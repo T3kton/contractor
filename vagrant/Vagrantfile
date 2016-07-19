@@ -1,0 +1,46 @@
+Vagrant.configure(2) do |config|
+  #config.vm.box = "ubuntu/xenial64"
+  config.vm.box = "geerlingguy/ubuntu1604"
+  config.vm.communicator = "ssh"
+  config.vm.guest = "linux"
+
+  config.vm.provider "virtualbox" do |vb|
+     vb.gui = true
+     vb.memory = "512"
+     vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+     vb.name = 'tekton-contractor'
+  end
+
+  config.vm.network "forwarded_port", guest: 8080, host: 8080
+
+  # "install" contractor
+  config.vm.synced_folder "../contractor", "/usr/lib/python3/dist-packages/contractor", create: true, :mount_options => ["rw"]
+  config.vm.synced_folder "../local", "/usr/local/contractor", create: true, :mount_options => ["ro"]
+  config.vm.synced_folder "../www", "/var/www/contractor", create: true, :mount_options => ["ro"]
+  config.vm.provision "file", source: "../contractor.conf", destination: "/tmp/contractor.conf"
+  config.vm.provision "shell", inline: <<-CONTRACTOR_CONFIG
+set -e
+set -x
+
+apt-get update
+apt-get install -y python3-django python3-dateutil sqlite3 apache2 libapache2-mod-wsgi-py3
+
+mv /tmp/contractor.conf /etc/apache2/sites-available/contractor.conf
+sed s/:80/:8080/ -i /etc/apache2/sites-available/contractor.conf
+echo "Listen 8080" >> /etc/apache2/ports.conf
+
+a2ensite contractor.conf
+
+service apache2 reload
+
+mkdir /opt/contractor
+chmod 777 /opt/contractor
+
+/usr/local/contractor/util/manage.py migrate
+/usr/local/contractor/util/manage.py createsuperuser --noinput --username=root --email=test@test.com
+
+chmod 666 /opt/contractor/db.sqlite3
+
+CONTRACTOR_CONFIG
+
+end
