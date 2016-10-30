@@ -38,8 +38,10 @@ chmod 777 /opt/contractor
 
 /usr/local/contractor/util/manage.py migrate
 /usr/local/contractor/util/manage.py createsuperuser --noinput --username=root --email=test@test.com
-
+echo "from django.contrib.auth.models import User; u = User.objects.get(); u.set_password('root'); u.save()" | /usr/local/contractor/util/manage.py shell
 chmod 666 /opt/contractor/db.sqlite3
+
+/usr/local/contractor/util/manage.py loaddata /usr/local/contractor/util/test_data.json
 
 CONTRACTOR_CONFIG
 

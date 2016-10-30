@@ -5,7 +5,7 @@ from contractor.fields import JSONField
 from contractor.Site.models import Site
 from contractor.Building.models import Foundation, Structure
 
-# stuff for getting handeling tasks
+# stuff for getting handeling tasks, everything here should be ephemerial, only things that are in progress/flight
 
 class BaseJob( models.Model ): # abstract base class
   JOB_STATE_CHOICES = ( ( 'working', 'working' ), ( 'waiting', 'waiting' ), ( 'done', 'done' ), ( 'pause', 'pause' ), ( 'error', 'error' ) )

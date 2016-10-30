@@ -6,6 +6,7 @@ from django.utils import timezone
 from contractor.fields import JSONField, name_regex, hostname_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
+from contractor.Utilities.models import Networked, PhysicalNetworkInterface
 
 # this is where the plan meats the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
 
@@ -14,6 +15,7 @@ class Foundation( models.Model ):
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
   locator = models.CharField( max_length=100 )
   id_map = JSONField( blank=True ) # ie a dict of asset, chassis, system, etc types
+  interfaces = models.ManyToManyField( PhysicalNetworkInterface, through='FoundationNetworkInterface' )
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -32,6 +34,10 @@ class Foundation( models.Model ):
     self.save()
 
   @property
+  def manager( self ):
+    return ( None, None ) # manager type, manager paramanter
+
+  @property
   def state( self ):
     if self.located_at is None:
       return 'planned'
@@ -45,9 +51,18 @@ class Foundation( models.Model ):
     return 'Foundation #{0} of "{1}" in "{2}"'.format( self.pk, self.blueprint.pk, self.site.pk )
 
 
-class Structure( models.Model ):
-  hostname = models.CharField( max_length=100 )
-  site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
+class FoundationNetworkInterface( models.Model ):
+  foundation = models.ForeignKey( Foundation )
+  interface = models.ForeignKey( PhysicalNetworkInterface )
+  name = models.CharField( max_length=20 )
+  updated = models.DateTimeField( editable=False, auto_now=True )
+  created = models.DateTimeField( editable=False, auto_now_add=True )
+
+  def __str__( self ):
+    return 'FoundationNetworkInterface for "{0}" to "{1}" named "{2}"'.format( self.foundation, self.interface, self.name )
+
+
+class Structure( Networked ):
   blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT ) # ie what to bild
   foundation = models.ForeignKey( Foundation, on_delete=models.PROTECT )   # ie what to build it on
   config_values = JSONField( blank=True )
@@ -87,9 +102,10 @@ class Structure( models.Model ):
     super().clean( *args, **kwargs )
 
   def __str__( self ):
-    return 'Instance #{0} of "{1}" in "{2}"'.format( self.pk, self.blueprint.pk, self.site.pk )
+    return 'Structure #{0} of "{1}" in "{2}"'.format( self.pk, self.blueprint.pk, self.site.pk )
 
-class Complex( models.Model ):
+
+class Complex( models.Model ):  # group of Structures, ie a cluster
   name = models.CharField( max_length=20, primary_key=True )
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   description = models.CharField( max_length=200 )

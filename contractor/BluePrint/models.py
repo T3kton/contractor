@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 
-from contractor.fields import JSONField, name_regex
+from contractor.fields import JSONField, StringListField, name_regex
 
 # these are the templates, describe how soomething is made and the template of the thing it's made on
 
@@ -43,6 +43,7 @@ class BluePrint( models.Model ):
 # will need a working pool of "eth0" type ips for the prepare
 class FoundationBluePrint( BluePrint ):
   template = JSONField()
+  physical_interface_names = StringListField( max_length=200 )
 
   @property
   def subcontractor( self ): # ie the manager that is used to deal with this type of Material
@@ -87,11 +88,18 @@ class BluePrintScript( models.Model ):
     if not name_regex.match( self.name ):
       raise ValidationError( 'BluePrint Script name "{0}" is invalid'.format( self.name ) )
 
-  def __unicode__( self ):
-    return 'BluePrintScript for BluePrint "{0}" Named "{1}" Script "{2}"' % ( self.blueprint, self.name, self.script )
-
   def __str__( self ):
-    return 'BluePrintScript for blueprint "{0}" name "{1}"'.format( self.blueprint.name, self.name )
+    return 'BluePrintScript for BluePrint "{0}" Named "{1}" Script "{2}"'.format( self.blueprint, self.name, self.script )
 
   class Meta:
     unique_together = ( ( 'blueprint', 'name' ), )
+
+
+class PXE( models.Model ):
+  name = models.CharField( max_length=50, primary_key=True )
+  script = models.TextField()
+  updated = models.DateTimeField( editable=False, auto_now=True )
+  created = models.DateTimeField( editable=False, auto_now_add=True )
+
+  def __str__( self ):
+    return 'PXE "{0}"'.format( self.name, self.script )
