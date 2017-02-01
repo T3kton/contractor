@@ -10,13 +10,14 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = (
+    'contractor.User',
     'contractor.Site',
     'contractor.BluePrint',
     'contractor.Building',
     'contractor.Utilities',
     'contractor.Foreman',
-    'contractor_plugins.manual',
-    'contractor_plugins.ipmi',
+    #'contractor_plugins.manual',
+    #'contractor_plugins.ipmi',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -63,7 +64,8 @@ WSGI_APPLICATION = 'contractor.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': '/opt/contractor/db.sqlite3',
+        #'NAME': '/opt/contractor/db.sqlite3',
+        'NAME': 'db.sqlite3',
     }
 }
 

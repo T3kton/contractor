@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 
 from django.utils import timezone
 
-from contractor.fields import JSONField, name_regex, hostname_regex
+from contractor.fields import JSONField, name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked, PhysicalNetworkInterface
@@ -91,15 +91,6 @@ class Structure( Networked ):
   def config( self ):
     # combine all the config stuffs
     return {}
-
-  class Meta:
-    unique_together = ( ( 'site', 'hostname' ), )
-
-  def clean( self, *args, **kwargs ): # verify hostname
-    if not hostname_regex.match( self.hostname ):
-      raise ValidationError( 'Structure hostname "{0}" is invalid'.format( self.name ) )
-
-    super().clean( *args, **kwargs )
 
   def __str__( self ):
     return 'Structure #{0} of "{1}" in "{2}"'.format( self.pk, self.blueprint.pk, self.site.pk )

@@ -1,7 +1,7 @@
 from django.db import models
 #from django.core.exceptions import ValidationError
 
-from contractor.fields import JSONField
+from contractor.fields import JSONField, hostname_regex
 from contractor.BluePrint.models import PXE
 from contractor.Site.models import Site
 
@@ -9,6 +9,15 @@ from contractor.Site.models import Site
 class Networked( models.Model ):
   hostname = models.CharField( max_length=100 )
   site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
+
+  class Meta:
+    unique_together = ( ( 'site', 'hostname' ), )
+
+  def clean( self, *args, **kwargs ): # verify hostname
+    if not hostname_regex.match( self.hostname ):
+      raise ValidationError( 'Structure hostname "{0}" is invalid'.format( self.name ) )
+
+    super().clean( *args, **kwargs )
 
   def __str__( self ):
     return 'Networked "{0}"'.format( self.physical_name )
