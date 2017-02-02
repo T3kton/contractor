@@ -1,4 +1,4 @@
 __pycache__
 vagrant/.vagrant
 vagrant/.Vagrantfile.swp
-
+*.sqlite3

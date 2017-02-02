@@ -28,7 +28,6 @@ def getUser( auth_id, auth_token ):
 #TODO: this has many security issues, spend some time and think this out better
 #TODO: should probably rename it auth as well, will also eventually need SSO abilities
 
-
 cinp = CInP( 'User', '0.1' )
 
 
