@@ -1,0 +1,147 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contractor - Let me build that for you</title>
+
+  <!-- Bootstrap -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <!-- App -->
+  <link href="screen.css" rel="stylesheet">
+</head>
+<body>
+  <nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <a class="navbar-brand" href="#">Contractor</a>
+      </div>
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="#">Settings</a></li>
+        <li><a href="#">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Modals -->
+  <div id="server-error-dialog" class="modal fade" role="dialog">
+    <div class="modal-dialog modal-lg">
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">Server Error</h4>
+        </div>
+        <div class="modal-body">
+        </div>
+        <div class="modal-detail">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-sm-3 col-md-2 sidebar">
+        <ul class="nav nav-sidebar">
+          <li id="overview-label"><a href="#overview">Overview</a></li>
+          <li id="blueprints-label"><a href="#blueprints">Blueprints</a></li>
+          <li id="foundations-label"><a href="#foundations">Foundations</a></li>
+          <li id="structures-label"><a href="#structures">Structures</a></li>
+          <li id="jobs-label"><a href="#jobs">Jobs</a></li>
+        </ul>
+      </div>
+      <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+        <div id="overview-panel">
+          <h2>Overview</h2>
+        </div>
+
+        <div id="blueprints-panel">
+          <h2>Blueprints</h2>
+          <table class="table table-condensed table-hover">
+            <thead>
+              <tr>
+                <th>Name</th><th>Description</th><th>Last Updated</th><th>Created</th>
+              </tr>
+            </thead>
+            <tbody />
+          </table>
+        </div>
+
+        <div id="foundations-panel">
+          <div class="row">
+            <div class="col-md-4">
+              <h2>Foundations</h2>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="dropdown">
+                <button class="btn btn-default dropdown-toggle" type="button" id="site-foundation-dropdown-label" data-toggle="dropdown" aria-haspopup="true">
+                  Site
+                  <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="site-foundation-dropdown-label" id="site-foundation-dropdown" />
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <table class="table" id="foundation-list-table">
+              <thead><tr><th>Id</th><th>Name</th><th>Type</th></tr></thead>
+              <tbody/>
+            </table>
+          </div>
+
+        </div>
+
+        <div id="structures-panel">
+          <div class="row">
+            <div class="col-md-4">
+              <h2>Structures</h2>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="dropdown">
+                <button class="btn btn-default dropdown-toggle" type="button" id="site-structure-dropdown-label" data-toggle="dropdown" aria-haspopup="true">
+                  Site
+                  <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="site-structure-dropdown-label" id="site-structure-dropdown" />
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <table class="table" id="structure-list-table">
+              <thead><tr><th>Id</th><th>Name</th><th>Type</th></tr></thead>
+              <tbody/>
+            </table>
+          </div>
+
+        </div>
+
+        <div id="jobs-panel">
+          <h2>Jobs</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- jQuery -->
+  <script src="js/jquery.js"></script>
+  <!-- Bootstrap -->
+  <script src="js/bootstrap.js"></script>
+  <!-- CInP -->
+  <script src="js/cinp.js"></script>
+  <!-- App -->
+  <script src="app/contractor.js"></script>
+  <script src="app/main.js"></script>
+</body>
+</html>
