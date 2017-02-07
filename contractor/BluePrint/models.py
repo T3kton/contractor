@@ -3,20 +3,21 @@ from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import JSONField, StringListField, name_regex
+from contractor.fields import MapField, StringListField, name_regex
+from contractor.tscript import parser
 
 # these are the templates, describe how soomething is made and the template of the thing it's made on
 
 cinp = CInP( 'BluePrint', '0.1' )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'CALL' ] )
+@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class BluePrint( models.Model ):
   name = models.CharField( max_length=20, primary_key=True )
   description = models.CharField( max_length=200 )
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
   scripts = models.ManyToManyField( 'Script', through='BluePrintScript' )
-  config_values = JSONField( blank=True )
+  config_values = MapField( blank=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -57,7 +58,7 @@ class BluePrint( models.Model ):
 # will need a working pool of "eth0" type ips for the prepare
 @cinp.model( property_list=[ 'config', 'script_map', 'subcontractor' ] )
 class FoundationBluePrint( BluePrint ):
-  template = JSONField()
+  template = MapField()
   physical_interface_names = StringListField( max_length=200 )
 
   @property
@@ -96,8 +97,17 @@ class Script( models.Model ):
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
+    errors = {}
+
     if not name_regex.match( self.name ):
-      raise ValidationError( 'BluePrint name "{0}" is invalid'.format( self.name ) )
+      errors[ 'name' ] = 'BluePrint name "{0}" is invalid'.format( self.name )
+
+    if not parser.lint( self.script ):
+      errors[ 'script' ] = 'Script is invalid'
+
+    if errors:
+      raise ValidationError( errors )
+
 
   @cinp.check_auth()
   @staticmethod

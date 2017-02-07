@@ -3,7 +3,7 @@ from django.db import models
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import JSONField, hostname_regex
+from contractor.fields import MapField, hostname_regex
 from contractor.BluePrint.models import PXE
 from contractor.Site.models import Site
 
@@ -34,7 +34,7 @@ class Networked( models.Model ):
     return 'Networked "{0}"'.format( self.physical_name )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'CALL' ] )
+@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class NetworkInterface( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -91,7 +91,7 @@ class VirtualNetworkInterface( NetworkInterface ):
 class AggragatedNetworkInterface( VirtualNetworkInterface ):
   master_interface = models.ForeignKey( NetworkInterface, related_name='+' )
   slaves = models.ManyToManyField( NetworkInterface, related_name='+' )
-  paramaters = JSONField()
+  paramaters = MapField()
 
   @cinp.check_auth()
   @staticmethod
@@ -132,7 +132,7 @@ class AddressBlock( models.Model ):
   def __str__( self ):
     return 'AddressBlock cluster "{0}" subnet "{1}/{2}"'.format( self.cluster, self.subnet, self.prefix )
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'CALL' ] )
+@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class BaseAddress( models.Model ):
   block = models.ForeignKey( AddressBlock )
   offset = models.IntegerField()

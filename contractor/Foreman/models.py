@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import JSONField
+from contractor.fields import MapField
 from contractor.Site.models import Site
 from contractor.Building.models import Foundation, Structure
 
@@ -12,13 +12,13 @@ from contractor.Building.models import Foundation, Structure
 cinp = CInP( 'Foreman', '0.1' )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'CALL' ] )
+@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class BaseJob( models.Model ): # abstract base class
   JOB_STATE_CHOICES = ( ( 'working', 'working' ), ( 'waiting', 'waiting' ), ( 'done', 'done' ), ( 'pause', 'pause' ), ( 'error', 'error' ) )
   site = models.ForeignKey( Site, editable=False, on_delete=models.CASCADE )
   state = models.CharField( max_length=10, choices=JOB_STATE_CHOICES )
-  script_pos = JSONField()
-  script_ast = JSONField()
+  script_pos = MapField()
+  script_ast = MapField()
   is_create = models.BooleanField( default=False ) # if it is neither create nor destroy, it is utility
   is_destroy = models.BooleanField( default=False )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -55,7 +55,7 @@ class BaseJob( models.Model ): # abstract base class
     return 'BaseJob #{0} in "{1}"'.format( self.pk, self.site.pk)
 
 
-@cinp.model( )
+@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class FoundationJob( BaseJob ):
   foundation = models.OneToOneField( Foundation, editable=False, on_delete=models.CASCADE )
 
@@ -74,7 +74,7 @@ class FoundationJob( BaseJob ):
     return 'FoundationJob #{0} for "{1}" in "{2}"'.format( self.pk, self.foundation.pk, self.foundation.site.pk )
 
 
-@cinp.model( )
+@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class StructureJob( BaseJob ):
   structure = models.OneToOneField( Structure, editable=False, on_delete=models.CASCADE )
 
