@@ -19,8 +19,7 @@ class BaseJob( models.Model ): # abstract base class
   state = models.CharField( max_length=10, choices=JOB_STATE_CHOICES )
   script_pos = JSONField( editable=False, default={} )
   script_ast = JSONField( editable=False, default={} )
-  is_create = models.BooleanField( editable=False, default=False ) # if it is neither create nor destroy, it is utility
-  is_destroy = models.BooleanField( editable=False, default=False )
+  script_name = models.CharField( max_length=20, editable=False, default=False )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -48,9 +47,6 @@ class BaseJob( models.Model ): # abstract base class
   def clean( self, *args, **kwargs ): # also need to make sure a Structure is in only one complex
     super().clean( *args, **kwargs )
     errors = {}
-    if self.is_create and self.is_destroy:
-      errors[ 'is_create' ] = 'Can not be a create and a destroy script at the same time'
-      errors[ 'is_destroy' ] = 'Can not be a create and a destroy script at the same time'
 
     if self.state not in JOB_STATE_CHOICES:
       errors[ 'state' ] = 'Invalid state "{0}"'.format( self.state )
@@ -76,9 +72,10 @@ class FoundationJob( BaseJob ):
   foundation = models.OneToOneField( Foundation, editable=False, on_delete=models.CASCADE )
 
   def done( self ):
-    if self.is_destroy:
+    if self.script_name == 'destroy':
       self.foundation.setDestroyed()
-    elif self.is_create:
+
+    elif self.script_name == 'create':
       self.foundation.setBuilt()
 
   @cinp.list_filter( name='site', paramater_type_list=[ 'Model:contractor.Site.models.Site' ] )
@@ -100,9 +97,10 @@ class StructureJob( BaseJob ):
   structure = models.OneToOneField( Structure, editable=False, on_delete=models.CASCADE )
 
   def done( self ):
-    if self.is_destroy:
+    if self.script_name == 'destroy':
       self.structure.setDestroyed()
-    elif self.is_create:
+
+    elif self.script_name == 'create':
       self.structure.setBuilt()
 
   @cinp.list_filter( name='site', paramater_type_list=[ 'Model:contractor.Site.models.Site' ] )

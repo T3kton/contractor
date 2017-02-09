@@ -5,30 +5,27 @@ from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob
 def parse_script( script ):
   return {}
 
-def createJob( script_name, structure=None, foundation=None, ):
-  if structure is not None:
+def createJob( script_name, target ):
+  if isinstance( target, Structure ):
     job = StructureJob()
-    job.site = structure.site
-    job.structure = structure
-    blueprint = structure.blueprint
+    job.structure = target
 
-  elif foundation is not None:
+  if isinstance( target, Foundation ):
     job = FoundationJob()
-    job.site = foundation.site
-    job.foundation = foundation
-    blueprint = foundation.blueprint
+    job.foundation = target
 
   else:
-    raise Exception( 'Either structure or material must be specified' )
+    raise Exception( 'target must be a Structure or Foundation' )
+
+  job.site = target.site
 
   try:
-    script = blueprint.script_map[ script_name ]
+    script = target.blueprint.script_map[ script_name ]
   except KeyError:
-    raise Exception( 'BluePrint "{0}" does not have a script named "{1}"'.format( blueprint, script_name ) )
+    raise ValueError( 'BluePrint "{0}" does not have a script named "{1}"'.format( target.blueprint, script_name ) )
 
   job.state = 'waiting'
-  job.is_create = script_name == 'create'
-  job.is_destroy = script_name == 'destroy'
+  job.script_name = script_name
   job.script_pos = [ 0 ]
   job.script_ast = parse_script( script )
   job.save()

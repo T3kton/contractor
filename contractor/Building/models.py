@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import MapField, name_regex
+from contractor.fields import MapField, JSONField, name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked, PhysicalNetworkInterface
@@ -19,7 +19,7 @@ class Foundation( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
   locator = models.CharField( max_length=100 )
-  id_map = MapField( blank=True ) # ie a dict of asset, chassis, system, etc types
+  id_map = JSONField( blank=True ) # ie a dict of asset, chassis, system, etc types
   interfaces = models.ManyToManyField( PhysicalNetworkInterface, through='FoundationNetworkInterface' )
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )

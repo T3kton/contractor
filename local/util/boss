@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+import os
+import sys
+import argparse
+
+sys.path.insert( 1, '../..' )
+
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+import django
+django.setup()
+
+from contractor.Building.models import Foundation, Structure
+from contractor.Foreman.lib import createJob
+
+def main():
+  parser = argparse.ArgumentParser( usage='%(prog)s -s|-f -c|-d|-p <id>', description='Boss/Manipulate Structures and Foundations and their jobs', epilog='' )
+  group = parser.add_argument_group( 'target' )
+  group.add_argument( '-s', '--structure', help='boss arround a structure', action='store_true' )
+  group.add_argument( '-f', '--foundation', help='boss arround a structure', action='store_true' )
+  group.add_argument( 'id', help='foundation/structure id' )
+
+  group = parser.add_argument_group( 'task' )
+  group.add_argument( '-c', '--do-create', help='submit create job', action='store_true' )
+  group.add_argument( '-d', '--do-destroy', help='submit destroy job', action='store_true' )
+  #group.add_argument( '-p', '--pause', help='pause active job', action='store_true' )
+
+  args = parser.parse_args()
+
+  target = None
+  if args.foundation:
+    try:
+      target = Foundation.objects.get( pk=args.id )
+    except Structure.DoesNotExist:
+      print( 'Unable to find Foundation "{0}"'.format( args.id ) )
+
+  elif args.structure:
+    try:
+      target = Structure.objects.get( pk=args.id )
+    except Structure.DoesNotExist:
+      print( 'Unable to find Structure "{0}"'.format( args.id ) )
+
+  else:
+    print( '-f or -s must be specified' )
+    sys.exit( 1 )
+
+  print( 'Working with "{0}"'.format( target ) )
+
+  if args.do_create:
+    createJob( 'create', target )
+
+  elif args.do_destroy:
+    createJob( 'destroy', target )
+
+  else:
+    print( 'unknown task' )
+
+if __name__ == '__main__':
+  main()

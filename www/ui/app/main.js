@@ -97,7 +97,7 @@ function updateFoundationJobTable( object_map )
   for( var uri in object_map )
   {
     var entry = object_map[ uri ];
-    var row = $( '<tr><td>' + uri + '</td><td>' + entry.foundation + '</td><td>' + entry.blueprint + '</td><td>' + entry.state + '</td><td>' + entry.last_update + '</td></tr>' );
+    var row = $( '<tr><td>' + uri + '</td><td>' + entry.foundation + '</td><td>' + entry.script_name + '</td><td>' + entry.state + '</td><td>' + entry.last_update + '</td></tr>' );
     row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
     row.find( 'td:eq( 1 )' ).on( 'click', function() { contractor.cinp.get( entry.foundation ).done( showObject ); } );
     row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.blueprint ).done( showObject ); } );
