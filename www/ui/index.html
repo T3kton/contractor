@@ -43,6 +43,25 @@
     </div>
   </div>
 
+  <div id="object-detail-dialog" class="modal fade" role="dialog">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title"></h4>
+        </div>
+        <div class="modal-body">
+          <table class="table table-condensed table-hover"><thead><tr><th>field</th><th>value</th></tr></thead><tbody /></table>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Primary Stuff -->
+
   <div class="container-fluid">
     <div class="row">
       <div class="col-sm-3 col-md-2 sidebar">
@@ -92,7 +111,7 @@
 
           <div class="row">
             <table class="table" id="foundation-list-table">
-              <thead><tr><th>Id</th><th>Name</th><th>Type</th></tr></thead>
+              <thead><tr><th>Id</th><th>Locator</th><th>Type</th><th>BluePrint</th><th>State</th></tr></thead>
               <tbody/>
             </table>
           </div>
@@ -120,7 +139,7 @@
 
           <div class="row">
             <table class="table" id="structure-list-table">
-              <thead><tr><th>Id</th><th>Name</th><th>Type</th></tr></thead>
+              <thead><tr><th>Id</th><th>Hostname</th><th>BluePrint</th><th>State</th></tr></thead>
               <tbody/>
             </table>
           </div>
@@ -128,7 +147,37 @@
         </div>
 
         <div id="jobs-panel">
-          <h2>Jobs</h2>
+          <div class="row">
+            <div class="col-md-4">
+              <h2>Jobs</h2>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="dropdown">
+                <button class="btn btn-default dropdown-toggle" type="button" id="site-job-dropdown-label" data-toggle="dropdown" aria-haspopup="true">
+                  Site
+                  <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="site-job-dropdown-label" id="site-job-dropdown" />
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <table class="table" id="job-foundation-list-table">
+              <thead><tr><th>Id</th><th>Foundation</th><th>BluePrint</th><th>State</th><th>Last Update</th></tr></thead>
+              <tbody/>
+            </table>
+          </div>
+
+          <div class="row">
+            <table class="table" id="job-structure-list-table">
+              <thead><tr><th>Id</th><th>Structure</th><th>BluePrint</th><th>State</th><th>Last Update</th></tr></thead>
+              <tbody/>
+            </table>
+          </div>
         </div>
       </div>
     </div>

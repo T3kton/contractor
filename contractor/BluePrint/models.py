@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import MapField, StringListField, name_regex
+from contractor.fields import MapField, JSONField, StringListField, name_regex
 from contractor.tscript import parser
 
 # these are the templates, describe how soomething is made and the template of the thing it's made on
@@ -36,8 +36,12 @@ class BluePrint( models.Model ):
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
+    errors = {}
     if not name_regex.match( self.name ):
-      raise ValidationError( 'BluePrint name "{0}" is invalid'.format( self.name ) )
+      errors[ 'name' ] = 'BluePrint Script name "{0}" is invalid'.format( self.name )
+
+    if errors:
+      raise ValidationError( errors )
 
   @cinp.check_auth()
   @staticmethod
@@ -58,7 +62,7 @@ class BluePrint( models.Model ):
 # will need a working pool of "eth0" type ips for the prepare
 @cinp.model( property_list=[ 'config', 'script_map', 'subcontractor' ] )
 class FoundationBluePrint( BluePrint ):
-  template = MapField()
+  template = JSONField()
   physical_interface_names = StringListField( max_length=200 )
 
   @property
@@ -102,8 +106,9 @@ class Script( models.Model ):
     if not name_regex.match( self.name ):
       errors[ 'name' ] = 'BluePrint name "{0}" is invalid'.format( self.name )
 
-    if not parser.lint( self.script ):
-      errors[ 'script' ] = 'Script is invalid'
+    results = parser.lint( self.script )
+    if results is not None:
+      errors[ 'script' ] = 'Script is invalid: {0}'.format( results )
 
     if errors:
       raise ValidationError( errors )
@@ -128,8 +133,12 @@ class BluePrintScript( models.Model ):
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
+    errors = {}
     if not name_regex.match( self.name ):
-      raise ValidationError( 'BluePrint Script name "{0}" is invalid'.format( self.name ) )
+      errors[ 'name' ] = 'BluePrint Script name "{0}" is invalid'.format( self.name )
+
+    if errors:
+      raise ValidationError( errors )
 
   @cinp.check_auth()
   @staticmethod

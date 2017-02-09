@@ -34,17 +34,27 @@ var contractorBuilder = {};
 
       contractor.getSiteList = function()
       {
-        return this.cinp.list( '/api/v1/Site/Site', undefined, undefined, 0, 100 ); // figure out a way to deal with lots of sites when there are more than 100
+        return this.cinp.list( '/api/v1/Site/Site' ); // figure out a way to deal with lots of sites when there are more than 100
       }
 
       contractor.getFoundationList = function( site )
       {
-        return this.cinp.list( '/api/v1/Building/Foundation', 'site', { 'site': site }, 0, 100 );
+        return this.cinp.getFilteredObjects( '/api/v1/Building/Foundation', 'site', { 'site': site } );
       }
 
       contractor.getStructureList = function( site )
       {
-        return this.cinp.list( '/api/v1/Building/Structure', 'site', { 'site': site }, 0, 100 );
+        return this.cinp.getFilteredObjects( '/api/v1/Building/Structure', 'site', { 'site': site } );
+      }
+
+      contractor.getFoundationJobList = function( site )
+      {
+        return this.cinp.getFilteredObjects( '/api/v1/Foreman/FoundationJob', 'site', { 'site': site } );
+      }
+
+      contractor.getStructureJobList = function( site )
+      {
+        return this.cinp.getFilteredObjects( '/api/v1/Foreman/StructureJob', 'site', { 'site': site } );
       }
 
       contractor.getFoundationBluePrints = function()

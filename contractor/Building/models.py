@@ -14,7 +14,7 @@ from contractor.Utilities.models import Networked, PhysicalNetworkInterface
 cinp = CInP( 'Building', '0.1' )
 
 
-@cinp.model( )
+@cinp.model( property_list=( 'state', 'type' ) )
 class Foundation( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
@@ -43,14 +43,23 @@ class Foundation( models.Model ):
     return ( None, None ) # manager type, manager paramanter
 
   @property
+  def type( self ):
+    return 'Foundation'
+
+  @property
   def state( self ):
-    if self.located_at is None:
+    if self.located_at is not None and self.built_at is not None:
+      return 'built'
+
+    elif self.located_at is not None:
       return 'planned'
 
-    elif self.located_at is not None and self.built_at is None:
-      return 'located'
+    return 'located'
 
-    return 'built'
+  @cinp.list_filter( name='site', paramater_type_list=[ 'Model:contractor.Site.models.Site' ] )
+  @staticmethod
+  def filter_site( site ):
+    return Foundation.objects.filter( site=site )
 
   @cinp.check_auth()
   @staticmethod
@@ -78,7 +87,7 @@ class FoundationNetworkInterface( models.Model ):
     return 'FoundationNetworkInterface for "{0}" to "{1}" named "{2}"'.format( self.foundation, self.interface, self.name )
 
 
-@cinp.model( )
+@cinp.model( property_list=( 'state', ) )
 class Structure( Networked ):
   blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT ) # ie what to bild
   foundation = models.ForeignKey( Foundation, on_delete=models.PROTECT )   # ie what to build it on
@@ -99,15 +108,20 @@ class Structure( Networked ):
 
   @property
   def state( self ):
-    if self.built_at is None:
-      return 'planned'
+    if self.built_at is not None:
+      return 'built'
 
-    return 'built'
+    return 'planned'
 
   @property
   def config( self ):
     # combine all the config stuffs
     return {}
+
+  @cinp.list_filter( name='site', paramater_type_list=[ 'Model:contractor.Site.models.Site' ] )
+  @staticmethod
+  def filter_site( site ):
+    return Structure.objects.filter( site=site )
 
   @cinp.check_auth()
   @staticmethod
@@ -135,8 +149,12 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
 
   def clean( self, *args, **kwargs ): # also need to make sure a Structure is in only one complex
     super().clean( *args, **kwargs )
+    errors = {}
     if not name_regex.match( self.name ):
-      raise ValidationError( 'Complex name "{0}" is invalid'.format( self.name ) )
+      errors[ 'name' ] = 'Complex name "{0}" is invalid'.format( self.name )
+
+    if errors:
+      raise ValidationError( errors )
 
   @cinp.check_auth()
   @staticmethod

@@ -20,14 +20,17 @@ function updateSiteList( id_list, position, count, total )
 {
   var foundation_dd = $( '#site-foundation-dropdown' );
   var structure_dd = $( '#site-structure-dropdown' );
+  var job_dd = $( '#site-job-dropdown' );
 
   foundation_dd.empty();
   structure_dd.empty();
+  job_dd.empty();
 
   for( site_id of id_list )
   {
     foundation_dd.append( $( '<li>' + site_id + '</li>' ).on( 'click', setFoundationSite ).data( 'site', site_id ) );
     structure_dd.append( $( '<li>' + site_id + '</li>' ).on( 'click', setStructureSite ).data( 'site', site_id ) );
+    job_dd.append( $( '<li>' + site_id + '</li>' ).on( 'click', setJobSite ).data( 'site', site_id ) );
   }
 }
 
@@ -38,11 +41,97 @@ function setFoundationSite( event )
   contractor.getFoundationList( element.data( 'site' ) ).done( updateFoundationTable ).fail( function( message ) { alert( 'Error loading foundations "' + message + '"' ); } );
 }
 
+function updateFoundationTable( object_map )
+{
+  var tbody = $( '#foundation-list-table tbody' );
+
+  tbody.empty();
+
+  for( var uri in object_map )
+  {
+    var entry = object_map[ uri ];
+    var row = $( '<tr><td>' + uri + '</td><td>' + entry.locator + '</td><td>' + entry.type + '</td><td>' + entry.blueprint + '</td><td>' + entry.state + '</td></tr>' );
+    row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
+    row.find( 'td:eq( 3 )' ).on( 'click', function() { contractor.cinp.get( entry.blueprint ).done( showObject ); } );
+    tbody.append( row );
+  }
+}
+
 function setStructureSite( event )
 {
   var element = $( this );
 
   contractor.getStructureList( element.data( 'site' ) ).done( updateStructureTable ).fail( function( message ) { alert( 'Error loading structures "' + message + '"' ); } );
+}
+
+function updateStructureTable( object_map )
+{
+  var tbody = $( '#structure-list-table tbody' );
+
+  tbody.empty();
+
+  for( var uri in object_map )
+  {
+    var entry = object_map[ uri ];
+    var row = $( '<tr><td>' + uri + '</td><td>' + entry.hostname + '</td><td>' + entry.blueprint + '</td><td>' + entry.state + '</td></tr>' );
+    row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
+    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.blueprint ).done( showObject ); } );
+    tbody.append( row );
+  }
+}
+
+function setJobSite( event )
+{
+  var element = $( this );
+
+  contractor.getFoundationJobList( element.data( 'site' ) ).done( updateFoundationJobTable ).fail( function( message ) { alert( 'Error loading jobs "' + message + '"' ); } );
+  contractor.getStructureJobList( element.data( 'site' ) ).done( updateStructureJobTable ).fail( function( message ) { alert( 'Error loading jobs "' + message + '"' ); } );
+}
+
+function updateFoundationJobTable( object_map )
+{
+  var tbody = $( '#job-foundation-list-table tbody' );
+
+  tbody.empty();
+
+  for( var uri in object_map )
+  {
+    var entry = object_map[ uri ];
+    var row = $( '<tr><td>' + uri + '</td><td>' + entry.foundation + '</td><td>' + entry.blueprint + '</td><td>' + entry.state + '</td><td>' + entry.last_update + '</td></tr>' );
+    row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
+    row.find( 'td:eq( 1 )' ).on( 'click', function() { contractor.cinp.get( entry.foundation ).done( showObject ); } );
+    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.blueprint ).done( showObject ); } );
+    tbody.append( row );
+  }
+}
+
+function updateStructureJobTable( object_map )
+{
+  var tbody = $( '#job-structure-list-table tbody' );
+
+  tbody.empty();
+
+  for( var uri in object_map )
+  {
+    var entry = object_map[ uri ];
+    var row = $( '<tr><td>' + uri + '</td><td>' + entry.structure + '</td><td>' + entry.blueprint + '</td><td>' + entry.state + '</td><td>' + entry.last_update + '</td></tr>' );
+    row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
+    row.find( 'td:eq( 1 )' ).on( 'click', function() { contractor.cinp.get( entry.structure ).done( showObject ); } );
+    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.blueprint ).done( showObject ); } );
+    tbody.append( row );
+  }
+}
+
+function showObject( data )
+{
+  $( '#object-detail-dialog .modal-title' ).html( data.id );
+  var body = $( '#object-detail-dialog .modal-body tbody' );
+  body.empty();
+  for( var key in data )
+  {
+    body.append( '<tr><td>' + key + '</td><td>' + data[ key ] + '</td></tr>' );
+  }
+  $( '#object-detail-dialog' ).modal( 'show' );
 }
 
 function handleHashChange( event )
