@@ -1,3 +1,5 @@
+import pickle
+
 from django.db import models
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
@@ -12,7 +14,7 @@ from contractor.Building.models import Foundation, Structure
 cinp = CInP( 'Foreman', '0.1' )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_runner', ) )
+@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
 class BaseJob( models.Model ): # abstract base class
   JOB_STATE_CHOICES = ( ( 'working', 'working' ), ( 'waiting', 'waiting' ), ( 'done', 'done' ), ( 'pause', 'pause' ), ( 'error', 'error' ) )
   site = models.ForeignKey( Site, editable=False, on_delete=models.CASCADE )
@@ -53,6 +55,9 @@ class BaseJob( models.Model ): # abstract base class
     if errors:
       raise ValidationError( errors )
 
+  @property
+  def progress( self ):
+    return pickle.loads( self.script_runner ).progress
 
   @cinp.check_auth()
   @staticmethod
@@ -66,7 +71,7 @@ class BaseJob( models.Model ): # abstract base class
     return 'BaseJob #{0} in "{1}"'.format( self.pk, self.site.pk)
 
 
-@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_runner', ) )
+@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
 class FoundationJob( BaseJob ):
   foundation = models.OneToOneField( Foundation, editable=False, on_delete=models.CASCADE )
 
@@ -91,7 +96,7 @@ class FoundationJob( BaseJob ):
     return 'FoundationJob #{0} for "{1}" in "{2}"'.format( self.pk, self.foundation.pk, self.foundation.site.pk )
 
 
-@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_runner', ) )
+@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
 class StructureJob( BaseJob ):
   structure = models.OneToOneField( Structure, editable=False, on_delete=models.CASCADE )
 

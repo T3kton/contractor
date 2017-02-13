@@ -97,7 +97,7 @@ class Migration(migrations.Migration):
             name='FoundationBluePrint',
             fields=[
                 ('blueprint_ptr', models.OneToOneField(to='BluePrint.BluePrint', serialize=False, primary_key=True, auto_created=True, parent_link=True)),
-                ('template', contractor.fields.JSONField()),
+                ('template', contractor.fields.JSONField(default={})),
                 ('physical_interface_names', contractor.fields.StringListField(default=[], max_length=200)),
             ],
             bases=('BluePrint.blueprint',),

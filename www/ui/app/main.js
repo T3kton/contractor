@@ -98,7 +98,7 @@ function updateFoundationJobTable( object_map )
   for( var uri in object_map )
   {
     var entry = object_map[ uri ];
-    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><td>' + entry.script_name + '</td><td>' + entry.foundation + '</td><td>' + entry.script_pos[0] + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
+    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><td>' + entry.script_name + '</td><td>' + entry.foundation + '</td><td>' + entry.progress + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
     row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
     row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.foundation ).done( showObject ); } );
     tbody.append( row );
@@ -114,7 +114,7 @@ function updateStructureJobTable( object_map )
   for( var uri in object_map )
   {
     var entry = object_map[ uri ];
-    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><<td>' + entry.script_name + '</td>td>' + entry.structure + '</td><td>' + entry.script_pos[0] + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
+    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><<td>' + entry.script_name + '</td><td>' + entry.structure + '</td><td>' + entry.progress + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
     row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
     row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.structure ).done( showObject ); } );
     tbody.append( row );

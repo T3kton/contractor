@@ -1,3 +1,5 @@
+import uuid
+
 from django.utils import timezone
 from django.db import models
 from django.core.exceptions import ValidationError
@@ -27,7 +29,12 @@ class Foundation( models.Model ):
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   def setLocated( self ):
+    try:
+      self.structure.setDestroyed() #TODO: this may be a little harsh
+    except Structure.DoesNotExist:
+      pass
     self.located_at = timezone.now()
+    self.built_at = None
     self.save()
 
   def setBuilt( self ):
@@ -35,7 +42,12 @@ class Foundation( models.Model ):
     self.save()
 
   def setDestroyed( self ):
+    try:
+      self.structure.setDestroyed() #TODO: this may be a little harsh
+    except Structure.DoesNotExist:
+      pass
     self.built_at = None
+    self.located_at = None
     self.save()
 
   @property
@@ -45,6 +57,10 @@ class Foundation( models.Model ):
   @property
   def type( self ):
     return 'Foundation'
+
+  @property
+  def canAutoLocate( self ): # child models can decide if it can auto submit job for building, ie: vm (and like foundations) are only canBuild if their structure is auto_build
+    return False
 
   @property
   def state( self ):
@@ -87,10 +103,14 @@ class FoundationNetworkInterface( models.Model ):
     return 'FoundationNetworkInterface for "{0}" to "{1}" named "{2}"'.format( self.foundation, self.interface, self.name )
 
 
-@cinp.model( property_list=( 'state', ) )
+def getUUID():
+  return str( uuid.uuid4() )
+
+@cinp.model( property_list=( 'state', ), read_only_list=( 'config_uuid', ) )
 class Structure( Networked ):
   blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT ) # ie what to bild
-  foundation = models.ForeignKey( Foundation, on_delete=models.PROTECT )   # ie what to build it on
+  foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT )   # ie what to build it on
+  config_uuid = models.CharField( max_length=36, default=getUUID, unique=True ) # unique
   config_values = MapField( blank=True )
   auto_build = models.BooleanField( default=True )
   build_priority = models.IntegerField( default=100 )
@@ -104,6 +124,7 @@ class Structure( Networked ):
 
   def setDestroyed( self ):
     self.built_at = None
+    self.config_uuid = str( uuid.uuid4() )
     self.save()
 
   @property
@@ -112,11 +133,6 @@ class Structure( Networked ):
       return 'built'
 
     return 'planned'
-
-  @property
-  def config( self ):
-    # combine all the config stuffs
-    return {}
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod

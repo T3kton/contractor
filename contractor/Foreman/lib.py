@@ -27,7 +27,7 @@ def createJob( script_name, target ):
         raise ValueError( 'can not do create job until Foundation is located' )
 
   elif script_name == 'destroy':
-    if target.state != 'build':
+    if target.state != 'built':
       raise ValueError( 'can only destroy built targets' )
 
   else:
@@ -50,6 +50,13 @@ def createJob( script_name, target ):
 def processJobs( site, max_jobs=10 ):
   if max_jobs > 100:
     max_jobs = 100
+
+  # see if there are any planned foundatons that can be auto located
+  for foundation in Foundation.objects.filter( located_at__isnull=True, built_at__isnull=True ):
+    if not foundation.canAutoLocate:
+      continue
+
+    foundation.setLocated()
 
   # see if there are any located foundations that need to be prepared
   for foundation in Foundation.objects.filter( located_at__isnull=False, built_at__isnull=True ):

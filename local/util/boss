@@ -12,6 +12,25 @@ django.setup()
 from contractor.Building.models import Foundation, Structure
 from contractor.Foreman.lib import createJob
 
+def _clear_job( target ):
+  if isinstance( target, Foundation ):
+    try:
+      job = target.foundationjob
+      print( 'deleting job "{0}"...'.format( job ) )
+      job.delete()
+      print( 'done' )
+    except AttributeError:
+      print( 'No Foundation Jobs' )
+
+  if isinstance( target, Structure ):
+    try:
+      job = target.structurejob
+      print( 'deleting job "{0}"...'.format( job ) )
+      job.delete()
+      print( 'done' )
+    except AttributeError:
+      print( 'No Structure Jobs' )
+
 def main():
   parser = argparse.ArgumentParser( description='Boss/Manipulate Structures and Foundations and their jobs', epilog='Only one option from task or force state, if more than one is specified, the force state option is ignored' )
   group = parser.add_argument_group( 'target' )
@@ -75,6 +94,7 @@ def main():
     sys.exit( 0 )
 
   if args.planned:
+    _clear_job( target )
     target.setDestroyed()
     print( '{0} now set to planned.'.format( target ) )
     sys.exit( 0 )
@@ -84,38 +104,22 @@ def main():
       print( 'Can only set Foundations to located' )
       sys.exit( 1 )
 
+    _clear_job( target )
     target.setLocated()
     print( '{0} now set to located.'.format( target ) )
     sys.exit( 0 )
 
   if args.built:
+    _clear_job( target )
     target.setBuilt()
     print( '{0} now set to built.'.format( target ) )
     sys.exit( 0 )
 
   if args.clear_job:
-    if isinstance( target, Foundation ):
-      try:
-        job = target.foundationjob
-        print( 'deleting "{0}"...'.format( job ) )
-        job.delete()
-        print( 'done' )
-      except AttributeError:
-        print( 'No Foundation Jobs' )
-
-    if isinstance( target, Structure ):
-      try:
-        job = target.structurejob
-        print( 'deleting "{0}"...'.format( job ) )
-        job.delete()
-        print( 'done' )
-      except AttributeError:
-        print( 'No Structure Jobs' )
-
+    _clear_job( target )
     sys.exit( 0 )
 
-
-  print( 'unknown task' )
+  print( 'unknown boss task' )
   sys.exit( 1 )
 
 if __name__ == '__main__':

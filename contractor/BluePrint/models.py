@@ -6,8 +6,6 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, JSONField, StringListField, name_regex
 from contractor.tscript import parser
 
-from  contractor.BluePrint.lib import getConfig
-
 # these are the templates, describe how soomething is made and the template of the thing it's made on
 
 cinp = CInP( 'BluePrint', '0.1' )
@@ -22,10 +20,6 @@ class BluePrint( models.Model ):
   config_values = MapField( blank=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
-
-  @property
-  def config( self ):
-    return getConfig( self )
 
   def get_script( self, name ):
     try:
