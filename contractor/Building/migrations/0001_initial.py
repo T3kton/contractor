@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
             name='Foundation',
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False, auto_created=True, verbose_name='ID')),
-                ('locator', models.CharField(max_length=100)),
+                ('locator', models.CharField(max_length=100, unique=True)),
                 ('id_map', contractor.fields.JSONField(blank=True)),
                 ('located_at', models.DateTimeField(blank=True, null=True, editable=False)),
                 ('built_at', models.DateTimeField(blank=True, null=True, editable=False)),

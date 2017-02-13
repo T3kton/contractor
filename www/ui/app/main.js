@@ -16,7 +16,7 @@ $( document ).ready( function()
 
 } );
 
-function updateSiteList( id_list, position, count, total )
+function updateSiteList( object_map )
 {
   var foundation_dd = $( '#site-foundation-dropdown' );
   var structure_dd = $( '#site-structure-dropdown' );
@@ -26,11 +26,12 @@ function updateSiteList( id_list, position, count, total )
   structure_dd.empty();
   job_dd.empty();
 
-  for( site_id of id_list )
+  for( site_id in object_map )
   {
-    foundation_dd.append( $( '<li>' + site_id + '</li>' ).on( 'click', setFoundationSite ).data( 'site', site_id ) );
-    structure_dd.append( $( '<li>' + site_id + '</li>' ).on( 'click', setStructureSite ).data( 'site', site_id ) );
-    job_dd.append( $( '<li>' + site_id + '</li>' ).on( 'click', setJobSite ).data( 'site', site_id ) );
+    var site = object_map[ site_id ];
+    foundation_dd.append( $( '<li>' + site.description + '</li>' ).on( 'click', setFoundationSite ).data( 'site', site_id ) );
+    structure_dd.append( $( '<li>' + site.description + '</li>' ).on( 'click', setStructureSite ).data( 'site', site_id ) );
+    job_dd.append( $( '<li>' + site.description + '</li>' ).on( 'click', setJobSite ).data( 'site', site_id ) );
   }
 }
 
@@ -97,10 +98,9 @@ function updateFoundationJobTable( object_map )
   for( var uri in object_map )
   {
     var entry = object_map[ uri ];
-    var row = $( '<tr><td>' + uri + '</td><td>' + entry.foundation + '</td><td>' + entry.script_name + '</td><td>' + entry.state + '</td><td>' + entry.last_update + '</td></tr>' );
+    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><td>' + entry.script_name + '</td><td>' + entry.foundation + '</td><td>' + entry.script_pos[0] + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
     row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
-    row.find( 'td:eq( 1 )' ).on( 'click', function() { contractor.cinp.get( entry.foundation ).done( showObject ); } );
-    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.blueprint ).done( showObject ); } );
+    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.foundation ).done( showObject ); } );
     tbody.append( row );
   }
 }
@@ -114,10 +114,9 @@ function updateStructureJobTable( object_map )
   for( var uri in object_map )
   {
     var entry = object_map[ uri ];
-    var row = $( '<tr><td>' + uri + '</td><td>' + entry.structure + '</td><td>' + entry.blueprint + '</td><td>' + entry.state + '</td><td>' + entry.last_update + '</td></tr>' );
+    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><<td>' + entry.script_name + '</td>td>' + entry.structure + '</td><td>' + entry.script_pos[0] + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
     row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
-    row.find( 'td:eq( 1 )' ).on( 'click', function() { contractor.cinp.get( entry.structure ).done( showObject ); } );
-    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.blueprint ).done( showObject ); } );
+    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.structure ).done( showObject ); } );
     tbody.append( row );
   }
 }

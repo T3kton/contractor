@@ -3,6 +3,8 @@ from importlib import import_module
 
 from contractor.tscript.parser import types
 
+from contractor.Building.models import Structure
+
 class ExecutionError( Exception ):
   pass
 
@@ -83,8 +85,8 @@ class ExternalFunction( object ):
   contractor_module = None
   contractor_function = None
 
-  def __init__( self, *args, **kwargs ):
-    super().__init__( *args, **kwargs )
+  def __init__( self ):
+    super().__init__()
 
   @property
   def ready( self ):
@@ -179,9 +181,10 @@ infix_logical_operator_map = {
                              }
 
 class Runner( object ):
-  def __init__( self, structure, ast ):
+  def __init__( self, target, ast ):
+    super().__init__()
     self.ast = ast
-    self.structure = structure
+    self.target = target
 
     # serilize
     self.module_list = []   # list of the loaded plugins
@@ -194,11 +197,12 @@ class Runner( object ):
     self.jump_point_map = {}
     self.function_map = {}
     self.value_map = {}
-    self.structure_plugin = StructurePlugin( self.structure )
 
     # setup structure plugin
-    self.value_map[ 'structure' ] = self.structure_plugin.get_values()
-    self.function_map[ 'structure' ] = self.structure_plugin.get_functions()
+    if isinstance( target, Structure ):
+      self.structure_plugin = StructurePlugin( self.target )
+      self.value_map[ 'structure' ] = self.structure_plugin.get_values()
+      self.function_map[ 'structure' ] = self.structure_plugin.get_functions()
 
     # scan for all the jump points
     for i in range( 0, len( ast[1][ '_children' ] ) ):
@@ -697,7 +701,7 @@ class Runner( object ):
     self.module_list.append( name )
 
   def __reduce__( self ):
-    return ( self.__class__, ( self.structure, self.ast ), self.__getstate__() )
+    return ( self.__class__, ( self.target, self.ast ), self.__getstate__() )
 
   def __getstate__( self ):
     return { 'module_list': self.module_list, 'state': self.state, 'variable_map': self.variable_map, 'cur_line': self.cur_line }
@@ -712,6 +716,7 @@ class Runner( object ):
 
 class StructurePlugin( object ):
   def __init__( self, structure ):
+    super().__init__()
     self.structure = structure
 
   def get_values( self ):

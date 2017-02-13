@@ -1,34 +1,51 @@
+import pickle
+
 from contractor.Building.models import Foundation, Structure
-from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob
+from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, cinp
 
-
-def parse_script( script ):
-  return {}
+from contractor.tscript.parser import parse
+from contractor.tscript.runner import Runner
 
 def createJob( script_name, target ):
   if isinstance( target, Structure ):
     job = StructureJob()
     job.structure = target
 
-  if isinstance( target, Foundation ):
+  elif isinstance( target, Foundation ):
     job = FoundationJob()
     job.foundation = target
 
   else:
-    raise Exception( 'target must be a Structure or Foundation' )
+    raise ValueError( 'target must be a Structure or Foundation' )
+
+  if script_name == 'create':
+    if target.state == 'built':
+      raise ValueError( 'target allready built' )
+
+    if isinstance( target, Foundation ):
+      if target.state != 'located':
+        raise ValueError( 'can not do create job until Foundation is located' )
+
+  elif script_name == 'destroy':
+    if target.state != 'build':
+      raise ValueError( 'can only destroy built targets' )
+
+  else:
+    if isinstance( target, Foundation ) and target.state != 'located':
+      raise ValueError( 'can only run utility jobs on located Foundations' )
 
   job.site = target.site
 
-  try:
-    script = target.blueprint.script_map[ script_name ]
-  except KeyError:
-    raise ValueError( 'BluePrint "{0}" does not have a script named "{1}"'.format( target.blueprint, script_name ) )
+  runner = Runner( target, parse( target.blueprint.get_script( script_name ) ) )
 
   job.state = 'waiting'
   job.script_name = script_name
-  job.script_pos = [ 0 ]
-  job.script_ast = parse_script( script )
+  job.script_runner = pickle.dumps( runner )
   job.save()
+
+  print( '**************** Created  Job "{0}" for "{1}"'.format( script_name, target ))
+
+  return job.pk
 
 def processJobs( site, max_jobs=10 ):
   if max_jobs > 100:
@@ -42,7 +59,7 @@ def processJobs( site, max_jobs=10 ):
     except FoundationJob.DoesNotExist:
       pass
 
-    createJob( 'create', foundation=foundation )
+    createJob( 'create', target=foundation )
 
   # see if there are any structures on setup foundations to start
   for structure in Structure.objects.filter( built_at__isnull=True, auto_build=True, foundation__built_at__isnull=False ):
@@ -52,10 +69,11 @@ def processJobs( site, max_jobs=10 ):
     except StructureJob.DoesNotExist:
       pass
 
-    createJob( 'create', structure=structure )
+    createJob( 'create', target=structure )
 
   # clean up completed jobs
   for job in BaseJob.objects.filter( site=site, state='done' ):
+    print( '____________ job "{0}" done!'.format(  job ) )
     job = job.realJob
     job.done()
     job.delete()
@@ -64,19 +82,25 @@ def processJobs( site, max_jobs=10 ):
   results = []
   for job in BaseJob.objects.filter( site=site, state='waiting' ).order_by( 'updated' ):
     job = job.realJob
-    if len( results ) >= max_jobs:
-      break
 
-    print( job.script_pos )
+    runner = pickle.loads( job.script_runner )
+    runner.run()
 
-    if job.script_pos[0] >= 10:
+    print( '____________ job "{0}" status "{1}", done: "{2}" progress: "{3}"'.format(  job, job.state,  runner.done, runner.progress ) )
+
+    if runner.done:
       job.state = 'done'
       job.save()
       continue
 
-    # do stuff
-    job.script_pos[0] += 1
+    result = runner.to_contractor()
+    if result is not None:
+      results.append( result )
+
+    job.script_runner = pickle.dumps( runner )
     job.save()
 
+    if len( results ) >= max_jobs:
+      break
 
   return results

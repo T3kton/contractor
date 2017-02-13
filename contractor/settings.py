@@ -16,6 +16,7 @@ INSTALLED_APPS = (
     'contractor.Building',
     'contractor.Utilities',
     'contractor.Foreman',
+    'contractor.SubContractor',
     #'contractor_plugins.manual',
     #'contractor_plugins.ipmi',
     'django.contrib.admin',

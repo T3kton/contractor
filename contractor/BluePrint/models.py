@@ -6,6 +6,8 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, JSONField, StringListField, name_regex
 from contractor.tscript import parser
 
+from  contractor.BluePrint.lib import getConfig
+
 # these are the templates, describe how soomething is made and the template of the thing it's made on
 
 cinp = CInP( 'BluePrint', '0.1' )
@@ -22,17 +24,17 @@ class BluePrint( models.Model ):
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
-  def config( self ): # combine depth first the config values
-    return {}
+  def config( self ):
+    return getConfig( self )
 
-  @property
-  def script_map( self ):
-    result = {}
-
-    for bps in self.blueprintscript_set.all():
-      result[ bps.name ] = bps.script.script
-
-    return result
+  def get_script( self, name ):
+    try:
+      return self.blueprintscript_set.get( name=name ).script.script
+    except BluePrintScript.DoesNotExist:
+      if self.parent is not None:
+        return self.parent.get_script( name )
+      else:
+        raise ValueError( 'BluePrint "{0}" does not have a script named "{1}"'.format( self.name, name ) )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -60,9 +62,9 @@ class BluePrint( models.Model ):
 # the material is not associated with the sctructure until fully prepared
 # ipmi type ip addresses will belong to the material, they belong to the device not the OS on the device anyway
 # will need a working pool of "eth0" type ips for the prepare
-@cinp.model( property_list=[ 'config', 'script_map', 'subcontractor' ] )
+@cinp.model( property_list=( 'config', 'subcontractor' ) )
 class FoundationBluePrint( BluePrint ):
-  template = JSONField()
+  template = JSONField( default={} )
   physical_interface_names = StringListField( max_length=200 )
 
   @property
@@ -78,9 +80,9 @@ class FoundationBluePrint( BluePrint ):
     return 'FoundationBluePrint "{0}"({1})'.format( self.description, self.name )
 
 
-@cinp.model( property_list=[ 'config', 'script_map' ] )
+@cinp.model( property_list=( 'config', ) )
 class StructureBluePrint( BluePrint ):
-  foundation_list = models.ManyToManyField( FoundationBluePrint ) # list of possible foundations this blueprint could be implemented on
+  foundation_blueprint_list = models.ManyToManyField( FoundationBluePrint ) # list of possible foundations this blueprint could be implemented on
 
   @cinp.check_auth()
   @staticmethod

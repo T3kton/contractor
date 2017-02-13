@@ -18,7 +18,7 @@ cinp = CInP( 'Building', '0.1' )
 class Foundation( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
-  locator = models.CharField( max_length=100 )
+  locator = models.CharField( max_length=100, unique=True )
   id_map = JSONField( blank=True ) # ie a dict of asset, chassis, system, etc types
   interfaces = models.ManyToManyField( PhysicalNetworkInterface, through='FoundationNetworkInterface' )
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
@@ -52,11 +52,11 @@ class Foundation( models.Model ):
       return 'built'
 
     elif self.located_at is not None:
-      return 'planned'
+      return 'located'
 
-    return 'located'
+    return 'planned'
 
-  @cinp.list_filter( name='site', paramater_type_list=[ 'Model:contractor.Site.models.Site' ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
     return Foundation.objects.filter( site=site )
@@ -118,7 +118,7 @@ class Structure( Networked ):
     # combine all the config stuffs
     return {}
 
-  @cinp.list_filter( name='site', paramater_type_list=[ 'Model:contractor.Site.models.Site' ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
     return Structure.objects.filter( site=site )

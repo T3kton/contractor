@@ -17,7 +17,8 @@ def load_blueprints( app, schema_editor ):
   fbp.save()
 
   sbpl = StructureBluePrint( name='generic-linux', description='Generic Linux' )
-  sbpl.foundation_list = [ fbp ]
+  sbpl.save()
+  sbpl.foundation_blueprint_list = [ fbp ]
   sbpl.save()
 
   sbpu = StructureBluePrint( name='generic-ubuntu', description='Generic Ubuntu' )
@@ -43,7 +44,7 @@ def load_blueprints( app, schema_editor ):
   s.save()
   BluePrintScript( blueprint=sbpl, script=s, name='create' ).save()
 
-  s = Script( name='destroy-virtualbox', description='Uninstall Linux' )
+  s = Script( name='destroy-linux', description='Uninstall Linux' )
   s.script = '# nothing to do, foundation cleanup should wipe/destroy the disks'
   s.save()
   BluePrintScript( blueprint=sbpl, script=s, name='destroy' ).save()
@@ -105,7 +106,7 @@ class Migration(migrations.Migration):
             name='StructureBluePrint',
             fields=[
                 ('blueprint_ptr', models.OneToOneField(to='BluePrint.BluePrint', serialize=False, primary_key=True, auto_created=True, parent_link=True)),
-                ('foundation_list', models.ManyToManyField(to='BluePrint.FoundationBluePrint')),
+                ('foundation_blueprint_list', models.ManyToManyField(to='BluePrint.FoundationBluePrint')),
             ],
             bases=('BluePrint.blueprint',),
         ),

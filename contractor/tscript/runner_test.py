@@ -5,8 +5,6 @@ from datetime import timedelta
 from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, Timeout
 
-from contractor.tscript.runner_plugins_test import other_stuff
-
 class TestStructure( object ):
   pass
 

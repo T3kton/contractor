@@ -45,6 +45,7 @@ if __name__ == '__main__':
   app.registerNamespace( '/', 'contractor.Site' )
   app.registerNamespace( '/', 'contractor.Building' )
   app.registerNamespace( '/', 'contractor.Foreman' )
+  app.registerNamespace( '/', 'contractor.SubContractor' )
 
   logger.info( 'Validating...' )
   app.validate()

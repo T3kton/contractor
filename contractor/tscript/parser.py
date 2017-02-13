@@ -85,9 +85,6 @@ def lint( script ):
 
 
 def parse( script ):
-  print( '---------------------' )
-  print( script )
-  print( '=====================' )
   parser = Parser()
   return parser.parse( script )
 
@@ -96,8 +93,8 @@ class IsEmpty( Exception ):
 
 
 class Parser( object ):
-  def __init__( self, *args, **kwargs ):
-    super().__init__( *args, **kwargs )
+  def __init__( self ):
+    super().__init__()
     self.line_endings = []
     self.grammar = Grammar( tscript_grammar )
 

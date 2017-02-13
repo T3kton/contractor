@@ -12,13 +12,12 @@ from contractor.Building.models import Foundation, Structure
 cinp = CInP( 'Foreman', '0.1' )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_pos', 'script_ast' ) )
+@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_runner', ) )
 class BaseJob( models.Model ): # abstract base class
   JOB_STATE_CHOICES = ( ( 'working', 'working' ), ( 'waiting', 'waiting' ), ( 'done', 'done' ), ( 'pause', 'pause' ), ( 'error', 'error' ) )
   site = models.ForeignKey( Site, editable=False, on_delete=models.CASCADE )
   state = models.CharField( max_length=10, choices=JOB_STATE_CHOICES )
-  script_pos = JSONField( editable=False, default={} )
-  script_ast = JSONField( editable=False, default={} )
+  script_runner = models.BinaryField( editable=False )
   script_name = models.CharField( max_length=20, editable=False, default=False )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -67,7 +66,7 @@ class BaseJob( models.Model ): # abstract base class
     return 'BaseJob #{0} in "{1}"'.format( self.pk, self.site.pk)
 
 
-@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
+@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_runner', ) )
 class FoundationJob( BaseJob ):
   foundation = models.OneToOneField( Foundation, editable=False, on_delete=models.CASCADE )
 
@@ -78,7 +77,7 @@ class FoundationJob( BaseJob ):
     elif self.script_name == 'create':
       self.foundation.setBuilt()
 
-  @cinp.list_filter( name='site', paramater_type_list=[ 'Model:contractor.Site.models.Site' ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
     return FoundationJob.objects.filter( foundation__site=site )
@@ -92,7 +91,7 @@ class FoundationJob( BaseJob ):
     return 'FoundationJob #{0} for "{1}" in "{2}"'.format( self.pk, self.foundation.pk, self.foundation.site.pk )
 
 
-@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
+@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_runner', ) )
 class StructureJob( BaseJob ):
   structure = models.OneToOneField( Structure, editable=False, on_delete=models.CASCADE )
 
@@ -103,7 +102,7 @@ class StructureJob( BaseJob ):
     elif self.script_name == 'create':
       self.structure.setBuilt()
 
-  @cinp.list_filter( name='site', paramater_type_list=[ 'Model:contractor.Site.models.Site' ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
     return StructureJob.objects.filter( structure__site=site )

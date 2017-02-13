@@ -13,16 +13,27 @@ from contractor.Building.models import Foundation, Structure
 from contractor.Foreman.lib import createJob
 
 def main():
-  parser = argparse.ArgumentParser( usage='%(prog)s -s|-f -c|-d|-p <id>', description='Boss/Manipulate Structures and Foundations and their jobs', epilog='' )
+  parser = argparse.ArgumentParser( description='Boss/Manipulate Structures and Foundations and their jobs', epilog='Only one option from task or force state, if more than one is specified, the force state option is ignored' )
   group = parser.add_argument_group( 'target' )
-  group.add_argument( '-s', '--structure', help='boss arround a structure', action='store_true' )
-  group.add_argument( '-f', '--foundation', help='boss arround a structure', action='store_true' )
   group.add_argument( 'id', help='foundation/structure id' )
+  type_group = group.add_mutually_exclusive_group()
+  type_group.add_argument( '-s', '--structure', help='boss arround a structure', action='store_true' )
+  type_group.add_argument( '-f', '--foundation', help='boss arround a structure', action='store_true' )
 
   group = parser.add_argument_group( 'task' )
-  group.add_argument( '-c', '--do-create', help='submit create job', action='store_true' )
-  group.add_argument( '-d', '--do-destroy', help='submit destroy job', action='store_true' )
-  #group.add_argument( '-p', '--pause', help='pause active job', action='store_true' )
+  task_group = group.add_mutually_exclusive_group()
+  task_group.add_argument( '-c', '--do-create', help='submit create job', action='store_true' )
+  task_group.add_argument( '-d', '--do-destroy', help='submit destroy job', action='store_true' )
+  #task_group.add_argument(       '--pause', help='pause active job', action='store_true' )
+  #task_group.add_argument(       '--reset', help='reset error on active job', action='store_true' )
+  #task_group.add_argument(       '--done', help='set  active job to done', action='store_true' )
+
+  group = parser.add_argument_group( 'force state', 'WARNING!!! Use with care, it is possible to leave some foundataions/structures orphand if you are not carefull' )
+  force_group = group.add_mutually_exclusive_group()
+  force_group.add_argument(       '--planned', help='force a foundataion/structure to planned state', action='store_true' )
+  force_group.add_argument(       '--located', help='force a foundation to located state', action='store_true' )
+  force_group.add_argument(       '--built', help='force a foundataion/structure to built state', action='store_true' )
+  force_group.add_argument(       '--clear-job', help='clear any assiciated  jobs', action='store_true' )
 
   args = parser.parse_args()
 
@@ -46,13 +57,66 @@ def main():
   print( 'Working with "{0}"'.format( target ) )
 
   if args.do_create:
-    createJob( 'create', target )
+    try:
+      rc = createJob( 'create', target )
+    except Exception as e:
+      print( 'Error creating create job: "{0}"'.format( str( e ) ) )
+      sys.exit( 1 )
+    print( 'Create Job for {0} created, job #{1}.'.format( target, rc ) )
+    sys.exit( 0 )
 
-  elif args.do_destroy:
-    createJob( 'destroy', target )
+  if args.do_destroy:
+    try:
+      rc = createJob( 'destroy', target )
+    except Exception as e:
+      print( 'Error creating destroy job: "{0}"'.format( str( e ) ) )
+      sys.exit( 1 )
+    print( 'Destroy Job for {0} created, job #{1}.'.format( target, rc ) )
+    sys.exit( 0 )
 
-  else:
-    print( 'unknown task' )
+  if args.planned:
+    target.setDestroyed()
+    print( '{0} now set to planned.'.format( target ) )
+    sys.exit( 0 )
+
+  if args.located:
+    if not isinstance( target, Foundation ):
+      print( 'Can only set Foundations to located' )
+      sys.exit( 1 )
+
+    target.setLocated()
+    print( '{0} now set to located.'.format( target ) )
+    sys.exit( 0 )
+
+  if args.built:
+    target.setBuilt()
+    print( '{0} now set to built.'.format( target ) )
+    sys.exit( 0 )
+
+  if args.clear_job:
+    if isinstance( target, Foundation ):
+      try:
+        job = target.foundationjob
+        print( 'deleting "{0}"...'.format( job ) )
+        job.delete()
+        print( 'done' )
+      except AttributeError:
+        print( 'No Foundation Jobs' )
+
+    if isinstance( target, Structure ):
+      try:
+        job = target.structurejob
+        print( 'deleting "{0}"...'.format( job ) )
+        job.delete()
+        print( 'done' )
+      except AttributeError:
+        print( 'No Structure Jobs' )
+
+    sys.exit( 0 )
+
+
+  print( 'unknown task' )
+  sys.exit( 1 )
 
 if __name__ == '__main__':
   main()
