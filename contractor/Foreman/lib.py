@@ -53,7 +53,7 @@ def processJobs( site, max_jobs=10 ):
 
   # see if there are any planned foundatons that can be auto located
   for foundation in Foundation.objects.filter( located_at__isnull=True, built_at__isnull=True ):
-    if not foundation.canAutoLocate:
+    if not foundation.can_auto_locate:
       continue
 
     foundation.setLocated()

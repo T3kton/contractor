@@ -18,10 +18,16 @@ sbp_xenial = StructureBluePrint.objects.get( pk='generic-xenial' )
 
 print( 'creating sites...' )
 s1 = Site( name='site1', description='Test Site 1' )
+s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'dns_servers' ] = [ '127.0.0.1' ]
+s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
 s1.full_clean()
 s1.save()
 
 s2 = Site( name='site2', description='Test Site 2' )
+s2.config_values[ 'domain_name' ] = 's2.site1.local'
+s2.config_values[ '{dns_search' ] = [ 's2.site1.local' ]
+s2.config_values[ 'dns_servers' ] = [ '10.0.0.1' ]
 s2.parent = s1
 s2.full_clean()
 s2.save()

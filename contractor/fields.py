@@ -4,8 +4,9 @@ import re
 from django.db import models
 from django.core.exceptions import ValidationError
 
-name_regex = re.compile( '^[a-zA-Z0-9_\-]*$')
-hostname_regex = re.compile( '^[a-zA-Z0-9_]*$' ) #TODO: get the real one
+name_regex = re.compile( '^[a-zA-Z0-9][a-zA-Z0-9_\-]*$')
+hostname_regex = re.compile( '^[a-z0-9][a-z0-9\-]*[a-z0-9]$' ) # '.' is not allowed, can cause trouble with the DNS generations stuff, must also be lowercase (DNS is non case sensitive)
+config_name_regex = re.compile( '^[{}\-~]?([a-zA-Z0-9]+:)?[a-zA-Z0-9][a-zA-Z0-9_\-]*$' )
 
 def validate_mapfield( value ):
   if not isinstance( value, dict ):

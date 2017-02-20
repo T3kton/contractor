@@ -114,21 +114,60 @@ function updateStructureJobTable( object_map )
   for( var uri in object_map )
   {
     var entry = object_map[ uri ];
-    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><<td>' + entry.script_name + '</td><td>' + entry.structure + '</td><td>' + entry.progress + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
+    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><td>' + entry.script_name + '</td><td>' + entry.structure + '</td><td>' + entry.progress + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
     row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
     row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.structure ).done( showObject ); } );
     tbody.append( row );
   }
 }
 
-function showObject( data )
+function showObject( data, multi, uri )
 {
-  $( '#object-detail-dialog .modal-title' ).html( data.id );
+  $( '#object-detail-dialog .modal-title' ).html( 'Detail for ' + uri );
   var body = $( '#object-detail-dialog .modal-body tbody' );
   body.empty();
+
+  for( var item of [ 'Building/Foundation', 'Building/Structure', 'Site/Site', 'BluePrint/StructureBluePrint', 'BluePrint/FoundationBluePrint' ] )
+  {
+    if( uri.startsWith( '/api/v1/' + item ) )
+    {
+      var row = $( '<tr><td colspan="2"><button>Get Full Config</button></td></tr>' );
+      row.find( 'button' ).on( 'click', function() { $( '#object-detail-dialog' ).modal( 'hide' ); contractor.cinp.call( uri + '(getConfig)' ).done( showConfig ); } );
+      body.append( row );
+    }
+  }
   for( var key in data )
   {
-    body.append( '<tr><td>' + key + '</td><td>' + data[ key ] + '</td></tr>' );
+    var value = data[ key ] ;
+    var row = $( '<tr><td>' + key + '</td><td>' + data[ key ] + '</td></tr>' );
+    if( typeof value === 'string' && value.startsWith( '/api/v1/' ) )
+    {
+      row.find( 'td:last' ).on( 'click', function() { $( '#object-detail-dialog' ).modal( 'hide' ); contractor.cinp.get( $( this ).html() ).done( showObject ); } );
+    }
+    else if( typeof value === 'object' )
+    {
+      row.find( 'td:last' ).html( '<pre>' + JSON.stringify( value, null, 2 ) + '</pre>' );
+    }
+    body.append( row );
+  }
+  $( '#object-detail-dialog' ).modal( 'show' );
+}
+
+function showConfig( data, uri )
+{
+  $( '#object-detail-dialog .modal-title' ).html( 'Full config for ' + uri );
+  var body = $( '#object-detail-dialog .modal-body tbody' );
+  body.empty();
+
+  for( var key in data )
+  {
+    var value = data[ key ] ;
+    var row = $( '<tr><td>' + key + '</td><td>' + data[ key ] + '</td></tr>' );
+     if( typeof value === 'object' )
+    {
+      row.find( 'td:last' ).html( '<pre>' + JSON.stringify( value, null, 2 ) + '</pre>' );
+    }
+    body.append( row );
   }
   $( '#object-detail-dialog' ).modal( 'show' );
 }

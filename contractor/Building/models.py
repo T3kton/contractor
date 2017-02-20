@@ -10,6 +10,7 @@ from contractor.fields import MapField, JSONField, name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked, PhysicalNetworkInterface
+from contractor.lib.config import getConfig
 
 # this is where the plan meats the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
 
@@ -50,6 +51,10 @@ class Foundation( models.Model ):
     self.located_at = None
     self.save()
 
+  @cinp.action( 'Map' )
+  def getConfig( self ):
+    return getConfig( self )
+
   @property
   def manager( self ):
     return ( None, None ) # manager type, manager paramanter
@@ -59,7 +64,11 @@ class Foundation( models.Model ):
     return 'Foundation'
 
   @property
-  def canAutoLocate( self ): # child models can decide if it can auto submit job for building, ie: vm (and like foundations) are only canBuild if their structure is auto_build
+  def class_list( self ):
+    return []
+
+  @property
+  def can_auto_locate( self ): # child models can decide if it can auto submit job for building, ie: vm (and like foundations) are only canBuild if their structure is auto_build
     return False
 
   @property
@@ -126,6 +135,10 @@ class Structure( Networked ):
     self.built_at = None
     self.config_uuid = str( uuid.uuid4() )
     self.save()
+
+  @cinp.action( 'Map' )
+  def getConfig( self ):
+    return getConfig( self )
 
   @property
   def state( self ):

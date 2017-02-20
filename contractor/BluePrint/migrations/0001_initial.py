@@ -17,15 +17,18 @@ def load_blueprints( app, schema_editor ):
   fbp.save()
 
   sbpl = StructureBluePrint( name='generic-linux', description='Generic Linux' )
+  sbpl.config_values = { 'distro': 'generic' }
   sbpl.save()
   sbpl.foundation_blueprint_list = [ fbp ]
   sbpl.save()
 
   sbpu = StructureBluePrint( name='generic-ubuntu', description='Generic Ubuntu' )
+  sbpu.config_values = { 'distro': 'ubuntu' }
   sbpu.parent = sbpl
   sbpu.save()
 
   sbpx = StructureBluePrint( name='generic-xenial', description='Generic Ubuntu Xenial (16.04 LTS)' )
+  sbpx.config_values = { 'distro_version': 'xenial' }
   sbpx.parent = sbpu
   sbpx.save()
 

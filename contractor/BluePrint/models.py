@@ -5,6 +5,7 @@ from cinp.orm_django import DjangoCInP as CInP
 
 from contractor.fields import MapField, JSONField, StringListField, name_regex
 from contractor.tscript import parser
+from contractor.lib.config import getConfig
 
 # these are the templates, describe how soomething is made and the template of the thing it's made on
 
@@ -29,6 +30,9 @@ class BluePrint( models.Model ):
         return self.parent.get_script( name )
       else:
         raise ValueError( 'BluePrint "{0}" does not have a script named "{1}"'.format( self.name, name ) )
+
+  def getConfig( self ):
+    return getConfig( self )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -56,10 +60,14 @@ class BluePrint( models.Model ):
 # the material is not associated with the sctructure until fully prepared
 # ipmi type ip addresses will belong to the material, they belong to the device not the OS on the device anyway
 # will need a working pool of "eth0" type ips for the prepare
-@cinp.model( property_list=( 'config', 'subcontractor' ) )
+@cinp.model( property_list=( 'subcontractor', ) )
 class FoundationBluePrint( BluePrint ):
   template = JSONField( default={} )
   physical_interface_names = StringListField( max_length=200 )
+
+  @cinp.action( 'Map' )
+  def getConfig( self ):
+    return getConfig( self )
 
   @property
   def subcontractor( self ): # ie the manager that is used to deal with this type of Material
@@ -74,9 +82,13 @@ class FoundationBluePrint( BluePrint ):
     return 'FoundationBluePrint "{0}"({1})'.format( self.description, self.name )
 
 
-@cinp.model( property_list=( 'config', ) )
+@cinp.model(  )
 class StructureBluePrint( BluePrint ):
   foundation_blueprint_list = models.ManyToManyField( FoundationBluePrint ) # list of possible foundations this blueprint could be implemented on
+
+  @cinp.action( 'Map' )
+  def getConfig( self ):
+    return getConfig( self )
 
   @cinp.check_auth()
   @staticmethod
