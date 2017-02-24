@@ -11,8 +11,11 @@ django.setup()
 
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Site.models import Site
-from contractor.Building.models import Foundation, Structure
+from contractor.Building.models import Structure
+from contractor_plugins.VirtualBox.models import VirtualBoxFoundation
+from contractor_plugins.Manual.models import ManualFoundation
 
+fbp_manual = FoundationBluePrint.objects.get( pk='generic-manual' )
 fbp_vm = FoundationBluePrint.objects.get( pk='generic-virtualbox' )
 sbp_xenial = StructureBluePrint.objects.get( pk='generic-xenial' )
 
@@ -33,12 +36,21 @@ s2.full_clean()
 s2.save()
 
 print( 'creating foundations...' )
-fdn_vm1 = Foundation( site=s1, blueprint=fbp_vm, locator='testvm1' )
+fdn_vm1 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='testvm1-vb' )
 fdn_vm1.full_clean()
 fdn_vm1.save()
+
+fdn_manual1 = ManualFoundation( site=s1, blueprint=fbp_manual, locator='oldserver1' )
+fdn_manual1.full_clean()
+fdn_manual1.save()
 
 print( 'creating structures...' )
 str_vm1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm1' )
 str_vm1.foundation = fdn_vm1
 str_vm1.full_clean()
 str_vm1.save()
+
+str_manual1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testmanual1' )
+str_manual1.foundation = fdn_manual1
+str_manual1.full_clean()
+str_manual1.save()

@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(primary_key=True, serialize=False, auto_created=True, verbose_name='ID')),
                 ('state', models.CharField(choices=[('working', 'working'), ('waiting', 'waiting'), ('done', 'done'), ('pause', 'pause'), ('error', 'error')], max_length=10)),
                 ('script_runner', models.BinaryField(editable=False)),
-                ('script_name', models.CharField(default=False, max_length=20, editable=False)),
+                ('script_name', models.CharField(default=False, max_length=40, editable=False)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],

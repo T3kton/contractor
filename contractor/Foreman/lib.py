@@ -6,6 +6,8 @@ from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, cinp
 from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner
 
+RUNNER_MODULE_LIST = []
+
 def createJob( script_name, target ):
   if isinstance( target, Structure ):
     job = StructureJob()
@@ -37,6 +39,8 @@ def createJob( script_name, target ):
   job.site = target.site
 
   runner = Runner( target, parse( target.blueprint.get_script( script_name ) ) )
+  for module in RUNNER_MODULE_LIST:
+    runner.register_module( module )
 
   job.state = 'waiting'
   job.script_name = script_name
@@ -53,6 +57,7 @@ def processJobs( site, max_jobs=10 ):
 
   # see if there are any planned foundatons that can be auto located
   for foundation in Foundation.objects.filter( located_at__isnull=True, built_at__isnull=True ):
+    foundation = foundation.subclass
     if not foundation.can_auto_locate:
       continue
 
@@ -60,6 +65,7 @@ def processJobs( site, max_jobs=10 ):
 
   # see if there are any located foundations that need to be prepared
   for foundation in Foundation.objects.filter( located_at__isnull=False, built_at__isnull=True ):
+    fondation = foundation.subclass
     try:
       FoundationJob.objects.get( foundation=foundation )
       continue # allready has a job, skip it

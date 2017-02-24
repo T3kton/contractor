@@ -16,6 +16,7 @@ from contractor.lib.config import getConfig
 
 cinp = CInP( 'Building', '0.1' )
 
+FOUNDATION_SUBCLASS_LIST = []
 
 @cinp.model( property_list=( 'state', 'type' ) )
 class Foundation( models.Model ):
@@ -51,6 +52,31 @@ class Foundation( models.Model ):
     self.located_at = None
     self.save()
 
+  @property
+  def subclass( self ):
+    for attr in FOUNDATION_SUBCLASS_LIST:
+      try:
+        return getattr( self, attr )
+      except AttributeError:
+        pass
+
+    return self
+
+  @cinp.action( 'String' )
+  def getRealFoundationURI( self ): #TODO: this is such a hack, figure  out a better way
+    subclass = self.subclass
+    class_name = type( subclass ).__name__
+    if class_name == 'Foundation':
+      return '/api/v1/Building/Foundation:{0}:'.format( subclass.pk )
+
+    elif class_name == 'VirtualBoxFoundation':
+      return '/api/v1/VirtualBox/VirtualBoxFoundation:{0}:'.format( subclass.pk )
+
+    elif class_name == 'ManualFoundation':
+      return '/api/v1/Manual/ManualFoundation:{0}:'.format( subclass.pk )
+
+    raise ValueError( 'Unknown Foundation class "{0}"'.format( class_name ) )
+
   @cinp.action( 'Map' )
   def getConfig( self ):
     return getConfig( self )
@@ -61,10 +87,11 @@ class Foundation( models.Model ):
 
   @property
   def type( self ):
-    return 'Foundation'
+    return 'Unknown'
 
   @property
   def class_list( self ):
+    # top level generic classes: Metal, VM, Container, Switch, PDU
     return []
 
   @property
@@ -80,6 +107,15 @@ class Foundation( models.Model ):
       return 'located'
 
     return 'planned'
+
+  def clean( self, *args, **kwargs ): # also need to make sure a Structure is in only one complex
+    super().clean( *args, **kwargs )
+    errors = {}
+    if self.type not in self.blueprint.foundation_type_list:
+      errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint.description, self.type )
+
+    if errors:
+      raise ValidationError( errors )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
@@ -99,7 +135,7 @@ class Foundation( models.Model ):
 class FoundationNetworkInterface( models.Model ):
   foundation = models.ForeignKey( Foundation )
   interface = models.ForeignKey( PhysicalNetworkInterface )
-  name = models.CharField( max_length=20 )
+  name = models.CharField( max_length=40 )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -147,6 +183,15 @@ class Structure( Networked ):
 
     return 'planned'
 
+  def clean( self, *args, **kwargs ): # also need to make sure a Structure is in only one complex
+    super().clean( *args, **kwargs )
+    errors = {}
+    if self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
+      errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint.description, self.foundation.blueprint.description )
+
+    if errors:
+      raise ValidationError( errors )
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
@@ -163,7 +208,7 @@ class Structure( Networked ):
 
 @cinp.model( )
 class Complex( models.Model ):  # group of Structures, ie a cluster
-  name = models.CharField( max_length=20, primary_key=True )
+  name = models.CharField( max_length=40, primary_key=True )
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   description = models.CharField( max_length=200 )
   members = models.ManyToManyField( Structure )

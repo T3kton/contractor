@@ -129,17 +129,17 @@ def set_otherstuff( value ):
 
 ## plugin exports
 
-name = 'testing'
+TSCRIPT_NAME = 'testing'
 
-functions = {
-              'constant': constant,
-              'multiply': multiply,
-              'remote': remote,
-              'count': count
-            }
+TSCRIPT_FUNCTIONS = {
+                      'constant': constant,
+                      'multiply': multiply,
+                      'remote': remote,
+                      'count': count
+                    }
 
-values = {
-           'bigstuff': ( get_bigstuff, None ),
-           'littlestuff': ( None, set_littlestuff ),
-           'otherstuff': ( get_otherstuff, set_otherstuff )
-         }
+TSCRIPT_VALUES = {
+                   'bigstuff': ( get_bigstuff, None ),
+                   'littlestuff': ( None, set_littlestuff ),
+                   'otherstuff': ( get_otherstuff, set_otherstuff )
+                 }

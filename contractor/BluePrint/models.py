@@ -14,9 +14,8 @@ cinp = CInP( 'BluePrint', '0.1' )
 
 @cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class BluePrint( models.Model ):
-  name = models.CharField( max_length=20, primary_key=True )
+  name = models.CharField( max_length=40, primary_key=True )
   description = models.CharField( max_length=200 )
-  parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
   scripts = models.ManyToManyField( 'Script', through='BluePrintScript' )
   config_values = MapField( blank=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -62,7 +61,9 @@ class BluePrint( models.Model ):
 # will need a working pool of "eth0" type ips for the prepare
 @cinp.model( property_list=( 'subcontractor', ) )
 class FoundationBluePrint( BluePrint ):
-  template = JSONField( default={} )
+  parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
+  foundation_type_list = StringListField( max_length=200 ) # list of the foundation types this blueprint can be used for
+  template = JSONField( default={}, blank=True )
   physical_interface_names = StringListField( max_length=200 )
 
   @cinp.action( 'Map' )
@@ -72,6 +73,15 @@ class FoundationBluePrint( BluePrint ):
   @property
   def subcontractor( self ): # ie the manager that is used to deal with this type of Material
     return { 'type': None }
+
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+    if not isinstance( self.template, dict ):
+      errors[ 'template' ] = 'template must be a dict'
+
+    if errors:
+      raise ValidationError( errors )
 
   @cinp.check_auth()
   @staticmethod
@@ -84,7 +94,16 @@ class FoundationBluePrint( BluePrint ):
 
 @cinp.model(  )
 class StructureBluePrint( BluePrint ):
+  parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
   foundation_blueprint_list = models.ManyToManyField( FoundationBluePrint ) # list of possible foundations this blueprint could be implemented on
+
+  @property
+  def combined_foundation_blueprint_list( self ):
+    result = list( self.foundation_blueprint_list.all() )
+    if self.parent is not None:
+      result += self.parent.combined_foundation_blueprint_list
+
+    return list( set( result ) )
 
   @cinp.action( 'Map' )
   def getConfig( self ):
@@ -101,7 +120,7 @@ class StructureBluePrint( BluePrint ):
 
 @cinp.model()
 class Script( models.Model ):
-  name = models.CharField( max_length=20, primary_key=True )
+  name = models.CharField( max_length=40, primary_key=True )
   description = models.CharField( max_length=200 )
   script = models.TextField()
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -120,7 +139,6 @@ class Script( models.Model ):
 
     if errors:
       raise ValidationError( errors )
-
 
   @cinp.check_auth()
   @staticmethod

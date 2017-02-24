@@ -20,7 +20,7 @@ class BaseJob( models.Model ): # abstract base class
   site = models.ForeignKey( Site, editable=False, on_delete=models.CASCADE )
   state = models.CharField( max_length=10, choices=JOB_STATE_CHOICES )
   script_runner = models.BinaryField( editable=False )
-  script_name = models.CharField( max_length=20, editable=False, default=False )
+  script_name = models.CharField( max_length=40, editable=False, default=False )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 

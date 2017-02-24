@@ -66,7 +66,7 @@ run()
 to_contractor() -> if not None value dispatched to contractor
 
 ready is True:
-value -> value returned to script
+value is returned to script
 
 
 
@@ -138,10 +138,11 @@ class ExternalFunction( object ):
     return True
 
   def __getstate__( self ):
-    # make sure to implement get/set state so the object can be serilized
+    # return serilizable value that will be passed to __setstate__ when execution is resumed
     return {}
 
   def __setstate__( self, state ):
+    # restore internal state from state
     pass
 
 
@@ -692,11 +693,11 @@ class Runner( object ):
   def register_module( self, name ):
     module = import_module( name )
 
-    if module.name == 'structure':
+    if module.TSCRIPT_NAME == 'structure':
       raise Exception( '"structure" module is reserved' )
 
-    self.function_map[ module.name ] = module.functions
-    self.value_map[ module.name ] = module.values
+    self.function_map[ module.TSCRIPT_NAME ] = module.TSCRIPT_FUNCTIONS
+    self.value_map[ module.TSCRIPT_NAME ] = module.TSCRIPT_VALUES
 
     self.module_list.append( name )
 

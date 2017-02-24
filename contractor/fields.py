@@ -70,6 +70,7 @@ class MapField( models.TextField ):
   def value_to_string( self, obj ):
     return json.dumps( self._get_val_from_obj( obj ) )
 
+JSON_MAGIC = '\x02JSON\x03'
 
 class JSONField( models.TextField ):
   description = 'JSON Encoded'
@@ -79,18 +80,22 @@ class JSONField( models.TextField ):
       return None
 
     try:
-      value = json.loads( value )
+      value = json.loads( value[ len( JSON_MAGIC ): ] )
     except ValueError:
       raise ValidationError( '"%(value)s" is not valid JSON', params={ 'value': value[ 0:100 ] } )
 
     return value
 
   def to_python( self, value ):
+    print( '--{0}--{1}--'.format( value, type( value).__name__))
     if value is None:
       return None
 
+    if not isinstance( value, str ) or not value.startswith( JSON_MAGIC ):
+      return value
+
     try:
-      value = json.loads( value )
+      value = json.loads( value[ len( JSON_MAGIC ): ] )
     except ValueError:
       raise ValidationError( '"%(value)s" is not valid JSON', params={ 'value': value[ 0:100 ] } )
 
@@ -100,10 +105,10 @@ class JSONField( models.TextField ):
     return value
 
   def get_prep_value( self, value ):
-    return json.dumps( value )
+    return JSON_MAGIC + json.dumps( value )
 
   def value_to_string( self, obj ):
-    return json.dumps( self._get_val_from_obj( obj ) )
+    return JSON_MAGIC + json.dumps( self._get_val_from_obj( obj ) )
 
 
 class StringListField( models.CharField ):

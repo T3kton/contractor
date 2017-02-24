@@ -47,6 +47,10 @@ if __name__ == '__main__':
   app.registerNamespace( '/', 'contractor.Foreman' )
   app.registerNamespace( '/', 'contractor.SubContractor' )
 
+  #app.registerNamespace( '/', name='Foundations', version='0.1' ) put  the plugins in the Foundation Namespace
+  app.registerNamespace( '/', 'contractor_plugins.Manual' )
+  app.registerNamespace( '/', 'contractor_plugins.VirtualBox' )
+
   logger.info( 'Validating...' )
   app.validate()
 

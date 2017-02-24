@@ -5,7 +5,7 @@ from contractor.Foreman.lib import processJobs
 cinp = CInP( 'SubContractor', '0.1' )
 
 
-@cinp.staticModel()
+@cinp.staticModel()  #TODO: move to  Foreman?
 class Dispatch():
   def __init__( self ):
     super().__init__()
@@ -13,7 +13,9 @@ class Dispatch():
   @cinp.action( return_type={ 'type': 'Map', 'is_array': True }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' }, 'Integer' ] )
   @staticmethod
   def getJobs( site, max_jobs=10 ):
-    return processJobs( site, max_jobs )
+    result = processJobs( site, max_jobs )
+    print( '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> "{0}"'.format( result ))
+    return result
 
   @cinp.check_auth()
   @staticmethod

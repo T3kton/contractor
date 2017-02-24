@@ -4,53 +4,40 @@ from __future__ import unicode_literals
 from django.db import migrations, models
 import contractor.fields
 
-def load_blueprints( app, schema_editor ):
-  FoundationBluePrint = app.get_model( 'BluePrint', 'FoundationBluePrint' )
+def load_structure_blueprints( app, schema_editor ):
   StructureBluePrint = app.get_model( 'BluePrint', 'StructureBluePrint' )
   Script = app.get_model( 'BluePrint', 'Script' )
   BluePrintScript = app.get_model( 'BluePrint', 'BluePrintScript' )
 
-  fbp = FoundationBluePrint( name='generic-virtualbox', description='Generic VirtualBox VM' )
-  fbp.config_values = {}
-  fbp.template = {}
-  fbp.physical_interface_names = [ 'eth0' ]
-  fbp.save()
-
   sbpl = StructureBluePrint( name='generic-linux', description='Generic Linux' )
   sbpl.config_values = { 'distro': 'generic' }
-  sbpl.save()
-  sbpl.foundation_blueprint_list = [ fbp ]
+  sbpl.full_clean()
   sbpl.save()
 
   sbpu = StructureBluePrint( name='generic-ubuntu', description='Generic Ubuntu' )
   sbpu.config_values = { 'distro': 'ubuntu' }
   sbpu.parent = sbpl
+  sbpu.full_clean()
   sbpu.save()
 
   sbpx = StructureBluePrint( name='generic-xenial', description='Generic Ubuntu Xenial (16.04 LTS)' )
   sbpx.config_values = { 'distro_version': 'xenial' }
   sbpx.parent = sbpu
+  sbpx.full_clean()
   sbpx.save()
-
-  s = Script( name='create-virtualbox', description='Create VirtualBox VM' )
-  s.script = '# create VM'
-  s.save()
-  BluePrintScript( blueprint=fbp, script=s, name='create' ).save()
-
-  s = Script( name='destroy-virtualbox', description='Destroy VirtualBox VM' )
-  s.script = '# remove vm'
-  s.save()
-  BluePrintScript( blueprint=fbp, script=s, name='destroy' ).save()
 
   s = Script( name='create-linux', description='Install Linux' )
   s.script = '# pxe boot and install'
+  s.full_clean()
   s.save()
   BluePrintScript( blueprint=sbpl, script=s, name='create' ).save()
 
   s = Script( name='destroy-linux', description='Uninstall Linux' )
   s.script = '# nothing to do, foundation cleanup should wipe/destroy the disks'
+  s.full_clean()
   s.save()
   BluePrintScript( blueprint=sbpl, script=s, name='destroy' ).save()
+
 
 class Migration(migrations.Migration):
 
@@ -61,9 +48,9 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='BluePrint',
             fields=[
-                ('name', models.CharField(serialize=False, primary_key=True, max_length=20)),
+                ('name', models.CharField(max_length=40, primary_key=True, serialize=False)),
                 ('description', models.CharField(max_length=200)),
-                ('config_values', contractor.fields.MapField(default={}, blank=True)),
+                ('config_values', contractor.fields.MapField(blank=True, default={})),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
@@ -71,7 +58,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='BluePrintScript',
             fields=[
-                ('id', models.AutoField(serialize=False, primary_key=True, auto_created=True, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, verbose_name='ID', serialize=False)),
                 ('name', models.CharField(max_length=50)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -80,7 +67,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PXE',
             fields=[
-                ('name', models.CharField(serialize=False, primary_key=True, max_length=50)),
+                ('name', models.CharField(max_length=50, primary_key=True, serialize=False)),
                 ('script', models.TextField()),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -89,7 +76,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Script',
             fields=[
-                ('name', models.CharField(serialize=False, primary_key=True, max_length=20)),
+                ('name', models.CharField(max_length=40, primary_key=True, serialize=False)),
                 ('description', models.CharField(max_length=200)),
                 ('script', models.TextField()),
                 ('updated', models.DateTimeField(auto_now=True)),
@@ -99,17 +86,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='FoundationBluePrint',
             fields=[
-                ('blueprint_ptr', models.OneToOneField(to='BluePrint.BluePrint', serialize=False, primary_key=True, auto_created=True, parent_link=True)),
-                ('template', contractor.fields.JSONField(default={})),
-                ('physical_interface_names', contractor.fields.StringListField(default=[], max_length=200)),
+                ('blueprint_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, to='BluePrint.BluePrint', serialize=False)),
+                ('foundation_type_list', contractor.fields.StringListField(max_length=200, default=[])),
+                ('template', contractor.fields.JSONField(default={}, blank=True)),
+                ('physical_interface_names', contractor.fields.StringListField(max_length=200, default=[])),
+                ('parent', models.ForeignKey(blank=True, null=True, to='BluePrint.FoundationBluePrint')),
             ],
             bases=('BluePrint.blueprint',),
         ),
         migrations.CreateModel(
             name='StructureBluePrint',
             fields=[
-                ('blueprint_ptr', models.OneToOneField(to='BluePrint.BluePrint', serialize=False, primary_key=True, auto_created=True, parent_link=True)),
+                ('blueprint_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, to='BluePrint.BluePrint', serialize=False)),
                 ('foundation_blueprint_list', models.ManyToManyField(to='BluePrint.FoundationBluePrint')),
+                ('parent', models.ForeignKey(blank=True, null=True, to='BluePrint.StructureBluePrint')),
             ],
             bases=('BluePrint.blueprint',),
         ),
@@ -125,17 +115,12 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='blueprint',
-            name='parent',
-            field=models.ForeignKey(null=True, blank=True, to='BluePrint.BluePrint'),
-        ),
-        migrations.AddField(
-            model_name='blueprint',
             name='scripts',
-            field=models.ManyToManyField(through='BluePrint.BluePrintScript', to='BluePrint.Script'),
+            field=models.ManyToManyField(to='BluePrint.Script', through='BluePrint.BluePrintScript'),
         ),
         migrations.AlterUniqueTogether(
             name='blueprintscript',
             unique_together=set([('blueprint', 'name')]),
         ),
-        migrations.RunPython( load_blueprints ),
+        migrations.RunPython( load_structure_blueprints ),
     ]
