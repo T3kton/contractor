@@ -52,8 +52,8 @@ function updateFoundationTable( object_map )
   {
     var entry = object_map[ uri ];
     var row = $( '<tr><td>' + uri + '</td><td>' + entry.locator + '</td><td>' + entry.type + '</td><td>' + entry.blueprint + '</td><td>' + entry.state + '</td></tr>' );
-    row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
-    row.find( 'td:eq( 3 )' ).on( 'click', function() { contractor.cinp.get( entry.blueprint ).done( showObject ); } );
+    row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( $( this ).html() ).done( showObject ); } );
+    row.find( 'td:eq( 3 )' ).on( 'click', function() { contractor.cinp.get( $( this ).html() ).done( showObject ); } );
     tbody.append( row );
   }
 }
@@ -75,8 +75,8 @@ function updateStructureTable( object_map )
   {
     var entry = object_map[ uri ];
     var row = $( '<tr><td>' + uri + '</td><td>' + entry.hostname + '</td><td>' + entry.blueprint + '</td><td>' + entry.state + '</td></tr>' );
-    row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
-    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.blueprint ).done( showObject ); } );
+    row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( $( this ).html() ).done( showObject ); } );
+    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( $( this ).html() ).done( showObject ); } );
     tbody.append( row );
   }
 }
@@ -100,7 +100,7 @@ function updateFoundationJobTable( object_map )
     var entry = object_map[ uri ];
     var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><td>' + entry.script_name + '</td><td>' + entry.foundation + '</td><td>' + entry.progress + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
     row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
-    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.foundation ).done( showObject ); } );
+    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( $( this ).html() ).done( showObject ); } );
     tbody.append( row );
   }
 }
@@ -116,7 +116,7 @@ function updateStructureJobTable( object_map )
     var entry = object_map[ uri ];
     var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><td>' + entry.script_name + '</td><td>' + entry.structure + '</td><td>' + entry.progress + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
     row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
-    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( entry.structure ).done( showObject ); } );
+    row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( $( this ).html() ).done( showObject ); } );
     tbody.append( row );
   }
 }
@@ -132,10 +132,27 @@ function showObject( data, multi, uri )
     if( uri.startsWith( '/api/v1/' + item ) )
     {
       var row = $( '<tr><td colspan="2"><button>Get Full Config</button></td></tr>' );
-      row.find( 'button' ).on( 'click', function() { $( '#object-detail-dialog' ).modal( 'hide' ); contractor.cinp.call( uri + '(getConfig)' ).done( showConfig ); } );
+      row.find( 'button' ).on( 'click', function() { $( '#object-detail-dialog' ).modal( 'hide' ); contractor.cinp.call( uri + '(getConfig)' ).done( show ); } );
       body.append( row );
     }
   }
+
+  if( uri.startsWith( '/api/v1/Building/Foundation' ) )
+  {
+    var row = $( '<tr><td colspan="2"><button>Get Real Foundation</button></td></tr>' );
+    row.find( 'button' ).on( 'click', function()
+      {
+        $( '#object-detail-dialog' ).modal( 'hide' );
+        contractor.cinp.call( uri + '(getRealFoundationURI)' ).done( function( uri )
+          {
+            contractor.cinp.get( uri ).done( showObject );
+          }
+        );
+      }
+    );
+    body.append( row );
+  }
+
   for( var key in data )
   {
     var value = data[ key ] ;
