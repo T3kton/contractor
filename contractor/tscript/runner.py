@@ -5,9 +5,15 @@ from contractor.tscript.parser import types
 
 from contractor.Building.models import Structure
 
+# thrown when the scipt would like to pause execution, calling run() resumes execution
+class Pause( Exception ):
+  pass
+
+# resumable error, only differes from pause by the type of exception raised, execution can be resumed with run()
 class ExecutionError( Exception ):
   pass
 
+# this error is no-resumable, the script is no longer able to be run()
 class UnrecoverableError( Exception ):
   pass
 
@@ -17,7 +23,7 @@ class ScriptError( UnrecoverableError ):
 class ParamaterError( UnrecoverableError ):
   def __init__( self, name, msg, line_no=None ):
     if line_no is not None:
-      msg =  'Paramater Error paramater "{0}" line {2}: {1}'.format( name, msg, line_no )
+      msg = 'Paramater Error paramater "{0}" line {2}: {1}'.format( name, msg, line_no )
     else:
       msg = 'Paramater Error paramater "{0}": {1}'.format( name, msg )
     super().__init__( msg )
@@ -49,9 +55,9 @@ class Goto( Exception ):
 
 # for an inline non-pausing/remote function, you only need to implement execute and return_value, to_contractor is not called if ready is immeditally True.
 
-# any exceptions raised in any of these functions will cause the job the script is running for to end up in error state. Use the any Excpetions other than
-# ExecutionError and UnrecoverableError will have it's Exception Name displayed in the output... where possible use ExecutionError for "normal" errors.
-# UnrecoverableError will case the Job to enter a perminate Error state where the job can not be resumed.
+# any exceptions raised in any of these functions will cause the job the script is running for to end up in error state. Using any Excpetions other than
+# ExecutionError and UnrecoverableError will have it's Exception Name displayed in the output, otherwise it is treaded as Unrecoverable... where possible
+# use ExecutionError for "normal" errors.  UnrecoverableError will case the Job to enter a perminate Error state where the job can not be resumed.
 
 """
 
@@ -61,7 +67,7 @@ first execution:
 
 setup()
 
-ready is False:
+ready is False or str:
 run()
 to_contractor() -> if not None value dispatched to contractor
 
@@ -72,7 +78,7 @@ value is returned to script
 
 following executions:
 
-ready is False:
+ready is False or str:
 run()
 
 ready is True:
@@ -106,6 +112,7 @@ class ExternalFunction( object ):
   def value( self ):
     # this returns the return value of this function, called only once, after ready returns True
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
+    # if the returned value is an instance of Exception, it is raised and the return value is None, the function is considered executed
     return None
 
   def run( self ):
@@ -146,6 +153,7 @@ class ExternalFunction( object ):
     pass
 
 
+# used internally to break execution
 class Interrupt( Exception ):
   pass
 
@@ -155,7 +163,10 @@ builtin_function_map = {
                           'slice':  lambda array, start, end: array[ start:end ],
                           'pop':    lambda array, index: array.pop( index ),
                           'append': lambda array, value: array.append( value ),
-                          'index':  lambda array, value: array.index( value )
+                          'index':  lambda array, value: array.index( value ),
+                          'pause':  lambda msg: Pause( msg ),
+                          'error':  lambda msg: ExecutionError( msg ),
+                          'fatal_error': lambda msg: UnrecoverableError( msg )
                         }
 
 infix_math_operator_map = {
@@ -212,11 +223,6 @@ class Runner( object ):
         self.jump_point_map[ child[1] ] = i
 
   @property
-  def progress( self ):
-    # % complete 0.0 - 100.0
-    return self.status[0][0]
-
-  @property
   def line( self ):
     return self.cur_line
 
@@ -225,9 +231,13 @@ class Runner( object ):
     return self.state == 'DONE'
 
   @property
+  def aborted( self ):
+    return self.state == 'ABORTED'
+
+  @property
   def status( self ): # list of ( % complete, status message )
     print( ")){0}((".format( self.state ) )
-    if self.done:
+    if self.done or self.aborted:
       return [ ( 100.0, None ) ]
     if len( self.state ) == 0:
       return [ ( 0.0, None ) ]
@@ -290,24 +300,40 @@ class Runner( object ):
 
   def run( self, ttl=1000 ):
     print( '*********************************' )
+    if self.aborted:
+      return 'aborted'
+
     if self.done:
-      return
+      return 'done'
 
     self.ttl = ttl
 
-    while True:
+    while True: # we are a while loop for the beninit of the goto
       try:
         self._evaluate( self.ast, 0 )
-        break
+        return 'done'
 
-      except Goto as e: # yamk the stack to this jump point,  NOTE: jump points can only be in the global scope
+      except Goto as e: # yank the stack to this jump point,  NOTE: jump points can only be in the global scope
         try:
           self.goto( e.name )
         except NotDefinedError:
+          self.state = 'ABORTED'
           raise NotDefinedError( e.name, e.line_no )
 
-      except Interrupt:
-        break
+      except Interrupt as e:
+        return str( e )
+
+      except ( Pause, ExecutionError ) as e:
+        raise e
+
+      except ( UnrecoverableError, ParamaterError, NotDefinedError, ScriptError ) as e:
+        self.state = 'ABORTED'
+        raise e
+
+      except Exception as e:
+        self.state = 'ABORTED'
+        raise UnrecoverableError( 'Unahndled Exception ({0}): "{1}"'.format( typ( e ).__name__, str( e ) ) )
+
 
   def _evaluate( self, operation, state_index ):
     print( '{1}~~~{0}~~~'.format( operation, '.' * state_index ) )
@@ -542,55 +568,68 @@ class Runner( object ):
       except IndexError:
         self.state[ state_index ].append( { 'paramaters': {} } )
 
-      # get the paramaters
-      for key in op_data[ 'paramaters' ]:
-        try:
-          self.state[ state_index ][1][ 'paramaters' ][ key ]
-        except KeyError:
-          try:
-            self.state[ state_index + 1 ][2]
-          except IndexError:
-            self._evaluate( op_data[ 'paramaters' ][ key ], state_index + 1 )
-
-          self.state[ state_index ][1][ 'paramaters' ][ key ] = self.state[ state_index + 1 ][2]
-          self.state = self.state[ :( state_index + 1 ) ]
-
-      if op_data[ 'module' ] is None:
-        # execute builtin function
-        try:
-          value = builtin_function_map[ op_data[ 'name' ] ]( **self.state[ state_index ][1][ 'paramaters' ] )
-        except TypeError as e:
-          raise ParamaterError( '<unknown>', e, self.cur_line )
-        except KeyError:
-          raise NotDefinedError( op_data[ 'name' ], self.cur_line )
+      if self.state[ state_index ] == [ types.FUNCTION, None, None ]:
+        pass
+        # function allready executed and was an Exceptoin last time, just let things pass by us
 
       else:
-        # execute external function
-        try:
-          handler = self.state[ state_index ][1][ 'handler' ]
-        except KeyError:
+        # get the paramaters
+        for key in op_data[ 'paramaters' ]:
           try:
-            module = self.function_map[ op_data[ 'module' ] ]
+            self.state[ state_index ][1][ 'paramaters' ][ key ]
           except KeyError:
-            raise NotDefinedError( op_data[ 'module' ], self.cur_line )
+            try:
+              self.state[ state_index + 1 ][2]
+            except IndexError:
+              self._evaluate( op_data[ 'paramaters' ][ key ], state_index + 1 )
 
+            self.state[ state_index ][1][ 'paramaters' ][ key ] = self.state[ state_index + 1 ][2]
+            self.state = self.state[ :( state_index + 1 ) ]
+
+        if op_data[ 'module' ] is None:
+          # execute builtin function
           try:
-            handler = module[ op_data[ 'name' ] ]()
+            value = builtin_function_map[ op_data[ 'name' ] ]( **self.state[ state_index ][1][ 'paramaters' ] )
+          except TypeError as e:
+            raise ParamaterError( '<unknown>', e, self.cur_line )
           except KeyError:
             raise NotDefinedError( op_data[ 'name' ], self.cur_line )
 
-          handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
-          self.contractor_cookie = uuid.uuid4()
-          self.state[ state_index ][1][ 'handler' ] = handler
+        else:
+          # execute external function
+          try:
+            handler = self.state[ state_index ][1][ 'handler' ]
+          except KeyError:
+            try:
+              module = self.function_map[ op_data[ 'module' ] ]
+            except KeyError:
+              raise NotDefinedError( op_data[ 'module' ], self.cur_line )
 
-        if handler.ready is not True:
-          handler.run()
-          raise Interrupt()
+            try:
+              handler = module[ op_data[ 'name' ] ]()
+            except KeyError:
+              raise NotDefinedError( op_data[ 'name' ], self.cur_line )
 
-        value = handler.value
+            handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
+            self.contractor_cookie = uuid.uuid4()
+            self.state[ state_index ][1][ 'handler' ] = handler
 
-      self.state[ state_index ][1] = None
-      self.state[ state_index ].append( value )
+          ready = handler.ready
+          if ready is not True:
+            handler.run()
+            if ready is False:
+              ready = ''
+            raise Interrupt( ready )
+
+          value = handler.value
+
+        self.state[ state_index ][1] = None
+        if isinstance( value, Exception ):
+          self.state[ state_index ].append( None )
+          raise value
+
+        else:
+          self.state[ state_index ].append( value )
 
     elif op_type == types.WHILE:
       try:
@@ -661,7 +700,7 @@ class Runner( object ):
 
   def to_contractor( self ):
     # return None if we done, or not started
-    if self.done is None or self.state == []:
+    if self.done or self.aborted or self.state == []:
       return None
 
     # return None if the top of the stack is not a function
@@ -677,7 +716,7 @@ class Runner( object ):
 
   def from_contractor( self, cookie, data ):
     # return None if we done, or not started
-    if self.done is None or self.state == []:
+    if self.done or self.aborted or self.state == []:
       return None
 
     if cookie != self.contractor_cookie:

@@ -4,7 +4,8 @@ from contractor.Building.models import Foundation, Structure
 from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, cinp
 
 from contractor.tscript.parser import parse
-from contractor.tscript.runner import Runner
+from contractor.tscript.runner import Runner, Pause, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, ScriptError
+
 
 RUNNER_MODULE_LIST = []
 
@@ -42,7 +43,7 @@ def createJob( script_name, target ):
   for module in RUNNER_MODULE_LIST:
     runner.register_module( module )
 
-  job.state = 'waiting'
+  job.state = 'queued'
   job.script_name = script_name
   job.script_runner = pickle.dumps( runner )
   job.save()
@@ -86,30 +87,50 @@ def processJobs( site, max_jobs=10 ):
 
   # clean up completed jobs
   for job in BaseJob.objects.filter( site=site, state='done' ):
-    print( '____________ job "{0}" done!'.format(  job ) )
+    print( '_________________________ job "{0}" done!'.format(  job ) )
     job = job.realJob
     job.done()
     job.delete()
 
   # iterate over the curent jobs
   results = []
-  for job in BaseJob.objects.filter( site=site, state='waiting' ).order_by( 'updated' ):
+  for job in BaseJob.objects.filter( site=site, state='queued' ).order_by( 'updated' ):
     job = job.realJob
 
     runner = pickle.loads( job.script_runner )
-    runner.run()
+    try:
+      job.message = runner.run()
 
-    print( '____________ job "{0}" status "{1}", done: "{2}" progress: "{3}"'.format(  job, job.state,  runner.done, runner.progress ) )
+    except Pause as e:
+      job.state = 'paused'
+      job.message = str( e )
+
+    except ExecutionError as e:
+      job.state = 'error'
+      job.message = str( e )
+
+    except ( UnrecoverableError, ParamaterError, NotDefinedError, ScriptError ) as e:
+      job.state = 'aborted'
+      job.message = str( e )
+
+    except Exception as e:
+      job.state = 'aborted'
+      job.message = 'Unknown Runtime Exception ({0}): "{1}"'.format( typ( e ).__name__, str( e ) )
+
+    if runner.aborted:
+      job.state = 'aborted'
 
     if runner.done:
       job.state = 'done'
-      job.save()
-      continue
 
-    result = runner.to_contractor()
-    if result is not None:
-      results.append( result )
+    if job.state == 'queued':
+      result = runner.to_contractor()
+      if result is not None:
+        job.state = 'waiting'
+        results.append( result )
 
+    job.status = runner.status
+    print( '____________ job "{0}"   state: "{1}"   progress: "{2}"    message: "{3}"'.format( job, job.state, job.progress, job.message ) )
     job.script_runner = pickle.dumps( runner )
     job.save()
 

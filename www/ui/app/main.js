@@ -98,9 +98,27 @@ function updateFoundationJobTable( object_map )
   for( var uri in object_map )
   {
     var entry = object_map[ uri ];
-    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><td>' + entry.script_name + '</td><td>' + entry.foundation + '</td><td>' + entry.progress + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
+    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><td>' + entry.script_name + '</td><td>' + entry.foundation + '</td><td>' + entry.message + '</td><td>' + entry.progress + '</td><td>' + entry.state + '</td><td>' + entry.status + '</td><td>' + entry.updated + '</td><td id="buttons"/></tr>' );
     row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
     row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( $( this ).html() ).done( showObject ); } );
+    if( entry.state == 'paused' )
+    {
+      var button = $( '<button>Resume</button>' );
+      button.on( 'click', function() { contractor.cinp.call( uri + '(resume)' ).done( function(){ alert( 'Job Resumed' ); updateFoundationJobTable(); } ).fail( function( message ) { alert( 'Error Resuming Job "' + message + '"' ); } ); } );
+      row.find( '#buttons' ).append( button );
+    }
+    else if( entry.state == 'error' )
+    {
+      var button = $( '<button>Reset</button>' );
+      button.on( 'click', function() { contractor.cinp.call( uri + '(reset)' ).done( function(){ alert( 'Job Reset' ); updateFoundationJobTable(); } ).fail( function( message ) { alert( 'Error Resetting Job "' + message + '"' ); } ); } );
+      row.find( '#buttons' ).append( button );
+    }
+    else if( entry.state == 'queued' )
+    {
+      var button = $( '<button>Pause</button>' );
+      button.on( 'click', function() { contractor.cinp.call( uri + '(pause)' ).done( function(){ alert( 'Job Paused' ); updateFoundationJobTable(); } ).fail( function( message ) { alert( 'Error Pausing Job "' + message + '"' ); } ); } );
+      row.find( '#buttons' ).append( button );
+    }
     tbody.append( row );
   }
 }
@@ -114,7 +132,7 @@ function updateStructureJobTable( object_map )
   for( var uri in object_map )
   {
     var entry = object_map[ uri ];
-    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><td>' + entry.script_name + '</td><td>' + entry.structure + '</td><td>' + entry.progress + '</td><td>' + entry.state + '</td><td>' + entry.updated + '</td></tr>' );
+    var row = $( '<tr><td>' + uri.split( ':' )[1] + '</td><td>' + entry.script_name + '</td><td>' + entry.structure + '</td><td>' + entry.message + '</td><td>' + entry.progress + '</td><td>' + entry.state + '</td><td>' + entry.status + '</td><td>' + entry.updated + '</td><td id="buttons"/></tr>' );
     row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( uri ).done( showObject ); } );
     row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( $( this ).html() ).done( showObject ); } );
     tbody.append( row );

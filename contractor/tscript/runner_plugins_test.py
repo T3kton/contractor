@@ -92,7 +92,8 @@ class count( ExternalFunction ):
 
   @property
   def ready( self ):
-    return self.counter >= self.stop_at
+    if self.counter >= self.stop_at:
+      return True
 
     return 'at {0} of {1}'.format( self.counter, self.stop_at )
 

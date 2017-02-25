@@ -3,7 +3,7 @@ import pickle
 from datetime import timedelta
 
 from contractor.tscript.parser import parse
-from contractor.tscript.runner import Runner, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, Timeout
+from contractor.tscript.runner import Runner, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, Timeout, Pause
 
 class TestStructure( object ):
   pass
@@ -14,26 +14,26 @@ def test_begin():
 
   runner = Runner( struct, parse( '' ) )
   assert runner.state == []
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
   assert runner.state == 'DONE'
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   runner.run()
   assert runner.state == 'DONE'
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
 
   runner = Runner( struct, parse( 'begin()end' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
 
   runner = Runner( struct, parse( 'begin()end' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
 
 
 def test_values():
@@ -63,6 +63,7 @@ def test_values():
   with pytest.raises( NotDefinedError ):
     runner.run()
   assert not runner.done
+  assert runner.aborted
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'asdf = asdf' ) )
@@ -70,6 +71,7 @@ def test_values():
   with pytest.raises( NotDefinedError ):
     runner.run()
   assert not runner.done
+  assert runner.aborted
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'adsf.asdf[1] = 123' ) )
@@ -77,6 +79,7 @@ def test_values():
   with pytest.raises( ParamaterError ):
     runner.run()
   assert not runner.done
+  assert runner.aborted
   assert runner.variable_map == {}
 
 
@@ -205,6 +208,7 @@ def test_plugin_values():
   with pytest.raises( NotDefinedError ):
     runner.run()
   assert not runner.done
+  assert runner.aborted
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'testing.bogus = 100' ) )
@@ -213,6 +217,7 @@ def test_plugin_values():
   with pytest.raises( NotDefinedError ):
     runner.run()
   assert not runner.done
+  assert runner.aborted
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'asdf = bogus.bogus' ) )
@@ -221,6 +226,7 @@ def test_plugin_values():
   with pytest.raises( NotDefinedError ):
     runner.run()
   assert not runner.done
+  assert runner.aborted
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'bogus.bogus = 100' ) )
@@ -229,6 +235,7 @@ def test_plugin_values():
   with pytest.raises( NotDefinedError ):
     runner.run()
   assert not runner.done
+  assert runner.aborted
   assert runner.variable_map == {}
 
 
@@ -288,6 +295,7 @@ def test_infix():
   with pytest.raises( ParamaterError ):
     runner.run()
   assert not runner.done
+  assert runner.aborted
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'myvar = ( "a" + 2.0 )' ) )
@@ -295,6 +303,7 @@ def test_infix():
   with pytest.raises( ParamaterError ):
     runner.run()
   assert not runner.done
+  assert runner.aborted
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'myvar = ( True and False )' ) )
@@ -370,6 +379,68 @@ def test_infix():
   assert runner.variable_map == { 'var2': False }
 
 
+def test_pause_error():
+  struct = TestStructure()
+
+  runner = Runner( struct, parse( 'pause( msg="the message" )' ) )
+  assert runner.variable_map == {}
+  with pytest.raises( Pause ) as execinfo:
+    runner.run()
+  assert str( execinfo.value ) == 'the message'
+  assert not runner.done
+  assert not runner.aborted
+  assert runner.run() == 'done'
+  assert runner.done
+  assert not runner.aborted
+  assert runner.variable_map == {}
+
+  runner = Runner( struct, parse( 'error( msg="oops fix it" )' ) )
+  assert runner.variable_map == {}
+  with pytest.raises( ExecutionError ) as execinfo:
+    runner.run()
+  assert str( execinfo.value ) == 'oops fix it'
+  assert not runner.done
+  assert not runner.aborted
+  assert runner.run() == 'done'
+  assert runner.done
+  assert not runner.aborted
+  assert runner.variable_map == {}
+
+  runner = Runner( struct, parse( 'fatal_error( msg="the world is over, go home" )' ) )
+  assert runner.variable_map == {}
+  with pytest.raises( UnrecoverableError ) as execinfo:
+    runner.run()
+  assert str( execinfo.value ) == 'the world is over, go home'
+  assert not runner.done
+  assert runner.aborted
+  assert runner.run() == 'aborted'
+  assert not runner.done
+  assert runner.aborted
+  assert runner.variable_map == {}
+
+  runner = Runner( struct, parse( 'pause( msg="you should do something" )\nerror( msg="seriously do it" )\nfatal_error( msg="to late now" )' ) )
+  assert runner.variable_map == {}
+  with pytest.raises( Pause ) as execinfo:
+    runner.run()
+  assert str( execinfo.value ) == 'you should do something'
+  assert not runner.done
+  assert not runner.aborted
+  with pytest.raises( ExecutionError ) as execinfo:
+    runner.run()
+  assert str( execinfo.value ) == 'seriously do it'
+  assert not runner.done
+  assert not runner.aborted
+  with pytest.raises( UnrecoverableError ) as execinfo:
+    runner.run()
+  assert str( execinfo.value ) == 'to late now'
+  assert not runner.done
+  assert runner.aborted
+  assert runner.run() == 'aborted'
+  assert not runner.done
+  assert runner.aborted
+  assert runner.variable_map == {}
+
+
 def test_functions():
   struct = TestStructure()
 
@@ -398,94 +469,93 @@ def test_external_functions():
   runner = Runner( struct, parse( 'var = testing.constant()' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.progress == 0.0
-  runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 0.0
+  assert runner.run() == 'done'
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'var': 42 }
 
   runner = Runner( struct, parse( 'var = testing.multiply( value=4321 )' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.progress == 0.0
-  runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 0.0
+  assert runner.run() == 'done'
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'var': 43210 }
 
   runner = Runner( struct, parse( 'var = testing.multiply( value=4321 )\nvar2 = testing.multiply( value=12 )' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.progress == 0.0
-  runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 0.0
+  assert runner.run() == 'done'
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'var': 43210,  'var2': 120 }
 
   runner = Runner( struct, parse( 'var = ( testing.multiply( value=2 ) + testing.multiply( value=3 ) )' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.progress == 0.0
-  runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 0.0
+  assert runner.run() == 'done'
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'var': 50 }
 
   runner = Runner( struct, parse( 'var = testing.multiply( value=testing.multiply( value=11 ) )' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.progress == 0.0
-  runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 0.0
+  assert runner.run() == 'done'
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'var': 1100 }
 
   runner = Runner( struct, parse( '321\nvar = testing.multiply( value=testing.multiply( value=11 ) )' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.progress == 0.0
-  runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 0.0
+  assert runner.run() == 'done'
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'var': 1100 }
 
   runner = Runner( struct, parse( 'testing.count( stop_at=2, count_by=1 )' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
-  assert runner.progress == 0.0
-  runner.run()
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
+  assert runner.run() == 'at 0 of 2'
+  assert runner.status[0][0] == 0.0
   assert not runner.done
-  runner.run()
-  assert runner.progress == 0.0
+  assert runner.run() == 'at 1 of 2'
+  assert runner.status[0][0] == 0.0
   assert not runner.done
-  runner.run()
-  assert runner.progress == 100.0
+  assert runner.run() == 'done'
+  assert runner.status[0][0] == 100.0
   assert runner.done
 
   runner = Runner( struct, parse( 'testing.count( stop_at="asd", count_by=1 )' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   with pytest.raises( ParamaterError ):
     runner.run()
   assert not runner.done
-  assert runner.progress == 0.0
+  assert runner.aborted
+  assert runner.status[0][0] == 100.0
 
   runner = Runner( struct, parse( 'testing.count( stop_at=2, count_by=1 )\ntesting.count( stop_at=1, count_by=1 )' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
-  assert runner.progress == 0.0
-  runner.run()
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
+  assert runner.run() == 'at 0 of 2'
+  assert runner.status[0][0] == 0.0
   assert not runner.done
-  runner.run()
-  assert runner.progress == 0.0
+  assert runner.run() == 'at 1 of 2'
   assert not runner.done
   assert runner.status == [ ( 0.0, {} ) ]
-  runner.run()
-  assert runner.progress == 50.0
+  assert runner.run() == 'at 0 of 1'
   assert not runner.done
   assert runner.status == [ ( 50.0, {} ) ]
-  runner.run()
-  assert runner.progress == 100.0
+  assert runner.run() == 'done'
+  assert runner.status[0][0] == 100.0
   assert runner.done
 
 
@@ -494,29 +564,24 @@ def test_external_remote_functions():
 
   runner = Runner( struct, parse( 'testing.remote()' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
-  assert runner.progress == 0.0
   assert runner.status == [ ( 0.0, None ) ]
   assert runner.to_contractor() == None
   assert runner.line == 0
-  runner.run()
-  assert runner.progress == 0.0
+  assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, {} ) ]
   assert runner.to_contractor() == ( runner.contractor_cookie, 'testing', 'remote', 'the count "1"')
   assert runner.line == 1
-  runner.run()
-  assert runner.progress == 0.0
+  assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, {} ) ]
   assert runner.to_contractor() == ( runner.contractor_cookie, 'testing', 'remote', 'the count "2"')
-  runner.run()
-  assert runner.progress == 0.0
+  assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, {} ) ]
   assert runner.to_contractor() == ( runner.contractor_cookie, 'testing', 'remote', 'the count "3"')
   assert runner.from_contractor( runner.contractor_cookie, True ) == 3
-  runner.run()
-  assert runner.progress == 100.0
+  assert runner.run() == 'done'
   assert runner.done
   assert runner.line == None
   assert runner.status == [ ( 100.0, None ) ]
@@ -524,26 +589,22 @@ def test_external_remote_functions():
 
   runner = Runner( struct, parse( 'var1 = testing.remote()' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
-  assert runner.progress == 0.0
   assert runner.status == [ ( 0.0, None ) ]
   assert runner.to_contractor() == None
   assert runner.variable_map == {}
-  runner.run()
-  assert runner.progress == 0.0
+  assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, {} ) ]
   assert runner.to_contractor() == ( runner.contractor_cookie, 'testing', 'remote', 'the count "1"')
   assert runner.variable_map == {}
-  runner.run()
-  assert runner.progress == 0.0
+  assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, {} ) ]
   assert runner.to_contractor() == ( runner.contractor_cookie, 'testing', 'remote', 'the count "2"')
   assert runner.variable_map == {}
   assert runner.from_contractor( runner.contractor_cookie, 'the sky is falling' ) == 2
   assert runner.variable_map == {}
-  runner.run()
-  assert runner.progress == 100.0
+  assert runner.run() == 'done'
   assert runner.done
   assert runner.status == [ ( 100.0, None ) ]
   assert runner.to_contractor() == None
@@ -555,40 +616,40 @@ def test_serilizer():
 
   runner = Runner( struct, parse( 'testing.count( stop_at=2, count_by=1 )' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   assert not runner.done
   runner.run()
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   assert not runner.done
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
 
   runner = Runner( struct, parse( 'testing.count( stop_at=2, count_by=1 )' ) )
   runner.register_module( 'contractor.tscript.runner_plugins_test' )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   assert not runner.done
 
   buff = pickle.dumps( runner )
   # origional sould  play out as normal
   runner.run()
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   assert not runner.done
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
 
   # copy should do the same thing
   runner2 = pickle.loads( buff )
   runner2.run()
-  assert runner2.progress == 0.0
+  assert runner2.status[0][0] == 0.0
   assert not runner2.done
   runner2.run()
-  assert runner2.progress == 100.0
+  assert runner2.status[0][0] == 100.0
   assert runner2.done
 
 def test_while():
@@ -596,53 +657,53 @@ def test_while():
 
   # first we will test the ttl
   runner = Runner( struct, parse( 'while True do 1' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   with pytest.raises( Timeout ):
     runner.run( 0 )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   assert not runner.done
 
   # ok, now we can have some fun
   runner = Runner( struct, parse( 'while True do 1' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   with pytest.raises( Timeout ):
     runner.run( 10 )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   assert not runner.done
 
   runner = Runner( struct, parse( 'cnt = 1\nwhile ( cnt >= 1 ) do cnt = ( cnt + 1 )' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   for i in range( 0, 100 ): # just do this infinite loop for a long time, make sure it dosen't have other problems
     with pytest.raises( Timeout ):
       runner.run( i )
-    runner.status
-  assert runner.progress == 50.0
+    runner.status # make sure nothing bad happens while computing status
+  assert runner.status[0][0] == 50.0
   assert not runner.done
 
   runner = Runner( struct, parse( 'cnt = 1\nwhile True do cnt = ( cnt + 1 )' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   with pytest.raises( Timeout ):
     runner.run( 20 )
-  assert runner.progress == 50.0
+  assert runner.status[0][0] == 50.0
   assert not runner.done
   assert runner.variable_map == { 'cnt': 3 }
   with pytest.raises( Timeout ):
     runner.run( 20 )
-  assert runner.progress == 50.0
+  assert runner.status[0][0] == 50.0
   assert not runner.done
   assert runner.variable_map == { 'cnt': 6 }
 
   runner = Runner( struct, parse( 'while False do asdf = 5' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run( 500 )
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'cnt = 1\nwhile ( cnt < 10 ) do cnt = ( cnt + 1 )' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run( 500 )
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'cnt': 10 }
 
@@ -650,117 +711,118 @@ def test_ifelse():
   struct = TestStructure()
 
   runner = Runner( struct, parse( 'if False then var = 1' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'if True then var = 1' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'var': 1 }
 
   runner = Runner( struct, parse( 'if False then var = 1 else var = 2' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'var': 2 }
 
   runner = Runner( struct, parse( 'asd = 1\nif ( asd == 1 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 3 ) then var = "c" else var = "d"' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 1, 'var': "a" }
 
   runner = Runner( struct, parse( 'asd = 2\nif ( asd == 1 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 3 ) then var = "c" else var = "d"' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 2, 'var': "b" }
 
   runner = Runner( struct, parse( 'asd = 9\nif ( asd == 1 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 3 ) then var = "c" else var = "d"' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 9, 'var': "d" }
 
   runner = Runner( struct, parse( 'asd = 1\nif ( asd == 1 ) then var = "a" elif ( asd == 1 ) then var = "b" elif ( asd == 1 ) then var = "c" else var = "d"' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 1, 'var': "a" }
 
   runner = Runner( struct, parse( 'asd = 1\nif ( asd == 2 ) then var = "a" elif ( asd == 1 ) then var = "b" elif ( asd == 1 ) then var = "c" else var = "d"' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 1, 'var': "b" }
 
   runner = Runner( struct, parse( 'asd = 1\nif ( asd == 2 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 1 ) then var = "c" else var = "d"' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 1, 'var': "c" }
 
   runner = Runner( struct, parse( 'asd = 1\nif ( asd == 2 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 2 ) then var = "c" else var = "d"' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 1, 'var': "d" }
 
   runner = Runner( struct, parse( 'asd = 1\nif ( asd == 2 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 2 ) then var = "c" else var = "d"\nwhile True do 10' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   for i in range( 0, 10 ): # just do this infinite loop for a long time, make sure it dosen't have other problems
     with pytest.raises( Timeout ):
       runner.run( i )
-    runner.status
-  assert runner.progress == 66.66666666666667
+    runner.status # make sure nothing bad happens while computing status
+  assert runner.status[0][0] == 66.66666666666667
   assert not runner.done
 
 def test_jumppoint():
   struct = TestStructure()
 
   runner = Runner( struct, parse( 'abc = 1\n:jump_a\ndce = 2' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'abc': 1, 'dce': 2 }
 
   runner = Runner( struct, parse( 'goto jump_a\nabc = 1\n:jump_a\ndce = 2' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'dce': 2 }
 
   runner = Runner( struct, parse( 'goto jump_b\nabc = 1\n:jump_a\ndce = 2' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   with pytest.raises( NotDefinedError ):
     runner.run()
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 100.0
   assert not runner.done
+  assert runner.aborted
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'goto jump_b\nabc = 1\n:jump_a\ndce = 2' ) )
-  assert runner.progress == 0.0
+  assert runner.status[0][0] == 0.0
   runner.goto( 'jump_a' )
   with pytest.raises( Timeout ):
     runner.run( 2 )
   assert runner.line == 3
   runner.run()
-  assert runner.progress == 100.0
+  assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'dce': 2 }
 

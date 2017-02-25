@@ -18,7 +18,7 @@ cinp = CInP( 'Building', '0.1' )
 
 FOUNDATION_SUBCLASS_LIST = []
 
-@cinp.model( property_list=( 'state', 'type' ) )
+@cinp.model( property_list=( 'state', 'type', 'class_list' ) )
 class Foundation( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )

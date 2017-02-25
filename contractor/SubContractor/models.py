@@ -12,7 +12,7 @@ class Dispatch():
 
   @cinp.action( return_type={ 'type': 'Map', 'is_array': True }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' }, 'Integer' ] )
   @staticmethod
-  def getJobs( site, max_jobs=10 ):
+  def getJobs( site='/api/v1/Site/Site:site1:', max_jobs=10 ):
     result = processJobs( site, max_jobs )
     print( '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> "{0}"'.format( result ))
     return result
