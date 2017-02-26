@@ -9,6 +9,7 @@ from contractor.tscript.runner import Runner, Pause, ExecutionError, Unrecoverab
 
 RUNNER_MODULE_LIST = []
 
+
 def createJob( script_name, target ):
   if isinstance( target, Structure ):
     job = StructureJob()
@@ -41,7 +42,7 @@ def createJob( script_name, target ):
 
   runner = Runner( target, parse( target.blueprint.get_script( script_name ) ) )
   for module in RUNNER_MODULE_LIST:
-    runner.register_module( module )
+    runner.registerModule( module )
 
   job.state = 'queued'
   job.script_name = script_name
@@ -52,7 +53,7 @@ def createJob( script_name, target ):
 
   return job.pk
 
-def processJobs( site, max_jobs=10 ):
+def processJobs( site, module_list, max_jobs=10 ):
   if max_jobs > 100:
     max_jobs = 100
 
@@ -124,10 +125,19 @@ def processJobs( site, max_jobs=10 ):
       job.state = 'done'
 
     if job.state == 'queued':
-      result = runner.to_contractor()
-      if result is not None:
-        job.state = 'waiting'
-        results.append( result )
+      request = runner.toSubcontractor()
+      if request is not None:
+        if request[ 'module' ] in module_list: # check to see if the subcontractor that asked can deal with this
+          job.state = 'dispatched'
+          manager = job.foundation.subclass.manager
+          if manager[0] is None:
+            raise ValueError( 'manager for "{0}"({1}) is not defined'.format( job.foundation.locator, job.foundation.blueprint.description ) )
+
+          request.update( { 'manager': manager, 'job': job.pk } )
+          results.append( request )
+
+        else:
+          job.state = 'waiting'
 
     job.status = runner.status
     print( '____________ job "{0}"   state: "{1}"   progress: "{2}"    message: "{3}"'.format( job, job.state, job.progress, job.message ) )

@@ -53,11 +53,19 @@ class Goto( Exception ):
 # for values in modules, the getter/setter must not block, if you need to block
 # make a external function
 
-# for an inline non-pausing/remote function, you only need to implement execute and return_value, to_contractor is not called if ready is immeditally True.
+# for an inline non-pausing/remote function, you only need to implement execute and return_value, toSubcontractor is not called if ready is immeditally True.
 
 # any exceptions raised in any of these functions will cause the job the script is running for to end up in error state. Using any Excpetions other than
 # ExecutionError and UnrecoverableError will have it's Exception Name displayed in the output, otherwise it is treaded as Unrecoverable... where possible
 # use ExecutionError for "normal" errors.  UnrecoverableError will case the Job to enter a perminate Error state where the job can not be resumed.
+
+# Keep in mind that toSubcontractor may be called without the resulting value ever making it to subcontractor.  Network issues, multiple subcontractors
+# not all containing all the needed plugins, etc may cause toSubcontractor's output to be discarded.  It may also be possible that subcontractor might
+# lock up and never return it's results to fromSubcontractor (lock up, network issues, process terminated, etc.), design acordingly.
+
+# it is perfectly acceptable to not complete the remote function in one request, if some communication betwee contractor and subcontractor modules is needed
+# this is allowed, keep in-mind, you may need to handle retries.  When handeling retries, do not rely on counting the number of times toSubcontractor/run/ready
+# are called, it is acceptable to store local timers.
 
 """
 
@@ -69,7 +77,7 @@ setup()
 
 ready is False or str:
 run()
-to_contractor() -> if not None value dispatched to contractor
+toSubcontractor() -> if not None value dispatched to contractor
 
 ready is True:
 value is returned to script
@@ -88,9 +96,6 @@ value is returned to script
 
 class ExternalFunction( object ):
   # these two tell contractor what module and function should handle the contractor data
-  contractor_module = None
-  contractor_function = None
-
   def __init__( self ):
     super().__init__()
 
@@ -128,7 +133,7 @@ class ExternalFunction( object ):
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     pass
 
-  def to_contractor( self ):
+  def toSubcontractor( self ):
     # this is sent to the contractor, first paramater is the plugin in contractor, the second is the function inside the plugin to call, third is the value to send to the function
     # this is only called once, after execute is called and ready is called ( and returns False )
     # return ( 'builtin', 'nop', None )
@@ -137,7 +142,7 @@ class ExternalFunction( object ):
     # contractor threads will be waiting on this function
     return None
 
-  def from_contractor( self, data ):
+  def fromFubcontractor( self, data ):
     # return value is send back to contractor so the plugin in contractor can get some feedback
     # can be called multiple times, depending on what the plugin is coded to do
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
@@ -213,8 +218,8 @@ class Runner( object ):
     # setup structure plugin
     if isinstance( target, Structure ):
       self.structure_plugin = StructurePlugin( self.target )
-      self.value_map[ 'structure' ] = self.structure_plugin.get_values()
-      self.function_map[ 'structure' ] = self.structure_plugin.get_functions()
+      self.value_map[ 'structure' ] = self.structure_plugin.getValues()
+      self.function_map[ 'structure' ] = self.structure_plugin.getFunctions()
 
     # scan for all the jump points
     for i in range( 0, len( ast[1][ '_children' ] ) ):
@@ -311,7 +316,7 @@ class Runner( object ):
     while True: # we are a while loop for the beninit of the goto
       try:
         self._evaluate( self.ast, 0 )
-        return 'done'
+        return ''
 
       except Goto as e: # yank the stack to this jump point,  NOTE: jump points can only be in the global scope
         try:
@@ -611,8 +616,10 @@ class Runner( object ):
               raise NotDefinedError( op_data[ 'name' ], self.cur_line )
 
             handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
-            self.contractor_cookie = uuid.uuid4()
+            self.contractor_cookie = str( uuid.uuid4() )
             self.state[ state_index ][1][ 'handler' ] = handler
+            self.state[ state_index ][1][ 'module' ] = op_data[ 'module' ]
+            self.state[ state_index ][1][ 'function' ] = op_data[ 'name' ]
 
           ready = handler.ready
           if ready is not True:
@@ -698,7 +705,7 @@ class Runner( object ):
       self.state = 'DONE'
       self.cur_line = None
 
-  def to_contractor( self ):
+  def toSubcontractor( self ):
     # return None if we done, or not started
     if self.done or self.aborted or self.state == []:
       return None
@@ -708,13 +715,13 @@ class Runner( object ):
       return None
 
     handler = self.state[-1][1][ 'handler' ]
-    data = handler.to_contractor()
-    if data is None:
+    paramaters = handler.toSubcontractor()
+    if paramaters is None:
       return None
 
-    return ( self.contractor_cookie, handler.contractor_module, handler.contractor_function, data )
+    return { 'module': self.state[-1][1][ 'module' ], 'function': self.state[-1][1][ 'function' ], 'cookie': self.contractor_cookie, 'paramaters': paramaters }
 
-  def from_contractor( self, cookie, data ):
+  def fromSubcontractor( self, cookie, data ):
     # return None if we done, or not started
     if self.done or self.aborted or self.state == []:
       return None
@@ -727,9 +734,9 @@ class Runner( object ):
       return None
 
     handler = self.state[-1][1][ 'handler' ]
-    return handler.from_contractor( data )
+    return handler.fromSubcontractor( data )
 
-  def register_module( self, name ):
+  def registerModule( self, name ):
     module = import_module( name )
 
     if module.TSCRIPT_NAME == 'structure':
@@ -751,7 +758,7 @@ class Runner( object ):
     self.variable_map = state[ 'variable_map' ]
     self.cur_line = state[ 'cur_line' ]
     for module in state[ 'module_list' ]:
-      self.register_module( module )
+      self.registerModule( module )
 
 
 class StructurePlugin( object ):
@@ -759,13 +766,13 @@ class StructurePlugin( object ):
     super().__init__()
     self.structure = structure
 
-  def get_values( self ):
+  def getValues( self ):
     result = {}
     result[ 'hostname' ] = ( lambda: self.structure.hostname, None )
 
     return result
 
-  def get_functions( self ):
+  def getFunctions( self ):
     result = {}
 
     return result

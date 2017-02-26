@@ -87,7 +87,7 @@ class BaseJob( models.Model ): # abstract base class
     return False
 
   def __str__( self ):
-    return 'BaseJob #{0} in "{1}"'.format( self.pk, self.site.pk)
+    return 'BaseJob #{0} in "{1}"'.format( self.pk, self.site.pk )
 
 
 @cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', 'status' ) )
@@ -137,6 +137,10 @@ class StructureJob( BaseJob ):
 
     elif self.script_name == 'create':
       self.structure.setBuilt()
+
+  @property
+  def foundation( self ):
+    return self.structure.foundation
 
   @cinp.action()
   def pause( self ):

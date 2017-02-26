@@ -28,9 +28,6 @@ class multiply( ExternalFunction ):
 
 
 class remote( ExternalFunction ):
-  contractor_module = 'testing'
-  contractor_function = 'remote'
-
   def __init__( self, *args, **kwargs ):
     super().__init__( *args, **kwargs )
     self.state = None
@@ -51,10 +48,10 @@ class remote( ExternalFunction ):
   def run( self ):
     self.counter += 1
 
-  def to_contractor( self ):
+  def toSubcontractor( self ):
     return 'the count "{0}"'.format( self.counter )
 
-  def from_contractor( self, data ):
+  def fromSubcontractor( self, data ):
     self.state = data
     return self.counter
 

@@ -87,7 +87,6 @@ class JSONField( models.TextField ):
     return value
 
   def to_python( self, value ):
-    print( '--{0}--{1}--'.format( value, type( value).__name__))
     if value is None:
       return None
 
@@ -105,6 +104,7 @@ class JSONField( models.TextField ):
     return value
 
   def get_prep_value( self, value ):
+    print( '^^^^^^^^^^^^^^^^ {0}'.format( value ))
     return JSON_MAGIC + json.dumps( value )
 
   def value_to_string( self, obj ):

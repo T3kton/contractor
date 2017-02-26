@@ -175,35 +175,35 @@ def test_plugin_values():
   struct = TestStructure()
 
   runner = Runner( struct, parse( 'asdf = testing.bigstuff' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   runner.run()
   assert runner.done
   assert runner.variable_map == { 'asdf': 'the big stuff' }
 
   runner = Runner( struct, parse( 'testing.littlestuff = 42' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   runner.run()
   assert runner.done
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'asdf = testing.otherstuff' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   runner.run()
   assert runner.done
   assert runner.variable_map == { 'asdf': None }
 
   runner = Runner( struct, parse( 'asdf = testing.otherstuff\ntesting.otherstuff = "hello"\nqwerty = testing.otherstuff' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   runner.run()
   assert runner.done
   assert runner.variable_map == { 'asdf': None, 'qwerty': 'hello' }
 
   runner = Runner( struct, parse( 'asdf = testing.bogus' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   with pytest.raises( NotDefinedError ):
     runner.run()
@@ -212,7 +212,7 @@ def test_plugin_values():
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'testing.bogus = 100' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   with pytest.raises( NotDefinedError ):
     runner.run()
@@ -221,7 +221,7 @@ def test_plugin_values():
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'asdf = bogus.bogus' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   with pytest.raises( NotDefinedError ):
     runner.run()
@@ -230,7 +230,7 @@ def test_plugin_values():
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'bogus.bogus = 100' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   with pytest.raises( NotDefinedError ):
     runner.run()
@@ -389,9 +389,10 @@ def test_pause_error():
   assert str( execinfo.value ) == 'the message'
   assert not runner.done
   assert not runner.aborted
-  assert runner.run() == 'done'
+  assert runner.run() == ''
   assert runner.done
   assert not runner.aborted
+  assert runner.run() == 'done'
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'error( msg="oops fix it" )' ) )
@@ -401,9 +402,10 @@ def test_pause_error():
   assert str( execinfo.value ) == 'oops fix it'
   assert not runner.done
   assert not runner.aborted
-  assert runner.run() == 'done'
+  assert runner.run() == ''
   assert runner.done
   assert not runner.aborted
+  assert runner.run() == 'done'
   assert runner.variable_map == {}
 
   runner = Runner( struct, parse( 'fatal_error( msg="the world is over, go home" )' ) )
@@ -467,61 +469,67 @@ def test_external_functions():
   struct = TestStructure()
 
   runner = Runner( struct, parse( 'var = testing.constant()' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   assert runner.status[0][0] == 0.0
-  assert runner.run() == 'done'
+  assert runner.run() == ''
   assert runner.status[0][0] == 100.0
   assert runner.done
+  assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 42 }
 
   runner = Runner( struct, parse( 'var = testing.multiply( value=4321 )' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   assert runner.status[0][0] == 0.0
-  assert runner.run() == 'done'
+  assert runner.run() == ''
   assert runner.status[0][0] == 100.0
   assert runner.done
+  assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 43210 }
 
   runner = Runner( struct, parse( 'var = testing.multiply( value=4321 )\nvar2 = testing.multiply( value=12 )' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   assert runner.status[0][0] == 0.0
-  assert runner.run() == 'done'
+  assert runner.run() == ''
   assert runner.status[0][0] == 100.0
   assert runner.done
+  assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 43210,  'var2': 120 }
 
   runner = Runner( struct, parse( 'var = ( testing.multiply( value=2 ) + testing.multiply( value=3 ) )' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   assert runner.status[0][0] == 0.0
-  assert runner.run() == 'done'
+  assert runner.run() == ''
   assert runner.status[0][0] == 100.0
   assert runner.done
+  assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 50 }
 
   runner = Runner( struct, parse( 'var = testing.multiply( value=testing.multiply( value=11 ) )' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   assert runner.status[0][0] == 0.0
-  assert runner.run() == 'done'
+  assert runner.run() == ''
   assert runner.status[0][0] == 100.0
   assert runner.done
+  assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 1100 }
 
   runner = Runner( struct, parse( '321\nvar = testing.multiply( value=testing.multiply( value=11 ) )' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
   assert runner.status[0][0] == 0.0
-  assert runner.run() == 'done'
+  assert runner.run() == ''
   assert runner.status[0][0] == 100.0
   assert runner.done
+  assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 1100 }
 
   runner = Runner( struct, parse( 'testing.count( stop_at=2, count_by=1 )' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.status[0][0] == 0.0
   assert runner.run() == 'at 0 of 2'
   assert runner.status[0][0] == 0.0
@@ -529,21 +537,23 @@ def test_external_functions():
   assert runner.run() == 'at 1 of 2'
   assert runner.status[0][0] == 0.0
   assert not runner.done
-  assert runner.run() == 'done'
+  assert runner.run() == ''
   assert runner.status[0][0] == 100.0
   assert runner.done
+  assert runner.run() == 'done'
 
   runner = Runner( struct, parse( 'testing.count( stop_at="asd", count_by=1 )' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.status[0][0] == 0.0
   with pytest.raises( ParamaterError ):
     runner.run()
   assert not runner.done
   assert runner.aborted
+  assert runner.run() == 'aborted'
   assert runner.status[0][0] == 100.0
 
   runner = Runner( struct, parse( 'testing.count( stop_at=2, count_by=1 )\ntesting.count( stop_at=1, count_by=1 )' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.status[0][0] == 0.0
   assert runner.run() == 'at 0 of 2'
   assert runner.status[0][0] == 0.0
@@ -554,60 +564,63 @@ def test_external_functions():
   assert runner.run() == 'at 0 of 1'
   assert not runner.done
   assert runner.status == [ ( 50.0, {} ) ]
-  assert runner.run() == 'done'
+  assert runner.run() == ''
   assert runner.status[0][0] == 100.0
   assert runner.done
+  assert runner.run() == 'done'
 
 
 def test_external_remote_functions():
   struct = TestStructure()
 
   runner = Runner( struct, parse( 'testing.remote()' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.status == [ ( 0.0, None ) ]
-  assert runner.to_contractor() == None
+  assert runner.toSubcontractor() == None
   assert runner.line == 0
   assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, {} ) ]
-  assert runner.to_contractor() == ( runner.contractor_cookie, 'testing', 'remote', 'the count "1"')
+  assert runner.toSubcontractor() == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote', 'paramaters': 'the count "1"' }
   assert runner.line == 1
   assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, {} ) ]
-  assert runner.to_contractor() == ( runner.contractor_cookie, 'testing', 'remote', 'the count "2"')
+  assert runner.toSubcontractor() == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote', 'paramaters': 'the count "2"' }
   assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, {} ) ]
-  assert runner.to_contractor() == ( runner.contractor_cookie, 'testing', 'remote', 'the count "3"')
-  assert runner.from_contractor( runner.contractor_cookie, True ) == 3
-  assert runner.run() == 'done'
+  assert runner.toSubcontractor() == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote', 'paramaters': 'the count "3"' }
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 3
+  assert runner.run() == ''
   assert runner.done
+  assert runner.run() == 'done'
   assert runner.line == None
   assert runner.status == [ ( 100.0, None ) ]
-  assert runner.to_contractor() == None
+  assert runner.toSubcontractor() == None
 
   runner = Runner( struct, parse( 'var1 = testing.remote()' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.status == [ ( 0.0, None ) ]
-  assert runner.to_contractor() == None
+  assert runner.toSubcontractor() == None
   assert runner.variable_map == {}
   assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, {} ) ]
-  assert runner.to_contractor() == ( runner.contractor_cookie, 'testing', 'remote', 'the count "1"')
+  assert runner.toSubcontractor() == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote', 'paramaters': 'the count "1"' }
   assert runner.variable_map == {}
   assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, {} ) ]
-  assert runner.to_contractor() == ( runner.contractor_cookie, 'testing', 'remote', 'the count "2"')
+  assert runner.toSubcontractor() == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote', 'paramaters': 'the count "2"' }
   assert runner.variable_map == {}
-  assert runner.from_contractor( runner.contractor_cookie, 'the sky is falling' ) == 2
+  assert runner.fromSubcontractor( runner.contractor_cookie, 'the sky is falling' ) == 2
   assert runner.variable_map == {}
-  assert runner.run() == 'done'
+  assert runner.run() == ''
   assert runner.done
+  assert runner.run() == 'done'
   assert runner.status == [ ( 100.0, None ) ]
-  assert runner.to_contractor() == None
+  assert runner.toSubcontractor() == None
   assert runner.variable_map == { 'var1': 'the sky is falling' }
 
 
@@ -615,7 +628,7 @@ def test_serilizer():
   struct = TestStructure()
 
   runner = Runner( struct, parse( 'testing.count( stop_at=2, count_by=1 )' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.status[0][0] == 0.0
   runner.run()
   assert runner.status[0][0] == 0.0
@@ -628,7 +641,7 @@ def test_serilizer():
   assert runner.done
 
   runner = Runner( struct, parse( 'testing.count( stop_at=2, count_by=1 )' ) )
-  runner.register_module( 'contractor.tscript.runner_plugins_test' )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.status[0][0] == 0.0
   runner.run()
   assert runner.status[0][0] == 0.0
@@ -830,4 +843,4 @@ def test_jumppoint():
 # test jumping over one function to another, making sure that the function returns are not crossed, and the jumped over function dosen't get it's return value accepted
 #test the contractor_cookie is getting rolled over correctly
 #try something with a better progress
-# test serilize and unserilize
+# test serilize and unserilize, especially with all the block options

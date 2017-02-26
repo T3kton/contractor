@@ -3,3 +3,5 @@ vagrant/.vagrant
 vagrant/.Vagrantfile.swp
 *.sqlite3
 htmlcov
+.coverage
+.cache
