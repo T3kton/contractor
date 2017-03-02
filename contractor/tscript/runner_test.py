@@ -560,10 +560,10 @@ def test_external_functions():
   assert not runner.done
   assert runner.run() == 'at 1 of 2'
   assert not runner.done
-  assert runner.status == [ ( 0.0, {} ) ]
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'count', 'dispatched': False } ) ]
   assert runner.run() == 'at 0 of 1'
   assert not runner.done
-  assert runner.status == [ ( 50.0, {} ) ]
+  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'count', 'dispatched': False } ) ]
   assert runner.run() == ''
   assert runner.status[0][0] == 100.0
   assert runner.done
@@ -575,53 +575,81 @@ def test_external_remote_functions():
 
   runner = Runner( struct, parse( 'testing.remote()' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
-  assert runner.status == [ ( 0.0, None ) ]
-  assert runner.toSubcontractor() == None
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) == None
   assert runner.line == 0
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 'Script not Running'
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, {} ) ]
-  assert runner.toSubcontractor() == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote', 'paramaters': 'the count "1"' }
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 'Not Expecting anything'
+  assert runner.toSubcontractor( [] ) == None
+  assert runner.toSubcontractor( [ 'sdf', 'were' ] ) == None
+  assert runner.toSubcontractor( [ 'rfrf', 'testing', 'sdf' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "1"' }
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
   assert runner.line == 1
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, {} ) ]
-  assert runner.toSubcontractor() == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote', 'paramaters': 'the count "2"' }
-  assert runner.run() == 'Not Initilized'
-  assert not runner.done
-  assert runner.status == [ ( 0.0, {} ) ]
-  assert runner.toSubcontractor() == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote', 'paramaters': 'the count "3"' }
-  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 3
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.fromSubcontractor( 'Bad Cookie', True ) == 'Bad Cookie'
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 'Accepted'
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 'Not Expecting anything'
+  assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "2"' }
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 'Accepted'
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.run() == ''
   assert runner.done
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 'Script not Running'
   assert runner.run() == 'done'
   assert runner.line == None
-  assert runner.status == [ ( 100.0, None ) ]
-  assert runner.toSubcontractor() == None
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) == None
 
   runner = Runner( struct, parse( 'var1 = testing.remote()' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
-  assert runner.status == [ ( 0.0, None ) ]
-  assert runner.toSubcontractor() == None
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) == None
   assert runner.variable_map == {}
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, {} ) ]
-  assert runner.toSubcontractor() == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote', 'paramaters': 'the count "1"' }
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "1"' }
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
   assert runner.variable_map == {}
-  assert runner.run() == 'Not Initilized'
-  assert not runner.done
-  assert runner.status == [ ( 0.0, {} ) ]
-  assert runner.toSubcontractor() == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote', 'paramaters': 'the count "2"' }
-  assert runner.variable_map == {}
-  assert runner.fromSubcontractor( runner.contractor_cookie, 'the sky is falling' ) == 2
+  assert runner.fromSubcontractor( runner.contractor_cookie, 'the sky is falling' ) == 'Accepted'
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.variable_map == {}
   assert runner.run() == ''
   assert runner.done
   assert runner.run() == 'done'
-  assert runner.status == [ ( 100.0, None ) ]
-  assert runner.toSubcontractor() == None
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) == None
   assert runner.variable_map == { 'var1': 'the sky is falling' }
+
+  runner = Runner( struct, parse( 'testing.remote()' ) )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
+  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.variable_map == {}
+  assert runner.run() == 'Not Initilized'
+  assert not runner.done
+  assert runner.status == [ ( 0.0, {} ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "1"' }
+  assert runner.variable_map == {}
+  assert runner.fromSubcontractor( runner.contractor_cookie, 'Bad' ) == 'Accepted'
+  assert runner.variable_map == {}
+  with pytest.raises( UnrecoverableError ):
+    runner.run()
+  assert not runner.done
+  assert runner.aborted
+  assert runner.run() == 'aborted'
+  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.variable_map == {}
+#TODO: test function rollback
 
 
 def test_serilizer():

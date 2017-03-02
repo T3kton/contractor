@@ -67,30 +67,31 @@ class Goto( Exception ):
 # this is allowed, keep in-mind, you may need to handle retries.  When handeling retries, do not rely on counting the number of times toSubcontractor/run/ready
 # are called, it is acceptable to store local timers.
 
+# any communication between the contractor and subcontractor pairs must happen between to/fromSubcontractor calls, if an operation requires multiple
+# communicatoin routnds, keep in mind that it is possible for multiple subcontractors to be taking requests, so subcontractor must store all state
+# with contractor
+
 """
 
 execution flow:
 
 first execution:
+  setup()
 
-setup()
 
-ready is False or str:
-run()
-toSubcontractor() -> if not None value dispatched to contractor
-
-ready is True:
-value is returned to script
-
+reset/rollback event:
+  rollback()
+  if values to subcontractor is outstanding, that is reset
 
 
 following executions:
+  if ready is False or str:
+    run()
+    if value dispatched to subcontractor and returned:
+      toSubcontractor() -> if not None, value dispatched to subcontractor
 
-ready is False or str:
-run()
-
-ready is True:
-value is returned to script
+  if ready is True:
+    value is retreived and returned to script
 
 """
 
@@ -102,15 +103,15 @@ class ExternalFunction( object ):
   @property
   def ready( self ):
     # this is called every time contractor wants to know if this script can continue.
-    # keep in mind that contractor, users, and other processes cause this to be called
+    # keep in mind that subcontractor, users, and other processes cause this to be called
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     # this is called frequently, keep it light
-    # True -> can continue, no error, False -> can not continue, <str> -> is treated as a status message and is displaied (otherwise treated as False)
+    # True -> can continue, False -> can not continue, <str> -> is treated as a status message and is displaied (otherwise treated as False)
     # anything else is cast to a string and treaded as a non-resumeable error
     # it is probably wise that this funcion does not do any processing, it may be call multiple times with out any other function in the class being called.
     # do not depend on return_value being called imeditally after ready returns True, ready may have to return True multiple times before the return_value is
     # reterieved and the object is cleaned up.  It is also possible that ready may still be called after return_value is reterieved.
-    # NOTE: if ready ever returns True, it can not take that back, bad things may happen.  Including trowing exceptions, they will probably be ignored.
+    # NOTE: if ready ever returns True, it can not take that back, bad things may happen.  Including throwing exceptions, they will probably be ignored.
     return True
 
   @property
@@ -133,20 +134,35 @@ class ExternalFunction( object ):
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     pass
 
+  def rollback( self ):
+    # this is call if there has been an error or loss of communication/tasks with subcontractor
+    # and what ever has been done so far needs to be un-done, this mostly applies for VMs
+    # and such as a way to clean up any half-baked stuf
+    # this must setup the process of rolling back, the regular run, to/fromSubcontractor
+    # process is fallowed after rollback is called to complete the job.
+    # after rollback is complete, further calls to run, to/from should start rolling forward again
+    # THIS MUST NOT HANG/PAUSE/WAIT/POLL
+    pass
+
   def toSubcontractor( self ):
-    # this is sent to the contractor, first paramater is the plugin in contractor, the second is the function inside the plugin to call, third is the value to send to the function
-    # this is only called once, after execute is called and ready is called ( and returns False )
-    # return ( 'builtin', 'nop', None )
+    # this is sent to the subcontractor
+    # first paramater is the function inside the plugin to call, second is the value to send to the function
+    # this is called initially, then again after fromSubcontractor has returnd results until ready is True
+    # example: return ( 'myfunc', { 'stuff': 'for', 'myfunc': 'to use' } ) #NOTE: the paramater part can be anything that is serilizable
     # if None is returned, contractor will not be notified to do anything
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
-    # contractor threads will be waiting on this function
-    return None
+    # subcontractor threads will be waiting on this function
+    # if there is a problem with the data from subcontractor or some other fatal error occurs,
+    #   set ready to True and return an Exception for value, NOTE: this kills this instance of the function unless rolled back
+    pass
 
-  def fromFubcontractor( self, data ):
+  def fromSubcontractor( self, data ):
     # return value is send back to contractor so the plugin in contractor can get some feedback
-    # can be called multiple times, depending on what the plugin is coded to do
+    # data will be a dict
+    # this will be called once for every toSubcontractor task sent to subcontractor.  There  could be external
+    # logic that looks for timeout/loss of results and call rollback to start from the top
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
-    # contractor threads will be waiting on this function, don't do anything to heavy to hold up contractor
+    # subcontractor threads will be waiting on this function, don't do anything to heavy to hold up contractor
     return True
 
   def __getstate__( self ):
@@ -243,9 +259,9 @@ class Runner( object ):
   def status( self ): # list of ( % complete, status message )
     print( ")){0}((".format( self.state ) )
     if self.done or self.aborted:
-      return [ ( 100.0, None ) ]
+      return [ ( 100.0, 'Scope', None ) ]
     if len( self.state ) == 0:
-      return [ ( 0.0, None ) ]
+      return [ ( 0.0, 'Scope', None ) ]
 
     item_list = []
     operation = self.ast
@@ -262,13 +278,13 @@ class Runner( object ):
         tmp = operation[1].copy()
         del tmp[ '_children' ]
         if step_data is None: # no point in continuing, we don't know where we are
-          item_list.append( ( 0, len( operation[1][ '_children' ] ), tmp ) )
+          item_list.append( ( 0, len( operation[1][ '_children' ] ), 'Scope', tmp ) )
           break
-        item_list.append( ( step_data, len( operation[1][ '_children' ] ), tmp ) )
+        item_list.append( ( step_data, len( operation[1][ '_children' ] ), 'Scope', tmp ) )
         operation = operation[1][ '_children' ][ step_data ]
 
       elif step_type == types.WHILE: # if a while loop is on the stack, we must be in it, keep on going
-        item_list.append( ( 0, 1, None ) )
+        item_list.append( ( 0, 1, 'While', None ) )
         operation = operation[1][ 'expression' ]
 
       elif step_type == types.IFELSE:
@@ -277,21 +293,30 @@ class Runner( object ):
       elif step_type == types.LINE:
         operation = operation[1]
 
-      elif step_type in ( types.LINE, types.FUNCTION, types.ASSIGNMENT, types.INFIX, types.CONSTANT, types.VARIABLE, types.GOTO ):
+      elif step_type == types.FUNCTION:
+        tmp = operation[1].copy()
+        tmp[ 'dispatched' ] = step_data.get( 'dispatched', None )
+        try:
+          del tmp[ 'paramaters' ]
+        except KeyError:
+          pass
+        item_list.append( ( 0, 1, 'Function', tmp ) )
+
+      elif step_type in ( types.ASSIGNMENT, types.INFIX, types.CONSTANT, types.VARIABLE, types.GOTO ):
         pass
 
       else:
         raise Exception( 'Confused step type "{0}"'.format( step_type ) )
+
+    print( item_list )
 
     result = []
     last_perc_complete = 0
     for item in reversed( item_list ): # work backwards, as we go up, we scale the last perc_complete acording to the % of the curent scope
       # before + -> scaling the last % complete .... after the +  -> the curent %
       perc_complete = ( 1.0 / item[1] ) * last_perc_complete + ( 100.0 * item[0]) / item[1]
-      result.insert( 0, ( perc_complete, item[2] ) )
+      result.insert( 0, ( perc_complete, item[2] , item[3] ) )
       last_perc_complete = perc_complete
-
-    print( item_list )
 
     return result
 
@@ -337,7 +362,7 @@ class Runner( object ):
 
       except Exception as e:
         self.state = 'ABORTED'
-        raise UnrecoverableError( 'Unahndled Exception ({0}): "{1}"'.format( typ( e ).__name__, str( e ) ) )
+        raise UnrecoverableError( 'Unahndled Exception ({0}): "{1}"'.format( type( e ).__name__, str( e ) ) )
 
 
   def _evaluate( self, operation, state_index ):
@@ -573,7 +598,7 @@ class Runner( object ):
       except IndexError:
         self.state[ state_index ].append( { 'paramaters': {} } )
 
-      if self.state[ state_index ] == [ types.FUNCTION, None, None ]:
+      if self.state[ state_index ][1] is None: #TODO: is there a better way to handle this?
         pass
         # function allready executed and was an Exceptoin last time, just let things pass by us
 
@@ -619,7 +644,7 @@ class Runner( object ):
             self.contractor_cookie = str( uuid.uuid4() )
             self.state[ state_index ][1][ 'handler' ] = handler
             self.state[ state_index ][1][ 'module' ] = op_data[ 'module' ]
-            self.state[ state_index ][1][ 'function' ] = op_data[ 'name' ]
+            self.state[ state_index ][1][ 'dispatched' ] = False
 
           ready = handler.ready
           if ready is not True:
@@ -705,36 +730,68 @@ class Runner( object ):
       self.state = 'DONE'
       self.cur_line = None
 
-  def toSubcontractor( self ):
+  def toSubcontractor( self, module_list ):
     # return None if we done, or not started
     if self.done or self.aborted or self.state == []:
       return None
 
+    operation = self.state[ -1 ]
+
     # return None if the top of the stack is not a function
-    if self.state[ -1 ][0] != types.FUNCTION:
+    if operation[0] != types.FUNCTION:
       return None
 
-    handler = self.state[-1][1][ 'handler' ]
-    paramaters = handler.toSubcontractor()
+    if operation[1][ 'module' ] not in module_list:
+      return None
+
+    if operation[1][ 'dispatched' ] is True: # allready dispatchced, don't send anything else until something comes back
+      return None
+
+    handler = operation[1][ 'handler' ]
+    ( function_name, paramaters ) = handler.toSubcontractor()
     if paramaters is None:
       return None
 
-    return { 'module': self.state[-1][1][ 'module' ], 'function': self.state[-1][1][ 'function' ], 'cookie': self.contractor_cookie, 'paramaters': paramaters }
+    operation[1][ 'dispatched' ] = True
+
+    return { 'module': operation[1][ 'module' ], 'function': function_name, 'cookie': self.contractor_cookie, 'paramaters': paramaters }
 
   def fromSubcontractor( self, cookie, data ):
-    # return None if we done, or not started
     if self.done or self.aborted or self.state == []:
-      return None
+      return 'Script not Running'
 
     if cookie != self.contractor_cookie:
-      return None
+      return 'Bad Cookie'
 
-    # return None if the top of the stack is not a function
-    if self.state[ -1 ][0] != types.FUNCTION:
-      return None
+    operation = self.state[ -1 ]
 
-    handler = self.state[-1][1][ 'handler' ]
-    return handler.fromSubcontractor( data )
+    if operation[0] != types.FUNCTION:
+      return 'Not At a Function'
+
+    if operation[1][ 'dispatched' ] is False:
+      return 'Not Expecting anything'
+
+    handler = operation[1][ 'handler' ]
+    handler.fromSubcontractor( data )
+    operation[1][ 'dispatched' ] = False
+
+    return 'Accepted'
+
+  def rollback( self ):
+    if self.done or self.aborted or self.state == []:
+      return 'Script not Running'
+
+    operation = self.state[ -1 ]
+
+    if operation[0] != types.FUNCTION:
+      return 'Not At a Function'
+
+    handler = operation[1][ 'handler' ]
+    handler.rollback()
+    self.contractor_cookie = str( uuid.uuid4() ) # revoke any outstanding tasks
+    operation[1][ 'dispatched' ] = False
+
+    return 'Done'
 
   def registerModule( self, name ):
     module = import_module( name )
@@ -751,12 +808,13 @@ class Runner( object ):
     return ( self.__class__, ( self.target, self.ast ), self.__getstate__() )
 
   def __getstate__( self ):
-    return { 'module_list': self.module_list, 'state': self.state, 'variable_map': self.variable_map, 'cur_line': self.cur_line }
+    return { 'module_list': self.module_list, 'state': self.state, 'variable_map': self.variable_map, 'cur_line': self.cur_line, 'contractor_cookie': self.contractor_cookie }
 
   def __setstate__( self, state ):
     self.state = state[ 'state' ]
     self.variable_map = state[ 'variable_map' ]
     self.cur_line = state[ 'cur_line' ]
+    self.contractor_cookie = state[ 'contractor_cookie' ]
     for module in state[ 'module_list' ]:
       self.registerModule( module )
 

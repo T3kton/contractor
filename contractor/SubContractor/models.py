@@ -1,10 +1,10 @@
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.Foreman.lib import processJobs
+from contractor.Foreman.lib import processJobs, jobResults
 
 cinp = CInP( 'SubContractor', '0.1' )
 
-
+# these are only for subcontractor to talk to, thus some of the job_id short cuts
 @cinp.staticModel()  #TODO: move to  Foreman?
 class Dispatch():
   def __init__( self ):
@@ -17,11 +17,17 @@ class Dispatch():
     print( '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> "{0}"'.format( result ))
     return result
 
-  @cinp.action( return_type={ 'type': 'String' },  paramater_type_list=[ 'Integer', 'Map' ] )
+  @cinp.action( return_type='String', paramater_type_list=[ 'Integer', 'String', 'Map' ] )
   @staticmethod
-  def jobResults( job_id, result ):
-    print( '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< "{0}" "{1}"'.format( job_id, result ) )
-    return True
+  def jobResults( job_id, cookie, data ):
+    print( '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< "{0}" "{1}" "{2}"'.format( job_id, cookie, data ) )
+    return jobResults( job_id, cookie, data )
+
+  @cinp.action( paramater_type_list=[ 'Integer', 'String', 'String' ] )
+  @staticmethod
+  def jobError( job_id, cookie, msg ):
+    print( '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! "{0}" "{1}" "{2}"'.format( job_id, cookie, msg ) )
+    jobError( job_id, cookie, msg )
 
   @cinp.check_auth()
   @staticmethod

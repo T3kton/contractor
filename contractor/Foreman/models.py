@@ -61,6 +61,17 @@ class BaseJob( models.Model ): # abstract base class
     self.state = 'queued'
     self.save()
 
+  def rollback( self ):
+    if self.state not in ( 'error', 'paused', 'queued' ):
+      raise ValueError( 'Can only reset a job if it is paused, queued or in error' )
+
+    runner = pickle.loads( self.script_runner )
+    runner.rollback()
+    self.status = runner.status
+    self.script_runner = pickle.dumps( runner )
+    self.state = 'queued'
+    self.save()
+
   def clean( self, *args, **kwargs ): # also need to make sure a Structure is in only one complex
     super().clean( *args, **kwargs )
     errors = {}
@@ -75,7 +86,7 @@ class BaseJob( models.Model ): # abstract base class
   def progress( self ):
     try:
       return self.status[0][0]
-    except KeyError:
+    except IndexError:
       return 0.0
 
   @cinp.check_auth()
@@ -112,6 +123,10 @@ class FoundationJob( BaseJob ):
   @cinp.action()
   def reset( self ):
     super().reset()
+
+  @cinp.action()
+  def rollback( self ):
+    super().rollback()
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
@@ -153,6 +168,10 @@ class StructureJob( BaseJob ):
   @cinp.action()
   def reset( self ):
     super().reset()
+
+  @cinp.action()
+  def rollback( self ):
+    super().rollback()
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod

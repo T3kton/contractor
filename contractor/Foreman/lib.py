@@ -58,7 +58,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     max_jobs = 100
 
   # see if there are any planned foundatons that can be auto located
-  for foundation in Foundation.objects.filter( located_at__isnull=True, built_at__isnull=True ):
+  for foundation in Foundation.objects.filter( site=site, located_at__isnull=True, built_at__isnull=True ):
     foundation = foundation.subclass
     if not foundation.can_auto_locate:
       continue
@@ -66,7 +66,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     foundation.setLocated()
 
   # see if there are any located foundations that need to be prepared
-  for foundation in Foundation.objects.filter( located_at__isnull=False, built_at__isnull=True ):
+  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True ):
     fondation = foundation.subclass
     try:
       FoundationJob.objects.get( foundation=foundation )
@@ -77,7 +77,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     createJob( 'create', target=foundation )
 
   # see if there are any structures on setup foundations to start
-  for structure in Structure.objects.filter( built_at__isnull=True, auto_build=True, foundation__built_at__isnull=False ):
+  for structure in Structure.objects.filter( site=site, built_at__isnull=True, auto_build=True, foundation__built_at__isnull=False ):
     try:
       StructureJob.objects.get( structure=structure )
       continue # allready has a job, skip it
@@ -88,7 +88,7 @@ def processJobs( site, module_list, max_jobs=10 ):
 
   # clean up completed jobs
   for job in BaseJob.objects.filter( site=site, state='done' ):
-    print( '_________________________ job "{0}" done!'.format(  job ) )
+    print( '_________________________ job "{0}" done!'.format( job ) )
     job = job.realJob
     job.done()
     job.delete()
@@ -97,8 +97,20 @@ def processJobs( site, module_list, max_jobs=10 ):
   results = []
   for job in BaseJob.objects.filter( site=site, state='queued' ).order_by( 'updated' ):
     job = job.realJob
+    print( '~~~~~~~~~~~~~~~~~~ "{0}"'.format( job ))
 
     runner = pickle.loads( job.script_runner )
+
+    if runner.aborted:
+      job.state = 'aborted'
+      job.save()
+      continue
+
+    if runner.done:
+      job.state = 'done'
+      job.save()
+      continue
+
     try:
       job.message = runner.run()
 
@@ -118,26 +130,15 @@ def processJobs( site, module_list, max_jobs=10 ):
       job.state = 'aborted'
       job.message = 'Unknown Runtime Exception ({0}): "{1}"'.format( typ( e ).__name__, str( e ) )
 
-    if runner.aborted:
-      job.state = 'aborted'
-
-    if runner.done:
-      job.state = 'done'
-
     if job.state == 'queued':
-      request = runner.toSubcontractor()
-      if request is not None:
-        if request[ 'module' ] in module_list: # check to see if the subcontractor that asked can deal with this
-          job.state = 'dispatched'
-          manager = job.foundation.subclass.manager
-          if manager[0] is None:
-            raise ValueError( 'manager for "{0}"({1}) is not defined'.format( job.foundation.locator, job.foundation.blueprint.description ) )
+      task = runner.toSubcontractor( module_list )
+      if task is not None:
+        manager = job.foundation.subclass.manager
+        if manager[0] is None:
+          raise ValueError( 'manager for "{0}"({1}) is not defined'.format( job.foundation.locator, job.foundation.blueprint.description ) )
 
-          request.update( { 'manager': manager, 'job': job.pk } )
-          results.append( request )
-
-        else:
-          job.state = 'waiting'
+        task.update( { 'manager': manager, 'job_id': job.pk } )
+        results.append( task )
 
     job.status = runner.status
     print( '____________ job "{0}"   state: "{1}"   progress: "{2}"    message: "{3}"'.format( job, job.state, job.progress, job.message ) )
@@ -148,3 +149,41 @@ def processJobs( site, module_list, max_jobs=10 ):
       break
 
   return results
+
+#TODO: we will need some kind of job record locking, so only one thing can happen at a time, ie: rolling back when things are still comming in,
+#   trying to handler.run() when fromsubContractor is happening, pretty much, anything the runner is unpickled, nothing else should  happen to
+#   the job till it is pickled and saved
+
+def jobResults( job_id, cookie, data ):
+  try:
+    job = BaseJob.objects.get( pk=job_id )
+  except BaseJob.DoesNotExist:
+    raise ValueError( 'Error saving job results: "Job Not Found"' )
+
+  job =  job.realJob
+  runner = pickle.loads( job.script_runner )
+  result = runner.fromSubcontractor( cookie, data )
+  if result != 'Accepted': # it wasn't valid/taken, no point in saving anything
+    raise ValueError( 'Error saving job results: "{0}"'.format( result ) )
+
+  job.status = runner.status
+  print( '----------------- job "{0}"   state: "{1}"   progress: "{2}"    message: "{3}"'.format( job, job.state, job.progress, job.message ) )
+  job.script_runner = pickle.dumps( runner )
+  job.save()
+
+  return result
+
+def jobError( job_id, cookie, msg ):
+  try:
+    job = BaseJob.objects.get( pk=job_id )
+  except BaseJob.DoesNotExist:
+    raise ValueError( 'Error setting job to error: "Job Not Found"' )
+
+  job =  job.realJob
+  runner = pickle.loads( job.script_runner )
+  if cookie != runner.contractor_cookie: # we do our own out of bad cookie check b/c this type of error dosen't need to be propagated to the script runner
+    raise ValueError( 'Error setting job to error: "Bad Cookie"' )
+
+  job.message = msg
+  job.status = 'error'
+  job.save()

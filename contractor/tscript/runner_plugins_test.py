@@ -43,17 +43,19 @@ class remote( ExternalFunction ):
 
   @property
   def value( self ):
+    if self.state == 'Bad':
+      return Exception( 'Bad things happened' )
+
     return self.state
 
   def run( self ):
     self.counter += 1
 
   def toSubcontractor( self ):
-    return 'the count "{0}"'.format( self.counter )
+    return ( 'remote_func', 'the count "{0}"'.format( self.counter ) )
 
   def fromSubcontractor( self, data ):
     self.state = data
-    return self.counter
 
   def setup( self, parms ):
     self.counter = 0

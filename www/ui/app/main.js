@@ -119,7 +119,13 @@ function updateFoundationJobTable( object_map )
       button.on( 'click', function() { contractor.cinp.call( uri + '(pause)' ).done( function(){ alert( 'Job Paused' ); updateFoundationJobTable(); } ).fail( function( message ) { alert( 'Error Pausing Job "' + message + '"' ); } ); } );
       row.find( '#buttons' ).append( button );
     }
-    tbody.append( row );
+    if( entry.state != 'done' ) // actualy status.entry[ status.entry.length - 1 ][1] == 'Function'   except status.entry is just text right now
+    {
+      var button = $( '<button>Rollback</button>' );
+      button.on( 'click', function() { contractor.cinp.call( uri + '(rollback)' ).done( function(){ alert( 'Job Rolled Back' ); updateFoundationJobTable(); } ).fail( function( message ) { alert( 'Error Rolling Back Job "' + message + '"' ); } ); } );
+      row.find( '#buttons' ).append( button );
+      tbody.append( row );
+    }
   }
 }
 

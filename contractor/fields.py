@@ -104,7 +104,6 @@ class JSONField( models.TextField ):
     return value
 
   def get_prep_value( self, value ):
-    print( '^^^^^^^^^^^^^^^^ {0}'.format( value ))
     return JSON_MAGIC + json.dumps( value )
 
   def value_to_string( self, obj ):
