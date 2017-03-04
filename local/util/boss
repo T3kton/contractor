@@ -2,34 +2,40 @@
 import os
 import sys
 import argparse
+import pprint
 
 sys.path.insert( 1, '../..' )
 
 os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
 import django
 django.setup()
-
+from django.core.exceptions import ObjectDoesNotExist
 from contractor.Building.models import Foundation, Structure
-from contractor.Foreman.lib import createJob
+from contractor.Foreman.lib import createJob, BaseJob
 
-def _clear_job( target ):
+def _get_job( target ):
   if isinstance( target, Foundation ):
     try:
-      job = target.foundationjob
-      print( 'deleting job "{0}"...'.format( job ) )
-      job.delete()
-      print( 'done' )
-    except AttributeError:
-      print( 'No Foundation Jobs' )
+      return target.foundationjob
+    except ( AttributeError, ObjectDoesNotExist ):
+      pass
 
   if isinstance( target, Structure ):
     try:
-      job = target.structurejob
-      print( 'deleting job "{0}"...'.format( job ) )
-      job.delete()
-      print( 'done' )
-    except AttributeError:
-      print( 'No Structure Jobs' )
+      return target.structurejob
+    except ( AttributeError, ObjectDoesNotExist ):
+      pass
+
+  return None
+
+def _clear_job( target ):
+  job = _get_job( target )
+  if job is None:
+    print( 'No Job to Delete' )
+
+  else:
+    job.delete()
+    print( 'Job Deleted' )
 
 def main():
   parser = argparse.ArgumentParser( description='Boss/Manipulate Structures and Foundations and their jobs', epilog='Only one option from task or force state, if more than one is specified, the force state option is ignored' )
@@ -43,9 +49,11 @@ def main():
   task_group = group.add_mutually_exclusive_group()
   task_group.add_argument( '-c', '--do-create', help='submit create job', action='store_true' )
   task_group.add_argument( '-d', '--do-destroy', help='submit destroy job', action='store_true' )
-  #task_group.add_argument(       '--pause', help='pause active job', action='store_true' )
-  #task_group.add_argument(       '--reset', help='reset error on active job', action='store_true' )
-  #task_group.add_argument(       '--done', help='set  active job to done', action='store_true' )
+  task_group.add_argument(       '--pause', help='pause active job', action='store_true' )
+  task_group.add_argument(       '--reset', help='reset error on active job', action='store_true' )
+  task_group.add_argument(       '--rollback', help='rollback active job', action='store_true' )
+  task_group.add_argument(       '--done', help='set active job to done', action='store_true' )
+  task_group.add_argument(       '--show-job', help='display curent job', action='store_true' )
 
   group = parser.add_argument_group( 'force state', 'WARNING!!! Use with care, it is possible to leave some foundataions/structures orphand if you are not carefull' )
   force_group = group.add_mutually_exclusive_group()
@@ -91,6 +99,78 @@ def main():
       print( 'Error creating destroy job: "{0}"'.format( str( e ) ) )
       sys.exit( 1 )
     print( 'Destroy Job for {0} created, job #{1}.'.format( target, rc ) )
+    sys.exit( 0 )
+
+  if args.reset:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job to Reset' )
+      sys.exit( 1 )
+
+    else:
+      try:
+        job.reset()
+      except ValueError as e:
+        print ( 'Error resetting job: "{0}"'.format( str( e ) ) )
+        sys.exit( 1 )
+      sys.exit( 0 )
+
+  if args.pause:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job to Pause' )
+      sys.exit( 1 )
+
+    else:
+      try:
+        job.pause()
+      except ValueError as e:
+        print ( 'Error pausing job: "{0}"'.format( str( e ) ) )
+        sys.exit( 1 )
+      sys.exit( 0 )
+
+  if args.rollback:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job to Rollback' )
+      sys.exit( 1 )
+
+    else:
+      try:
+        job.rollback()
+      except ValueError as e:
+        print ( 'Error rolling back job: "{0}"'.format( str( e ) ) )
+        sys.exit( 1 )
+      sys.exit( 0 )
+
+  if args.done:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job to set to done' )
+      sys.exit( 1 )
+
+    else:
+      job.status = 'done'
+      job.save()
+      sys.exit( 0 )
+
+  if args.show_job:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job jobs' )
+      sys.exit( 0 )
+
+    pp =  pprint.PrettyPrinter()
+    print( """
+Job Id:        {0}
+Script Name:   {1}
+State:         {2}
+Pcnt Complete: {3}%
+Message:       {4}
+Created:       {5}
+Updated:       {6}
+Status:
+{7}""".format( job.pk, job.script_name, job.state, job.status[0][0], job.message, job.created, job.updated, pp.pformat( job.status ) ) )
     sys.exit( 0 )
 
   if args.planned:

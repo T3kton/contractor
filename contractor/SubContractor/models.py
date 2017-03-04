@@ -1,6 +1,6 @@
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.Foreman.lib import processJobs, jobResults
+from contractor.Foreman.lib import processJobs, jobResults, jobError
 
 cinp = CInP( 'SubContractor', '0.1' )
 

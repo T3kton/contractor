@@ -50,6 +50,9 @@ class Goto( Exception ):
     self.name = name
     self.line_no = line_no
 
+class NoRollback( Exception ):
+  pass
+
 # for values in modules, the getter/setter must not block, if you need to block
 # make a external function
 
@@ -141,8 +144,9 @@ class ExternalFunction( object ):
     # this must setup the process of rolling back, the regular run, to/fromSubcontractor
     # process is fallowed after rollback is called to complete the job.
     # after rollback is complete, further calls to run, to/from should start rolling forward again
+    # if rollback is not possible raise NoRollback
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
-    pass
+    raise NoRollback()
 
   def toSubcontractor( self ):
     # this is sent to the subcontractor
@@ -777,7 +781,21 @@ class Runner( object ):
 
     return 'Accepted'
 
-  def rollback( self ):
+  def clearDispatched( self ):
+    if self.done or self.aborted or self.state == []:
+      return
+
+    operation = self.state[ -1 ]
+
+    if operation[0] != types.FUNCTION:
+      return
+
+    handler = operation[1][ 'handler' ]
+    operation[1][ 'dispatched' ] = False
+
+    return
+
+  def rollback( self ):  #TODO: make to/from subcontractor and  rollback consistant in how they handle errors, this will take some work with the things calling them
     if self.done or self.aborted or self.state == []:
       return 'Script not Running'
 
@@ -787,8 +805,12 @@ class Runner( object ):
       return 'Not At a Function'
 
     handler = operation[1][ 'handler' ]
-    handler.rollback()
-    self.contractor_cookie = str( uuid.uuid4() ) # revoke any outstanding tasks
+    try:
+      handler.rollback()
+    except NoRollback:
+      return 'Rollback not possible'
+
+    self.contractor_cookie = str( uuid.uuid4() ) # revoke any outstanding tasks, TODO: do we also rotate cookie on reset?  if not, should we rotate keys even if rollback is  not possible
     operation[1][ 'dispatched' ] = False
 
     return 'Done'

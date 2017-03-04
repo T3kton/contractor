@@ -185,5 +185,5 @@ def jobError( job_id, cookie, msg ):
     raise ValueError( 'Error setting job to error: "Bad Cookie"' )
 
   job.message = msg
-  job.status = 'error'
+  job.state = 'error'
   job.save()

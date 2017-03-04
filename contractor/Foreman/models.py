@@ -58,15 +58,22 @@ class BaseJob( models.Model ): # abstract base class
     if self.state != 'error':
       raise ValueError( 'Can only reset a job if it is in error' )
 
+    runner = pickle.loads( self.script_runner )
+    runner.clearDispatched()
+    self.status = runner.status
+    self.script_runner = pickle.dumps( runner )
+
     self.state = 'queued'
     self.save()
 
   def rollback( self ):
-    if self.state not in ( 'error', 'paused', 'queued' ):
-      raise ValueError( 'Can only reset a job if it is paused, queued or in error' )
+    if self.state != 'error':
+      raise ValueError( 'Can only rollback a job if it is in error' )
 
     runner = pickle.loads( self.script_runner )
-    runner.rollback()
+    msg = runner.rollback()
+    if msg != 'Accepted':
+      raise ValueError( 'Unable to rollback "{0}"'.format( msg ) )
     self.status = runner.status
     self.script_runner = pickle.dumps( runner )
     self.state = 'queued'
