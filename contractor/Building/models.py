@@ -82,10 +82,6 @@ class Foundation( models.Model ):
     return getConfig( self )
 
   @property
-  def manager( self ):
-    return ( None, None ) # manager type, manager paramanter
-
-  @property
   def type( self ):
     return 'Unknown'
 

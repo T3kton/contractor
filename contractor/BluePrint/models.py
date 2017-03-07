@@ -71,7 +71,7 @@ class FoundationBluePrint( BluePrint ):
     return getConfig( self )
 
   @property
-  def subcontractor( self ): # ie the manager that is used to deal with this type of Material
+  def subcontractor( self ):
     return { 'type': None }
 
   def clean( self, *args, **kwargs ):

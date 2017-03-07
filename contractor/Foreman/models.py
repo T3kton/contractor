@@ -72,8 +72,9 @@ class BaseJob( models.Model ): # abstract base class
 
     runner = pickle.loads( self.script_runner )
     msg = runner.rollback()
-    if msg != 'Accepted':
+    if msg != 'Done':
       raise ValueError( 'Unable to rollback "{0}"'.format( msg ) )
+
     self.status = runner.status
     self.script_runner = pickle.dumps( runner )
     self.state = 'queued'
