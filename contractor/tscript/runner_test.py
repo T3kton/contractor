@@ -170,6 +170,7 @@ def test_array():
   assert runner.done
   assert runner.variable_map == { 'myvar': [1,2,3,4,'end'] }
 
+  #TODO: test getting status, going to need a  function that can paus executeion both for the value and also for the index
 
 def test_plugin_values():
   struct = TestStructure()
@@ -637,7 +638,7 @@ def test_external_remote_functions():
   assert runner.variable_map == {}
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, {} ) ]
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "1"' }
   assert runner.variable_map == {}
   assert runner.fromSubcontractor( runner.contractor_cookie, 'Bad' ) == 'Accepted'

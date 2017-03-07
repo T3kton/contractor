@@ -235,12 +235,6 @@ class Runner( object ):
     self.function_map = {}
     self.value_map = {}
 
-    # setup structure plugin
-    if isinstance( target, Structure ):
-      self.structure_plugin = StructurePlugin( self.target )
-      self.value_map[ 'structure' ] = self.structure_plugin.getValues()
-      self.function_map[ 'structure' ] = self.structure_plugin.getFunctions()
-
     # scan for all the jump points
     for i in range( 0, len( ast[1][ '_children' ] ) ):
       child = ast[1][ '_children' ][i][1] # jump into the  line
@@ -284,6 +278,7 @@ class Runner( object ):
         if step_data is None: # no point in continuing, we don't know where we are
           item_list.append( ( 0, len( operation[1][ '_children' ] ), 'Scope', tmp ) )
           break
+
         item_list.append( ( step_data, len( operation[1][ '_children' ] ), 'Scope', tmp ) )
         operation = operation[1][ '_children' ][ step_data ]
 
@@ -306,7 +301,15 @@ class Runner( object ):
           pass
         item_list.append( ( 0, 1, 'Function', tmp ) )
 
-      elif step_type in ( types.ASSIGNMENT, types.INFIX, types.CONSTANT, types.VARIABLE, types.GOTO ):
+      elif step_type == types.ASSIGNMENT:
+        if operation[1][ 'target' ][0] == types.ARRAY_ITEM and ( step_data is None or 'index' not in step_data ):
+          operation = operation[1][ 'target' ][1][ 'index' ]
+        elif step_data is None or 'value' not in step_data:
+          operation = operation[1][ 'value' ]
+        else:
+          raise Exception( 'status - assignment confused' )
+
+      elif step_type in ( types.INFIX, types.CONSTANT, types.VARIABLE, types.GOTO ):
         pass
 
       else:
@@ -370,8 +373,8 @@ class Runner( object ):
 
 
   def _evaluate( self, operation, state_index ):
-    print( '{1}~~~{0}~~~'.format( operation, '.' * state_index ) )
-    print( '{1}---{0}---'.format( self.state, '.' * state_index ) )
+    print( '~~~{1}~~~{0}~~~'.format( operation, '.' * state_index ) )
+    print( '---{1}---{0}---'.format( self.state, '.' * state_index ) )
     op_type = operation[0]
     op_data = operation[1]
     try:
@@ -537,6 +540,7 @@ class Runner( object ):
           self.variable_map[ target[ 'name' ] ][ self.state[ state_index ][1][ 'index' ] ] = value
         else:
          self.variable_map[ target[ 'name' ] ] = value
+
       else:
         try:
           module = self.value_map[ target[ 'module' ] ]
@@ -729,7 +733,7 @@ class Runner( object ):
     else:
       self.state = self.state[ :state_index + 1 ] # remove everything after this one, save this one's return value on the stack
 
-    print( '{1}==={0}==='.format( self.state, ' ' * state_index ) )
+    print( '==={1}==={0}==='.format( self.state, ' ' * state_index ) )
     if self.state == []:
       self.state = 'DONE'
       self.cur_line = None
@@ -818,9 +822,6 @@ class Runner( object ):
   def registerModule( self, name ):
     module = import_module( name )
 
-    if module.TSCRIPT_NAME == 'structure':
-      raise Exception( '"structure" module is reserved' )
-
     self.function_map[ module.TSCRIPT_NAME ] = module.TSCRIPT_FUNCTIONS
     self.value_map[ module.TSCRIPT_NAME ] = module.TSCRIPT_VALUES
 
@@ -839,20 +840,3 @@ class Runner( object ):
     self.contractor_cookie = state[ 'contractor_cookie' ]
     for module in state[ 'module_list' ]:
       self.registerModule( module )
-
-
-class StructurePlugin( object ):
-  def __init__( self, structure ):
-    super().__init__()
-    self.structure = structure
-
-  def getValues( self ):
-    result = {}
-    result[ 'hostname' ] = ( lambda: self.structure.hostname, None )
-
-    return result
-
-  def getFunctions( self ):
-    result = {}
-
-    return result
