@@ -12,6 +12,7 @@ django.setup()
 from django.core.exceptions import ObjectDoesNotExist
 from contractor.Building.models import Foundation, Structure
 from contractor.Foreman.lib import createJob, BaseJob
+from contractor.lib.config import getConfig
 
 def _get_job( target ):
   if isinstance( target, Foundation ):
@@ -54,6 +55,7 @@ def main():
   task_group.add_argument(       '--rollback', help='rollback active job', action='store_true' )
   task_group.add_argument(       '--done', help='set active job to done', action='store_true' )
   task_group.add_argument(       '--show-job', help='display curent job', action='store_true' )
+  task_group.add_argument(       '--show-config', help='display config', action='store_true' )
 
   group = parser.add_argument_group( 'force state', 'WARNING!!! Use with care, it is possible to leave some foundataions/structures orphand if you are not carefull' )
   force_group = group.add_mutually_exclusive_group()
@@ -67,7 +69,7 @@ def main():
   target = None
   if args.foundation:
     try:
-      target = Foundation.objects.get( pk=args.id )
+      target = Foundation.objects.get( pk=args.id ).subclass
     except Structure.DoesNotExist:
       print( 'Unable to find Foundation "{0}"'.format( args.id ) )
 
@@ -171,6 +173,12 @@ Created:       {5}
 Updated:       {6}
 Status:
 {7}""".format( job.pk, job.script_name, job.state, job.status[0][0], job.message, job.created, job.updated, pp.pformat( job.status ) ) )
+    sys.exit( 0 )
+
+  if args.show_config:
+    config = getConfig( target )
+    pp =  pprint.PrettyPrinter()
+    pp.pprint( config )
     sys.exit( 0 )
 
   if args.planned:
