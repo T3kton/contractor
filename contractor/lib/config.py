@@ -110,7 +110,7 @@ def _siteConfig( site, class_list, config ):
 
   lastModified = _siteConfigInternal( site, class_list, config )
 
-  config[ '_site' ] = site.pk
+  config[ 'site' ] = site.pk
 
   return lastModified
 
@@ -128,27 +128,22 @@ def _bluePrintConfigInternal( blueprint, class_list, config ):
 def _bluePrintConfig( blueprint, class_list, config ):
   lastModified = _bluePrintConfigInternal( blueprint, class_list, config )
 
-  config[ '_blueprint' ] = blueprint.pk
+  config[ 'blueprint' ] = blueprint.pk
 
   return lastModified
 
 
 def _foundationConfig( foundation, class_list, config ):
-  config[ '_foundation' ] = foundation.pk
-  config[ '_foundation_type' ] = foundation.type
-  config[ '_foundation_state' ] = foundation.state
-  config[ '_foundation_class_list' ] = foundation.class_list
+  _updateConfig( foundation.config_values, class_list, config )
 
+  config.update( foundation.configValues() )
   return foundation.updated
 
 
 def _structureConfig( structure, class_list, config ):
   _updateConfig( structure.config_values, class_list, config )
-  config[ '_hostname' ] = structure.hostname
-  config[ '_structure' ] = structure.pk
-  config[ '_state' ] = structure.state
-  config[ '_config_uuid' ] = structure.config_uuid
 
+  config.update( structure.configValues() )
   return structure.updated
 
 
@@ -171,13 +166,13 @@ def getConfig( target ): # combine depth first the config values
 
   elif target.__class__.__name__ == 'Structure':
     lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
-    lastModified = max( lastModified,  _bluePrintConfig( target.blueprint, class_list, config ) )
+    lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
     lastModified = max( lastModified, _foundationConfig( target.foundation, class_list, config ) )
     lastModified = max( lastModified, _structureConfig( target, class_list, config ) )
 
   elif hasattr( target, 'blueprint' ): # foundations should end up here, can't count on the class name, that will depend on which foundation type is being used
     lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
-    lastModified = max( lastModified,  _bluePrintConfig( target.blueprint, class_list, config ) )
+    lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
     lastModified = max( lastModified, _foundationConfig( target, class_list, config ) )
 
   else:

@@ -1,9 +1,8 @@
 import uuid
+import traceback
 from importlib import import_module
 
 from contractor.tscript.parser import types
-
-from contractor.Building.models import Structure
 
 # thrown when the scipt would like to pause execution, calling run() resumes execution
 class Pause( Exception ):
@@ -26,6 +25,7 @@ class ParamaterError( UnrecoverableError ):
       msg = 'Paramater Error paramater "{0}" line {2}: {1}'.format( name, msg, line_no )
     else:
       msg = 'Paramater Error paramater "{0}": {1}'.format( name, msg )
+
     super().__init__( msg )
     self.name = name
     self.msg = msg
@@ -37,6 +37,7 @@ class NotDefinedError( UnrecoverableError ):
       msg = 'Not Defined "{0}" line {1}'.format( name, line_no )
     else:
       msg = 'Not Defined "{0}"'.format( name )
+
     super().__init__( msg )
     self.name = name
     self.line_no = line_no
@@ -218,13 +219,13 @@ infix_logical_operator_map = {
                              }
 
 class Runner( object ):
-  def __init__( self, target, ast ):
+  def __init__( self, ast ):
     super().__init__()
     self.ast = ast
-    self.target = target
 
     # serilize
-    self.module_list = []   # list of the loaded plugins
+    self.module_list = []   # list of the loaded modules
+    self.object_list = []   # list of loaded embeded objects
     self.state = []     # list of ( <type>, work values, [ return value ] ), for each level of the AST to the curent execution point
     self.variable_map = {} # map of the variables, they are all global
     self.cur_line = 0
@@ -336,7 +337,7 @@ class Runner( object ):
     self.state = [ [ types.SCOPE, pos ] ]
 
   def run( self, ttl=1000 ):
-    print( '*********************************' )
+    print( '*******  RUN START  *******' )
     if self.aborted:
       return 'aborted'
 
@@ -368,9 +369,10 @@ class Runner( object ):
         raise e
 
       except Exception as e:
-        self.state = 'ABORTED'
-        raise UnrecoverableError( 'Unahndled Exception ({0}): "{1}"'.format( type( e ).__name__, str( e ) ) )
+        self.state = 'ABORTED' #TODO: watch some kind of DEBUG flag to enable/disable the stack trace
+        raise UnrecoverableError( 'Unahndled Exception ({0}): "{1}"\ntrace:\n{2}'.format( type( e ).__name__, str( e ), traceback.format_exc() ) )
 
+    print( '*******  RUN FINISH  *******' )
 
   def _evaluate( self, operation, state_index ):
     print( '~~~{1}~~~{0}~~~'.format( operation, '.' * state_index ) )
@@ -429,9 +431,14 @@ class Runner( object ):
           raise NotDefinedError( op_data[ 'module' ], self.cur_line )
 
         try:
-          value = module[ op_data[ 'name' ] ][0]() # index 0 is the getter
+          getter = module[ op_data[ 'name' ] ][0] # index 0 is the getter
         except KeyError:
           raise NotDefinedError( op_data[ 'name' ], self.cur_line )
+
+        if getter is None:
+          raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
+
+        value = getter()
 
       try:
         self.state[ state_index ][2] = value
@@ -488,9 +495,14 @@ class Runner( object ):
           raise NotDefinedError( op_data[ 'module' ], self.cur_line )
 
         try:
-          value = module[ op_data[ 'name' ] ][0]() # index 0 is the getter
+          getter = module[ op_data[ 'name' ] ][0] # index 0 is the getter
         except KeyError:
           raise NotDefinedError( op_data[ 'name' ], self.cur_line )
+
+        if getter is None:
+          raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
+
+        value = getter()
 
       value = value[ self.state[ state_index ][1][ 'index' ] ]
 
@@ -548,9 +560,14 @@ class Runner( object ):
           raise NotDefinedError( target[ 'module' ], self.cur_line )
 
         try:
-          module[ target[ 'name' ] ][1]( value ) # index 1 is the setter
+          setter = module[ target[ 'name' ] ][1] # index 1 is the setter
         except KeyError:
           raise NotDefinedError( target[ 'name' ], self.cur_line )
+
+        if setter is None:
+          raise ParamaterError( 'target', '"{0}" of "{1}" is not settable'.format( target[ 'module' ], target[ 'name' ] ), self.cur_line )
+
+        setter( value )
 
     elif op_type == types.INFIX: # infix type operators
       try:
@@ -738,7 +755,7 @@ class Runner( object ):
       self.state = 'DONE'
       self.cur_line = None
 
-  def toSubcontractor( self, module_list ):
+  def toSubcontractor( self, subcontractor_module_list ):
     # return None if we done, or not started
     if self.done or self.aborted or self.state == []:
       return None
@@ -749,7 +766,7 @@ class Runner( object ):
     if operation[0] != types.FUNCTION:
       return None
 
-    if operation[1][ 'module' ] not in module_list:
+    if operation[1][ 'module' ] not in subcontractor_module_list:
       return None
 
     if operation[1][ 'dispatched' ] is True: # allready dispatchced, don't send anything else until something comes back
@@ -827,11 +844,19 @@ class Runner( object ):
 
     self.module_list.append( name )
 
+  def registerObject( self, obj ): # all objects must be serializable, if not use the module, thoes are not serilized into the stored pickle, just the names so they can be auto-registered when unpickled
+    name = obj.TSCRIPT_NAME
+
+    self.function_map[ name ] = obj.getFunctions()
+    self.value_map[ name ] = obj.getValues()
+
+    self.object_list.append( obj )
+
   def __reduce__( self ):
-    return ( self.__class__, ( self.target, self.ast ), self.__getstate__() )
+    return ( self.__class__, ( self.ast, ), self.__getstate__() )
 
   def __getstate__( self ):
-    return { 'module_list': self.module_list, 'state': self.state, 'variable_map': self.variable_map, 'cur_line': self.cur_line, 'contractor_cookie': self.contractor_cookie }
+    return { 'module_list': self.module_list, 'object_list': self.object_list, 'state': self.state, 'variable_map': self.variable_map, 'cur_line': self.cur_line, 'contractor_cookie': self.contractor_cookie }
 
   def __setstate__( self, state ):
     self.state = state[ 'state' ]
@@ -840,3 +865,6 @@ class Runner( object ):
     self.contractor_cookie = state[ 'contractor_cookie' ]
     for module in state[ 'module_list' ]:
       self.registerModule( module )
+
+    for obj in state[ 'object_list' ]:
+      self.registerObject( obj )

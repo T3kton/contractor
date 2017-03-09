@@ -37,6 +37,7 @@ s2.save()
 
 print( 'creating foundations...' )
 fdn_vm1 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='testvm1-vb' )
+fdn_vm1.config_values = { 'memory_size': 1024 }
 fdn_vm1.full_clean()
 fdn_vm1.save()
 

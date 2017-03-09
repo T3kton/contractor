@@ -27,13 +27,17 @@ def load_structure_blueprints( app, schema_editor ):
   sbpx.save()
 
   s = Script( name='create-linux', description='Install Linux' )
-  s.script = '# pxe boot and install'
+  s.script = """# pxe boot and install
+foundation.power_on()
+"""
   s.full_clean()
   s.save()
   BluePrintScript( blueprint=sbpl, script=s, name='create' ).save()
 
   s = Script( name='destroy-linux', description='Uninstall Linux' )
-  s.script = '# nothing to do, foundation cleanup should wipe/destroy the disks'
+  s.script = """# nothing to do, foundation cleanup should wipe/destroy the disks
+foundation.power_off()
+"""
   s.full_clean()
   s.save()
   BluePrintScript( blueprint=sbpl, script=s, name='destroy' ).save()

@@ -2,6 +2,7 @@ import pickle
 
 from contractor.Building.models import Foundation, Structure
 from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, cinp
+from contractor.lib.config import getConfig
 
 from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner, Pause, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, ScriptError
@@ -11,13 +12,19 @@ RUNNER_MODULE_LIST = []
 
 
 def createJob( script_name, target ):
+  obj_list = []
   if isinstance( target, Structure ):
     job = StructureJob()
     job.structure = target
+    obj_list.append( StructureFoundationPlugin( target ) )
+    obj_list.append( StructurePlugin( target ) )
+    obj_list.append( ConfigPlugin( target ) )
 
   elif isinstance( target, Foundation ):
     job = FoundationJob()
     job.foundation = target
+    obj_list.append( FoundationPlugin( target ) )
+    obj_list.append( ConfigPlugin( target ) )
 
   else:
     raise ValueError( 'target must be a Structure or Foundation' )
@@ -40,9 +47,11 @@ def createJob( script_name, target ):
 
   job.site = target.site
 
-  runner = Runner( target, parse( target.blueprint.get_script( script_name ) ) )
+  runner = Runner( parse( target.blueprint.get_script( script_name ) ) )
   for module in RUNNER_MODULE_LIST:
     runner.registerModule( module )
+  for obj in obj_list:
+    runner.registerObject( obj )
 
   job.state = 'queued'
   job.script_name = script_name
@@ -133,11 +142,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     if job.state == 'queued':
       task = runner.toSubcontractor( module_list )
       if task is not None:
-        manager = job.foundation.subclass.manager
-        if manager[0] is None:
-          raise ValueError( 'manager for "{0}"({1}) is not defined'.format( job.foundation.locator, job.foundation.blueprint.description ) )
-
-        task.update( { 'manager': manager, 'job_id': job.pk } )
+        task.update( { 'job_id': job.pk } )
         results.append( task )
 
     job.status = runner.status
@@ -187,3 +192,107 @@ def jobError( job_id, cookie, msg ):
   job.message = msg
   job.state = 'error'
   job.save()
+
+
+class ConfigPlugin( object ): # this is purley Read Only, if wiring is needed have to set it to the structure/foundation's config_values, and figure out a way to reload
+  TSCRIPT_NAME = 'config'
+
+  def __init__( self, target ):
+    super().__init__()
+    if isinstance( target, dict ):
+      self.config = target
+    else:
+      self.config = getConfig( target )
+
+  def getValues( self ):
+    result = {}
+    for key in self.config:
+      result[ key ] = ( lambda key=key: self.config[ key ], None )
+
+    return result
+
+  def getFunctions( self ):
+    result = {}
+
+    return result
+
+  def __reduce__( self ):
+    return ( self.__class__, ( self.config, ) )
+
+
+class FoundationPlugin( object ):
+  TSCRIPT_NAME = 'foundation'
+
+  def __init__( self, foundation ): # most of the time all that is needed is the locator, so we are going to cache that and only go get the object if other than locator is needed
+    super().__init__()
+    if isinstance( foundation, tuple ):
+      self._foundation = None
+      self.foundation_class = foundation[0]
+      self.foundation_pk = foundation[1]
+      self.foundation_locator = foundation[2]
+
+    else:
+      self._foundation = foundation.subclass
+      self.foundation_class = self._foundation.__class__
+      self.foundation_pk = foundation.pk
+      self.foundation_locator = foundation.locator
+
+    self.value_map = self.foundation_class.getTscriptValues( True )
+
+  @property
+  def foundation( self ):
+    if self._foundation is None:
+      self._foundation = self.foundation_class.objects.get( pk=self.foundation_pk )
+
+    return self._foundation
+
+  def getValues( self ):
+    result = {}
+    for key in self.value_map:
+      getter = self.value_map[ key ][0]
+      setter = self.value_map[ key ][1]
+      if setter is not None:
+        result[ key ] = ( lambda: getter( self.foundation ), lambda val: setter( self.foundation, val ) )
+      else:
+        result[ key ] = ( lambda: getter( self.foundation ), None )
+
+    result[ 'locator' ] = ( lambda: self.foundation_locator, None )
+
+    print( '$$$$$$$$$$$$$$$$$$$4444' )
+    print( result)
+
+    return result
+
+  def getFunctions( self ):
+    result = {}
+
+    return result
+
+  def __reduce__( self ):
+    return ( self.__class__, ( ( self.foundation_class, self.foundation_pk, self.foundation_locator ), ) )
+
+
+class StructureFoundationPlugin( FoundationPlugin ): # ie: read only foundation
+  def __init__( self, foundation ):
+    super().__init__()
+    # the same as Foundation plugin, except we want read onlyt value_map, so replace value_map with this and call it good
+    self.value_map = self.foundation_class.getTscriptValues( False )
+
+
+class StructurePlugin( object ): # ie: structure with some settable attributes, 'config' is structures (with the foundation merged in of course)
+  TSCRIPT_NAME = 'structure'
+
+  def __init__( self, structure ):
+    super().__init__()
+    self.structure = structure
+
+  def getValues( self ):
+    result = {}
+    result[ 'hostname' ] = ( lambda: self.structure.hostname, None )
+
+    return result
+
+  def getFunctions( self ):
+    result = {}
+
+    return result

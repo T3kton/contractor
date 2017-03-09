@@ -1,3 +1,5 @@
+import os
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '@(a3yjcc-d3uxt)q7n(tvdfhe4$%u2(dvkd9^cg26+4wmih7l7'
 
@@ -66,8 +68,7 @@ WSGI_APPLICATION = 'contractor.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        #'NAME': '/opt/contractor/db.sqlite3',
-        'NAME': 'db.sqlite3',
+        'NAME': os.path.join( os.path.abspath( '../{0}'.format( os.path.dirname( __file__ ) ) ), 'db.sqlite3' ),
     }
 }
 

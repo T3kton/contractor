@@ -23,6 +23,7 @@ class Foundation( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
   locator = models.CharField( max_length=100, unique=True )
+  config_values = MapField( blank=True )
   id_map = JSONField( blank=True ) # ie a dict of asset, chassis, system, etc types
   interfaces = models.ManyToManyField( PhysicalNetworkInterface, through='FoundationNetworkInterface' )
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
@@ -51,6 +52,23 @@ class Foundation( models.Model ):
     self.built_at = None
     self.located_at = None
     self.save()
+
+  @staticmethod
+  def getTscriptValues( write_mode=False ): # locator is handled seperatly
+    return { # none of these base items are writeable, ignore the write_mode for now
+              'site': ( lambda foundation: foundation.site.pk, None ),
+              'blueprint': ( lambda foundation: foundation.blueprint.pk, None ),
+              'id_map': ( lambda foundation: foundation.ip_map, None ),
+              'interfaces': ( lambda foundation: [ i.name for i in foundation.interfaces.all() ], None )
+            }
+
+  def configValues( self ):
+    return {
+             'foundation_id': self.pk,
+             'foundation_type': self.type,
+             'foundation_state': self.state,
+             'foundation_class_list': self.class_list
+           }
 
   @property
   def subclass( self ):
@@ -167,6 +185,14 @@ class Structure( Networked ):
     self.built_at = None
     self.config_uuid = str( uuid.uuid4() )
     self.save()
+
+  def configValues( self ):
+    return {
+             'hostname': self.hostname,
+             'structure': self.pk,
+             'state': self.state,
+             'config_uuid': self.config_uuid
+           }
 
   @cinp.action( 'Map' )
   def getConfig( self ):
