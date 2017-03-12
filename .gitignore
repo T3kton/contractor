@@ -1,7 +1,9 @@
 __pycache__
-vagrant/.vagrant
-vagrant/.Vagrantfile.swp
+*.pyc
+/build
+
 *.sqlite3
 htmlcov
 .coverage
 .cache
+
