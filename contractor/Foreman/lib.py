@@ -16,7 +16,7 @@ def createJob( script_name, target ):
   if isinstance( target, Structure ):
     job = StructureJob()
     job.structure = target
-    obj_list.append( StructureFoundationPlugin( target ) )
+    obj_list.append( StructureFoundationPlugin( target.foundation ) )
     obj_list.append( StructurePlugin( target ) )
     obj_list.append( ConfigPlugin( target ) )
 
@@ -61,6 +61,7 @@ def createJob( script_name, target ):
   print( '**************** Created  Job "{0}" for "{1}"'.format( script_name, target ))
 
   return job.pk
+
 
 def processJobs( site, module_list, max_jobs=10 ):
   if max_jobs > 100:
@@ -155,10 +156,10 @@ def processJobs( site, module_list, max_jobs=10 ):
 
   return results
 
+
 #TODO: we will need some kind of job record locking, so only one thing can happen at a time, ie: rolling back when things are still comming in,
 #   trying to handler.run() when fromsubContractor is happening, pretty much, anything the runner is unpickled, nothing else should  happen to
 #   the job till it is pickled and saved
-
 def jobResults( job_id, cookie, data ):
   try:
     job = BaseJob.objects.get( pk=job_id )
@@ -177,6 +178,7 @@ def jobResults( job_id, cookie, data ):
   job.save()
 
   return result
+
 
 def jobError( job_id, cookie, msg ):
   try:
@@ -225,6 +227,7 @@ class FoundationPlugin( object ):
 
   def __init__( self, foundation ): # most of the time all that is needed is the locator, so we are going to cache that and only go get the object if other than locator is needed
     super().__init__()
+    self._dirty_list = []
     if isinstance( foundation, tuple ):
       self._foundation = None
       self.foundation_class = foundation[0]
@@ -246,20 +249,22 @@ class FoundationPlugin( object ):
 
     return self._foundation
 
+  def _setValue( self, name, val ):
+    setter = self.value_map[ name ][1]
+    setter( self.foundation, val )
+    self._dirty_list.append( name )
+
   def getValues( self ):
     result = {}
     for key in self.value_map:
       getter = self.value_map[ key ][0]
       setter = self.value_map[ key ][1]
       if setter is not None:
-        result[ key ] = ( lambda: getter( self.foundation ), lambda val: setter( self.foundation, val ) )
+        result[ key ] = ( lambda getter=getter: getter( self.foundation ), lambda val, name=key: self._setValue( name, val ) )
       else:
-        result[ key ] = ( lambda: getter( self.foundation ), None )
+        result[ key ] = ( lambda getter=getter: getter( self.foundation ), None )
 
     result[ 'locator' ] = ( lambda: self.foundation_locator, None )
-
-    print( '$$$$$$$$$$$$$$$$$$$4444' )
-    print( result)
 
     return result
 
@@ -269,12 +274,15 @@ class FoundationPlugin( object ):
     return result
 
   def __reduce__( self ):
+    if self._foundation is not None and self._dirty_list:
+      self._foundation.save( update_fields=self._dirty_list )
+
     return ( self.__class__, ( ( self.foundation_class, self.foundation_pk, self.foundation_locator ), ) )
 
 
 class StructureFoundationPlugin( FoundationPlugin ): # ie: read only foundation
   def __init__( self, foundation ):
-    super().__init__()
+    super().__init__( foundation )
     # the same as Foundation plugin, except we want read onlyt value_map, so replace value_map with this and call it good
     self.value_map = self.foundation_class.getTscriptValues( False )
 

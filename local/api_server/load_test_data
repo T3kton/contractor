@@ -48,6 +48,7 @@ fdn_manual1.save()
 print( 'creating structures...' )
 str_vm1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm1' )
 str_vm1.foundation = fdn_vm1
+str_vm1.auto_build = False
 str_vm1.full_clean()
 str_vm1.save()
 
