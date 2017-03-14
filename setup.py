@@ -18,7 +18,7 @@ class build( build_py ):
           continue
         self.build_module( module, module_file, package )
 
-setup( name='cinp',
+setup( name='contractor',
        version='1.0',
        description='Contractor, builder of all',
        author='Peter Howe',
