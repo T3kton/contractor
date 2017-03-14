@@ -62,6 +62,10 @@ class Foundation( models.Model ):
               'interfaces': ( lambda foundation: [ i.name for i in foundation.interfaces.all() ], None )
             }
 
+  @staticmethod
+  def getTscriptFunctions():
+    return {}
+
   def configValues( self ):
     return {
              'foundation_id': self.pk,

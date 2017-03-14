@@ -21,7 +21,7 @@ class testExternalObject( object ):
              'dataRO': ( lambda: self.dataRO, None )
             }
 
-  def getFunctions( self ):
+  def getFunctions( self ): #TODO: test exteral object functions, also module override
     result = {}
 
     return result

@@ -241,6 +241,7 @@ class FoundationPlugin( object ):
       self.foundation_locator = foundation.locator
 
     self.value_map = self.foundation_class.getTscriptValues( True )
+    self.function_map = self.foundation_class.getTscriptFunctions()
 
   @property
   def foundation( self ):
@@ -270,6 +271,9 @@ class FoundationPlugin( object ):
 
   def getFunctions( self ):
     result = {}
+    for key in self.function_map:
+      builder = self.function_map[ key ]
+      result[ key ] = lambda builder=builder: builder( self.foundation )
 
     return result
 

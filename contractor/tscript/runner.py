@@ -99,6 +99,11 @@ following executions:
 
 """
 
+# the module value sent to subcontractor is the same as the tscript name
+# if the module value needs to be overwridden with something else, have the
+# function constructor/build return a tuple, the first value will be treated
+# as the module name for subcontractor, and the second is the function
+
 class ExternalFunction( object ):
   # these two tell contractor what module and function should handle the contractor data
   def __init__( self ):
@@ -145,20 +150,22 @@ class ExternalFunction( object ):
     # this must setup the process of rolling back, the regular run, to/fromSubcontractor
     # process is fallowed after rollback is called to complete the job.
     # after rollback is complete, further calls to run, to/from should start rolling forward again
+    # this can also be used as a type of reset, for example after X attempts, your function
+    # can throw a Pause and request user intervention, calling rollback can be used to re-set
+    # the counter
     # if rollback is not possible raise NoRollback
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     raise NoRollback()
 
   def toSubcontractor( self ):
     # this is sent to the subcontractor
+    # this should return a tuple
     # first paramater is the function inside the plugin to call, second is the value to send to the function
     # this is called initially, then again after fromSubcontractor has returnd results until ready is True
     # example: return ( 'myfunc', { 'stuff': 'for', 'myfunc': 'to use' } ) #NOTE: the paramater part can be anything that is serilizable
     # if None is returned, contractor will not be notified to do anything
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     # subcontractor threads will be waiting on this function
-    # if there is a problem with the data from subcontractor or some other fatal error occurs,
-    #   set ready to True and return an Exception for value, NOTE: this kills this instance of the function unless rolled back
     pass
 
   def fromSubcontractor( self, data ):
@@ -168,6 +175,8 @@ class ExternalFunction( object ):
     # logic that looks for timeout/loss of results and call rollback to start from the top
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     # subcontractor threads will be waiting on this function, don't do anything to heavy to hold up contractor
+    # if there is a problem with the data from subcontractor or some other fatal error occurs,
+    #   have ready() return True and return an Exception for value, NOTE: this kills this instance of the function unless rolled back
     return True
 
   def __getstate__( self ):
@@ -665,10 +674,16 @@ class Runner( object ):
             except KeyError:
               raise NotDefinedError( op_data[ 'name' ], self.cur_line )
 
+            if isinstance( handler, tuple ):
+              module = handler[0]
+              handler = handler[1]
+            else:
+              module = op_data[ 'module' ]
+
             handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
             self.contractor_cookie = str( uuid.uuid4() )
             self.state[ state_index ][1][ 'handler' ] = handler
-            self.state[ state_index ][1][ 'module' ] = op_data[ 'module' ]
+            self.state[ state_index ][1][ 'module' ] = module
             self.state[ state_index ][1][ 'dispatched' ] = False
 
           ready = handler.ready
