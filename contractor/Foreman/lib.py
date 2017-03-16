@@ -1,8 +1,8 @@
 import pickle
 
 from contractor.Building.models import Foundation, Structure
-from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, cinp
-from contractor.lib.config import getConfig
+from contractor.Forman.runner_plugins.building import ConfigPlugin, FoundationPlugin, StructureFoundationPlugin, StructurePlugin
+from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob
 
 from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner, Pause, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, ScriptError
@@ -50,6 +50,10 @@ def createJob( script_name, target ):
   runner = Runner( parse( target.blueprint.get_script( script_name ) ) )
   for module in RUNNER_MODULE_LIST:
     runner.registerModule( module )
+
+  for module in ( 'contractor.Foreman.runner_plugins.dhcp', ):
+    runner.registerModule( module )
+
   for obj in obj_list:
     runner.registerObject( obj )
 
@@ -77,10 +81,10 @@ def processJobs( site, module_list, max_jobs=10 ):
 
   # see if there are any located foundations that need to be prepared
   for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True ):
-    fondation = foundation.subclass
+    foundation = foundation.subclass
     try:
       FoundationJob.objects.get( foundation=foundation )
-      continue # allready has a job, skip it
+      continue  # allready has a job, skip it
     except FoundationJob.DoesNotExist:
       pass
 
@@ -90,7 +94,7 @@ def processJobs( site, module_list, max_jobs=10 ):
   for structure in Structure.objects.filter( site=site, built_at__isnull=True, auto_build=True, foundation__built_at__isnull=False ):
     try:
       StructureJob.objects.get( structure=structure )
-      continue # allready has a job, skip it
+      continue  # allready has a job, skip it
     except StructureJob.DoesNotExist:
       pass
 
@@ -138,7 +142,7 @@ def processJobs( site, module_list, max_jobs=10 ):
 
     except Exception as e:
       job.state = 'aborted'
-      job.message = 'Unknown Runtime Exception ({0}): "{1}"'.format( typ( e ).__name__, str( e ) )
+      job.message = 'Unknown Runtime Exception ({0}): "{1}"'.format( type( e ).__name__, str( e ) )
 
     if job.state == 'queued':
       task = runner.toSubcontractor( module_list )
@@ -157,7 +161,7 @@ def processJobs( site, module_list, max_jobs=10 ):
   return results
 
 
-#TODO: we will need some kind of job record locking, so only one thing can happen at a time, ie: rolling back when things are still comming in,
+# TODO: we will need some kind of job record locking, so only one thing can happen at a time, ie: rolling back when things are still comming in,
 #   trying to handler.run() when fromsubContractor is happening, pretty much, anything the runner is unpickled, nothing else should  happen to
 #   the job till it is pickled and saved
 def jobResults( job_id, cookie, data ):
@@ -166,10 +170,10 @@ def jobResults( job_id, cookie, data ):
   except BaseJob.DoesNotExist:
     raise ValueError( 'Error saving job results: "Job Not Found"' )
 
-  job =  job.realJob
+  job = job.realJob
   runner = pickle.loads( job.script_runner )
   result = runner.fromSubcontractor( cookie, data )
-  if result != 'Accepted': # it wasn't valid/taken, no point in saving anything
+  if result != 'Accepted':  # it wasn't valid/taken, no point in saving anything
     raise ValueError( 'Error saving job results: "{0}"'.format( result ) )
 
   job.status = runner.status
@@ -186,125 +190,11 @@ def jobError( job_id, cookie, msg ):
   except BaseJob.DoesNotExist:
     raise ValueError( 'Error setting job to error: "Job Not Found"' )
 
-  job =  job.realJob
+  job = job.realJob
   runner = pickle.loads( job.script_runner )
-  if cookie != runner.contractor_cookie: # we do our own out of bad cookie check b/c this type of error dosen't need to be propagated to the script runner
+  if cookie != runner.contractor_cookie:  # we do our own out of bad cookie check b/c this type of error dosen't need to be propagated to the script runner
     raise ValueError( 'Error setting job to error: "Bad Cookie"' )
 
   job.message = msg
   job.state = 'error'
   job.save()
-
-
-class ConfigPlugin( object ): # this is purley Read Only, if wiring is needed have to set it to the structure/foundation's config_values, and figure out a way to reload
-  TSCRIPT_NAME = 'config'
-
-  def __init__( self, target ):
-    super().__init__()
-    if isinstance( target, dict ):
-      self.config = target
-    else:
-      self.config = getConfig( target )
-
-  def getValues( self ):
-    result = {}
-    for key in self.config:
-      result[ key ] = ( lambda key=key: self.config[ key ], None )
-
-    return result
-
-  def getFunctions( self ):
-    result = {}
-
-    return result
-
-  def __reduce__( self ):
-    return ( self.__class__, ( self.config, ) )
-
-
-class FoundationPlugin( object ):
-  TSCRIPT_NAME = 'foundation'
-
-  def __init__( self, foundation ): # most of the time all that is needed is the locator, so we are going to cache that and only go get the object if other than locator is needed
-    super().__init__()
-    self._dirty_list = []
-    if isinstance( foundation, tuple ):
-      self._foundation = None
-      self.foundation_class = foundation[0]
-      self.foundation_pk = foundation[1]
-      self.foundation_locator = foundation[2]
-
-    else:
-      self._foundation = foundation.subclass
-      self.foundation_class = self._foundation.__class__
-      self.foundation_pk = foundation.pk
-      self.foundation_locator = foundation.locator
-
-    self.value_map = self.foundation_class.getTscriptValues( True )
-    self.function_map = self.foundation_class.getTscriptFunctions()
-
-  @property
-  def foundation( self ):
-    if self._foundation is None:
-      self._foundation = self.foundation_class.objects.get( pk=self.foundation_pk )
-
-    return self._foundation
-
-  def _setValue( self, name, val ):
-    setter = self.value_map[ name ][1]
-    setter( self.foundation, val )
-    self._dirty_list.append( name )
-
-  def getValues( self ):
-    result = {}
-    for key in self.value_map:
-      getter = self.value_map[ key ][0]
-      setter = self.value_map[ key ][1]
-      if setter is not None:
-        result[ key ] = ( lambda getter=getter: getter( self.foundation ), lambda val, name=key: self._setValue( name, val ) )
-      else:
-        result[ key ] = ( lambda getter=getter: getter( self.foundation ), None )
-
-    result[ 'locator' ] = ( lambda: self.foundation_locator, None )
-
-    return result
-
-  def getFunctions( self ):
-    result = {}
-    for key in self.function_map:
-      builder = self.function_map[ key ]
-      result[ key ] = lambda builder=builder: builder( self.foundation )
-
-    return result
-
-  def __reduce__( self ):
-    if self._foundation is not None and self._dirty_list:
-      self._foundation.save( update_fields=self._dirty_list )
-
-    return ( self.__class__, ( ( self.foundation_class, self.foundation_pk, self.foundation_locator ), ) )
-
-
-class StructureFoundationPlugin( FoundationPlugin ): # ie: read only foundation
-  def __init__( self, foundation ):
-    super().__init__( foundation )
-    # the same as Foundation plugin, except we want read onlyt value_map, so replace value_map with this and call it good
-    self.value_map = self.foundation_class.getTscriptValues( False )
-
-
-class StructurePlugin( object ): # ie: structure with some settable attributes, 'config' is structures (with the foundation merged in of course)
-  TSCRIPT_NAME = 'structure'
-
-  def __init__( self, structure ):
-    super().__init__()
-    self.structure = structure
-
-  def getValues( self ):
-    result = {}
-    result[ 'hostname' ] = ( lambda: self.structure.hostname, None )
-
-    return result
-
-  def getFunctions( self ):
-    result = {}
-
-    return result
