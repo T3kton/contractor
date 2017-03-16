@@ -1,9 +1,10 @@
 import pytest
 import pickle
-from datetime import timedelta
+import time
 
 from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, Timeout, Pause
+
 
 class testExternalObject( object ):
   TSCRIPT_NAME = 'test_obj'
@@ -21,13 +22,14 @@ class testExternalObject( object ):
              'dataRO': ( lambda: self.dataRO, None )
             }
 
-  def getFunctions( self ): #TODO: test exteral object functions, also module override
+  def getFunctions( self ):  # TODO: test exteral object functions, also module override
     result = {}
 
     return result
 
   def __reduce__( self ):
     return ( self.__class__, ( self.dataRW, self.dataWO, self.dataRO ) )
+
 
 def test_begin():
   runner = Runner( parse( '' ) )
@@ -146,46 +148,46 @@ def test_array():
   assert runner.variable_map == {}
   runner.run()
   assert runner.done
-  assert runner.variable_map == { 'myvar': [1,2,3,4,5,6,7,8], 'little': [ 3,4] }
+  assert runner.variable_map == { 'myvar': [ 1, 2, 3, 4, 5, 6, 7, 8 ], 'little': [ 3, 4 ] }
 
   runner = Runner( parse( 'myvar = [1,2,3,4,5,6,7,8]\nlittle = pop( array=myvar, index=1 )' ) )
   assert runner.variable_map == {}
   runner.run()
   assert runner.done
-  assert runner.variable_map == { 'myvar': [1,3,4,5,6,7,8], 'little': 2 }
+  assert runner.variable_map == { 'myvar': [ 1, 3, 4, 5, 6, 7, 8 ], 'little': 2 }
 
   runner = Runner( parse( 'myvar = [1,2,3,4,5,6,7,8]\nlittle = index( array=myvar, value=4 )' ) )
   assert runner.variable_map == {}
   runner.run()
   assert runner.done
-  assert runner.variable_map == { 'myvar': [1,2,3,4,5,6,7,8], 'little': 3 }
+  assert runner.variable_map == { 'myvar': [ 1, 2, 3, 4, 5, 6, 7, 8 ], 'little': 3 }
 
   runner = Runner( parse( 'myvar = [1,2,3,4,5,6,7,8]\nmyvar[2] = "hello"' ) )
   assert runner.variable_map == {}
   runner.run()
   assert runner.done
-  assert runner.variable_map == { 'myvar': [1,2,'hello',4,5,6,7,8] }
+  assert runner.variable_map == { 'myvar': [ 1, 2, 'hello', 4, 5, 6, 7, 8 ] }
 
   runner = Runner( parse( 'myvar = [1,2,3,4,5,6,7,8]\nmyvar[ ( 1 + 3 ) ] = "by"' ) )
   assert runner.variable_map == {}
   runner.run()
   assert runner.done
-  assert runner.variable_map == { 'myvar': [1,2,3,4,'by',6,7,8] }
+  assert runner.variable_map == { 'myvar': [ 1, 2, 3, 4, 'by', 6, 7, 8 ] }
 
   runner = Runner( parse( 'myvar = [1,2,3,4,5,6,7,8]\nmyvar[ ( len( array=myvar ) - 1 ) ] = "end"' ) )
   assert runner.variable_map == {}
   runner.run()
   assert runner.done
-  assert runner.variable_map == { 'myvar': [1,2,3,4,5,6,7,'end'] }
+  assert runner.variable_map == { 'myvar': [ 1, 2, 3, 4, 5, 6, 7, 'end' ] }
 
   runner = Runner( parse( 'myvar = [1,2,3,4,5]\nmyvar[ ( len( array=myvar ) - 1 ) ] = "end"' ) )
   assert runner.variable_map == {}
   runner.run()
   assert runner.done
-  assert runner.variable_map == { 'myvar': [1,2,3,4,'end'] }
+  assert runner.variable_map == { 'myvar': [ 1, 2, 3, 4, 'end' ] }
 
 
-def test_module_values():  #TODO: add pickling testing
+def test_module_values():  # TODO: add pickling testing
   runner = Runner( parse( 'asdf = testing.bigstuff' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
@@ -547,7 +549,7 @@ def test_pause_error():
   assert runner.variable_map == {}
 
 
-def test_functions():
+def test_builtin_functions():
   runner = Runner( parse( 'ary = [ 1,2,3,4 ]\nvar = len( array=ary )' ) )
   assert runner.variable_map == {}
   runner.run()
@@ -566,8 +568,74 @@ def test_functions():
   assert runner.done
   assert runner.variable_map == { 'ary': [ 1, 2, 3, 4 ], 'var': 4 }
 
+  runner = Runner( parse( 'ary = [ 1,2,3,4 ]\nvar = slice( array=ary, start=2, end=3 )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'ary': [ 1, 2, 3, 4 ], 'var': [ 3 ] }
 
-def test_object_functions(): #TODO: this and pickleing too
+  runner = Runner( parse( 'ary = [ 1,2,3,4 ]\nvar = slice( array=ary, start=0, end=2 )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'ary': [ 1, 2, 3, 4 ], 'var': [ 1, 2 ] }
+
+  runner = Runner( parse( 'ary = [ 1,2,3,4 ]\nvar = pop( array=ary, index=0 )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'ary': [ 2, 3, 4 ], 'var': 1 }
+
+  runner = Runner( parse( 'ary = [ 1,2,3,4 ]\nvar = pop( array=ary, index=-1 )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'ary': [ 1, 2, 3 ], 'var': 4 }
+
+  runner = Runner( parse( 'ary = [ 1,2,3,4 ]\nvar = pop( array=ary )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'ary': [ 1, 2, 3 ], 'var': 4 }
+
+  runner = Runner( parse( 'ary = [ 1,2,3,4 ]\nappend( array=ary, value=5 )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'ary': [ 1, 2, 3, 4, 5 ] }
+
+  runner = Runner( parse( 'ary = [ 1,2,3,4 ]\nvar = index( array=ary, value=3 )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'ary': [ 1, 2, 3, 4 ], 'var': 2 }
+
+
+def test_delay():
+  runner = Runner( parse( 'delay( seconds=5 )' ) )
+  assert runner.run() == 'Waiting for 4 more seconds'
+  assert runner.done is False
+  time.sleep( 1 )
+  runner.run() == 'Waiting for 3 more seconds'
+  assert runner.done is False
+  time.sleep( 5 )
+  runner.run()
+  assert runner.done
+
+  runner = Runner( parse( 'delay( minutes=5 )' ) )
+  assert runner.run() == 'Waiting for 299 more seconds'
+  assert runner.done is False
+  time.sleep( 1 )
+  assert runner.run() == 'Waiting for 298 more seconds'
+
+  runner = Runner( parse( 'delay( hours=2 )' ) )
+  assert runner.run() == 'Waiting for 7199 more seconds'
+  assert runner.done is False
+  time.sleep( 2 )
+  assert runner.run() == 'Waiting for 7197 more seconds'
+
+
+def test_object_functions():  # TODO: this and pickleing too
   pass
 
 
@@ -600,7 +668,7 @@ def test_module_functions():
   assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.run() == 'done'
-  assert runner.variable_map == { 'var': 43210,  'var2': 120 }
+  assert runner.variable_map == { 'var': 43210, 'var2': 120 }
 
   runner = Runner( parse( 'var = ( testing.multiply( value=2 ) + testing.multiply( value=3 ) )' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
@@ -678,22 +746,22 @@ def test_external_remote_functions():
   runner = Runner( parse( 'testing.remote()' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
-  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.line == 0
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 'Script not Running'
   assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 'Not Expecting anything'
-  assert runner.toSubcontractor( [] ) == None
-  assert runner.toSubcontractor( [ 'sdf', 'were' ] ) == None
+  assert runner.toSubcontractor( [] ) is None
+  assert runner.toSubcontractor( [ 'sdf', 'were' ] ) is None
   assert runner.toSubcontractor( [ 'rfrf', 'testing', 'sdf' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "1"' }
   assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
   assert runner.line == 1
   assert runner.run() == 'Not Initilized'
   assert not runner.done
   assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
-  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.fromSubcontractor( 'Bad Cookie', True ) == 'Bad Cookie'
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 'Accepted'
   assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
@@ -705,17 +773,17 @@ def test_external_remote_functions():
   assert runner.run() == ''
   assert runner.done
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
-  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == 'Script not Running'
   assert runner.run() == 'done'
-  assert runner.line == None
+  assert runner.line is None
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
-  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
 
   runner = Runner( parse( 'var1 = testing.remote()' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
-  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.variable_map == {}
   assert runner.run() == 'Not Initilized'
   assert not runner.done
@@ -730,12 +798,12 @@ def test_external_remote_functions():
   assert runner.done
   assert runner.run() == 'done'
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
-  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.variable_map == { 'var1': 'the sky is falling' }
 
   runner = Runner( parse( 'testing.remote()' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
-  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.variable_map == {}
   assert runner.run() == 'Not Initilized'
   assert not runner.done
@@ -749,9 +817,9 @@ def test_external_remote_functions():
   assert not runner.done
   assert runner.aborted
   assert runner.run() == 'aborted'
-  assert runner.toSubcontractor( [ 'testing' ] ) == None
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.variable_map == {}
-#TODO: test function rollback
+# TODO: test function rollback
 
 
 def test_serilizer():
@@ -793,6 +861,7 @@ def test_serilizer():
   assert runner2.status[0][0] == 100.0
   assert runner2.done
 
+
 def test_while():
   # first we will test the ttl
   runner = Runner( parse( 'while True do 1' ) )
@@ -812,10 +881,10 @@ def test_while():
 
   runner = Runner( parse( 'cnt = 1\nwhile ( cnt >= 1 ) do cnt = ( cnt + 1 )' ) )
   assert runner.status[0][0] == 0.0
-  for i in range( 0, 100 ): # just do this infinite loop for a long time, make sure it dosen't have other problems
+  for i in range( 0, 100 ):  # just do this infinite loop for a long time, make sure it dosen't have other problems
     with pytest.raises( Timeout ):
       runner.run( i )
-    runner.status # make sure nothing bad happens while computing status
+    runner.status  # make sure nothing bad happens while computing status
   assert runner.status[0][0] == 50.0
   assert not runner.done
 
@@ -845,6 +914,7 @@ def test_while():
   assert runner.status[0][0] == 100.0
   assert runner.done
   assert runner.variable_map == { 'cnt': 10 }
+
 
 def test_ifelse():
   runner = Runner( parse( 'if False then var = 1' ) )
@@ -919,12 +989,13 @@ def test_ifelse():
 
   runner = Runner( parse( 'asd = 1\nif ( asd == 2 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 2 ) then var = "c" else var = "d"\nwhile True do 10' ) )
   assert runner.status[0][0] == 0.0
-  for i in range( 0, 10 ): # just do this infinite loop for a long time, make sure it dosen't have other problems
+  for i in range( 0, 10 ):  # just do this infinite loop for a long time, make sure it dosen't have other problems
     with pytest.raises( Timeout ):
       runner.run( i )
-    runner.status # make sure nothing bad happens while computing status
+    runner.status  # make sure nothing bad happens while computing status
   assert runner.status[0][0] == 66.66666666666667
   assert not runner.done
+
 
 def test_jumppoint():
   runner = Runner( parse( 'abc = 1\n:jump_a\ndce = 2' ) )

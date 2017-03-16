@@ -1,23 +1,29 @@
 import uuid
 import traceback
+import datetime
 from importlib import import_module
 
 from contractor.tscript.parser import types
+
 
 # thrown when the scipt would like to pause execution, calling run() resumes execution
 class Pause( Exception ):
   pass
 
+
 # resumable error, only differes from pause by the type of exception raised, execution can be resumed with run()
 class ExecutionError( Exception ):
   pass
+
 
 # this error is no-resumable, the script is no longer able to be run()
 class UnrecoverableError( Exception ):
   pass
 
+
 class ScriptError( UnrecoverableError ):
   pass
+
 
 class ParamaterError( UnrecoverableError ):
   def __init__( self, name, msg, line_no=None ):
@@ -31,9 +37,10 @@ class ParamaterError( UnrecoverableError ):
     self.msg = msg
     self.line_no = line_no
 
+
 class NotDefinedError( UnrecoverableError ):
   def __init__( self, name, line_no=None ):
-    if line_no is not  None:
+    if line_no is not None:
       msg = 'Not Defined "{0}" line {1}'.format( name, line_no )
     else:
       msg = 'Not Defined "{0}"'.format( name )
@@ -42,14 +49,17 @@ class NotDefinedError( UnrecoverableError ):
     self.name = name
     self.line_no = line_no
 
+
 class Timeout( ExecutionError ):
   def __init__( self, line_no ):
     self.line_no = line_no
+
 
 class Goto( Exception ):
   def __init__( self, name, line_no ):
     self.name = name
     self.line_no = line_no
+
 
 class NoRollback( Exception ):
   pass
@@ -98,6 +108,7 @@ following executions:
     value is retreived and returned to script
 
 """
+
 
 # the module value sent to subcontractor is the same as the tscript name
 # if the module value needs to be overwridden with something else, have the
@@ -193,39 +204,84 @@ class Interrupt( Exception ):
   pass
 
 
+class delay( ExternalFunction ):
+  def __init__( self, *args, **kwargs ):
+    super().__init__( *args, **kwargs )
+    self.end_at = None
+
+  @property
+  def ready( self ):
+    if datetime.datetime.utcnow() >= self.end_at:
+      return True
+    else:
+      return 'Waiting for {0} more seconds'.format( ( self.end_at - datetime.datetime.utcnow() ).seconds )
+
+  def setup( self, parms ):
+    seconds = 0
+    minutes = 0
+    hours = 0
+    try:
+      seconds = int( parms.get( 'seconds', 0 ) )
+    except ( ValueError, TypeError ):
+      raise ParamaterError( 'seconds', 'must be an integer' )
+
+    try:
+      minutes = int( parms.get( 'minutes', 0 ) )
+    except ( ValueError, TypeError ):
+      raise ParamaterError( 'minutes', 'must be an integer' )
+
+    try:
+      hours = int( parms.get( 'hours', 0 ) )
+    except ( ValueError, TypeError ):
+      raise ParamaterError( 'hours', 'must be an integer' )
+
+    if seconds == 0 and minutes == 0 and hours == 0:
+      raise ParamaterError( '<unknwon>', 'specified 0 delay, set one or more of "seconds", "minutes", "hours"' )
+
+    self.end_at = datetime.datetime.utcnow() + datetime.timedelta( seconds=seconds, minutes=minutes, hours=hours )
+
+  def __getstate__( self ):
+    return ( self.end_at, )
+
+  def __setstate__( self, state ):
+    self.end_at = state[0]
+
+
 builtin_function_map = {
-                          'len':    lambda array: len( array ),
-                          'slice':  lambda array, start, end: array[ start:end ],
-                          'pop':    lambda array, index: array.pop( index ),
+                          'len': lambda array: len( array ),
+                          'slice': lambda array, start, end: array[ start:end ],
+                          'pop': lambda array, index=-1: array.pop( index ),
                           'append': lambda array, value: array.append( value ),
-                          'index':  lambda array, value: array.index( value ),
-                          'pause':  lambda msg: Pause( msg ),
-                          'error':  lambda msg: ExecutionError( msg ),
-                          'fatal_error': lambda msg: UnrecoverableError( msg )
+                          'index': lambda array, value: array.index( value ),
+                          'pause': lambda msg: Pause( msg ),
+                          'error': lambda msg: ExecutionError( msg ),
+                          'fatal_error': lambda msg: UnrecoverableError( msg ),
+                          'delay': delay()
                         }
 
 infix_math_operator_map = {
-                            '+' : lambda a, b: a + b,
-                            '-' : lambda a, b: a - b,
-                            '*' : lambda a, b: a * b,
-                            '/' : lambda a, b: a / b,
-                            '%' : lambda a, b: a % b,
-                            '^' : lambda a, b: pow( a, b ),
-                            '&' : lambda a, b: a & b,
-                            '|' : lambda a, b: a | b
+                            '+': lambda a, b: a + b,
+                            '-': lambda a, b: a - b,
+                            '*': lambda a, b: a * b,
+                            '/': lambda a, b: a / b,
+                            '%': lambda a, b: a % b,
+                            '^': lambda a, b: pow( a, b ),
+                            '&': lambda a, b: a & b,
+                            '|': lambda a, b: a | b
                           }
 
 infix_logical_operator_map = {
                                'and': lambda a, b: a and b,
-                               'or':  lambda a, b: a or b,
-                               '==':  lambda a, b: a == b,
-                               '!=':  lambda a, b: a != b,
-                               '>=':  lambda a, b: a >= b,
-                               '<=':  lambda a, b: a <= b,
-                               '>':   lambda a, b: a > b,
-                               '<':   lambda a, b: a < b,
+                               'or': lambda a, b: a or b,
+                               '==': lambda a, b: a == b,
+                               '!=': lambda a, b: a != b,
+                               '>=': lambda a, b: a >= b,
+                               '<=': lambda a, b: a <= b,
+                               '>': lambda a, b: a > b,
+                               '<': lambda a, b: a < b,
                                'not': lambda a, b: not bool( a )
                              }
+
 
 class Runner( object ):
   def __init__( self, ast ):
@@ -235,8 +291,8 @@ class Runner( object ):
     # serilize
     self.module_list = []   # list of the loaded modules
     self.object_list = []   # list of loaded embeded objects
-    self.state = []     # list of ( <type>, work values, [ return value ] ), for each level of the AST to the curent execution point
-    self.variable_map = {} # map of the variables, they are all global
+    self.state = []         # list of ( <type>, work values, [ return value ] ), for each level of the AST to the curent execution point
+    self.variable_map = {}  # map of the variables, they are all global
     self.cur_line = 0
     self.contractor_cookie = None
 
@@ -247,7 +303,7 @@ class Runner( object ):
 
     # scan for all the jump points
     for i in range( 0, len( ast[1][ '_children' ] ) ):
-      child = ast[1][ '_children' ][i][1] # jump into the  line
+      child = ast[1][ '_children' ][i][1]  # jump into the  line
       if child[0] == types.JUMP_POINT:
         self.jump_point_map[ child[1] ] = i
 
@@ -264,7 +320,7 @@ class Runner( object ):
     return self.state == 'ABORTED'
 
   @property
-  def status( self ): # list of ( % complete, status message )
+  def status( self ):  # list of ( % complete, status message )
     print( ")){0}((".format( self.state ) )
     if self.done or self.aborted:
       return [ ( 100.0, 'Scope', None ) ]
@@ -273,7 +329,7 @@ class Runner( object ):
 
     item_list = []
     operation = self.ast
-    for step in self.state:  #condense into on loop, last status may be a blocking function with remote  and status values
+    for step in self.state:  # condense into on loop, last status may be a blocking function with remote  and status values
       step_type = step[0]
       try:
         step_data = step[1]
@@ -285,14 +341,14 @@ class Runner( object ):
       if step_type == types.SCOPE:
         tmp = operation[1].copy()
         del tmp[ '_children' ]
-        if step_data is None: # no point in continuing, we don't know where we are
+        if step_data is None:  # no point in continuing, we don't know where we are
           item_list.append( ( 0, len( operation[1][ '_children' ] ), 'Scope', tmp ) )
           break
 
         item_list.append( ( step_data, len( operation[1][ '_children' ] ), 'Scope', tmp ) )
         operation = operation[1][ '_children' ][ step_data ]
 
-      elif step_type == types.WHILE: # if a while loop is on the stack, we must be in it, keep on going
+      elif step_type == types.WHILE:  # if a while loop is on the stack, we must be in it, keep on going
         item_list.append( ( 0, 1, 'While', None ) )
         operation = operation[1][ 'expression' ]
 
@@ -329,10 +385,10 @@ class Runner( object ):
 
     result = []
     last_perc_complete = 0
-    for item in reversed( item_list ): # work backwards, as we go up, we scale the last perc_complete acording to the % of the curent scope
+    for item in reversed( item_list ):  # work backwards, as we go up, we scale the last perc_complete acording to the % of the curent scope
       # before + -> scaling the last % complete .... after the +  -> the curent %
       perc_complete = ( 1.0 / item[1] ) * last_perc_complete + ( 100.0 * item[0]) / item[1]
-      result.insert( 0, ( perc_complete, item[2] , item[3] ) )
+      result.insert( 0, ( perc_complete, item[2], item[3] ) )
       last_perc_complete = perc_complete
 
     return result
@@ -355,12 +411,12 @@ class Runner( object ):
 
     self.ttl = ttl
 
-    while True: # we are a while loop for the beninit of the goto
+    while True:  # we are a while loop for the beninit of the goto
       try:
         self._evaluate( self.ast, 0 )
         return ''
 
-      except Goto as e: # yank the stack to this jump point,  NOTE: jump points can only be in the global scope
+      except Goto as e:  # yank the stack to this jump point,  NOTE: jump points can only be in the global scope
         try:
           self.goto( e.name )
         except NotDefinedError:
@@ -378,7 +434,7 @@ class Runner( object ):
         raise e
 
       except Exception as e:
-        self.state = 'ABORTED' #TODO: watch some kind of DEBUG flag to enable/disable the stack trace
+        self.state = 'ABORTED'  # TODO: watch some kind of DEBUG flag to enable/disable the stack trace
         raise UnrecoverableError( 'Unahndled Exception ({0}): "{1}"\ntrace:\n{2}'.format( type( e ).__name__, str( e ), traceback.format_exc() ) )
 
     print( '*******  RUN FINISH  *******' )
@@ -420,13 +476,13 @@ class Runner( object ):
         self._evaluate( op_data[ '_children' ][ self.state[ state_index ][ 1 ] ], state_index + 1 )
         self.state[ state_index ][1] += 1
 
-    elif op_type == types.CONSTANT: # reterieve constant value
+    elif op_type == types.CONSTANT:  # reterieve constant value
       try:
         self.state[ state_index ][2] = op_data
       except IndexError:
         self.state[ state_index ] += [ None, op_data ]
 
-    elif op_type == types.VARIABLE: # reterieve variable value
+    elif op_type == types.VARIABLE:  # reterieve variable value
       if op_data[ 'module' ] is None:
         try:
           value = self.variable_map[ op_data[ 'name' ] ]
@@ -440,7 +496,7 @@ class Runner( object ):
           raise NotDefinedError( op_data[ 'module' ], self.cur_line )
 
         try:
-          getter = module[ op_data[ 'name' ] ][0] # index 0 is the getter
+          getter = module[ op_data[ 'name' ] ][0]  # index 0 is the getter
         except KeyError:
           raise NotDefinedError( op_data[ 'name' ], self.cur_line )
 
@@ -454,7 +510,7 @@ class Runner( object ):
       except IndexError:
         self.state[ state_index ] += [ None, value ]
 
-    elif op_type == types.ARRAY: # return array
+    elif op_type == types.ARRAY:  # return array
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -472,7 +528,7 @@ class Runner( object ):
       self.state[ state_index ].append( self.state[ state_index ][1] )
       self.state[ state_index ][1] = None
 
-    elif op_type == types.ARRAY_ITEM: # reterieve array index value
+    elif op_type == types.ARRAY_ITEM:  # reterieve array index value
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -490,7 +546,7 @@ class Runner( object ):
         self.state[ state_index ][1][ 'index' ] = self.state[ state_index + 1 ][2]
         self.state = self.state[ :( state_index + 1 ) ]
 
-      #look up the variable
+      # look up the variable
       if op_data[ 'module' ] is None:
         try:
           value = self.variable_map[ op_data[ 'name' ] ]
@@ -504,7 +560,7 @@ class Runner( object ):
           raise NotDefinedError( op_data[ 'module' ], self.cur_line )
 
         try:
-          getter = module[ op_data[ 'name' ] ][0] # index 0 is the getter
+          getter = module[ op_data[ 'name' ] ][0]  # index 0 is the getter
         except KeyError:
           raise NotDefinedError( op_data[ 'name' ], self.cur_line )
 
@@ -521,7 +577,7 @@ class Runner( object ):
       except IndexError:
         self.state[ state_index ].append( value )
 
-    elif op_type == types.ASSIGNMENT: # get the value from 'value', and assign it to the variable defined in 'target'
+    elif op_type == types.ASSIGNMENT:  # get the value from 'value', and assign it to the variable defined in 'target'
       if op_data[ 'target' ][0] not in ( types.VARIABLE, types.ARRAY_ITEM ) or ( op_data[ 'target' ][0] == types.ARRAY_ITEM and op_data[ 'target' ][1][ 'module' ] is not None ):
         raise ParamaterError( 'target', 'Can only assign to variables', self.cur_line )
 
@@ -556,7 +612,7 @@ class Runner( object ):
       target = op_data[ 'target' ][1]
       value = self.state[ state_index ][1][ 'value' ]
 
-      if target[ 'module' ] is None: # we don't evaluate the target, it can only be a variable
+      if target[ 'module' ] is None:  # we don't evaluate the target, it can only be a variable
         if op_data[ 'target' ][0] == types.ARRAY_ITEM:
           self.variable_map[ target[ 'name' ] ][ self.state[ state_index ][1][ 'index' ] ] = value
         else:
@@ -569,7 +625,7 @@ class Runner( object ):
           raise NotDefinedError( target[ 'module' ], self.cur_line )
 
         try:
-          setter = module[ target[ 'name' ] ][1] # index 1 is the setter
+          setter = module[ target[ 'name' ] ][1]  # index 1 is the setter
         except KeyError:
           raise NotDefinedError( target[ 'name' ], self.cur_line )
 
@@ -578,7 +634,7 @@ class Runner( object ):
 
         setter( value )
 
-    elif op_type == types.INFIX: # infix type operators
+    elif op_type == types.INFIX:  # infix type operators
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -609,10 +665,10 @@ class Runner( object ):
       left_val = self.state[ state_index ][1][ 'left' ]
       right_val = self.state[ state_index ][1][ 'right' ]
 
-      if op_data[ 'operator' ] in infix_math_operator_map: # the number group
-        if not isinstance( left_val, ( int,  float ) ):
+      if op_data[ 'operator' ] in infix_math_operator_map:  # the number group
+        if not isinstance( left_val, ( int, float ) ):
           raise ParamaterError( 'left of operator', 'must be numeric', self.cur_line )
-        if not isinstance( right_val, ( int,  float ) ):
+        if not isinstance( right_val, ( int, float ) ):
           raise ParamaterError( 'right of operator', 'must be numeric', self.cur_line )
 
         value = infix_math_operator_map[ op_data[ 'operator' ] ]( left_val, right_val )
@@ -626,13 +682,13 @@ class Runner( object ):
       self.state[ state_index ][1] = None
       self.state[ state_index ].append( value )
 
-    elif op_type == types.FUNCTION: # FUNCTION
+    elif op_type == types.FUNCTION:  # FUNCTION
       try:
         self.state[ state_index ][1]
       except IndexError:
         self.state[ state_index ].append( { 'paramaters': {} } )
 
-      if self.state[ state_index ][1] is None: #TODO: is there a better way to handle this?
+      if self.state[ state_index ][1] is None:  # TODO: is there a better way to handle this?
         pass
         # function allready executed and was an Exceptoin last time, just let things pass by us
 
@@ -650,20 +706,18 @@ class Runner( object ):
             self.state[ state_index ][1][ 'paramaters' ][ key ] = self.state[ state_index + 1 ][2]
             self.state = self.state[ :( state_index + 1 ) ]
 
-        if op_data[ 'module' ] is None:
-          # execute builtin function
-          try:
-            value = builtin_function_map[ op_data[ 'name' ] ]( **self.state[ state_index ][1][ 'paramaters' ] )
-          except TypeError as e:
-            raise ParamaterError( '<unknown>', e, self.cur_line )
-          except KeyError:
-            raise NotDefinedError( op_data[ 'name' ], self.cur_line )
+        try:
+          handler = self.state[ state_index ][1][ 'handler' ]
+        except KeyError:  # handler dosen't exist, let's find it and set it up
+          if op_data[ 'module' ] is None:  # built in function
+            try:
+              handler = builtin_function_map[ op_data[ 'name' ] ]
+            except KeyError:
+              raise NotDefinedError( op_data[ 'name' ], self.cur_line )
 
-        else:
-          # execute external function
-          try:
-            handler = self.state[ state_index ][1][ 'handler' ]
-          except KeyError:
+            module = '<builtin>'
+
+          else:  # external function
             try:
               module = self.function_map[ op_data[ 'module' ] ]
             except KeyError:
@@ -674,11 +728,12 @@ class Runner( object ):
             except KeyError:
               raise NotDefinedError( op_data[ 'name' ], self.cur_line )
 
+            module = op_data[ 'module' ]
+
+          if isinstance( handler, ExternalFunction ):
             if isinstance( handler, tuple ):
               module = handler[0]
               handler = handler[1]
-            else:
-              module = op_data[ 'module' ]
 
             handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
             self.contractor_cookie = str( uuid.uuid4() )
@@ -686,6 +741,13 @@ class Runner( object ):
             self.state[ state_index ][1][ 'module' ] = module
             self.state[ state_index ][1][ 'dispatched' ] = False
 
+          else:
+            try:
+              value = handler( **self.state[ state_index ][1][ 'paramaters' ] )
+            except TypeError as e:
+              raise ParamaterError( '<unknown>', e, self.cur_line )
+
+        if isinstance( handler, ExternalFunction ):  # else was allready run and set a value above
           ready = handler.ready
           if ready is not True:
             handler.run()
@@ -707,7 +769,7 @@ class Runner( object ):
       try:
         self.state[ state_index ][1]
       except IndexError:
-        self.state[ state_index ].append( { 'doing': 'condition' } ) # this is so we remember what it was we were doing when interrupted
+        self.state[ state_index ].append( { 'doing': 'condition' } )  # this is so we remember what it was we were doing when interrupted
 
       while True:
         if self.state[ state_index ][1][ 'doing' ] == 'condition':
@@ -750,7 +812,7 @@ class Runner( object ):
 
         self.state = self.state[ :( state_index + 1 ) ]
 
-    elif op_type == types.JUMP_POINT: # just a NOP execution wise
+    elif op_type == types.JUMP_POINT:  # just a NOP execution wise
       pass
 
     elif op_type == types.GOTO:
@@ -760,10 +822,10 @@ class Runner( object ):
       raise ScriptError( 'Unimplemented "{0}"'.format( op_type ), self.cur_line )
 
     # if the op_type we just ran does not  return a value, make sure it is cleaned up
-    if op_type not in ( types.CONSTANT, types.VARIABLE, types.ARRAY, types.ARRAY_ITEM, types.INFIX, types.FUNCTION ): # all the things that "return" a value
-      self.state = self.state[ :state_index ] # remove this an evertying after from the state
+    if op_type not in ( types.CONSTANT, types.VARIABLE, types.ARRAY, types.ARRAY_ITEM, types.INFIX, types.FUNCTION ):  # all the things that "return" a value
+      self.state = self.state[ :state_index ]  # remove this an evertying after from the state
     else:
-      self.state = self.state[ :state_index + 1 ] # remove everything after this one, save this one's return value on the stack
+      self.state = self.state[ :state_index + 1 ]  # remove everything after this one, save this one's return value on the stack
 
     print( '==={1}==={0}==='.format( self.state, ' ' * state_index ) )
     if self.state == []:
@@ -784,7 +846,7 @@ class Runner( object ):
     if operation[1][ 'module' ] not in subcontractor_module_list:
       return None
 
-    if operation[1][ 'dispatched' ] is True: # allready dispatchced, don't send anything else until something comes back
+    if operation[1][ 'dispatched' ] is True:  # allready dispatchced, don't send anything else until something comes back
       return None
 
     handler = operation[1][ 'handler' ]
@@ -826,12 +888,11 @@ class Runner( object ):
     if operation[0] != types.FUNCTION:
       return
 
-    handler = operation[1][ 'handler' ]
     operation[1][ 'dispatched' ] = False
 
     return
 
-  def rollback( self ):  #TODO: make to/from subcontractor and  rollback consistant in how they handle errors, this will take some work with the things calling them
+  def rollback( self ):  # TODO: make to/from subcontractor and  rollback consistant in how they handle errors, this will take some work with the things calling them
     if self.done or self.aborted or self.state == []:
       return 'Script not Running'
 
@@ -846,7 +907,7 @@ class Runner( object ):
     except NoRollback:
       return 'Rollback not possible'
 
-    self.contractor_cookie = str( uuid.uuid4() ) # revoke any outstanding tasks, TODO: do we also rotate cookie on reset?  if not, should we rotate keys even if rollback is  not possible
+    self.contractor_cookie = str( uuid.uuid4() )  # revoke any outstanding tasks, TODO: do we also rotate cookie on reset?  if not, should we rotate keys even if rollback is  not possible
     operation[1][ 'dispatched' ] = False
 
     return 'Done'
@@ -859,7 +920,7 @@ class Runner( object ):
 
     self.module_list.append( name )
 
-  def registerObject( self, obj ): # all objects must be serializable, if not use the module, thoes are not serilized into the stored pickle, just the names so they can be auto-registered when unpickled
+  def registerObject( self, obj ):  # all objects must be serializable, if not use the module, thoes are not serilized into the stored pickle, just the names so they can be auto-registered when unpickled
     name = obj.TSCRIPT_NAME
 
     self.function_map[ name ] = obj.getFunctions()
