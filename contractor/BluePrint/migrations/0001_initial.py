@@ -4,10 +4,27 @@ from __future__ import unicode_literals
 from django.db import migrations, models
 import contractor.fields
 
-def load_structure_blueprints( app, schema_editor ):
+
+def load_generic_pxe( app, schema_editor ):
+  PXE = app.get_model( 'BluePrint', 'PXE' )
+
+  pxe = PXE( name='normal-boot-ipxe' )
+  pxe.boot_script = """echo Booting form Primary Boot Disk
+sanboot --no-describe --drive 0x80 || echo Primary Boot Disk is not Bootable"""
+  pxe.template = ''
+  pxe.save()
+
+  pxe = PXE( name='normal-boot' )
+  pxe.boot_script = ''
+  pxe.template = ''
+  pxe.save()
+
+
+def load_linux_blueprints( app, schema_editor ):
   StructureBluePrint = app.get_model( 'BluePrint', 'StructureBluePrint' )
   Script = app.get_model( 'BluePrint', 'Script' )
   BluePrintScript = app.get_model( 'BluePrint', 'BluePrintScript' )
+  PXE = app.get_model( 'BluePrint', 'PXE' )
 
   sbpl = StructureBluePrint( name='generic-linux', description='Generic Linux' )
   sbpl.config_values = { 'distro': 'generic' }
@@ -28,7 +45,18 @@ def load_structure_blueprints( app, schema_editor ):
 
   s = Script( name='create-linux', description='Install Linux' )
   s.script = """# pxe boot and install
-foundation.power_on()
+begin( description="Linux Install" )
+  dhcp.set_pxe( interface=structure.provisioning_interface, pxe="ubuntu-iso" )
+  foundation.power_on()
+  delay( seconds=30 )
+  foundation.wait_for_poweroff()
+end
+
+begin( description="Boot Linux" )
+  boot.pxe_to( pxe="normal-boot" )
+  foundation.power_on()
+  iputils.wait_for_port( target=structure.provisioning_ip, port=22 )
+end
 """
   s.full_clean()
   s.save()
@@ -37,10 +65,16 @@ foundation.power_on()
   s = Script( name='destroy-linux', description='Uninstall Linux' )
   s.script = """# nothing to do, foundation cleanup should wipe/destroy the disks
 foundation.power_off()
+#eventually pxe boot to MBR wipper
 """
   s.full_clean()
   s.save()
   BluePrintScript( blueprint=sbpl, script=s, name='destroy' ).save()
+
+  pxe = PXE( name='ubuntu-iso' )
+  pxe.boot_script = ''
+  pxe.template = ''
+  pxe.save()
 
 
 class Migration(migrations.Migration):
@@ -72,7 +106,8 @@ class Migration(migrations.Migration):
             name='PXE',
             fields=[
                 ('name', models.CharField(max_length=50, primary_key=True, serialize=False)),
-                ('script', models.TextField()),
+                ('boot_script', models.TextField()),
+                ('template', models.TextField()),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
@@ -126,5 +161,6 @@ class Migration(migrations.Migration):
             name='blueprintscript',
             unique_together=set([('blueprint', 'name')]),
         ),
-        migrations.RunPython( load_structure_blueprints ),
+        migrations.RunPython( load_generic_pxe ),
+        migrations.RunPython( load_linux_blueprints ),
     ]

@@ -181,7 +181,8 @@ class BluePrintScript( models.Model ):
 @cinp.model()
 class PXE( models.Model ):
   name = models.CharField( max_length=50, primary_key=True )
-  script = models.TextField()
+  boot_script = models.TextField()
+  template = models.TextField()
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 

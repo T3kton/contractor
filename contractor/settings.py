@@ -8,7 +8,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = (
@@ -21,7 +20,7 @@ INSTALLED_APPS = (
     'contractor.SubContractor',
     'contractor_plugins.Manual',
     'contractor_plugins.VirtualBox',
-    #'contractor_plugins.ipmi',
+    'contractor_plugins.IPUtils',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

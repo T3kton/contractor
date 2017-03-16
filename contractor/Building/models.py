@@ -18,13 +18,14 @@ cinp = CInP( 'Building', '0.1' )
 
 FOUNDATION_SUBCLASS_LIST = []
 
+
 @cinp.model( property_list=( 'state', 'type', 'class_list' ) )
 class Foundation( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
   locator = models.CharField( max_length=100, unique=True )
   config_values = MapField( blank=True )
-  id_map = JSONField( blank=True ) # ie a dict of asset, chassis, system, etc types
+  id_map = JSONField( blank=True )  # ie a dict of asset, chassis, system, etc types
   interfaces = models.ManyToManyField( PhysicalNetworkInterface, through='FoundationNetworkInterface' )
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
@@ -33,7 +34,7 @@ class Foundation( models.Model ):
 
   def setLocated( self ):
     try:
-      self.structure.setDestroyed() #TODO: this may be a little harsh
+      self.structure.setDestroyed()  # TODO: this may be a little harsh
     except Structure.DoesNotExist:
       pass
     self.located_at = timezone.now()
@@ -46,7 +47,7 @@ class Foundation( models.Model ):
 
   def setDestroyed( self ):
     try:
-      self.structure.setDestroyed() #TODO: this may be a little harsh
+      self.structure.setDestroyed()  # TODO: this may be a little harsh
     except Structure.DoesNotExist:
       pass
     self.built_at = None
@@ -54,12 +55,13 @@ class Foundation( models.Model ):
     self.save()
 
   @staticmethod
-  def getTscriptValues( write_mode=False ): # locator is handled seperatly
-    return { # none of these base items are writeable, ignore the write_mode for now
+  def getTscriptValues( write_mode=False ):  # locator is handled seperatly
+    return {  # none of these base items are writeable, ignore the write_mode for now
               'site': ( lambda foundation: foundation.site.pk, None ),
               'blueprint': ( lambda foundation: foundation.blueprint.pk, None ),
               'id_map': ( lambda foundation: foundation.ip_map, None ),
-              'interfaces': ( lambda foundation: [ i.name for i in foundation.interfaces.all() ], None )
+              'provisioning_interface': ( lambda foundation: foundation.interfaces.get( provisioning=True ), None ),
+              'interface_list': ( lambda foundation: [ i for i in foundation.interfaces.all() ], None )
             }
 
   @staticmethod
@@ -68,11 +70,11 @@ class Foundation( models.Model ):
 
   def configValues( self ):
     return {
-             'foundation_id': self.pk,
-             'foundation_type': self.type,
-             'foundation_state': self.state,
-             'foundation_class_list': self.class_list
-           }
+              'foundation_id': self.pk,
+              'foundation_type': self.type,
+              'foundation_state': self.state,
+              'foundation_class_list': self.class_list
+            }
 
   @property
   def subclass( self ):
@@ -85,7 +87,7 @@ class Foundation( models.Model ):
     return self
 
   @cinp.action( 'String' )
-  def getRealFoundationURI( self ): #TODO: this is such a hack, figure  out a better way
+  def getRealFoundationURI( self ):  # TODO: this is such a hack, figure  out a better way
     subclass = self.subclass
     class_name = type( subclass ).__name__
     if class_name == 'Foundation':
@@ -113,7 +115,7 @@ class Foundation( models.Model ):
     return []
 
   @property
-  def can_auto_locate( self ): # child models can decide if it can auto submit job for building, ie: vm (and like foundations) are only canBuild if their structure is auto_build
+  def can_auto_locate( self ):  # child models can decide if it can auto submit job for building, ie: vm (and like foundations) are only canBuild if their structure is auto_build
     return False
 
   @property
@@ -126,7 +128,7 @@ class Foundation( models.Model ):
 
     return 'planned'
 
-  def clean( self, *args, **kwargs ): # also need to make sure a Structure is in only one complex
+  def clean( self, *args, **kwargs ):  # also need to make sure a Structure is in only one complex
     super().clean( *args, **kwargs )
     errors = {}
     if self.type not in self.blueprint.foundation_type_list:
@@ -169,11 +171,12 @@ class FoundationNetworkInterface( models.Model ):
 def getUUID():
   return str( uuid.uuid4() )
 
+
 @cinp.model( property_list=( 'state', ), read_only_list=( 'config_uuid', ) )
 class Structure( Networked ):
-  blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT ) # ie what to bild
-  foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT )   # ie what to build it on
-  config_uuid = models.CharField( max_length=36, default=getUUID, unique=True ) # unique
+  blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT )  # ie what to bild
+  foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT )      # ie what to build it on
+  config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # unique
   config_values = MapField( blank=True )
   auto_build = models.BooleanField( default=True )
   build_priority = models.IntegerField( default=100 )
@@ -209,7 +212,7 @@ class Structure( Networked ):
 
     return 'planned'
 
-  def clean( self, *args, **kwargs ): # also need to make sure a Structure is in only one complex
+  def clean( self, *args, **kwargs ):  # also need to make sure a Structure is in only one complex
     super().clean( *args, **kwargs )
     errors = {}
     if self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
@@ -247,7 +250,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
 
     return 'built' in state_list
 
-  def clean( self, *args, **kwargs ): # also need to make sure a Structure is in only one complex
+  def clean( self, *args, **kwargs ):  # also need to make sure a Structure is in only one complex
     super().clean( *args, **kwargs )
     errors = {}
     if not name_regex.match( self.name ):
