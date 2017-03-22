@@ -1,40 +1,94 @@
 from math import log
+from itertools import groupby
 
-def IpIsV4( value ): # ipv4 is signaled by 0000:0000:0000:0000:0000:FFFF:XXXX:XXXX
+
+def IpIsV4( value ):  # ipv4 is signaled by 0000:0000:0000:0000:0000:FFFF:XXXX:XXXX
   return ( value & 0xffffffffffffffffffffffff00000000 ) == 0x00000000000000000000ffff00000000
 
+
 def CIDRNetwork( prefix, ipv6 ):
+  if not isinstance( prefix, int ) or prefix < 0 or ( ipv6 and prefix > 128 ) or ( not ipv6 and prefix > 32 ):
+    raise ValueError( 'Invalid Prefix' )
+
   if ipv6:
     return ( 2 ** ( 128 - prefix ) ) - 1
   else:
-    return ( 2 ** ( 32 - prefix ) ) - 1
+    return ( 2 ** ( 32 - prefix ) ) - 1 + 0x0000000000000000000000000000ffff00000000
 
-def CIDRNetmask( prefix, ipv6=False ):
+
+def CIDRNetmask( prefix, ipv6 ):
   if ipv6:
     return 0xffffffffffffffffffffffffffffffff - CIDRNetwork( prefix, True )
   else:
-    return 0xffffffff - CIDRNetwork( prefix, False )
+    return 0xffffffffffff - ( CIDRNetwork( prefix, False ) - 0x0000000000000000000000000000ffff00000000 )
 
-def CIDRNetmaskToPrefix( value, ipv6=False ):
-  if ipv6:
+
+def CIDRNetmaskToPrefix( value ):
+  if not isinstance( value, int ):
+    raise ValueError( 'Invalid Netmask' )
+
+  if not IpIsV4( value ):
     tmp = 0xffffffffffffffffffffffffffffffff - value + 1
     return 128 - int( log( tmp, 2 ) )
   else:
-    tmp = 0xffffffff - value + 1
+    tmp = 0xffffffffffff - value + 1
     return 32 - int( log( tmp, 2 ) )
 
-def CIDRNetworkBounds( value, include_unusable=False ):
-  try:
-    ( ip, prefix ) = value.split( '/' )
-    prefix = int( prefix )
-  except ValueError:
-    raise ValueError( 'Invalid CIDR range "{0}"'.format( value ) )
 
-  ip = StrToIp( ip )
-  if IpIsV4( ip ):
-    net = CIDRNetwork( prefix, False )
-    netmask = CIDRNetmask( prefix, False )
-    base_ip = net & netmask
+def CIDRNetworkSize( ip, prefix, include_unusable=False ):
+  if not isinstance( ip, int ):
+    raise ValueError( 'Invalid Ip Address' )
+
+  if ip < 0 or ip > 0xffffffffffffffffffffffffffffffff:
+    raise ValueError( 'ip value is invalid' )
+
+  ipv6 = not IpIsV4( ip )
+  if not isinstance( prefix, int ) or prefix < 0 or ( ipv6 and prefix > 128 ) or ( not ipv6 and prefix > 32 ):
+    raise ValueError( 'Invalid Prefix' )
+
+  if not ipv6:
+    if prefix == 32:
+      return 1
+
+    elif prefix == 31:
+      return 2
+
+    elif include_unusable:
+      return ( 2 ** ( 32 - prefix ) )
+
+    else:
+      return ( 2 ** ( 32 - prefix ) ) - 2
+
+  else:
+    if prefix == 128:
+      return 1
+
+    elif prefix == 127:
+      return 2
+
+    elif include_unusable:
+      return ( 2 ** ( 128 - prefix ) )
+
+    else:
+      return ( 2 ** ( 128 - prefix ) ) - 2
+
+
+def CIDRNetworkBounds( ip, prefix, include_unusable=False ):
+  if not isinstance( ip, int ):
+    raise ValueError( 'Invalid Ip Address' )
+
+  if ip < 0 or ip > 0xffffffffffffffffffffffffffffffff:
+    raise ValueError( 'ip value is invalid' )
+
+  ipv6 = not IpIsV4( ip )
+  if not isinstance( prefix, int ) or prefix < 0 or ( ipv6 and prefix > 128 ) or ( not ipv6 and prefix > 32 ):
+    raise ValueError( 'Invalid Prefix' )
+
+  netmask = CIDRNetmask( prefix, ipv6 )
+  net = CIDRNetwork( prefix, ipv6 )
+  base_ip = netmask & ip
+  if not ipv6:
+    net -= 0x0000000000000000000000000000ffff00000000  # take this out, otherwise it get's added in twice
     if prefix == 32:
       return( ip, ip )
 
@@ -48,10 +102,6 @@ def CIDRNetworkBounds( value, include_unusable=False ):
       return ( base_ip + 1, base_ip + net - 1)
 
   else:
-    net = CIDRNetwork( prefix, True )
-    netmask = CIDRNetmask( prefix, True )
-    base_ip = net & netmask
-
     if prefix == 128:
       return( ip, ip )
 
@@ -61,83 +111,126 @@ def CIDRNetworkBounds( value, include_unusable=False ):
     elif include_unusable:
       return ( base_ip, base_ip + net )
 
-    else: # I don't think ipv6 requires us to reserve the broadcast anymore, but who knows what kind of broken implementations there are out there, so just to be safe, for now
+    else:  # I don't think ipv6 requires us to reserve the broadcast anymore, but who knows what kind of broken implementations there are out there, so just to be safe, for now
       return ( base_ip + 1, base_ip + net - 1)
 
 
-def CIDRNetworkRange( value, include_unusable=False ): # make /24 /23 compatible for ipv4
-  ( start, end ) = CIDRNetworkBounds( value, include_unusable )
+def CIDRNetworkRange( value, prefix, include_unusable=False ):
+  ( start, end ) = CIDRNetworkBounds( value, prefix, include_unusable )
 
-  result = []
   for i in range( start, ( end + 1 ) ):
-    result.append( IpToStr( i ) )
-
-  return result
+    yield i
 
 
 def StrToIp( value ):
   result = 0
 
   if value.find( '.' ) != -1:
-    parts = value.split( '.' )
-    if len( parts ) != 4:
-      raise ValueError( 'Invalid IPv4 Address, "{0}"'.format( value ) )
+    if value.startswith( ':ffff:' ):
+      value = value[ 6: ]
+    part_list = value.split( '.' )
+    if len( part_list ) != 4:
+      raise ValueError( 'Invalid IPv4 Address' )
 
-    while( parts ):
+    while( part_list ):
       result <<= 8
       try:
-        result += int( parts.pop( 0 ) )
+        part = int( part_list.pop( 0 ) )
       except ValueError:
-        raise ValueError( 'Invalid IPv4 Address, "{0}"'.format( value ) )
+        raise ValueError( 'Invalid IPv4 Address' )
+
+      if part > 255 or part < 0:
+        raise ValueError( 'Invalid IPv4 Address' )
+
+      result += part
 
     result += 0x0000000000000000000000000000ffff00000000
 
   elif value.find( ':' ) != -1:
-    parts = value.split( ':' )
-    if len( parts ) < 3 or len( parts ) > 8:
-      raise ValueError( 'Invalid IPv6 Address, "{0}}"'.format( value ) )
-    print( parts )
-    for i in range( 0, len( parts ) ):
-      if parts[i] == '':
-        if parts[i + 1] == '':
-          parts = parts[ 0:i ] + ( [ '0' ] * ( 10 - len( parts  ) ) ) + parts[ i + 2: ]
+    part_list = value.split( ':' )
+    if len( part_list ) < 3 or len( part_list ) > 8:
+      raise ValueError( 'Invalid IPv6 Address' )
+
+    for i in range( 0, len( part_list ) ):
+      if part_list[i] == '':
+        if part_list[i + 1] == '':
+          part_list = part_list[ 0:i ] + ( [ '0' ] * ( 10 - len( part_list  ) ) ) + part_list[ i + 2: ]
         else:
-          parts = parts[ 0:i ] + ( [ '0' ] * ( 9 - len( parts ) ) ) + parts[ i + 1: ]
+          part_list = part_list[ 0:i ] + ( [ '0' ] * ( 9 - len( part_list ) ) ) + part_list[ i + 1: ]
         break
 
-    print( parts )
+    if part_list[-1] == '':
+      part_list[-1] = '0'
+
     for i in range( 0, 8 ):
       result <<= 16
       try:
-        result += int( parts[i], base=16 )
+        result += int( part_list[i], base=16 )
       except ValueError:
-        raise ValueError( 'Invalid IPv6 Address, "{0}"'.format( value ) )
+        raise ValueError( 'Invalid IPv6 Address' )
 
   else:
-    raise ValueError( 'Invalid IP Address, "{0}"'.format( value ) )
+    raise ValueError( 'Invalid IP Address' )
 
   return result
 
 
-def IpToStr( value, force_v6=False ):
+def IpToStr( value, as_v6=False ):
   if not isinstance( value, int ):
     raise ValueError( 'ip must be numeric' )
 
   if value < 0 or value > 0xffffffffffffffffffffffffffffffff:
     raise ValueError( 'ip value is invalid' )
 
-  parts = []
-  if IpIsV4( value ) and not force_v6:
+  part_list = []
+  if IpIsV4( value ):
     for i in range( 0, 4 ):
-      parts.insert( 0, '{0}'.format( value & 0xff ) )
+      part_list.insert( 0, '{0}'.format( value & 0xff ) )
       value >>= 8
 
-    return '.'.join( parts )
+    if as_v6:
+      return ':ffff:{0}'.format( '.'.join( part_list ) )
+    else:
+      return '.'.join( part_list )
+
   else:
     for i in range( 0, 8 ):
-      parts.insert( 0, '{0:x}'.format( value & 0xffff ) ) # as hex
+      part_list.insert( 0, '{0:x}'.format( value & 0xffff ) )  # as hex
       value >>= 16
 
-    # find the longest group of 0s and compress them to ::
+    item_list = []
+    count_list = []
+    for item, grouper in groupby( part_list ):
+      count = len( list( grouper ) )
+      if item != '0':
+        item_list += [ item ] * count
+        count_list += [ 0 ] * count
+      else:
+        item_list.append( item )
+        count_list.append( count )
 
-    return ':'.join( parts )
+    max_count = max( count_list )
+    if max_count == 1:
+      return ':'.join( item_list )
+
+    part_list = []
+    max_index = count_list.index( max_count )
+    for i in range( 0, len( count_list ) ):
+      if item_list[i] != '0':
+        part_list.append( item_list[i] )
+        continue
+
+      if i == max_index:
+        part_list.append( '' )
+      else:
+        part_list += [ '0' ] * count_list[i]
+
+    if part_list[0] == '':
+      part_list.insert( 0, '' )
+    elif part_list[-1] == '':
+      part_list.append( '' )
+
+    if len( part_list ) == 2:
+      return '::{0}'.format( part_list[1] )
+
+    return ':'.join( part_list )
