@@ -4,17 +4,30 @@ import re
 from django.db import models
 from django.core.exceptions import ValidationError
 
+from contractor.lib.ip import StrToIp, IpToStr
+
 name_regex = re.compile( '^[a-zA-Z0-9][a-zA-Z0-9_\-]*$')
-hostname_regex = re.compile( '^[a-z0-9][a-z0-9\-]*[a-z0-9]$' ) # '.' is not allowed, can cause trouble with the DNS generations stuff, must also be lowercase (DNS is non case sensitive)
+hostname_regex = re.compile( '^[a-z0-9][a-z0-9\-]*[a-z0-9]$' )  # '.' is not allowed, can cause trouble with the DNS generations stuff, must also be lowercase (DNS is non case sensitive)
 config_name_regex = re.compile( '^[{}\-~]?([a-zA-Z0-9]+:)?[a-zA-Z0-9][a-zA-Z0-9_\-]*$' )
+JSON_MAGIC = '\x02JSON\x03'
+
 
 def validate_mapfield( value ):
   if not isinstance( value, dict ):
-    raise ValidationError( 'Value must be a python dict, got %{type}', type=type( value ).__name__ )
+    raise ValidationError( 'Value must be a python dict, got %(type)s', params={ 'type': type( value ).__name__ } )
+
 
 def validate_list( value ):
   if not isinstance( value, list ):
-    raise ValidationError( 'Value must be a python list, got %{type}', type=type( value ).__name__ )
+    raise ValidationError( 'Value must be a python list, got %(type)s', params={ 'type': type( value ).__name__ } )
+
+
+def validate_ipaddress( value ):
+  try:
+    StrToIp( value )
+  except ValueError:
+    raise ValidationError( 'Invalid Ip Address "%(value)s"', params={ 'value': value[ 0:100 ] } )
+
 
 class MapField( models.TextField ):
   description = 'JSON Encoded Map'
@@ -67,10 +80,6 @@ class MapField( models.TextField ):
 
     return json.dumps( value )
 
-  def value_to_string( self, obj ):
-    return json.dumps( self._get_val_from_obj( obj ) )
-
-JSON_MAGIC = '\x02JSON\x03'
 
 class JSONField( models.TextField ):
   description = 'JSON Encoded'
@@ -106,9 +115,6 @@ class JSONField( models.TextField ):
   def get_prep_value( self, value ):
     return JSON_MAGIC + json.dumps( value )
 
-  def value_to_string( self, obj ):
-    return JSON_MAGIC + json.dumps( self._get_val_from_obj( obj ) )
-
 
 class StringListField( models.CharField ):
   description = 'String List'
@@ -117,7 +123,7 @@ class StringListField( models.CharField ):
   def __init__( self, *args, **kwargs ):
     if 'default' not in kwargs:
       kwargs[ 'default' ] = []
-    if 'null' in kwargs: # the field needs to be valid JSON, None is not valid
+    if 'null' in kwargs:  # the field needs to be valid JSON, None is not valid
       del kwargs[ 'null' ]
 
     if not isinstance( kwargs[ 'default' ], list ):
@@ -142,3 +148,36 @@ class StringListField( models.CharField ):
 
   def get_prep_value( self, value ):
     return '\t'.join( value )
+
+
+class IpAddressField( models.IntegerField ):
+  description = 'Ip Address Field'
+  validators = [ validate_ipaddress ]
+  cinp_type = 'String'
+
+  def from_db_value( self, value, expression, connection, context ):
+    if value is None:
+      return None
+
+    try:
+      return IpToStr( value )
+    except ValueError:
+      raise ValidationError( '"%(value)s" is not valid', params={ 'value': value } )
+
+  def to_python( self, value ):
+    if value is None:
+      return None
+
+    if isinstance( value, str ):
+      return value
+
+    try:
+      return IpToStr( value )
+    except ValueError:
+      raise ValidationError( '"%(value)s" is not valid', params={ 'value': value } )
+
+  def get_prep_value( self, value ):
+    return StrToIp( value )
+
+  def value_to_string( self, obj ):
+    return self.get_prep_value( self._get_val_from_obj( obj ) )

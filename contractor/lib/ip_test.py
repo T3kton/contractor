@@ -86,6 +86,8 @@ def test_strtoip():
   assert StrToIp( '2001:0:1:0:1:0:1:0' ) == 42540488161977051686370252529451728896
   assert StrToIp( '2001::' ) == 42540488161975842760550356425300246528
 
+  assert StrToIp( None ) is None
+
 
 def test_iptostr():
   assert IpToStr( 0 ) == '::'
@@ -141,6 +143,8 @@ def test_iptostr():
     IpToStr( 0x100000000000000000000000000000000 )
   with pytest.raises( ValueError ):
     IpToStr( '0' )
+
+  assert IpToStr( None ) is None
 
 
 def test_cidrnetwork():

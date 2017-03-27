@@ -1,7 +1,7 @@
 all:
 
 test:
-	DJANGO_SETTINGS_MODULE=contractor.settings py.test-3 -x --cov=contractor/tscript --cov-report html --cov-report term -vv contractor/tscript
+	DJANGO_SETTINGS_MODULE=contractor.settings py.test-3 -x --cov=contractor --cov-report html --cov-report term -vv contractor
 
 
 make_test_db:

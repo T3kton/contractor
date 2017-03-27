@@ -78,7 +78,7 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('foundation', models.ForeignKey(to='Building.Foundation')),
-                ('interface', models.ForeignKey(to='Utilities.PhysicalNetworkInterface')),
+                ('interface', models.ForeignKey(to='Utilities.RealNetworkInterface')),
             ],
         ),
         migrations.CreateModel(
@@ -100,7 +100,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='foundation',
             name='interfaces',
-            field=models.ManyToManyField(through='Building.FoundationNetworkInterface', to='Utilities.PhysicalNetworkInterface'),
+            field=models.ManyToManyField(through='Building.FoundationNetworkInterface', to='Utilities.RealNetworkInterface'),
         ),
         migrations.AddField(
             model_name='foundation',

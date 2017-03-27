@@ -1,7 +1,7 @@
 import pickle
 
 from contractor.Building.models import Foundation, Structure
-from contractor.Forman.runner_plugins.building import ConfigPlugin, FoundationPlugin, StructureFoundationPlugin, StructurePlugin
+from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, StructureFoundationPlugin, StructurePlugin
 from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob
 
 from contractor.tscript.parser import parse

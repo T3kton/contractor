@@ -9,7 +9,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, JSONField, name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
-from contractor.Utilities.models import Networked, PhysicalNetworkInterface
+from contractor.Utilities.models import Networked, RealNetworkInterface
 from contractor.lib.config import getConfig
 
 # this is where the plan meats the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
@@ -26,7 +26,7 @@ class Foundation( models.Model ):
   locator = models.CharField( max_length=100, unique=True )
   config_values = MapField( blank=True )
   id_map = JSONField( blank=True )  # ie a dict of asset, chassis, system, etc types
-  interfaces = models.ManyToManyField( PhysicalNetworkInterface, through='FoundationNetworkInterface' )
+  interfaces = models.ManyToManyField( RealNetworkInterface, through='FoundationNetworkInterface' )
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -103,7 +103,7 @@ class Foundation( models.Model ):
 
   @cinp.action( 'Map' )
   def getConfig( self ):
-    return getConfig( self )
+    return getConfig( self.subclass )
 
   @property
   def type( self ):
@@ -154,7 +154,7 @@ class Foundation( models.Model ):
 @cinp.model( )
 class FoundationNetworkInterface( models.Model ):
   foundation = models.ForeignKey( Foundation )
-  interface = models.ForeignKey( PhysicalNetworkInterface )
+  interface = models.ForeignKey( RealNetworkInterface )
   name = models.CharField( max_length=40 )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )

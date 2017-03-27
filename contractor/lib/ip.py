@@ -3,6 +3,9 @@ from itertools import groupby
 
 
 def IpIsV4( value ):  # ipv4 is signaled by 0000:0000:0000:0000:0000:FFFF:XXXX:XXXX
+  if not isinstance( value, int ):
+    raise ValueError( 'Invalid Ip Address' )
+
   return ( value & 0xffffffffffffffffffffffff00000000 ) == 0x00000000000000000000ffff00000000
 
 
@@ -40,7 +43,7 @@ def CIDRNetworkSize( ip, prefix, include_unusable=False ):
     raise ValueError( 'Invalid Ip Address' )
 
   if ip < 0 or ip > 0xffffffffffffffffffffffffffffffff:
-    raise ValueError( 'ip value is invalid' )
+    raise ValueError( 'Invalid Ip Address' )
 
   ipv6 = not IpIsV4( ip )
   if not isinstance( prefix, int ) or prefix < 0 or ( ipv6 and prefix > 128 ) or ( not ipv6 and prefix > 32 ):
@@ -78,7 +81,7 @@ def CIDRNetworkBounds( ip, prefix, include_unusable=False ):
     raise ValueError( 'Invalid Ip Address' )
 
   if ip < 0 or ip > 0xffffffffffffffffffffffffffffffff:
-    raise ValueError( 'ip value is invalid' )
+    raise ValueError( 'Invalid Ip Address' )
 
   ipv6 = not IpIsV4( ip )
   if not isinstance( prefix, int ) or prefix < 0 or ( ipv6 and prefix > 128 ) or ( not ipv6 and prefix > 32 ):
@@ -123,6 +126,9 @@ def CIDRNetworkRange( value, prefix, include_unusable=False ):
 
 
 def StrToIp( value ):
+  if value is None:
+    return None
+
   result = 0
 
   if value.find( '.' ) != -1:
@@ -170,17 +176,20 @@ def StrToIp( value ):
         raise ValueError( 'Invalid IPv6 Address' )
 
   else:
-    raise ValueError( 'Invalid IP Address' )
+    raise ValueError( 'Invalid Ip Address' )
 
   return result
 
 
 def IpToStr( value, as_v6=False ):
+  if value is None:
+    return None
+
   if not isinstance( value, int ):
-    raise ValueError( 'ip must be numeric' )
+    raise ValueError( 'Invalid Ip Address' )
 
   if value < 0 or value > 0xffffffffffffffffffffffffffffffff:
-    raise ValueError( 'ip value is invalid' )
+    raise ValueError( 'Invalid Ip Address' )
 
   part_list = []
   if IpIsV4( value ):

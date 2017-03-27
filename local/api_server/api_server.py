@@ -14,8 +14,10 @@ from gunicorn.app.base import BaseApplication
 from cinp.server_werkzeug import WerkzeugServer
 
 from contractor.User.models import getUser
+from contractor.lib.config_handler import handler as config_handler
 
 DEBUG = True
+
 
 class GunicornApp( BaseApplication ):
   def __init__( self, application, options=None ):
@@ -43,6 +45,7 @@ if __name__ == '__main__':
   app.registerNamespace( '/', 'contractor.User' )
   app.registerNamespace( '/', 'contractor.BluePrint' )
   app.registerNamespace( '/', 'contractor.Site' )
+  app.registerNamespace( '/', 'contractor.Utilities' )
   app.registerNamespace( '/', 'contractor.Building' )
   app.registerNamespace( '/', 'contractor.Foreman' )
   app.registerNamespace( '/', 'contractor.SubContractor' )
@@ -50,6 +53,8 @@ if __name__ == '__main__':
   #app.registerNamespace( '/', name='Foundations', version='0.1' ) put  the plugins in the Foundation Namespace
   app.registerNamespace( '/', 'contractor_plugins.Manual' )
   app.registerNamespace( '/', 'contractor_plugins.VirtualBox' )
+
+  app.registerPathHandler( '/config/', config_handler )
 
   logger.info( 'Validating...' )
   app.validate()
