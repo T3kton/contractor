@@ -88,6 +88,13 @@ def test_strtoip():
 
   assert StrToIp( None ) is None
 
+  with pytest.raises( ValueError ):
+    StrToIp( 1 )
+  with pytest.raises( ValueError ):
+    StrToIp( 42540766411282592856904266426630537217 )
+  with pytest.raises( ValueError ):
+    StrToIp( 281472812449793 )
+
 
 def test_iptostr():
   assert IpToStr( 0 ) == '::'

@@ -129,6 +129,9 @@ def StrToIp( value ):
   if value is None:
     return None
 
+  if not isinstance( value, str ):
+    raise ValueError( 'Invalid Ip Address' )
+
   result = 0
 
   if value.find( '.' ) != -1:

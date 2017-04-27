@@ -1,9 +1,11 @@
-from contractor.tscript.runner import Runner, ExternalFunction, ExecutionError, UnrecoverableError, ParamaterError
+from contractor.tscript.runner import ExternalFunction, ParamaterError
+
 
 class constant( ExternalFunction ):
   @property
   def value( self ):
     return 42
+
 
 class multiply( ExternalFunction ):
   def __init__( self, *args, **kwargs ):
@@ -127,7 +129,7 @@ def set_otherstuff( value ):
   global other_stuff
   other_stuff = value
 
-## plugin exports
+# plugin exports
 
 TSCRIPT_NAME = 'testing'
 

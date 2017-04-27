@@ -62,7 +62,7 @@ class BluePrint( models.Model ):
 @cinp.model( property_list=( 'subcontractor', ) )
 class FoundationBluePrint( BluePrint ):
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
-  foundation_type_list = StringListField( max_length=200 ) # list of the foundation types this blueprint can be used for
+  foundation_type_list = StringListField( max_length=200 )  # list of the foundation types this blueprint can be used for
   template = JSONField( default={}, blank=True )
   physical_interface_names = StringListField( max_length=200 )
 
@@ -95,7 +95,7 @@ class FoundationBluePrint( BluePrint ):
 @cinp.model(  )
 class StructureBluePrint( BluePrint ):
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
-  foundation_blueprint_list = models.ManyToManyField( FoundationBluePrint ) # list of possible foundations this blueprint could be implemented on
+  foundation_blueprint_list = models.ManyToManyField( FoundationBluePrint )  # list of possible foundations this blueprint could be implemented on
 
   @property
   def combined_foundation_blueprint_list( self ):

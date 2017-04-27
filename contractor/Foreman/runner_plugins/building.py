@@ -1,3 +1,5 @@
+from django.core.exceptions import ObjectDoesNotExist
+
 from contractor.lib.config import getConfig
 
 
@@ -106,9 +108,19 @@ class StructurePlugin( object ):  # ie: structure with some settable attributes,
 
   def getValues( self ):
     result = {}
+    try:
+      provisioning_ip = self.structure.address_set.get( is_provisioning=True )
+    except ObjectDoesNotExist:
+      provisioning_ip = None
+
+    try:
+      provisioning_interface = provisioning_ip.interface if provisioning_ip is not None else None
+    except ObjectDoesNotExist:
+      provisioning_interface = None
+
     result[ 'hostname' ] = ( lambda: self.structure.hostname, None )
-    result[ 'privisioning_ip' ] = ( lambda: '127.0.0.1', None )
-    result[ 'privisioning_interfaace' ] = ( lambda: self.structure.foundation.interfaces.objects.get( pk='eth0' ), None )
+    result[ 'provisioning_ip' ] = ( lambda: provisioning_ip.ip_address if provisioning_ip is not None else None, None )
+    result[ 'provisioning_interface' ] = ( lambda: provisioning_interface if provisioning_interface is not None else None, None )
 
     return result
 

@@ -155,7 +155,7 @@ class Foundation( models.Model ):
 class FoundationNetworkInterface( models.Model ):
   foundation = models.ForeignKey( Foundation )
   interface = models.ForeignKey( RealNetworkInterface )
-  name = models.CharField( max_length=40 )
+  physical_location = models.CharField( max_length=100 )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -254,7 +254,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
     super().clean( *args, **kwargs )
     errors = {}
     if not name_regex.match( self.name ):
-      errors[ 'name' ] = 'Complex name "{0}" is invalid'.format( self.name )
+      errors[ 'name' ] = '"{0}" is invalid'.format( self.name[ 0:50 ] )
 
     if errors:
       raise ValidationError( errors )

@@ -15,12 +15,12 @@ cinp = CInP( 'Foreman', '0.1' )
 
 
 @cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
-class BaseJob( models.Model ): # abstract base class
+class BaseJob( models.Model ):  # abstract base class
   JOB_STATE_CHOICES = ( ( 'queued', 'queued' ), ( 'waiting', 'waiting' ), ( 'done', 'done' ), ( 'paused', 'paused' ), ( 'error', 'error' ), ( 'aborted', 'aborted' ) )
   site = models.ForeignKey( Site, editable=False, on_delete=models.CASCADE )
   state = models.CharField( max_length=10, choices=JOB_STATE_CHOICES )
   status = JSONField( default=[], blank=True )
-  message = models.CharField( max_length=255, default='', blank=True )
+  message = models.CharField( max_length=1024, default='', blank=True )
   script_runner = models.BinaryField( editable=False )
   script_name = models.CharField( max_length=40, editable=False, default=False )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -80,11 +80,11 @@ class BaseJob( models.Model ): # abstract base class
     self.state = 'queued'
     self.save()
 
-  def clean( self, *args, **kwargs ): # also need to make sure a Structure is in only one complex
+  def clean( self, *args, **kwargs ):  # also need to make sure a Structure is in only one complex
     super().clean( *args, **kwargs )
     errors = {}
 
-    if self.state not in JOB_STATE_CHOICES:
+    if self.state not in self.JOB_STATE_CHOICES:
       errors[ 'state' ] = 'Invalid state "{0}"'.format( self.state )
 
     if errors:

@@ -104,7 +104,7 @@ def _siteConfigInternal( site, class_list, config ):
 
 def _siteConfig( site, class_list, config ):
   config[ 'domain_name' ] = None
-  config[ 'domain_search' ] = [] #TODO: need to make sure these are lists, have to have clean on Site.save do that
+  config[ 'domain_search' ] = []  # TODO: need to make sure these are lists, have to have clean on Site.save do that
   config[ 'dns_servers' ] = []
   config[ 'log_servers' ] = []
 
@@ -119,7 +119,7 @@ def _bluePrintConfigInternal( blueprint, class_list, config ):
   lastModified = blueprint.updated
 
   if blueprint.parent is not None:
-    lastModified = max( lastModified,  _bluePrintConfigInternal( blueprint.parent, class_list, config ) )
+    lastModified = max( lastModified, _bluePrintConfigInternal( blueprint.parent, class_list, config ) )
 
   _updateConfig( blueprint.config_values, class_list, config )
   return lastModified
@@ -147,7 +147,7 @@ def _structureConfig( structure, class_list, config ):
   return structure.updated
 
 
-def getConfig( target ): # combine depth first the config values
+def getConfig( target ):  # combine depth first the config values
   config = {}
   lastModified = datetime( 1, 1, 1, tzinfo=timezone.utc )
 
@@ -170,7 +170,7 @@ def getConfig( target ): # combine depth first the config values
     lastModified = max( lastModified, _foundationConfig( target.foundation, class_list, config ) )
     lastModified = max( lastModified, _structureConfig( target, class_list, config ) )
 
-  elif hasattr( target, 'blueprint' ): # foundations should end up here, can't count on the class name, that will depend on which foundation type is being used
+  elif hasattr( target, 'blueprint' ):  # foundations should end up here, can't count on the class name, that will depend on which foundation type is being used
     lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
     lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
     lastModified = max( lastModified, _foundationConfig( target, class_list, config ) )

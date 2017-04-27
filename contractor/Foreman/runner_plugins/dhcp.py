@@ -1,3 +1,4 @@
+from contractor.BluePrint.models import PXE
 from contractor.tscript.runner import ExternalFunction, ParamaterError
 
 
@@ -11,7 +12,7 @@ class setPXE( ExternalFunction ):
 
   def setup( self, parms ):
     try:
-      pxe = parms[ 'pxe' ]
+      pxe_name = parms[ 'pxe' ]
     except KeyError:
       raise ParamaterError( 'pxe', 'required' )
 
@@ -19,6 +20,14 @@ class setPXE( ExternalFunction ):
       interface = parms[ 'interface' ]
     except KeyError:
       raise ParamaterError( 'interface', 'required' )
+
+    if interface is None:
+      raise ParamaterError( 'interface', 'can not be None' )
+
+    try:
+      pxe = PXE.objects.get( name=pxe_name )
+    except PXE.DoesNotExist:
+      raise ParamaterError( 'pxe', 'pxe "{0}" not found'.format( pxe_name ) )
 
     interface.pxe = pxe
     interface.full_clean()

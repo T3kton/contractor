@@ -41,16 +41,16 @@ error( 'can not destroy/decommission unknown/base foundation' )
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('Site', '0001_initial'),
-        ('Utilities', '0001_initial'),
         ('BluePrint', '0001_initial'),
+        ('Utilities', '0001_initial'),
+        ('Site', '0001_initial'),
     ]
 
     operations = [
         migrations.CreateModel(
             name='Complex',
             fields=[
-                ('name', models.CharField(serialize=False, primary_key=True, max_length=40)),
+                ('name', models.CharField(primary_key=True, max_length=40, serialize=False)),
                 ('description', models.CharField(max_length=200)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -59,12 +59,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Foundation',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('id', models.AutoField(primary_key=True, verbose_name='ID', auto_created=True, serialize=False)),
                 ('locator', models.CharField(unique=True, max_length=100)),
                 ('config_values', contractor.fields.MapField(default={}, blank=True)),
                 ('id_map', contractor.fields.JSONField(blank=True)),
-                ('located_at', models.DateTimeField(editable=False, null=True, blank=True)),
-                ('built_at', models.DateTimeField(editable=False, null=True, blank=True)),
+                ('located_at', models.DateTimeField(null=True, blank=True, editable=False)),
+                ('built_at', models.DateTimeField(null=True, blank=True, editable=False)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('blueprint', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='BluePrint.FoundationBluePrint')),
@@ -73,8 +73,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='FoundationNetworkInterface',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('name', models.CharField(max_length=40)),
+                ('id', models.AutoField(primary_key=True, verbose_name='ID', auto_created=True, serialize=False)),
+                ('physical_location', models.CharField(max_length=100)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('foundation', models.ForeignKey(to='Building.Foundation')),
@@ -84,12 +84,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Structure',
             fields=[
-                ('networked_ptr', models.OneToOneField(auto_created=True, to='Utilities.Networked', serialize=False, parent_link=True, primary_key=True)),
-                ('config_uuid', models.CharField(default=contractor.Building.models.getUUID, unique=True, max_length=36)),
+                ('networked_ptr', models.OneToOneField(serialize=False, parent_link=True, primary_key=True, auto_created=True, to='Utilities.Networked')),
+                ('config_uuid', models.CharField(unique=True, default=contractor.Building.models.getUUID, max_length=36)),
                 ('config_values', contractor.fields.MapField(default={}, blank=True)),
                 ('auto_build', models.BooleanField(default=True)),
                 ('build_priority', models.IntegerField(default=100)),
-                ('built_at', models.DateTimeField(editable=False, null=True, blank=True)),
+                ('built_at', models.DateTimeField(null=True, blank=True, editable=False)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('blueprint', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='BluePrint.StructureBluePrint')),

@@ -130,19 +130,19 @@ def processJobs( site, module_list, max_jobs=10 ):
 
     except Pause as e:
       job.state = 'paused'
-      job.message = str( e )
+      job.message = str( e )[ 0:1024 ]
 
     except ExecutionError as e:
       job.state = 'error'
-      job.message = str( e )
+      job.message = str( e )[ 0:1024 ]
 
     except ( UnrecoverableError, ParamaterError, NotDefinedError, ScriptError ) as e:
       job.state = 'aborted'
-      job.message = str( e )
+      job.message = str( e )[ 0:1024 ]
 
     except Exception as e:
       job.state = 'aborted'
-      job.message = 'Unknown Runtime Exception ({0}): "{1}"'.format( type( e ).__name__, str( e ) )
+      job.message = 'Unknown Runtime Exception ({0}): "{1}"'.format( type( e ).__name__, str( e ) )[ 0:1024 ]
 
     if job.state == 'queued':
       task = runner.toSubcontractor( module_list )
@@ -195,6 +195,6 @@ def jobError( job_id, cookie, msg ):
   if cookie != runner.contractor_cookie:  # we do our own out of bad cookie check b/c this type of error dosen't need to be propagated to the script runner
     raise ValueError( 'Error setting job to error: "Bad Cookie"' )
 
-  job.message = msg
+  job.message = msg[ 0:1024 ]
   job.state = 'error'
   job.save()
