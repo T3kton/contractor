@@ -730,11 +730,11 @@ class Runner( object ):
 
             module = op_data[ 'module' ]
 
-          if isinstance( handler, ExternalFunction ):
-            if isinstance( handler, tuple ):
-              module = handler[0]
-              handler = handler[1]
+          if isinstance( handler, tuple ):
+            module = handler[0]  # yes, overlay what ever was here
+            handler = handler[1]
 
+          if isinstance( handler, ExternalFunction ):
             handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
             self.contractor_cookie = str( uuid.uuid4() )
             self.state[ state_index ][1][ 'handler' ] = handler
