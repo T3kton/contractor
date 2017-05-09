@@ -74,6 +74,7 @@ def handler( request ):
     interface = target.provisioning_interface
 
   else:
+    print( 'Getting config goodies for "{0}"'.format( request.remote_addr ) )
     address = BaseAddress.lookup( request.remote_addr )
     if address is None:
       return Response( 404, data='Address Not Found', content_type='text' )
@@ -104,12 +105,15 @@ def handler( request ):
       return Response( 200, data='', content_type='text' )
 
     if request_type == 'boot_script':
-      template = Template( pxe.boot_script )
+      template = Template( '#!ipxe\n\n' + pxe.boot_script )
 
     elif request_type == 'pxe_template':
-      template = Template( pxe.pxe_template )
+      template = Template( pxe.template )
 
     data = template.render( Context( config ) )
+    print( 'config_handler sending "{0}" to "{1}"\n    -----------    '.format( request_type, request.remote_addr ) )
+    print( data )
+    print( '    -----------    ')
     return Response( 200, data=data, content_type='text' )
 
   elif request_type == 'config':

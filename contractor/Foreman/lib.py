@@ -21,6 +21,12 @@ def createJob( script_name, target ):
     obj_list.append( ConfigPlugin( target ) )
 
   elif isinstance( target, Foundation ):
+    try:
+      StructureJob.objects.get( structure=target.structure )
+      raise ValueError( 'Structure associated with this Foundation has a job' )
+    except StructureJob.DoesNotExist:
+      pass
+
     job = FoundationJob()
     job.foundation = target
     obj_list.append( FoundationPlugin( target ) )
@@ -96,6 +102,12 @@ def processJobs( site, module_list, max_jobs=10 ):
       StructureJob.objects.get( structure=structure )
       continue  # allready has a job, skip it
     except StructureJob.DoesNotExist:
+      pass
+
+    try:
+      FoundationJob.objects.get( foundation=structure.foundation )
+      continue  # the foundation is doing something, structure shoud not do anything till is is done
+    except FoundationJob.DoesNotExist:
       pass
 
     createJob( 'create', target=structure )

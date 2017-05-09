@@ -5,6 +5,7 @@ import sys
 sys.path.insert( 1, '../..' )
 
 os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
 import django
 django.setup()
 
@@ -39,7 +40,7 @@ addr1_block = AddressBlock( site=s1, subnet='127.0.0.0', prefix=24 )
 addr1_block.full_clean()
 addr1_block.save()
 
-addr2_block = AddressBlock( site=s2, subnet='10.0.0.0', gateway='10.0.0.1', prefix=8 )
+addr2_block = AddressBlock( site=s2, subnet='192.168.200.0', gateway_offset=1, prefix=24 )
 addr2_block.full_clean()
 addr2_block.save()
 
@@ -68,7 +69,7 @@ fni = FoundationNetworkInterface( foundation=fdn_vm1, interface=iface, physical_
 fni.full_clean()
 fni.save()
 
-addr = Address( networked=str_vm1, block=addr1_block, interface_name='eth0', offset=1, is_primary=True, is_provisioning=True )
+addr = Address( networked=str_vm1, address_block=addr2_block, interface_name='eth0', offset=201, is_primary=True, is_provisioning=True )
 addr.full_clean()
 addr.save()
 

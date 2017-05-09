@@ -177,7 +177,7 @@ class AddressBlock( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   subnet = IpAddressField()
   prefix = models.IntegerField()
-  gateway = IpAddressField( blank=True, null=True )
+  gateway_offset = models.IntegerField( blank=True, null=True )
   _max_address = IpAddressField( editable=False )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -220,13 +220,10 @@ class AddressBlock( models.Model ):
         if self.prefix > 128:
           errors[ 'prefix' ] = 'Max Prefix for ipv6 is 128'
 
-      if self.gateway is not None:
-        try:
-          gateway_ip = StrToIp( self.gateway )
-          if ipv4 is not IpIsV4( gateway_ip ):
-            errors[ 'gateway' ] = 'Not the Same ipv# as Subnet'
-        except ValueError:
-          errors[ 'gateway' ] = 'Invalid Ip Address'
+      if self.gateway_offset is not None:
+        size = CIDRNetworkSize( subnet_ip, self.prefix, False )
+        if self.gateway_offset < 0 or self.gateway_offset >= size:
+          errors[ 'gateway_offset' ] = 'Must be greater than 0 and less than {0}'.format( size )
 
     if errors:  # no point in continuing until the prefix and subnet are good
       raise ValidationError( errors )
@@ -244,6 +241,11 @@ class AddressBlock( models.Model ):
     if errors:
       raise ValidationError( errors )
 
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @staticmethod
+  def filter_site( site ):
+    return AddressBlock.objects.filter( site=site )
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, method, id_list, action=None ):
@@ -253,16 +255,16 @@ class AddressBlock( models.Model ):
     return 'AddressBlock site "{0}" subnet "{1}/{2}"'.format( self.site, self.subnet, self.prefix )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'address', 'subclass', 'type' ) )
+@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type' ) )
 class BaseAddress( models.Model ):
-  block = models.ForeignKey( AddressBlock )
+  address_block = models.ForeignKey( AddressBlock )
   offset = models.IntegerField()
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
   def ip_address( self ):
-    return IpToStr( StrToIp( self.block.subnet ) + self.offset )
+    return IpToStr( StrToIp( self.address_block.subnet ) + self.offset )
 
   @property
   def subclass( self ):
@@ -291,35 +293,35 @@ class BaseAddress( models.Model ):
   @staticmethod
   def lookup( value ):
     try:
-      block = AddressBlock.objects.get( subnet__lte=value, _max_address__gte=value )
+      address_block = AddressBlock.objects.get( subnet__lte=value, _max_address__gte=value )
     except AddressBlock.DoesNotExist:
       return None
 
-    offset = StrToIp( value ) - StrToIp( block.subnet )
+    offset = StrToIp( value ) - StrToIp( address_block.subnet )
     try:
-      return BaseAddress.objects.get( block=block, offset=offset )
+      return BaseAddress.objects.get( address_block=address_block, offset=offset )
     except BaseAddress.DoesNotExist:
       return None
 
     return None
 
   class Meta:
-    unique_together = ( ( 'block', 'offset' ), )
+    unique_together = ( ( 'address_block', 'offset' ), )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    block_size = self.block.size
-    if block_size == 1:
+    address_block_size = self.address_block.size
+    if address_block_size == 1:
       if self.offset != 0:
         errors[ 'offset' ] = 'for blocks of size 1, offset must be 0'
 
-    elif block_size == 2:
+    elif address_block_size == 2:
       if self.offset not in ( 0, 1 ):
         errors[ 'offset' ] = 'for blocks of size 2, offset must be 1 or 2'
 
     else:
-      if self.offset >= self.block.size:
+      if self.offset >= self.address_block.size:
         errors[ 'offset' ] = 'Offset Greater than size of Address Block'
       if self.offset < 1:
         errors[ 'offset' ] = 'Offset must be at least 1'
@@ -336,10 +338,10 @@ class BaseAddress( models.Model ):
     return False
 
   def __str__( self ):
-    return 'BaseAddress block "{0}" offset "{1}"'.format( self.block, self.offset )
+    return 'BaseAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
 
 
-@cinp.model( property_list=( 'state', 'type' ) )
+@cinp.model( property_list=( 'ip_address', 'type' ) )
 class Address( BaseAddress ):
   networked = models.ForeignKey( Networked )
   interface_name = models.CharField( max_length=20 )
@@ -377,16 +379,21 @@ class Address( BaseAddress ):
     if errors:
       raise ValidationError( errors )
 
+  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' } ] )
+  @staticmethod
+  def filter_address_block( address_block ):
+    return Address.objects.filter( address_block=address_block )
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, method, id_list, action=None ):
     return True
 
   def __str__( self ):
-    return 'Address in Block "{0}" offset "{1}" networked "{2}" on interface "{3}"'.format( self.block, self.offset, self.networked, self.interface_name )
+    return 'Address in Block "{0}" offset "{1}" networked "{2}" on interface "{3}"'.format( self.address_block, self.offset, self.networked, self.interface_name )
 
 
-@cinp.model( property_list=( 'state', 'type' ) )
+@cinp.model( property_list=( 'ip_address', 'type' ) )
 class ReservedAddress( BaseAddress ):
   reason = models.CharField( max_length=50 )
 
@@ -398,16 +405,21 @@ class ReservedAddress( BaseAddress ):
   def type( self ):
     return 'ReservedAddress'
 
+  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' } ] )
+  @staticmethod
+  def filter_address_block( address_block ):
+    return ReservedAddress.objects.filter( address_block=address_block )
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, method, id_list, action=None ):
     return True
 
   def __str__( self ):
-    return 'ReservedAddress block "{0}" offset "{1}"'.format( self.block, self.offset )
+    return 'ReservedAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
 
 
-@cinp.model( property_list=( 'state', 'type' ) )
+@cinp.model( property_list=( 'ip_address', 'type' ) )
 class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto detected
   pass
 
@@ -419,13 +431,18 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
   def type( self ):
     return 'DynamicAddress'
 
+  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' } ] )
+  @staticmethod
+  def filter_address_block( address_block ):
+    return DynamicAddress.objects.filter( address_block=address_block )
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, method, id_list, action=None ):
     return True
 
   def __str__( self ):
-    return 'DynamicAddress block "{0}" offset "{1}"'.format( self.block, self.offset )
+    return 'DynamicAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
 
 
 # and Powered

@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(serialize=False, auto_created=True, verbose_name='ID', primary_key=True)),
                 ('subnet', contractor.fields.IpAddressField()),
                 ('prefix', models.IntegerField()),
-                ('gateway', contractor.fields.IpAddressField(blank=True, null=True)),
+                ('gateway_offset', models.IntegerField(blank=True, null=True)),
                 ('_max_address', contractor.fields.IpAddressField(editable=False)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='baseaddress',
-            name='block',
+            name='address_block',
             field=models.ForeignKey(to='Utilities.AddressBlock'),
         ),
         migrations.CreateModel(
@@ -115,7 +115,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name='baseaddress',
-            unique_together=set([('block', 'offset')]),
+            unique_together=set([('address_block', 'offset')]),
         ),
         migrations.AddField(
             model_name='address',
