@@ -7,12 +7,15 @@ import pprint
 sys.path.insert( 1, '../..' )
 
 os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
 import django
 django.setup()
+
 from django.core.exceptions import ObjectDoesNotExist
 from contractor.Building.models import Foundation, Structure
-from contractor.Foreman.lib import createJob, BaseJob
+from contractor.Foreman.lib import createJob
 from contractor.lib.config import getConfig
+
 
 def _get_job( target ):
   if isinstance( target, Foundation ):
@@ -29,6 +32,7 @@ def _get_job( target ):
 
   return None
 
+
 def _clear_job( target ):
   job = _get_job( target )
   if job is None:
@@ -37,6 +41,7 @@ def _clear_job( target ):
   else:
     job.delete()
     print( 'Job Deleted' )
+
 
 def main():
   parser = argparse.ArgumentParser( description='Boss/Manipulate Structures and Foundations and their jobs', epilog='Only one option from task or force state, if more than one is specified, the force state option is ignored' )
@@ -50,6 +55,7 @@ def main():
   task_group = group.add_mutually_exclusive_group()
   task_group.add_argument( '-c', '--do-create', help='submit create job', action='store_true' )
   task_group.add_argument( '-d', '--do-destroy', help='submit destroy job', action='store_true' )
+  task_group.add_argument( '-j', '--submit-job', help='submit a named job', metavar='JOB NAME' )
   task_group.add_argument(       '--pause', help='pause active job', action='store_true' )
   task_group.add_argument(       '--reset', help='reset error on active job', action='store_true' )
   task_group.add_argument(       '--rollback', help='rollback active job', action='store_true' )
@@ -103,6 +109,15 @@ def main():
     print( 'Destroy Job for {0} created, job #{1}.'.format( target, rc ) )
     sys.exit( 0 )
 
+  if args.submit_job:
+    try:
+      rc = createJob( args.submit_job, target )
+    except Exception as e:
+      print( 'Error creating "{1}" job: "{0}"'.format( str( e ), args.submit_job ) )
+      sys.exit( 1 )
+    print( '"{2}" Job for {0} created, job #{1}.'.format( target, rc, args.submit_job ) )
+    sys.exit( 0 )
+
   if args.reset:
     job = _get_job( target )
     if job is None:
@@ -113,7 +128,7 @@ def main():
       try:
         job.reset()
       except ValueError as e:
-        print ( 'Error resetting job: "{0}"'.format( str( e ) ) )
+        print( 'Error resetting job: "{0}"'.format( str( e ) ) )
         sys.exit( 1 )
       sys.exit( 0 )
 
@@ -127,7 +142,7 @@ def main():
       try:
         job.pause()
       except ValueError as e:
-        print ( 'Error pausing job: "{0}"'.format( str( e ) ) )
+        print( 'Error pausing job: "{0}"'.format( str( e ) ) )
         sys.exit( 1 )
       sys.exit( 0 )
 
@@ -141,7 +156,7 @@ def main():
       try:
         job.rollback()
       except ValueError as e:
-        print ( 'Error rolling back job: "{0}"'.format( str( e ) ) )
+        print( 'Error rolling back job: "{0}"'.format( str( e ) ) )
         sys.exit( 1 )
       sys.exit( 0 )
 
@@ -162,7 +177,7 @@ def main():
       print( 'No Job jobs' )
       sys.exit( 0 )
 
-    pp =  pprint.PrettyPrinter()
+    pp = pprint.PrettyPrinter()
     print( """
 Job Id:        {0}
 Script Name:   {1}
@@ -177,7 +192,7 @@ Status:
 
   if args.show_config:
     config = getConfig( target )
-    pp =  pprint.PrettyPrinter()
+    pp = pprint.PrettyPrinter()
     pp.pprint( config )
     sys.exit( 0 )
 
