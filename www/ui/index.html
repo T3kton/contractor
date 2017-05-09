@@ -70,6 +70,7 @@
           <li id="blueprints-label"><a href="#blueprints">Blueprints</a></li>
           <li id="foundations-label"><a href="#foundations">Foundations</a></li>
           <li id="structures-label"><a href="#structures">Structures</a></li>
+          <li id="networks-label"><a href="#networks">Networks</a></li>
           <li id="jobs-label"><a href="#jobs">Jobs</a></li>
         </ul>
       </div>
@@ -140,6 +141,34 @@
           <div class="row">
             <table class="table" id="structure-list-table">
               <thead><tr><th>Id</th><th>Hostname</th><th>BluePrint</th><th>State</th></tr></thead>
+              <tbody/>
+            </table>
+          </div>
+
+        </div>
+
+        <div id="networks-panel">
+          <div class="row">
+            <div class="col-md-4">
+              <h2>Networks</h2>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="dropdown">
+                <button class="btn btn-default dropdown-toggle" type="button" id="site-network-dropdown-label" data-toggle="dropdown" aria-haspopup="true">
+                  Site
+                  <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="site-network-dropdown-label" id="site-network-dropdown" />
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <table class="table" id="addressblock-list-table">
+              <thead><tr><th>Id</th><th>Subnet</th><th>Prefix</th><th>Gateway Offset</th><th>Max Address</th><th>&nbsp;</th></tr></thead>
               <tbody/>
             </table>
           </div>

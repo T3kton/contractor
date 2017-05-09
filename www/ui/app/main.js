@@ -20,10 +20,12 @@ function updateSiteList( object_map )
 {
   var foundation_dd = $( '#site-foundation-dropdown' );
   var structure_dd = $( '#site-structure-dropdown' );
+  var network_dd = $( '#site-network-dropdown' );
   var job_dd = $( '#site-job-dropdown' );
 
   foundation_dd.empty();
   structure_dd.empty();
+  network_dd.empty();
   job_dd.empty();
 
   for( site_id in object_map )
@@ -31,6 +33,7 @@ function updateSiteList( object_map )
     var site = object_map[ site_id ];
     foundation_dd.append( $( '<li>' + site.description + '</li>' ).on( 'click', setFoundationSite ).data( 'site', site_id ) );
     structure_dd.append( $( '<li>' + site.description + '</li>' ).on( 'click', setStructureSite ).data( 'site', site_id ) );
+    network_dd.append( $( '<li>' + site.description + '</li>' ).on( 'click', setNetworkSite ).data( 'site', site_id ) );
     job_dd.append( $( '<li>' + site.description + '</li>' ).on( 'click', setJobSite ).data( 'site', site_id ) );
   }
 }
@@ -79,6 +82,52 @@ function updateStructureTable( object_map )
     row.find( 'td:eq( 2 )' ).on( 'click', function() { contractor.cinp.get( $( this ).html() ).done( showObject ); } );
     tbody.append( row );
   }
+}
+
+function setNetworkSite( event )
+{
+  var element = $( this );
+
+  contractor.getAddressBlockList( element.data( 'site' ) ).done( updateAddressBlockTable ).fail( function( message ) { alert( 'Error loading address blocks "' + message + '"' ); } );
+}
+
+function updateAddressBlockTable( object_map )
+{
+  var tbody = $( '#addressblock-list-table tbody' );
+
+  tbody.empty();
+
+  for( var uri in object_map )
+  {
+    var entry = object_map[ uri ];
+    var row = $( '<tr><td>' + uri + '</td><td>' + entry.subnet + '</td><td>' + entry.prefix + '</td><td>' + entry.gateway_offset + '</td><<td>' + entry._max_address + '</td><td>Address List</td></tr>' );
+    row.find( 'td:first' ).on( 'click', function() { contractor.cinp.get( $( this ).html() ).done( showObject ); } );
+    row.find( 'td:eq(5)' ).on( 'click', function() { contractor.getAddressBlockAddresses( $( this ).parent( '*' ).find( 'td:first' ).html() ).done( showAddressBlockAddresses ); } );
+    tbody.append( row );
+  }
+}
+
+function showAddressBlockAddresses( data, multi )
+{
+  $( '#object-detail-dialog .modal-title' ).html( 'Addresses' );
+  var body = $( '#object-detail-dialog .modal-body tbody' );
+  body.empty();
+
+  for( var key in data )
+  {
+    var value = data[ key ] ;
+    var row = $( '<tr><td>' + key + '</td><td>' + data[ key ] + '</td></tr>' );
+    if( typeof value === 'string' && value.startsWith( '/api/v1/' ) )
+    {
+      row.find( 'td:last' ).on( 'click', function() { $( '#object-detail-dialog' ).modal( 'hide' ); contractor.cinp.get( $( this ).html() ).done( showObject ); } );
+    }
+    else if( typeof value === 'object' )
+    {
+      row.find( 'td:last' ).html( '<pre>' + JSON.stringify( value, null, 2 ) + '</pre>' );
+    }
+    body.append( row );
+  }
+  $( '#object-detail-dialog' ).modal( 'show' );
 }
 
 function setJobSite( event )
@@ -215,7 +264,7 @@ function showConfig( data, uri )
 
 function handleHashChange( event )
 {
-  const panel_list = [ 'overview', 'blueprints', 'foundations', 'structures', 'jobs' ];
+  const panel_list = [ 'overview', 'blueprints', 'foundations', 'structures', 'networks', 'jobs' ];
   var panel;
 
   for( panel of panel_list )

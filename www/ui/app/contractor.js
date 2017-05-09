@@ -47,6 +47,20 @@ var contractorBuilder = {};
         return this.cinp.getFilteredObjects( '/api/v1/Building/Structure', 'site', { 'site': site } );
       }
 
+      contractor.getAddressBlockList = function( site )
+      {
+        return this.cinp.getFilteredObjects( '/api/v1/Utilities/AddressBlock', 'site', { 'site': site } );
+      }
+
+      contractor.getAddressBlockAddresses = function( address_block )
+      {
+        return this.cinp.getFilteredObjects( '/api/v1/Utilities/Address', 'address_block', { 'address_block': address_block } );
+
+        //ReservedAddress
+        //DynamicAddress
+      }
+
+
       contractor.getFoundationJobList = function( site )
       {
         return this.cinp.getFilteredObjects( '/api/v1/Foreman/FoundationJob', 'site', { 'site': site } );
