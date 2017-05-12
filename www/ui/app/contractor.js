@@ -54,10 +54,52 @@ var contractorBuilder = {};
 
       contractor.getAddressBlockAddresses = function( address_block )
       {
-        return this.cinp.getFilteredObjects( '/api/v1/Utilities/Address', 'address_block', { 'address_block': address_block } );
+        var deferred = $.Deferred();
+        var full_result = {};
+        var cinp = this.cinp;
 
-        //ReservedAddress
-        //DynamicAddress
+        $.when( cinp.getFilteredObjects( '/api/v1/Utilities/Address', 'address_block', { 'address_block': address_block } ) )
+          .then(
+            function( result )
+            {
+              $.extend( full_result, result )
+              $.when( cinp.getFilteredObjects( '/api/v1/Utilities/ReservedAddress', 'address_block', { 'address_block': address_block } ) )
+              .then(
+                function( result )
+                {
+                  $.extend( full_result, result )
+                  $.when( cinp.getFilteredObjects( '/api/v1/Utilities/DynamicAddress', 'address_block', { 'address_block': address_block } ) )
+                  .then(
+                    function( result )
+                    {
+                      $.extend( full_result, result )
+                      deferred.resolve( full_result );
+                    }
+                  )
+                  .fail(
+                    function( reason )
+                    {
+                      deferred.reject( reason );
+                    }
+                  );
+                }
+              )
+              .fail(
+                function( reason )
+                {
+                  deferred.reject( reason );
+                }
+              );
+            }
+          )
+          .fail(
+            function( reason )
+            {
+              deferred.reject( reason );
+            }
+          );
+
+        return deferred.promise();
       }
 
 
