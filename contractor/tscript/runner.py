@@ -435,6 +435,9 @@ class Runner( object ):
 
       except Exception as e:
         self.state = 'ABORTED'  # TODO: watch some kind of DEBUG flag to enable/disable the stack trace
+        print( '^^^ TSCRIPT EXCEPTION ^^^' )  # TODO: remove this and parse through the execution stack to find the important part, not the exceptions parts that are a part of the runner
+        print( 'Unahndled Exception ({0}): "{1}"\ntrace:\n{2}'.format( type( e ).__name__, str( e ), traceback.format_exc() ) )
+        print( '^^^^^^^^^^^^' )
         raise UnrecoverableError( 'Unahndled Exception ({0}): "{1}"\ntrace:\n{2}'.format( type( e ).__name__, str( e ), traceback.format_exc() ) )
 
     print( '*******  RUN FINISH  *******' )

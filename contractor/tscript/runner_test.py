@@ -186,6 +186,14 @@ def test_array():
   assert runner.done
   assert runner.variable_map == { 'myvar': [ 1, 2, 3, 4, 'end' ] }
 
+  runner = Runner( parse( 'myvar[ "hi" ] = "stuff"' ) )
+  runner.variable_map = { 'myvar': { 'abc': 123 } }
+  assert runner.variable_map == { 'myvar': { 'abc': 123 } }
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': { 'abc': 123, 'hi': 'stuff' } }
+  # TODO: more  tests on 'maps', also allow tscript to be able to create one instead of just reading it
+
 
 def test_module_values():  # TODO: add pickling testing
   runner = Runner( parse( 'asdf = testing.bigstuff' ) )
