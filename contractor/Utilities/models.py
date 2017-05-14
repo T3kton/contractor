@@ -100,8 +100,8 @@ class NetworkInterface( models.Model ):
 
 @cinp.model( )
 class RealNetworkInterface( NetworkInterface ):
-  mac = models.CharField( max_length=18, primary_key=True )
-  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True)
+  mac = models.CharField( max_length=18, unique=True, blank=True, null=True )
+  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
 
   @property
   def subclass( self ):
@@ -114,8 +114,12 @@ class RealNetworkInterface( NetworkInterface ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not re.match( '([0-9a-f]{2}:){5}[0-9a-f]{2}', self.mac ):
-      errors[ 'mac' ] = '"{0}" is invalid'.format( self.mac[ 0:50 ] )
+    if not self.mac:
+      self.mac = None
+
+    else:
+      if not re.match( '([0-9a-f]{2}:){5}[0-9a-f]{2}', self.mac ):
+        errors[ 'mac' ] = '"{0}" is invalid'.format( self.mac[ 0:50 ] )
 
     if errors:
       raise ValidationError( errors )
@@ -181,6 +185,10 @@ class AddressBlock( models.Model ):
   _max_address = IpAddressField( editable=False )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
+
+  @property
+  def gateway_ip( self ):
+    return IpToStr( StrToIp( self.subnet ) + self.gateway_offset )
 
   @property
   def dns_servers( self ):
@@ -358,7 +366,7 @@ class Address( BaseAddress ):
   @property
   def interface( self ):
     try:
-      return self.networked.foundation.interfaces.get( name=self.interface_name )
+      return self.networked.structure.foundation.interfaces.get( name=self.interface_name )
     except ObjectDoesNotExist:
       return None
 
@@ -421,7 +429,7 @@ class ReservedAddress( BaseAddress ):
 
 @cinp.model( property_list=( 'ip_address', 'type' ) )
 class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto detected
-  pass
+  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
 
   @property
   def subclass( self ):

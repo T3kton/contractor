@@ -74,6 +74,7 @@ class Migration(migrations.Migration):
             name='DynamicAddress',
             fields=[
                 ('baseaddress_ptr', models.OneToOneField(serialize=False, auto_created=True, parent_link=True, to='Utilities.BaseAddress', primary_key=True)),
+                ('pxe', models.ForeignKey(related_name='+', to='BluePrint.PXE', blank=True, null=True)),
             ],
             bases=('Utilities.baseaddress',),
         ),
@@ -81,7 +82,7 @@ class Migration(migrations.Migration):
             name='RealNetworkInterface',
             fields=[
                 ('networkinterface_ptr', models.OneToOneField(auto_created=True, parent_link=True, to='Utilities.NetworkInterface')),
-                ('mac', models.CharField(serialize=False, max_length=18, primary_key=True)),
+                ('mac', models.CharField(blank=True, unique=True, max_length=18, null=True)),
                 ('pxe', models.ForeignKey(related_name='+', to='BluePrint.PXE', blank=True, null=True)),
             ],
             bases=('Utilities.networkinterface',),
