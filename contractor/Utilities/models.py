@@ -118,6 +118,12 @@ class RealNetworkInterface( NetworkInterface ):
       self.mac = None
 
     else:
+      if re.match( '([0-9a-f]{4}.){2}[0-9a-f]{4}', self.mac ):
+        self.mac = self.mac.replace( '.', '' )
+
+      if re.match( '[0-9a-f]{12}', self.mac ):  # this is #2, it will catch the stripped cisco notation, and the  : less notation
+        self.mac = ':'.join( [ self.mac[ i: i + 2 ] for i in range( 0, 12, 2 ) ] )
+
       if not re.match( '([0-9a-f]{2}:){5}[0-9a-f]{2}', self.mac ):
         errors[ 'mac' ] = '"{0}" is invalid'.format( self.mac[ 0:50 ] )
 

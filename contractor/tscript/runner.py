@@ -730,6 +730,8 @@ class Runner( object ):
               handler = module[ op_data[ 'name' ] ]()
             except KeyError:
               raise NotDefinedError( op_data[ 'name' ], self.cur_line )
+            except TypeError as e:  # hm.... this is bad
+              raise UnrecoverableError( 'Handler init function failed "{0}" on line {1}, possibly trying to call the function directly?'.format( op_data[ 'name' ], self.cur_line ) )
 
             module = op_data[ 'module' ]
 
