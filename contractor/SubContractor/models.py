@@ -61,7 +61,7 @@ class DHCPd():
 
   @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
-  def getStaticMAC( site ):
+  def getStaticPools( site ):
     result = {}
     addr_block_list = AddressBlock.objects.filter( site=site, baseaddress__address__networked__isnull=False )
     for addr_block in addr_block_list:
@@ -71,7 +71,15 @@ class DHCPd():
         if iface is None or iface.mac is None:
           continue
 
-        result[ iface.mac ] = { 'gateway': addr_block.gateway_ip, 'ip_address': addr.ip_address }
+        result[ iface.mac ] = {
+                                'ip_address': addr.ip_address,
+                                'netmask': addr_block.netmask,
+                                'gateway': addr_block.gateway_ip,
+                                'dns_server': addr_block.dns_servers[0],
+                                'host_name': addr.structure.hostname,
+                                'domain_name': 'get.from.site.config',
+                                'boot_file': 'undionly_console.kpxe'
+                              }
 
     return result
 

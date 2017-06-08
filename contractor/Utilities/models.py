@@ -7,7 +7,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, IpAddressField, hostname_regex, name_regex
 from contractor.BluePrint.models import PXE
 from contractor.Site.models import Site
-from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRNetworkSize
+from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRNetworkSize, CIDRNetmask
 
 
 cinp = CInP( 'Utilities', '0.1' )
@@ -198,20 +198,20 @@ class AddressBlock( models.Model ):
 
   @property
   def dns_servers( self ):
-    return []
+    return [ '192.168.200.1' ]
     # get config from cluster and return dns servers, if none return empty []
 
   @property
-  def tftp_servers( self ):
-    return []
-
-  @property
-  def syslog_servers( self ):
-    return []
+  def netmask( self ):
+    return IpToStr( CIDRNetmask( self.prefix, not self.isIpV4 ) )
 
   @property
   def size( self ):
-    return CIDRNetworkSize( StrToIp( self.subnet ), self.prefix, False )
+    return CIDRNetworkSize( StrToIp( self.subnet ), self.prefix, not self.isIpV4 )
+
+  @property
+  def isIpV4( self ):
+    return IpIsV4( StrToIp( self.subnet ) )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )

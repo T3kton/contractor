@@ -88,6 +88,7 @@ def parse( script ):
   parser = Parser()
   return parser.parse( script )
 
+
 class IsEmpty( Exception ):
   pass
 
@@ -99,7 +100,7 @@ class Parser( object ):
     self.grammar = Grammar( tscript_grammar )
 
   def lint( self, script ):
-    script += '\n' # just incase the end of the script lacks a \n otherwise the *line* will not match
+    script += '\n'  # just incase the end of the script lacks a \n otherwise the *line* will not match
     self.line_endings = [ i for i, c in enumerate( script ) if c == '\n' ]
     try:
       ast = self.grammar.parse( script )
@@ -114,7 +115,7 @@ class Parser( object ):
     return None
 
   def parse( self, script ):
-    script += '\n' # just incase the end of the script lacks a \n otherwise the *line* will not match
+    script += '\n'  # just incase the end of the script lacks a \n otherwise the *line* will not match
     self.line_endings = [ i for i, c in enumerate( script ) if c == '\n' ]
     try:
       ast = self.grammar.parse( script )
@@ -210,7 +211,7 @@ class Parser( object ):
   def goto( self, node ):
     return ( types.GOTO, node.children[1].text )
 
-  def time( self, node ): # days:hours:mins:seconds
+  def time( self, node ):  # days:hours:mins:seconds
     parts = [ int( i ) for i in node.text.split( ':' ) ]
 
     if len( parts ) == 4:
@@ -268,7 +269,7 @@ class Parser( object ):
   def infix( self, node ):
     return ( types.INFIX, { 'operator': node.children[2].text, 'left': self._eval( node.children[1] ), 'right': self._eval( node.children[3] ) } )
 
-  def not_( self, node ): # we are going to abuse the INFIX functino for this one
+  def not_( self, node ):  # we are going to abuse the INFIX functino for this one
     return ( types.INFIX, { 'operator': 'not', 'left': self._eval( node.children[1] ), 'right': ( types.CONSTANT, None ) } )
 
   def other( self, node ):

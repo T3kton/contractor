@@ -116,7 +116,7 @@ following executions:
 # as the module name for subcontractor, and the second is the function
 
 class ExternalFunction( object ):
-  # these two tell contractor what module and function should handle the contractor data
+  # try to keep __init__ simple, most things should be done in setup()
   def __init__( self ):
     super().__init__()
 
@@ -197,6 +197,12 @@ class ExternalFunction( object ):
   def __setstate__( self, state ):
     # restore internal state from state
     pass
+
+  def getScriptValue( self, module, name ):
+    try:
+      return self._runner.getValue( module, name )
+    except ( NotDefinedError, ParamaterError) as e:
+      raise ValueError( e )
 
 
 # used internally to break execution
@@ -740,6 +746,7 @@ class Runner( object ):
             handler = handler[1]
 
           if isinstance( handler, ExternalFunction ):
+            handler._runner = self
             handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
             self.contractor_cookie = str( uuid.uuid4() )
             self.state[ state_index ][1][ 'handler' ] = handler
@@ -753,6 +760,7 @@ class Runner( object ):
               raise ParamaterError( '<unknown>', e, self.cur_line )
 
         if isinstance( handler, ExternalFunction ):  # else was allready run and set a value above
+          handler._runner = self
           ready = handler.ready
           if ready is not True:
             handler.run()
@@ -855,6 +863,7 @@ class Runner( object ):
       return None
 
     handler = operation[1][ 'handler' ]
+    handler._runner = self
     ( function_name, paramaters ) = handler.toSubcontractor()
     if paramaters is None:
       return None
@@ -879,6 +888,7 @@ class Runner( object ):
       return 'Not Expecting anything'
 
     handler = operation[1][ 'handler' ]
+    handler._runner = self
     handler.fromSubcontractor( data )
     operation[1][ 'dispatched' ] = False
 
@@ -932,6 +942,22 @@ class Runner( object ):
     self.value_map[ name ] = obj.getValues()
 
     self.object_list.append( obj )
+
+  def getValue( self, module, name ):
+    try:
+      module = self.value_map[ module ]
+    except KeyError:
+      raise NotDefinedError( module )
+
+    try:
+      getter = module[ name ][0]  # index 0 is the getter
+    except KeyError:
+      raise NotDefinedError( name )
+
+    if getter is None:
+      raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( module, name ) )
+
+    return getter()
 
   def __reduce__( self ):
     return ( self.__class__, ( self.ast, ), self.__getstate__() )

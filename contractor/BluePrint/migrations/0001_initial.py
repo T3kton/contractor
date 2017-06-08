@@ -40,10 +40,13 @@ def load_linux_blueprints( app, schema_editor ):
 
   s = Script( name='create-linux', description='Install Linux' )
   s.script = """# pxe boot and install
+if not structure.provisioning_interface then
+  fatal_error( msg="Provisioning Interface Not Defined" )
+
 begin( description="Linux Install" )
   dhcp.set_pxe( interface=structure.provisioning_interface, pxe="ubuntu" )
   foundation.power_on()
-  delay( seconds=30 )
+  delay( seconds=120 )
   foundation.wait_for_poweroff()
 end
 

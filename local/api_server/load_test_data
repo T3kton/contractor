@@ -60,20 +60,9 @@ for i in range( 220, 225 ):
 
 print( 'creating foundations...' )
 fdn_vm1 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='testvm1-vb' )
-fdn_vm1.config_values = { 'memory_size': 1024 }
+fdn_vm1.config_values = { 'memory_size': 512 }
 fdn_vm1.full_clean()
 fdn_vm1.save()
-
-fdn_manual1 = ManualFoundation( site=s1, blueprint=fbp_manual, locator='oldserver1' )
-fdn_manual1.full_clean()
-fdn_manual1.save()
-
-print( 'creating structures...' )
-str_vm1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm1' )
-str_vm1.foundation = fdn_vm1
-str_vm1.auto_build = True
-str_vm1.full_clean()
-str_vm1.save()
 
 iface = RealNetworkInterface( name='eth0' )
 iface.full_clean()
@@ -83,7 +72,61 @@ fni = FoundationNetworkInterface( foundation=fdn_vm1, interface=iface, physical_
 fni.full_clean()
 fni.save()
 
+fdn_vm2 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='testvm2-vb' )
+fdn_vm2.config_values = { 'memory_size': 512 }
+fdn_vm2.full_clean()
+fdn_vm2.save()
+
+iface = RealNetworkInterface( name='eth0' )
+iface.full_clean()
+iface.save()
+
+fni = FoundationNetworkInterface( foundation=fdn_vm2, interface=iface, physical_location='eth0' )
+fni.full_clean()
+fni.save()
+
+fdn_vm3 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='testvm3-vb' )
+fdn_vm3.config_values = { 'memory_size': 512 }
+fdn_vm3.full_clean()
+fdn_vm3.save()
+
+iface = RealNetworkInterface( name='eth0' )
+iface.full_clean()
+iface.save()
+
+fni = FoundationNetworkInterface( foundation=fdn_vm3, interface=iface, physical_location='eth0' )
+fni.full_clean()
+fni.save()
+
+fdn_manual1 = ManualFoundation( site=s1, blueprint=fbp_manual, locator='oldserver1' )
+fdn_manual1.full_clean()
+fdn_manual1.save()
+
+print( 'creating structures...' )
+str_vm1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm1', foundation=fdn_vm1 )
+str_vm1.auto_build = True
+str_vm1.full_clean()
+str_vm1.save()
+
 addr = Address( networked=str_vm1, address_block=addr1_block, interface_name='eth0', offset=101, is_primary=True, is_provisioning=True )
+addr.full_clean()
+addr.save()
+
+str_vm2 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm2', foundation=fdn_vm2 )
+str_vm2.auto_build = False
+str_vm2.full_clean()
+str_vm2.save()
+
+addr = Address( networked=str_vm2, address_block=addr1_block, interface_name='eth0', offset=102, is_primary=True, is_provisioning=True )
+addr.full_clean()
+addr.save()
+
+str_vm3 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm3', foundation=fdn_vm3 )
+str_vm3.auto_build = False
+str_vm3.full_clean()
+str_vm3.save()
+
+addr = Address( networked=str_vm3, address_block=addr1_block, interface_name='eth0', offset=103, is_primary=True, is_provisioning=True )
 addr.full_clean()
 addr.save()
 

@@ -95,7 +95,7 @@ class FoundationPlugin( object ):
 class StructureFoundationPlugin( FoundationPlugin ):  # ie: read only foundation
   def __init__( self, foundation ):
     super().__init__( foundation )
-    # the same as Foundation plugin, except we want read onlyt value_map, so replace value_map with this and call it good
+    # the same as Foundation plugin, except we want read only value_map, so replace value_map with this and call it good
     self.value_map = self.foundation_class.getTscriptValues( False )
 
 
@@ -118,6 +118,7 @@ class StructurePlugin( object ):  # ie: structure with some settable attributes,
     except ObjectDoesNotExist:
       provisioning_interface = None
 
+    result[ 'id' ] = ( lambda: self.structure.pk, None )
     result[ 'hostname' ] = ( lambda: self.structure.hostname, None )
     result[ 'provisioning_ip' ] = ( lambda: provisioning_ip.ip_address if provisioning_ip is not None else None, None )
     result[ 'provisioning_interface' ] = ( lambda: provisioning_interface if provisioning_interface is not None else None, None )
