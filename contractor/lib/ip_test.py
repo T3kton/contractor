@@ -427,3 +427,28 @@ def test_cidrnetworksizerange():  # NOTE: becarefull with the prefixes here, thi
   assert CIDRNetworkSize( StrToIp( '1:2:3::' ), 120 ) == len( list( CIDRNetworkRange( StrToIp( '1:2:3::' ), 120 ) ) )
   assert CIDRNetworkSize( StrToIp( '1:2:3::' ), 120, True ) == len( list( CIDRNetworkRange( StrToIp( '1:2:3::' ), 120, True ) ) )
   assert CIDRNetworkSize( StrToIp( '1:2:3::' ), 120, False ) == len( list( CIDRNetworkRange( StrToIp( '1:2:3::' ), 120, False ) ) )
+
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 32 ) ) == [ StrToIp( '169.254.1.3' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 32, True ) ) == [ StrToIp( '169.254.1.3' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 32, False ) ) == [ StrToIp( '169.254.1.3' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 31 ) ) == [ StrToIp( '169.254.1.2' ), StrToIp( '169.254.1.3' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 31, True ) ) == [ StrToIp( '169.254.1.2' ), StrToIp( '169.254.1.3' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 31, False ) ) == [ StrToIp( '169.254.1.2' ), StrToIp( '169.254.1.3' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 30 ) ) == [ StrToIp( '169.254.1.1' ), StrToIp( '169.254.1.2' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 30, True ) ) == [ StrToIp( '169.254.1.0' ), StrToIp( '169.254.1.1' ), StrToIp( '169.254.1.2' ), StrToIp( '169.254.1.3' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 30, False ) ) == [ StrToIp( '169.254.1.1' ), StrToIp( '169.254.1.2' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 29 ) ) == [ StrToIp( '169.254.1.1' ), StrToIp( '169.254.1.2' ), StrToIp( '169.254.1.3' ), StrToIp( '169.254.1.4' ), StrToIp( '169.254.1.5' ), StrToIp( '169.254.1.6' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 29, True ) ) == [ StrToIp( '169.254.1.0' ), StrToIp( '169.254.1.1' ), StrToIp( '169.254.1.2' ), StrToIp( '169.254.1.3' ), StrToIp( '169.254.1.4' ), StrToIp( '169.254.1.5' ), StrToIp( '169.254.1.6' ), StrToIp( '169.254.1.7' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '169.254.1.3' ), 29, False ) ) == [ StrToIp( '169.254.1.1' ), StrToIp( '169.254.1.2' ), StrToIp( '169.254.1.3' ), StrToIp( '169.254.1.4' ), StrToIp( '169.254.1.5' ), StrToIp( '169.254.1.6' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 128 ) ) == [ StrToIp( '2::5' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 128, True ) ) == [ StrToIp( '2::5' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 128, False ) ) == [ StrToIp( '2::5' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 127 ) ) == [ StrToIp( '2::4' ), StrToIp( '2::5' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 127, True ) ) == [ StrToIp( '2::4' ), StrToIp( '2::5' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 127, False ) ) == [ StrToIp( '2::4' ), StrToIp( '2::5' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 126 ) ) == [ StrToIp( '2::5' ), StrToIp( '2::6' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 126, True ) ) == [ StrToIp( '2::4' ), StrToIp( '2::5' ), StrToIp( '2::6' ), StrToIp( '2::7' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 126, False ) ) == [ StrToIp( '2::5' ), StrToIp( '2::6' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 125 ) ) == [ StrToIp( '2::1' ), StrToIp( '2::2' ), StrToIp( '2::3' ), StrToIp( '2::4' ), StrToIp( '2::5' ), StrToIp( '2::6' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 125, True ) ) == [ StrToIp( '2::0' ), StrToIp( '2::1' ), StrToIp( '2::2' ), StrToIp( '2::3' ), StrToIp( '2::4' ), StrToIp( '2::5' ), StrToIp( '2::6' ), StrToIp( '2::7' ) ]
+  assert list( CIDRNetworkRange( StrToIp( '2::5' ), 125, False ) ) == [ StrToIp( '2::1' ), StrToIp( '2::2' ), StrToIp( '2::3' ), StrToIp( '2::4' ), StrToIp( '2::5' ), StrToIp( '2::6' ) ]

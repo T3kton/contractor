@@ -652,6 +652,15 @@ def test_ifelse():
                           ] ), 1 )
                  ] } )
 
+  node = parse( 'if ( True == False ) then 10' )
+  assert node == ( 'S', { '_children':
+                 [
+                   ( 'L', ( 'I', [
+                           { 'condition': ( 'X',
+                                            { 'left': ( 'C', True ), 'operator': '==', 'right': ( 'C', False ) } ),
+                            'expression': ( 'C', 10 ) }
+                          ] ), 1 )
+                 ] } )
 
 def test_not():
   node = parse( 'False' )

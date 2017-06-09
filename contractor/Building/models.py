@@ -57,6 +57,8 @@ class Foundation( models.Model ):
   @staticmethod
   def getTscriptValues( write_mode=False ):  # locator is handled seperatly
     return {  # none of these base items are writeable, ignore the write_mode for now
+              'id': ( lambda foundation: foundation.pk, None ),
+              'type': ( lambda foundation: foundation.subclass.type, None ),
               'site': ( lambda foundation: foundation.site.pk, None ),
               'blueprint': ( lambda foundation: foundation.blueprint.pk, None ),
               'id_map': ( lambda foundation: foundation.ip_map, None ),

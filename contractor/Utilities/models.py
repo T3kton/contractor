@@ -7,7 +7,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, IpAddressField, hostname_regex, name_regex
 from contractor.BluePrint.models import PXE
 from contractor.Site.models import Site
-from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRNetworkSize
+from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRNetworkSize, CIDRNetmask
 
 
 cinp = CInP( 'Utilities', '0.1' )
@@ -100,8 +100,8 @@ class NetworkInterface( models.Model ):
 
 @cinp.model( )
 class RealNetworkInterface( NetworkInterface ):
-  mac = models.CharField( max_length=18, primary_key=True )
-  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True)
+  mac = models.CharField( max_length=18, unique=True, blank=True, null=True )
+  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
 
   @property
   def subclass( self ):
@@ -114,8 +114,18 @@ class RealNetworkInterface( NetworkInterface ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not re.match( '([0-9a-f]{2}:){5}[0-9a-f]{2}', self.mac ):
-      errors[ 'mac' ] = '"{0}" is invalid'.format( self.mac[ 0:50 ] )
+    if not self.mac:
+      self.mac = None
+
+    else:
+      if re.match( '([0-9a-f]{4}.){2}[0-9a-f]{4}', self.mac ):
+        self.mac = self.mac.replace( '.', '' )
+
+      if re.match( '[0-9a-f]{12}', self.mac ):  # this is #2, it will catch the stripped cisco notation, and the  : less notation
+        self.mac = ':'.join( [ self.mac[ i: i + 2 ] for i in range( 0, 12, 2 ) ] )
+
+      if not re.match( '([0-9a-f]{2}:){5}[0-9a-f]{2}', self.mac ):
+        errors[ 'mac' ] = '"{0}" is invalid'.format( self.mac[ 0:50 ] )
 
     if errors:
       raise ValidationError( errors )
@@ -183,21 +193,25 @@ class AddressBlock( models.Model ):
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
+  def gateway_ip( self ):
+    return IpToStr( StrToIp( self.subnet ) + self.gateway_offset )
+
+  @property
   def dns_servers( self ):
-    return []
+    return [ '192.168.200.1' ]
     # get config from cluster and return dns servers, if none return empty []
 
   @property
-  def tftp_servers( self ):
-    return []
-
-  @property
-  def syslog_servers( self ):
-    return []
+  def netmask( self ):
+    return IpToStr( CIDRNetmask( self.prefix, not self.isIpV4 ) )
 
   @property
   def size( self ):
-    return CIDRNetworkSize( StrToIp( self.subnet ), self.prefix, False )
+    return CIDRNetworkSize( StrToIp( self.subnet ), self.prefix, not self.isIpV4 )
+
+  @property
+  def isIpV4( self ):
+    return IpIsV4( StrToIp( self.subnet ) )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -358,7 +372,7 @@ class Address( BaseAddress ):
   @property
   def interface( self ):
     try:
-      return self.networked.foundation.interfaces.get( name=self.interface_name )
+      return self.networked.structure.foundation.interfaces.get( name=self.interface_name )
     except ObjectDoesNotExist:
       return None
 
@@ -421,7 +435,7 @@ class ReservedAddress( BaseAddress ):
 
 @cinp.model( property_list=( 'ip_address', 'type' ) )
 class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto detected
-  pass
+  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
 
   @property
   def subclass( self ):

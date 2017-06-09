@@ -15,7 +15,7 @@ cinp = CInP( 'Foreman', '0.1' )
 
 
 @cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
-class BaseJob( models.Model ):  # abstract base class
+class BaseJob( models.Model ):
   JOB_STATE_CHOICES = ( ( 'queued', 'queued' ), ( 'waiting', 'waiting' ), ( 'done', 'done' ), ( 'paused', 'paused' ), ( 'error', 'error' ), ( 'aborted', 'aborted' ) )
   site = models.ForeignKey( Site, editable=False, on_delete=models.CASCADE )
   state = models.CharField( max_length=10, choices=JOB_STATE_CHOICES )
