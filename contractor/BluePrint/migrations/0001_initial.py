@@ -33,21 +33,29 @@ def load_linux_blueprints( app, schema_editor ):
   sbpu.save()
 
   sbpx = StructureBluePrint( name='generic-xenial', description='Generic Ubuntu Xenial (16.04 LTS)' )
-  sbpx.config_values = { 'distro_version': 'xenial' }
+  sbpx.config_values = { 'distro_version': 'xenial', 'aws_instance_type': 'ami-efd0428f' }
   sbpx.parent = sbpu
   sbpx.full_clean()
   sbpx.save()
 
   s = Script( name='create-linux', description='Install Linux' )
   s.script = """# pxe boot and install
-if not structure.provisioning_interface then
-  fatal_error( msg="Provisioning Interface Not Defined" )
+if ( foundation.type == "AWSEC2" ) then
+begin( description="Provision AWS EC2" )
+  pause( "should be done allready" )
+end
+else
+begin()
 
-begin( description="Linux Install" )
-  dhcp.set_pxe( interface=structure.provisioning_interface, pxe="ubuntu" )
-  foundation.power_on()
-  delay( seconds=120 )
-  foundation.wait_for_poweroff()
+  if not structure.provisioning_interface then
+    fatal_error( msg="Provisioning Interface Not Defined" )
+
+  begin( description="Linux Install" )
+    dhcp.set_pxe( interface=structure.provisioning_interface, pxe="ubuntu" )
+    foundation.power_on()
+    delay( seconds=120 )
+    foundation.wait_for_poweroff()
+  end
 end
 
 begin( description="Boot Linux" )

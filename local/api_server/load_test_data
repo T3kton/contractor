@@ -14,10 +14,12 @@ from contractor.Site.models import Site
 from contractor.Building.models import Structure, FoundationNetworkInterface
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
 from contractor_plugins.VirtualBox.models import VirtualBoxFoundation
+from contractor_plugins.AWS.models import AWSEC2Foundation
 from contractor_plugins.Manual.models import ManualFoundation
 
 fbp_manual = FoundationBluePrint.objects.get( pk='generic-manual' )
 fbp_vm = FoundationBluePrint.objects.get( pk='generic-virtualbox' )
+fbp_aws = FoundationBluePrint.objects.get( pk='generic-awsec2' )
 sbp_xenial = StructureBluePrint.objects.get( pk='generic-xenial' )
 
 print( 'creating sites...' )
@@ -36,6 +38,7 @@ s2.parent = s1
 s2.full_clean()
 s2.save()
 
+print( 'creating networks...' )
 addr1_block = AddressBlock( site=s1, subnet='192.168.200.0', gateway_offset=1, prefix=24 )
 addr1_block.full_clean()
 addr1_block.save()
@@ -43,6 +46,10 @@ addr1_block.save()
 addr2_block = AddressBlock( site=s2, subnet='169.254.0.0', gateway_offset=1, prefix=24 )
 addr2_block.full_clean()
 addr2_block.save()
+
+addraws_block = AddressBlock( site=s1, subnet='172.31.0.0', gateway_offset=1, prefix=16 )
+addraws_block.full_clean()
+addraws_block.save()
 
 for i in range( 2, 10 ):
   addr = ReservedAddress( address_block=addr1_block, offset=i, reason='switch reserved' )
@@ -58,8 +65,8 @@ for i in range( 220, 225 ):
   addr.full_clean()
   addr.save()
 
-print( 'creating foundations...' )
-fdn_vm1 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='testvm1-vb' )
+print( 'creating virtualbox foundation(s)...' )
+fdn_vm1 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='test1-vb' )
 fdn_vm1.config_values = { 'memory_size': 512 }
 fdn_vm1.full_clean()
 fdn_vm1.save()
@@ -72,7 +79,7 @@ fni = FoundationNetworkInterface( foundation=fdn_vm1, interface=iface, physical_
 fni.full_clean()
 fni.save()
 
-fdn_vm2 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='testvm2-vb' )
+fdn_vm2 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='test2-vb' )
 fdn_vm2.config_values = { 'memory_size': 512 }
 fdn_vm2.full_clean()
 fdn_vm2.save()
@@ -85,19 +92,21 @@ fni = FoundationNetworkInterface( foundation=fdn_vm2, interface=iface, physical_
 fni.full_clean()
 fni.save()
 
-fdn_vm3 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='testvm3-vb' )
-fdn_vm3.config_values = { 'memory_size': 512 }
-fdn_vm3.full_clean()
-fdn_vm3.save()
+print( 'creating aws foundation(s)...' )
+fdn_aws1 = AWSEC2Foundation( site=s1, blueprint=fbp_aws, locator='test1-aws' )
+fdn_aws1.config_values = {}
+fdn_aws1.full_clean()
+fdn_aws1.save()
 
 iface = RealNetworkInterface( name='eth0' )
 iface.full_clean()
 iface.save()
 
-fni = FoundationNetworkInterface( foundation=fdn_vm3, interface=iface, physical_location='eth0' )
+fni = FoundationNetworkInterface( foundation=fdn_aws1, interface=iface, physical_location='eth0' )
 fni.full_clean()
 fni.save()
 
+print( 'creating manual foundation(s)...' )
 fdn_manual1 = ManualFoundation( site=s1, blueprint=fbp_manual, locator='oldserver1' )
 fdn_manual1.full_clean()
 fdn_manual1.save()
@@ -121,12 +130,12 @@ addr = Address( networked=str_vm2, address_block=addr1_block, interface_name='et
 addr.full_clean()
 addr.save()
 
-str_vm3 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm3', foundation=fdn_vm3 )
-str_vm3.auto_build = False
-str_vm3.full_clean()
-str_vm3.save()
+str_aws1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testaws1' )
+str_aws1.foundation = fdn_aws1
+str_aws1.full_clean()
+str_aws1.save()
 
-addr = Address( networked=str_vm3, address_block=addr1_block, interface_name='eth0', offset=103, is_primary=True, is_provisioning=True )
+addr = Address( networked=str_aws1, address_block=addr1_block, interface_name='eth0', offset=111, is_primary=True, is_provisioning=True )
 addr.full_clean()
 addr.save()
 
@@ -134,3 +143,7 @@ str_manual1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testmanual1' )
 str_manual1.foundation = fdn_manual1
 str_manual1.full_clean()
 str_manual1.save()
+
+addr = Address( networked=str_manual1, address_block=None, interface_name='eth0', offset=0, is_primary=True, is_provisioning=True )
+addr.full_clean()
+addr.save()

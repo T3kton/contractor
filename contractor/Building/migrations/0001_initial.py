@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 from django.db import migrations, models
 import contractor.fields
 import django.db.models.deletion
-import contractor.fields
 import contractor.Building.models
 
 
