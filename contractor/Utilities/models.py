@@ -13,6 +13,15 @@ from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRN
 cinp = CInP( 'Utilities', '0.1' )
 
 
+def ipAddress2Native( ip_address ):
+  try:
+    address_block = AddressBlock.objects.get( subnet__lte=ip_address, _max_address__gte=ip_address )
+  except AddressBlock.DoesNotExist:
+    raise ValueError( 'ip_address "{0}" does not exist in any existing Address Blocks'.format( ip_address ) )
+
+  return address_block, StrToIp( ip_address ) - StrToIp( address_block.subnet )
+
+
 @cinp.model( )
 class Networked( models.Model ):
   hostname = models.CharField( max_length=100 )
@@ -305,13 +314,13 @@ class BaseAddress( models.Model ):
 
   @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilitied.models.BaseAddress' }, paramater_type_list=[ 'String' ] )
   @staticmethod
-  def lookup( value ):
+  def lookup( ip_address ):
     try:
-      address_block = AddressBlock.objects.get( subnet__lte=value, _max_address__gte=value )
+      address_block = AddressBlock.objects.get( subnet__lte=ip_address, _max_address__gte=ip_address )
     except AddressBlock.DoesNotExist:
       return None
 
-    offset = StrToIp( value ) - StrToIp( address_block.subnet )
+    offset = StrToIp( ip_address ) - StrToIp( address_block.subnet )
     try:
       return BaseAddress.objects.get( address_block=address_block, offset=offset )
     except BaseAddress.DoesNotExist:

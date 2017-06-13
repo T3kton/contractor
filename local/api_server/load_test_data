@@ -19,7 +19,7 @@ from contractor_plugins.Manual.models import ManualFoundation
 
 fbp_manual = FoundationBluePrint.objects.get( pk='generic-manual' )
 fbp_vm = FoundationBluePrint.objects.get( pk='generic-virtualbox' )
-fbp_aws = FoundationBluePrint.objects.get( pk='generic-awsec2' )
+fbp_aws = FoundationBluePrint.objects.get( pk='generic-awsec2-micro' )
 sbp_xenial = StructureBluePrint.objects.get( pk='generic-xenial' )
 
 print( 'creating sites...' )
@@ -47,9 +47,17 @@ addr2_block = AddressBlock( site=s2, subnet='169.254.0.0', gateway_offset=1, pre
 addr2_block.full_clean()
 addr2_block.save()
 
-addraws_block = AddressBlock( site=s1, subnet='172.31.0.0', gateway_offset=1, prefix=16 )
-addraws_block.full_clean()
-addraws_block.save()
+addrawspri_block = AddressBlock( site=s1, subnet='172.31.0.0', gateway_offset=1, prefix=16 )
+addrawspri_block.full_clean()
+addrawspri_block.save()
+
+addrawspub1_block = AddressBlock( site=s1, subnet='52.0.0.0', gateway_offset=1, prefix=6 )
+addrawspub1_block.full_clean()
+addrawspub1_block.save()
+
+addrawspub2_block = AddressBlock( site=s1, subnet='32.0.0.0', gateway_offset=1, prefix=6 )
+addrawspub2_block.full_clean()
+addrawspub2_block.save()
 
 for i in range( 2, 10 ):
   addr = ReservedAddress( address_block=addr1_block, offset=i, reason='switch reserved' )
@@ -113,7 +121,7 @@ fdn_manual1.save()
 
 print( 'creating structures...' )
 str_vm1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm1', foundation=fdn_vm1 )
-str_vm1.auto_build = True
+str_vm1.auto_build = False
 str_vm1.full_clean()
 str_vm1.save()
 
@@ -130,20 +138,16 @@ addr = Address( networked=str_vm2, address_block=addr1_block, interface_name='et
 addr.full_clean()
 addr.save()
 
-str_aws1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testaws1' )
-str_aws1.foundation = fdn_aws1
+str_aws1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testaws1', foundation=fdn_aws1 )
+str_aws1.auto_build = True
 str_aws1.full_clean()
 str_aws1.save()
 
-addr = Address( networked=str_aws1, address_block=addr1_block, interface_name='eth0', offset=111, is_primary=True, is_provisioning=True )
-addr.full_clean()
-addr.save()
-
-str_manual1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testmanual1' )
-str_manual1.foundation = fdn_manual1
+str_manual1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testmanual1', foundation=fdn_manual1 )
+str_manual1.auto_build = False
 str_manual1.full_clean()
 str_manual1.save()
 
-addr = Address( networked=str_manual1, address_block=None, interface_name='eth0', offset=0, is_primary=True, is_provisioning=True )
+addr = Address( networked=str_manual1, address_block=addr1_block, interface_name='eth0', offset=51, is_primary=True, is_provisioning=True )
 addr.full_clean()
 addr.save()
