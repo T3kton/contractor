@@ -1046,3 +1046,286 @@ def test_jumppoint():
 # try something with a better progress
 # test serilize and unserilize, especially with all the block options
 # test getting status, going to need a function that can paus executeion both for the value and also for the index
+
+
+def test_status():
+  runner = Runner( parse( 'begin()\n42\nend' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'pause( msg="" )' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( '42\npause( msg="" )' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'pause( msg="1" )\npause( msg="2" )\npause( msg="3" )' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 33.333333333333336, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 66.66666666666667, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+  runner = Runner( parse( 'begin()\npause( msg="" )\nend' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'begin()\n42\npause( msg="" )\nend' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( '12\nbegin()\n42\npause( msg="" )\nend' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 75.0, 'Scope', {} ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( '12\nbegin()\n42\npause( msg="" )\nend\n34' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'while True do pause( msg="" )' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+
+  runner = Runner( parse( 'while True do begin()\n5\npause( msg="" )\nend' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'While', { 'doing': 'expression' } ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'While', { 'doing': 'expression' } ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+
+  runner = Runner( parse( 'while True do begin()\n5\npause( msg="" )\n6\npause( msg="" )\nend' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 25.0, 'Scope', {} ), ( 25.0, 'While', { 'doing': 'expression' } ), ( 25.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 75.0, 'Scope', {} ), ( 75.0, 'While', { 'doing': 'expression' } ), ( 75.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+
+  runner = Runner( parse( 'while pause( msg="" ) do 5' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'while not pause( msg="" ) do 5' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+
+  runner = Runner( parse( '( not pause( msg="cond" ) | True )' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( '( True | not pause( msg="cond" ) )' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'while not pause( msg="cond" ) do begin()\npause( msg="exp" )\nend' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+
+  runner = Runner( parse( 'while not pause( msg="cond" ) do begin()\n12\npause( msg="exp" )\n34\nend' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 33.333333333333336, 'Scope', {} ), ( 33.333333333333336, 'While', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 33.333333333333336, 'Scope', {} ), ( 33.333333333333336, 'While', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+
+  runner = Runner( parse( 'if True then pause( msg="exp" )' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'if pause( msg="cond" ) then 5' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'if not pause( msg="cond" ) then 5' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'if False then 23 else pause( msg="cond" )' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'if not pause( msg="cond" ) then begin()\npause( msg="exp" )\nend' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'if False then 1 elif not pause( msg="cond" ) then begin()\npause( msg="exp" )\nend' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'if False then 1 elif not pause( msg="cond" ) then begin()\n5\npause( msg="exp" )\n6\nend' ) )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  with pytest.raises( Pause ):
+    runner.run()
+  assert runner.status == [ ( 66.66666666666667, 'Scope', {} ), ( 66.66666666666667, 'IfElse', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert not runner.done
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
