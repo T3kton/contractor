@@ -64,7 +64,7 @@ class FoundationBluePrint( BluePrint ):
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
   foundation_type_list = StringListField( max_length=200 )  # list of the foundation types this blueprint can be used for
   template = JSONField( default={}, blank=True )
-  physical_interface_names = StringListField( max_length=200 )
+  physical_interface_names = StringListField( max_length=200, blank=True )
 
   @cinp.action( 'Map' )
   def getConfig( self ):

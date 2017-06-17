@@ -15,11 +15,13 @@ from contractor.Building.models import Structure, FoundationNetworkInterface
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
 from contractor_plugins.VirtualBox.models import VirtualBoxFoundation
 from contractor_plugins.AWS.models import AWSEC2Foundation
+from contractor_plugins.Docker.models import DockerFoundation
 from contractor_plugins.Manual.models import ManualFoundation
 
 fbp_manual = FoundationBluePrint.objects.get( pk='generic-manual' )
 fbp_vm = FoundationBluePrint.objects.get( pk='generic-virtualbox' )
 fbp_aws = FoundationBluePrint.objects.get( pk='generic-awsec2-micro' )
+fbp_dkr = FoundationBluePrint.objects.get( pk='generic-docker' )
 sbp_xenial = StructureBluePrint.objects.get( pk='generic-xenial' )
 
 print( 'creating sites...' )
@@ -114,12 +116,18 @@ fni = FoundationNetworkInterface( foundation=fdn_aws1, interface=iface, physical
 fni.full_clean()
 fni.save()
 
+print( 'creating docker foundation(s)...' )
+fdn_dkr1 = DockerFoundation( site=s1, blueprint=fbp_dkr, locator='test1-docker' )
+fdn_dkr1.config_values = {}
+fdn_dkr1.full_clean()
+fdn_dkr1.save()
+
 print( 'creating manual foundation(s)...' )
 fdn_manual1 = ManualFoundation( site=s1, blueprint=fbp_manual, locator='oldserver1' )
 fdn_manual1.full_clean()
 fdn_manual1.save()
 
-print( 'creating structures...' )
+print( 'creating virtual box structure(s)...' )
 str_vm1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm1', foundation=fdn_vm1 )
 str_vm1.auto_build = False
 str_vm1.full_clean()
@@ -138,11 +146,19 @@ addr = Address( networked=str_vm2, address_block=addr1_block, interface_name='et
 addr.full_clean()
 addr.save()
 
+print( 'creating aws box structure(s)...' )
 str_aws1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testaws1', foundation=fdn_aws1 )
-str_aws1.auto_build = True
+str_aws1.auto_build = False
 str_aws1.full_clean()
 str_aws1.save()
 
+print( 'creating docker box structure(s)...' )
+str_dkr1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testdkr1', foundation=fdn_dkr1 )
+str_dkr1.auto_build = True
+str_dkr1.full_clean()
+str_dkr1.save()
+
+print( 'creating manual box structure(s)...' )
 str_manual1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testmanual1', foundation=fdn_manual1 )
 str_manual1.auto_build = False
 str_manual1.full_clean()

@@ -33,16 +33,23 @@ def load_linux_blueprints( app, schema_editor ):
   sbpu.save()
 
   sbpx = StructureBluePrint( name='generic-xenial', description='Generic Ubuntu Xenial (16.04 LTS)' )
-  sbpx.config_values = { 'distro_version': 'xenial', 'awsec2_image_id': 'ami-efd0428f' }
+  sbpx.config_values = { 'distro_version': 'xenial', 'awsec2_image_id': 'ami-efd0428f', 'docker_image': 'xenial/ssh' }
   sbpx.parent = sbpu
   sbpx.full_clean()
   sbpx.save()
 
   s = Script( name='create-linux', description='Install Linux' )
   s.script = """# pxe boot and install
+ssh_port = 22
+
 if ( foundation.type == "AWSEC2" ) then
-begin( description="Provision From Image" )
-  pause( msg="should be done allready" )
+begin( description="Provision AWS EC2" )
+  # should allready be ready to go and started
+end
+elif ( foundation.type == "Docker" ) then
+begin( description="Provision Docker" )
+  ssh_port = 4422
+  foundation.start()
 end
 else
 begin( description="Provision From Installer" )
@@ -59,7 +66,7 @@ begin( description="Provision From Installer" )
 end
 
 begin( description="Verify Running" )
-  iputils.wait_for_port( target=structure.provisioning_ip, port=22 )
+  iputils.wait_for_port( target=structure.provisioning_ip, port=ssh_port )
 end
 """
   s.full_clean()
@@ -221,7 +228,7 @@ class Migration(migrations.Migration):
                 ('blueprint_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, to='BluePrint.BluePrint', serialize=False)),
                 ('foundation_type_list', contractor.fields.StringListField(max_length=200, default=[])),
                 ('template', contractor.fields.JSONField(default={}, blank=True)),
-                ('physical_interface_names', contractor.fields.StringListField(max_length=200, default=[])),
+                ('physical_interface_names', contractor.fields.StringListField(max_length=200, default=[], blank=True)),
                 ('parent', models.ForeignKey(blank=True, null=True, to='BluePrint.FoundationBluePrint')),
             ],
             bases=('BluePrint.blueprint',),
