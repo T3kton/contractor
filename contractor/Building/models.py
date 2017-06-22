@@ -17,6 +17,7 @@ from contractor.lib.config import getConfig
 cinp = CInP( 'Building', '0.1' )
 
 FOUNDATION_SUBCLASS_LIST = []
+COMPLEX_SUBCLASS_LIST = []
 
 
 @cinp.model( property_list=( 'state', 'type', 'class_list' ) )
@@ -42,6 +43,8 @@ class Foundation( models.Model ):
     self.save()
 
   def setBuilt( self ):
+    if self.located_at is None:
+      self.located_at = timezone.now()
     self.built_at = timezone.now()
     self.save()
 
@@ -62,7 +65,6 @@ class Foundation( models.Model ):
               'site': ( lambda foundation: foundation.site.pk, None ),
               'blueprint': ( lambda foundation: foundation.blueprint.pk, None ),
               'id_map': ( lambda foundation: foundation.ip_map, None ),
-              'provisioning_interface': ( lambda foundation: foundation.interfaces.get( provisioning=True ), None ),
               'interface_list': ( lambda foundation: [ i for i in foundation.interfaces.all() ], None )
             }
 
@@ -130,15 +132,6 @@ class Foundation( models.Model ):
 
     return 'planned'
 
-  def clean( self, *args, **kwargs ):  # also need to make sure a Structure is in only one complex
-    super().clean( *args, **kwargs )
-    errors = {}
-    if self.type not in self.blueprint.foundation_type_list:
-      errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint.description, self.type )
-
-    if errors:
-      raise ValidationError( errors )
-
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
@@ -148,6 +141,15 @@ class Foundation( models.Model ):
   @staticmethod
   def checkAuth( user, method, id_list, action=None ):
     return True
+
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+    if self.type not in self.blueprint.foundation_type_list:
+      errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint.description, self.type )
+
+    if errors:
+      raise ValidationError( errors )
 
   def __str__( self ):
     return 'Foundation #{0} of "{1}" in "{2}"'.format( self.pk, self.blueprint.pk, self.site.pk )
@@ -214,15 +216,6 @@ class Structure( Networked ):
 
     return 'planned'
 
-  def clean( self, *args, **kwargs ):  # also need to make sure a Structure is in only one complex
-    super().clean( *args, **kwargs )
-    errors = {}
-    if self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
-      errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint.description, self.foundation.blueprint.description )
-
-    if errors:
-      raise ValidationError( errors )
-
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
@@ -233,16 +226,25 @@ class Structure( Networked ):
   def checkAuth( user, method, id_list, action=None ):
     return True
 
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+    if self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
+      errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint.description, self.foundation.blueprint.description )
+
+    if errors:
+      raise ValidationError( errors )
+
   def __str__( self ):
     return 'Structure #{0} of "{1}" in "{2}"'.format( self.pk, self.blueprint.pk, self.site.pk )
 
 
-@cinp.model( )
+@cinp.model( property_list=( 'state', 'type' ) )
 class Complex( models.Model ):  # group of Structures, ie a cluster
   name = models.CharField( max_length=40, primary_key=True )
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   description = models.CharField( max_length=200 )
-  members = models.ManyToManyField( Structure )
+  members = models.ManyToManyField( Structure, through='ComplexStructure' )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -252,7 +254,12 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
 
     return 'built' in state_list
 
-  def clean( self, *args, **kwargs ):  # also need to make sure a Structure is in only one complex
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
+
+  def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
     if not name_regex.match( self.name ):
@@ -261,10 +268,85 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
     if errors:
       raise ValidationError( errors )
 
+  def __str__( self ):
+    return 'Complex "{0}"({1})'.format( self.description, self.name )
+
+
+@cinp.model( )
+class ComplexStructure( models.Model ):
+  complex = models.ForeignKey( Complex )
+  structure = models.ForeignKey( Structure )
+  updated = models.DateTimeField( editable=False, auto_now=True )
+  created = models.DateTimeField( editable=False, auto_now_add=True )
+
+  @staticmethod
+  def getTscriptValues( write_mode=False ):  # locator is handled seperatly
+    return {  # none of these base items are writeable, ignore the write_mode for now
+              'id': ( lambda foundation: foundation.pk, None ),
+              'type': ( lambda foundation: foundation.subclass.type, None ),
+              'site': ( lambda foundation: foundation.site.pk, None )
+            }
+
+  @staticmethod
+  def getTscriptFunctions():
+    return {}
+
+  def configValues( self ):
+    return {
+              'complex_id': self.pk,
+              'complex_type': self.type,
+              'complex_state': self.state,
+            }
+
+  @property
+  def subclass( self ):
+    for attr in COMPLEX_SUBCLASS_LIST:
+      try:
+        return getattr( self, attr )
+      except AttributeError:
+        pass
+
+    return self
+
+  # @cinp.action( 'String' )
+  # def getRealFoundationURI( self ):  # TODO: this is such a hack, figure  out a better way
+  #   subclass = self.subclass
+  #   class_name = type( subclass ).__name__
+  #   if class_name == 'Foundation':
+  #     return '/api/v1/Building/Foundation:{0}:'.format( subclass.pk )
+  #
+  #   elif class_name == 'VirtualBoxFoundation':
+  #     return '/api/v1/VirtualBox/VirtualBoxFoundation:{0}:'.format( subclass.pk )
+  #
+  #   elif class_name == 'ManualFoundation':
+  #     return '/api/v1/Manual/ManualFoundation:{0}:'.format( subclass.pk )
+  #
+  #   raise ValueError( 'Unknown Foundation class "{0}"'.format( class_name ) )
+  #
+  # @cinp.action( 'Map' )
+  # def getConfig( self ):
+  #   return getConfig( self.subclass )
+
+  @property
+  def type( self ):
+    return 'Unknown'
+
+  @property
+  def state( self ):
+    return 'Built'
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, method, id_list, action=None ):
     return True
 
+  # TODO: need to make sure a Structure is in only one complex
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+
+    if errors:
+      raise ValidationError( errors )
+
   def __str__( self ):
-    return 'Complex "{0}"({1})'.format( self.description, self.name )
+    return 'ComplexStructure for "{0}" to "{1}"'.format( self.complex, self.structure )

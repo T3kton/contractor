@@ -11,7 +11,7 @@ django.setup()
 
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Site.models import Site
-from contractor.Building.models import Structure, FoundationNetworkInterface
+from contractor.Building.models import Structure, FoundationNetworkInterface, Complex, ComplexStructure
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
 from contractor_plugins.VirtualBox.models import VirtualBoxFoundation
 from contractor_plugins.AWS.models import AWSEC2Foundation
@@ -49,6 +49,10 @@ addr2_block = AddressBlock( site=s2, subnet='169.254.0.0', gateway_offset=1, pre
 addr2_block.full_clean()
 addr2_block.save()
 
+addrlo_block = AddressBlock( site=s1, subnet='127.0.0.0', prefix=8 )
+addrlo_block.full_clean()
+addrlo_block.save()
+
 addrawspri_block = AddressBlock( site=s1, subnet='172.31.0.0', gateway_offset=1, prefix=16 )
 addrawspri_block.full_clean()
 addrawspri_block.save()
@@ -75,8 +79,38 @@ for i in range( 220, 225 ):
   addr.full_clean()
   addr.save()
 
+print( 'creating local dev box and cluster...' )
+fdn_dev = ManualFoundation( site=s1, blueprint=fbp_manual, locator='localdev' )
+fdn_dev.full_clean()
+fdn_dev.save()
+fdn_dev.setBuilt()
+
+str_dev = Structure( site=s1, blueprint=sbp_xenial, hostname='localdev', foundation=fdn_dev )
+str_dev.auto_build = False
+str_dev.full_clean()
+str_dev.save()
+str_dev.setBuilt()
+
+addr = Address( networked=str_dev, address_block=addrlo_block, interface_name='lo', offset=1, is_primary=True, is_provisioning=True )
+addr.full_clean()
+addr.save()
+
+cpx_dev = Complex( site=s1, name='localdev', description='local dev complex' )
+cpx_dev.full_clean()
+cpx_dev.save()
+
+cpx_member = ComplexStructure( complex=cpx_dev, structure=str_dev )
+cpx_member.full_clean()
+cpx_member.save()
+
+print( 'creating manual foundation(s)...' )
+fdn_manual1 = ManualFoundation( site=s1, blueprint=fbp_manual, locator='oldserver1' )
+fdn_manual1.full_clean()
+fdn_manual1.save()
+
 print( 'creating virtualbox foundation(s)...' )
 fdn_vm1 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='test1-vb' )
+fdn_vm1.virtualbox_host = cpx_dev
 fdn_vm1.config_values = { 'memory_size': 512 }
 fdn_vm1.full_clean()
 fdn_vm1.save()
@@ -90,6 +124,7 @@ fni.full_clean()
 fni.save()
 
 fdn_vm2 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='test2-vb' )
+fdn_vm2.virtualbox_host = cpx_dev
 fdn_vm2.config_values = { 'memory_size': 512 }
 fdn_vm2.full_clean()
 fdn_vm2.save()
@@ -118,14 +153,20 @@ fni.save()
 
 print( 'creating docker foundation(s)...' )
 fdn_dkr1 = DockerFoundation( site=s1, blueprint=fbp_dkr, locator='test1-docker' )
+fdn_dkr1.container_host = cpx_dev
 fdn_dkr1.config_values = {}
 fdn_dkr1.full_clean()
 fdn_dkr1.save()
 
-print( 'creating manual foundation(s)...' )
-fdn_manual1 = ManualFoundation( site=s1, blueprint=fbp_manual, locator='oldserver1' )
-fdn_manual1.full_clean()
-fdn_manual1.save()
+print( 'creating manual box structure(s)...' )
+str_manual1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testmanual1', foundation=fdn_manual1 )
+str_manual1.auto_build = False
+str_manual1.full_clean()
+str_manual1.save()
+
+addr = Address( networked=str_manual1, address_block=addr1_block, interface_name='eth0', offset=51, is_primary=True, is_provisioning=True )
+addr.full_clean()
+addr.save()
 
 print( 'creating virtual box structure(s)...' )
 str_vm1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm1', foundation=fdn_vm1 )
@@ -157,13 +198,3 @@ str_dkr1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testdkr1', founda
 str_dkr1.auto_build = True
 str_dkr1.full_clean()
 str_dkr1.save()
-
-print( 'creating manual box structure(s)...' )
-str_manual1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testmanual1', foundation=fdn_manual1 )
-str_manual1.auto_build = False
-str_manual1.full_clean()
-str_manual1.save()
-
-addr = Address( networked=str_manual1, address_block=addr1_block, interface_name='eth0', offset=51, is_primary=True, is_provisioning=True )
-addr.full_clean()
-addr.save()

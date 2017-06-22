@@ -36,8 +36,10 @@ class Networked( models.Model ):
 
     return self
 
-  class Meta:
-    unique_together = ( ( 'site', 'hostname' ), )
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -48,10 +50,8 @@ class Networked( models.Model ):
     if errors:
       raise ValidationError( errors )
 
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    return True
+  class Meta:
+    unique_together = ( ( 'site', 'hostname' ), )
 
   def __str__( self ):
     return 'Networked hostname "{0}" in "{1}"'.format( self.hostname, self.site.name )
@@ -86,6 +86,14 @@ class NetworkInterface( models.Model ):
   def type( self ):
     return 'Unknown'  # This class should not be used directly
 
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    if method == 'DESCRIBE':
+      return True
+
+    return False
+
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
@@ -94,14 +102,6 @@ class NetworkInterface( models.Model ):
 
     if errors:
       raise ValidationError( errors )
-
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    if method == 'DESCRIBE':
-      return True
-
-    return False
 
   def __str__( self ):
     return 'NetworkInterface "{0}"'.format( self.physical_name )
@@ -119,6 +119,11 @@ class RealNetworkInterface( NetworkInterface ):
   @property
   def type( self ):
     return 'Real'
+
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -138,11 +143,6 @@ class RealNetworkInterface( NetworkInterface ):
 
     if errors:
       raise ValidationError( errors )
-
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    return True
 
   def __str__( self ):
     return 'RealNetworkInterface "{0}" mac "{1}"'.format( self.name, self.mac )
@@ -222,6 +222,16 @@ class AddressBlock( models.Model ):
   def isIpV4( self ):
     return IpIsV4( StrToIp( self.subnet ) )
 
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @staticmethod
+  def filter_site( site ):
+    return AddressBlock.objects.filter( site=site )
+
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
+
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
@@ -263,16 +273,6 @@ class AddressBlock( models.Model ):
 
     if errors:
       raise ValidationError( errors )
-
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
-  @staticmethod
-  def filter_site( site ):
-    return AddressBlock.objects.filter( site=site )
-
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    return True
 
   def __str__( self ):
     return 'AddressBlock site "{0}" subnet "{1}/{2}"'.format( self.site, self.subnet, self.prefix )
@@ -328,8 +328,13 @@ class BaseAddress( models.Model ):
 
     return None
 
-  class Meta:
-    unique_together = ( ( 'address_block', 'offset' ), )
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    if method == 'DESCRIBE':
+      return True
+
+    return False
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -352,13 +357,8 @@ class BaseAddress( models.Model ):
     if errors:
       raise ValidationError( errors )
 
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    if method == 'DESCRIBE':
-      return True
-
-    return False
+  class Meta:
+    unique_together = ( ( 'address_block', 'offset' ), )
 
   def __str__( self ):
     return 'BaseAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
@@ -393,15 +393,6 @@ class Address( BaseAddress ):
   def type( self ):
     return 'Address'
 
-  def clean( self, *args, **kwargs ):
-    super().clean( *args, **kwargs )
-    errors = {}
-    if not name_regex.match( self.interface_name ):
-      errors[ 'interface_name' ] = '"{0}" is invalid'.format( self.interface_name[ 0:50 ] )
-
-    if errors:
-      raise ValidationError( errors )
-
   @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' } ] )
   @staticmethod
   def filter_address_block( address_block ):
@@ -411,6 +402,16 @@ class Address( BaseAddress ):
   @staticmethod
   def checkAuth( user, method, id_list, action=None ):
     return True
+
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+    if not name_regex.match( self.interface_name ):
+      errors[ 'interface_name' ] = '"{0}" is invalid'.format( self.interface_name[ 0:50 ] )
+
+    if errors:
+      raise ValidationError( errors )
+
 
   def __str__( self ):
     return 'Address in Block "{0}" offset "{1}" networked "{2}" on interface "{3}"'.format( self.address_block, self.offset, self.networked, self.interface_name )

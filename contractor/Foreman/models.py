@@ -80,16 +80,6 @@ class BaseJob( models.Model ):
     self.state = 'queued'
     self.save()
 
-  def clean( self, *args, **kwargs ):  # also need to make sure a Structure is in only one complex
-    super().clean( *args, **kwargs )
-    errors = {}
-
-    if self.state not in self.JOB_STATE_CHOICES:
-      errors[ 'state' ] = 'Invalid state "{0}"'.format( self.state )
-
-    if errors:
-      raise ValidationError( errors )
-
   @property
   def progress( self ):
     try:
@@ -104,6 +94,16 @@ class BaseJob( models.Model ):
       return True
 
     return False
+
+  def clean( self, *args, **kwargs ):  # also need to make sure a Structure is in only one complex
+    super().clean( *args, **kwargs )
+    errors = {}
+
+    if self.state not in self.JOB_STATE_CHOICES:
+      errors[ 'state' ] = 'Invalid state "{0}"'.format( self.state )
+
+    if errors:
+      raise ValidationError( errors )
 
   def __str__( self ):
     return 'BaseJob #{0} in "{1}"'.format( self.pk, self.site.pk )
