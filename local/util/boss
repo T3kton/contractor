@@ -4,8 +4,6 @@ import sys
 import argparse
 import pprint
 
-sys.path.insert( 1, '../..' )
-
 os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
 
 import django

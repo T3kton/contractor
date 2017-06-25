@@ -51,6 +51,7 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('name', models.CharField(max_length=20)),
+                ('is_provisioning', models.BooleanField(default=False)),
             ],
         ),
         migrations.CreateModel(
@@ -65,8 +66,9 @@ class Migration(migrations.Migration):
             fields=[
                 ('baseaddress_ptr', models.OneToOneField(serialize=False, auto_created=True, parent_link=True, to='Utilities.BaseAddress', primary_key=True)),
                 ('interface_name', models.CharField(max_length=20)),
+                ('sub_interface', models.IntegerField(default=None, blank=True, null=True)),
+                ('vlan', models.IntegerField(default=0)),
                 ('is_primary', models.BooleanField(default=False)),
-                ('is_provisioning', models.BooleanField(default=False)),
             ],
             bases=('Utilities.baseaddress',),
         ),

@@ -62,6 +62,7 @@ class NetworkInterface( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
   name = models.CharField( max_length=20 )
+  is_provisioning = models.BooleanField( default=False )
 
   @property
   def subclass( self ):
@@ -242,8 +243,11 @@ class AddressBlock( models.Model ):
       ipv4 = None
       errors[ 'subnet' ] = 'Invalid Ip Address'
 
-    if self.prefix < 1:
+    if self.prefix is None or self.prefix < 1:
       errors[ 'prefix' ] = 'Min Prefix is 1'
+
+    if errors:  # no point in continuing until the prefix and subnet are good
+      raise ValidationError( errors )
 
     if ipv4 is not None:
       if ipv4:
@@ -254,9 +258,12 @@ class AddressBlock( models.Model ):
           errors[ 'prefix' ] = 'Max Prefix for ipv6 is 128'
 
       if self.gateway_offset is not None:
-        size = CIDRNetworkSize( subnet_ip, self.prefix, False )
-        if self.gateway_offset < 0 or self.gateway_offset >= size:
-          errors[ 'gateway_offset' ] = 'Must be greater than 0 and less than {0}'.format( size )
+        ( low, high ) = CIDRNetworkBounds( subnet_ip, self.prefix, False, True )
+        if low == high:
+          errors[ 'gateway_offset' ] = 'Gateway not possible in single host subnet'
+
+        if self.gateway_offset < low or self.gateway_offset > high:
+          errors[ 'gateway_offset' ] = 'Must be greater than {0} and less than {1}'.format( low, high )
 
     if errors:  # no point in continuing until the prefix and subnet are good
       raise ValidationError( errors )
@@ -368,8 +375,9 @@ class BaseAddress( models.Model ):
 class Address( BaseAddress ):
   networked = models.ForeignKey( Networked )
   interface_name = models.CharField( max_length=20 )
+  sub_interface = models.IntegerField( default=None, blank=True, null=True )
+  vlan = models.IntegerField( default=0 )
   is_primary = models.BooleanField( default=False )
-  is_provisioning = models.BooleanField( default=False )
 
   @property
   def structure( self ):
@@ -409,9 +417,17 @@ class Address( BaseAddress ):
     if not name_regex.match( self.interface_name ):
       errors[ 'interface_name' ] = '"{0}" is invalid'.format( self.interface_name[ 0:50 ] )
 
+    if not self.sub_interface:
+      self.sub_interface = None
+    else:
+      if self.sub_interface < 1:
+        errors[ 'sub_interface' ] = 'Must be a positive value'
+
+    if self.vlan > 4096 or self.vlan < 0:
+      errors[ 'vlan' ] = 'must be between 0 and 4096'
+
     if errors:
       raise ValidationError( errors )
-
 
   def __str__( self ):
     return 'Address in Block "{0}" offset "{1}" networked "{2}" on interface "{3}"'.format( self.address_block, self.offset, self.networked, self.interface_name )

@@ -108,15 +108,16 @@ class StructurePlugin( object ):  # ie: structure with some settable attributes,
 
   def getValues( self ):
     result = {}
-    try:
-      provisioning_ip = self.structure.address_set.get( is_provisioning=True )
-    except ObjectDoesNotExist:
-      provisioning_ip = None
 
     try:
-      provisioning_interface = provisioning_ip.interface if provisioning_ip is not None else None
+      provisioning_interface = self.structure.foundation.interface_set.get( is_provisioning=True )
     except ObjectDoesNotExist:
       provisioning_interface = None
+
+    try:
+      provisioning_ip = self.structure.address_set.get( interface_name=provisioning_interface.name, sub_interface=None ) if provisioning_interface is not None else None
+    except ObjectDoesNotExist:
+      provisioning_ip = None
 
     result[ 'id' ] = ( lambda: self.structure.pk, None )
     result[ 'hostname' ] = ( lambda: self.structure.hostname, None )

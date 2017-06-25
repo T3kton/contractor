@@ -249,10 +249,13 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
-  def isUsable( self ):
+  def state( self ):
     state_list = [ i.state for i in self.members.all() ]
 
-    return 'built' in state_list
+    if 'built' in state_list:
+      return 'built'
+
+    return 'planned'
 
   @cinp.check_auth()
   @staticmethod

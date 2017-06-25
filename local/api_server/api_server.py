@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 import os
-import sys
-
-sys.path.insert( 1, '../..' )
 
 os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
 
