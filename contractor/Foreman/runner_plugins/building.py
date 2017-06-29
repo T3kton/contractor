@@ -110,7 +110,7 @@ class StructurePlugin( object ):  # ie: structure with some settable attributes,
     result = {}
 
     try:
-      provisioning_interface = self.structure.foundation.interface_set.get( is_provisioning=True )
+      provisioning_interface = self.structure.foundation.interfaces.get( is_provisioning=True )
     except ObjectDoesNotExist:
       provisioning_interface = None
 

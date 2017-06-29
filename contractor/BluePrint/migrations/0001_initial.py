@@ -48,7 +48,7 @@ begin( description="Provision AWS EC2" )
 end
 elif ( foundation.type == "Docker" ) then
 begin( description="Provision Docker" )
-  ssh_port = 4422
+  ssh_port = 4222
   foundation.start()
 end
 else

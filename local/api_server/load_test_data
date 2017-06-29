@@ -9,7 +9,7 @@ django.setup()
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Site.models import Site
 from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure
-from contractor.Utilities.models import RealNetworkInterface, AbstractNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
+from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
 from contractor_plugins.VirtualBox.models import VirtualBoxFoundation, VirtualBoxComplex
 from contractor_plugins.AWS.models import AWSEC2Foundation
 from contractor_plugins.Docker.models import DockerFoundation, DockerComplex
@@ -82,7 +82,7 @@ fdn_dev.full_clean()
 fdn_dev.save()
 fdn_dev.setBuilt()
 
-iface = AbstractNetworkInterface( name='lo', is_provisioning=True )
+iface = RealNetworkInterface( name='lo', is_provisioning=True )
 iface.full_clean()
 iface.save()
 
@@ -171,6 +171,14 @@ fdn_dkr1.config_values = {}
 fdn_dkr1.full_clean()
 fdn_dkr1.save()
 
+iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+iface.full_clean()
+iface.save()
+
+fni = FoundationNetworkInterface( foundation=fdn_dkr1, interface=iface, physical_location='eth0' )
+fni.full_clean()
+fni.save()
+
 print( 'creating manual box structure(s)...' )
 str_manual1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testmanual1', foundation=fdn_manual1 )
 str_manual1.auto_build = False
@@ -183,7 +191,7 @@ addr.save()
 
 print( 'creating virtual box structure(s)...' )
 str_vm1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm1', foundation=fdn_vm1 )
-str_vm1.auto_build = True
+str_vm1.auto_build = False
 str_vm1.full_clean()
 str_vm1.save()
 
@@ -206,8 +214,16 @@ str_aws1.auto_build = False
 str_aws1.full_clean()
 str_aws1.save()
 
+addr = Address( networked=str_aws1, interface_name='eth0', is_primary=True )
+addr.full_clean()
+addr.save()
+
 print( 'creating docker box structure(s)...' )
 str_dkr1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testdkr1', foundation=fdn_dkr1 )
 str_dkr1.auto_build = True
 str_dkr1.full_clean()
 str_dkr1.save()
+
+addr = Address( networked=str_dkr1, pointer=Address.objects.get( networked=str_dev, interface_name='lo' ), interface_name='eth0', is_primary=True )
+addr.full_clean()
+addr.save()
