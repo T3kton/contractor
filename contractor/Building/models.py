@@ -194,8 +194,10 @@ class Structure( Networked ):
 
   def setDestroyed( self ):
     self.built_at = None
-    self.config_uuid = str( uuid.uuid4() )
+    self.config_uuid = str( uuid.uuid4() )  # new on destroyed, that way we can leave anything that might still be kicking arround in the dust
     self.save()
+    for dependancy in self.dependancy_set.all():
+      dependancy.setDestroyed()
 
   def configValues( self ):
     return {
@@ -245,14 +247,15 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   description = models.CharField( max_length=200 )
   members = models.ManyToManyField( Structure, through='ComplexStructure' )
+  built_percentage = models.IntegerField( default=90 )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
   def state( self ):
-    state_list = [ i.state for i in self.members.all() ]
+    state_list = [ 1 if i.state == 'built' else 0 for i in self.members.all() ]
 
-    if 'built' in state_list:
+    if ( sum( state_list ) * 100 ) / len( state_list ) >= self.built_percentage:
       return 'built'
 
     return 'planned'
@@ -353,3 +356,52 @@ class ComplexStructure( models.Model ):
 
   def __str__( self ):
     return 'ComplexStructure for "{0}" to "{1}"'.format( self.complex, self.structure )
+
+
+@cinp.model( property_list=( 'state', ) )
+class Dependancy( models.Model ):
+  LINK_OPTIONS = ( ( 'soft', 'soft' ), ( 'hard', 'hard' ) )  # a hardlink if the structure is set back pulls the foundation back with it, soft does not
+  foundation = models.ForeignKey( Foundation, on_delete=models.CASCADE )
+  structure = models.ForeignKey( Structure, on_delete=models.CASCADE )
+  link = models.CharField( max_length=4, choices=LINK_OPTIONS )
+  script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job must complete before built_at is set
+  built_at = models.DateTimeField( editable=False, blank=True, null=True )
+  updated = models.DateTimeField( editable=False, auto_now=True )
+  created = models.DateTimeField( editable=False, auto_now_add=True )
+
+  def setBuilt( self ):
+    self.built_at = timezone.now()
+    self.save()
+
+  def setDestroyed( self ):
+    self.built_at = None
+    self.save()
+    if self.link == 'hard':
+      self.foundation.setDestroyed()
+
+  @property
+  def state( self ):
+    if self.built_at is not None:
+      return 'built'
+
+    return 'planned'
+
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
+
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+    if not name_regex.match( self.name ):
+      errors[ 'name' ] = '"{0}" is invalid'.format( self.name[ 0:50 ] )
+
+    if errors:
+      raise ValidationError( errors )
+
+  class Meta:
+    unique_together = ( ( 'structure', 'foundation' ), )
+
+  def __str__( self ):
+    return 'Complex "{0}"({1})'.format( self.description, self.name )

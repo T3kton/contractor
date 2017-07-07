@@ -1,8 +1,8 @@
 import pickle
 
-from contractor.Building.models import Foundation, Structure
-from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, StructureFoundationPlugin, StructurePlugin
-from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob
+from contractor.Building.models import Foundation, Structure, Dependancy
+from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin
+from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependancyJob
 
 from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner, Pause, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, ScriptError
@@ -16,7 +16,7 @@ def createJob( script_name, target ):
   if isinstance( target, Structure ):
     job = StructureJob()
     job.structure = target
-    obj_list.append( StructureFoundationPlugin( target.foundation ) )
+    obj_list.append( ROFoundationPlugin( target.foundation ) )
     obj_list.append( StructurePlugin( target ) )
     obj_list.append( ConfigPlugin( target ) )
 
@@ -32,8 +32,18 @@ def createJob( script_name, target ):
     obj_list.append( FoundationPlugin( target ) )
     obj_list.append( ConfigPlugin( target ) )
 
+  elif isinstance( target, Dependancy ):
+    if target.structure.state != 'built':
+      raise ValueError( 'Can not start Dependancy job until Structure is built')
+
+    job = DependancyJob()
+    job.dependancy = target
+    obj_list.append( ROFoundationPlugin( target.foundation ) )
+    obj_list.append( ROStructurePlugin( target.structure ) )
+    obj_list.append( ConfigPlugin( target.structure ) )
+
   else:
-    raise ValueError( 'target must be a Structure or Foundation' )
+    raise ValueError( 'target must be a Structure, Foundation, or Dependancy' )
 
   if script_name == 'create':
     if target.state == 'built':
@@ -76,6 +86,8 @@ def createJob( script_name, target ):
 def processJobs( site, module_list, max_jobs=10 ):
   if max_jobs > 100:
     max_jobs = 100
+
+  # ok now we need to check dependancies, after locating before building?
 
   # see if there are any planned foundatons that can be auto located
   for foundation in Foundation.objects.filter( site=site, located_at__isnull=True, built_at__isnull=True ):

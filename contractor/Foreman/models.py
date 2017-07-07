@@ -7,7 +7,7 @@ from cinp.orm_django import DjangoCInP as CInP
 
 from contractor.fields import JSONField
 from contractor.Site.models import Site
-from contractor.Building.models import Foundation, Structure
+from contractor.Building.models import Foundation, Structure, Dependancy
 
 # stuff for getting handeling tasks, everything here should be ephemerial, only things that are in progress/flight
 
@@ -35,6 +35,11 @@ class BaseJob( models.Model ):
 
     try:
       return self.structurejob
+    except ObjectDoesNotExist:
+      pass
+
+    try:
+      return self.dependancyjob
     except ObjectDoesNotExist:
       pass
 
@@ -193,3 +198,40 @@ class StructureJob( BaseJob ):
 
   def __str__( self ):
     return 'StructureJob #{0} for "{1}" in "{2}"'.format( self.pk, self.structure.pk, self.structure.site.pk )
+
+
+@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', 'status' ) )
+class DependancyJob( BaseJob ):
+  dependancy = models.OneToOneField( Dependancy, editable=False, on_delete=models.CASCADE )
+
+  def done( self ):
+    self.dependancy.setBuilt()
+
+  @cinp.action()
+  def pause( self ):
+    super().pause()
+
+  @cinp.action()
+  def resume( self ):
+    super().resume()
+
+  @cinp.action()
+  def reset( self ):
+    super().reset()
+
+  @cinp.action()
+  def rollback( self ):
+    super().rollback()
+
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @staticmethod
+  def filter_site( site ):
+    return DependancyJob.objects.filter( structure__site=site )
+
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
+
+  def __str__( self ):
+    return 'DependancyJob #{0} for "{1}" in "{2}"'.format( self.pk, self.dependancy.pk, self.dependancy.structure.site.pk )

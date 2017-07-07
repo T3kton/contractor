@@ -92,7 +92,7 @@ class FoundationPlugin( object ):
     return ( self.__class__, ( ( self.foundation_class, self.foundation_pk, self.foundation_locator ), ) )
 
 
-class StructureFoundationPlugin( FoundationPlugin ):  # ie: read only foundation
+class ROFoundationPlugin( FoundationPlugin ):
   def __init__( self, foundation ):
     super().__init__( foundation )
     # the same as Foundation plugin, except we want read only value_map, so replace value_map with this and call it good
@@ -130,3 +130,8 @@ class StructurePlugin( object ):  # ie: structure with some settable attributes,
     result = {}
 
     return result
+
+
+class ROStructurePlugin( StructurePlugin ):  # curently Structure is RO, this is so we don't have to figure out what should be RO later
+  def __init__( self, structure ):
+    super().__init__( structure )
