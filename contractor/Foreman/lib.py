@@ -83,11 +83,28 @@ def createJob( script_name, target ):
   return job.pk
 
 
+# auto job creation checklist
+# 1 - Any Foundation that can be auto located, if locating is possible, it can be
+#         done without foundation dependancies
+#         (located_at is null, built_at is also null)
+#   ---> Set To located
+# 2 - Any Located Foundation without dependancies
+#         ( located_at is not null, built_at is null, depenancies is null)
+#   ---> Create a Foundation Build job
+# 3 - Any Located Foundation with dependancies that are build
+#         ( located_at is not null, built_at is null, all depenancies build_at is not null)
+#   ---> Create Foundation Build Job
+# 4 - Any Structure which not built and is auto_build and and foundation is built_at
+#         ( built_at is null, foundation_built_at is not null, auto_build is True)
+#   ---> Create Structure Build Job
+#
+# NOTE:  Foundations that rely on a Complex should check the complex's build state
+#        when evaluating auto_locate, ie: use auto_locate as a "dependancy" check on
+#        the complex.
+
 def processJobs( site, module_list, max_jobs=10 ):
   if max_jobs > 100:
     max_jobs = 100
-
-  # ok now we need to check dependancies, after locating before building?
 
   # see if there are any planned foundatons that can be auto located
   for foundation in Foundation.objects.filter( site=site, located_at__isnull=True, built_at__isnull=True ):
@@ -97,8 +114,29 @@ def processJobs( site, module_list, max_jobs=10 ):
 
     foundation.setLocated()
 
-  # see if there are any located foundations that need to be prepared
-  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True ):
+  # see if there are any located foundations that need to be prepared, with out dependancies
+  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True, dependancy__isnull=True ):
+    foundation = foundation.subclass
+    try:
+      FoundationJob.objects.get( foundation=foundation )
+      continue  # allready has a job, skip it
+    except FoundationJob.DoesNotExist:
+      pass
+
+    createJob( 'create', target=foundation )
+
+  # see if there are any located foundations that need to be prepared, with completed dependancies
+  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True, dependancy__is_built__isnull=False ):
+    # NOTE: the filter get's us one with at least one dependancie done, let's check the others
+    is_ready = True
+    for dependancy in foundation.dependy_set.all():
+      if dependancy.state != 'built':
+        is_ready = False  # TODO: check to see if thedepency has a job that can be started <-------------
+        break
+
+    if not is_ready:  # there was a unbuilt dependancy
+      continue
+
     foundation = foundation.subclass
     try:
       FoundationJob.objects.get( foundation=foundation )
