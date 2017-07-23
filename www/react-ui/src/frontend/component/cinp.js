@@ -353,6 +353,9 @@ class CInP
 
     for( var uri of uri_list )
     {
+      if( uri === undefined || uri === null )
+        continue;
+
       var parts = uriRegex.exec( uri );
       if( parts[4] === undefined )
       {

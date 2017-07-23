@@ -40,14 +40,49 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Building/Structure', 'site', { 'site': site } );
   }
 
+  getFoundationBluePrintList = () =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/BluePrint/FoundationBluePrint' );
+  }
+
+  getStructureBluePrintList = () =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/BluePrint/StructureBluePrint' );
+  }
+
   getAddressBlockList = ( site ) =>
   {
     return this.cinp.getFilteredObjects( '/api/v1/Utilities/AddressBlock', 'site', { 'site': site } );
   }
 
+  getSite = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/Site/Site:' + id + ':' );
+  }
+
   getFoundation = ( id ) =>
   {
     return this.cinp.get( '/api/v1/Building/Foundation:' + id + ':' );
+  }
+
+  getStructure = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/Building/Structure:' + id + ':' );
+  }
+
+  getFoundationBluePrint = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/BluePrint/FoundationBluePrint:' + id + ':' );
+  }
+
+  getStructureBluePrint = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/BluePrint/StructureBluePrint:' + id + ':' );
+  }
+
+  getAddressBlock = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/Utilities/AddressBlock:' + id + ':' );
   }
 }
 
