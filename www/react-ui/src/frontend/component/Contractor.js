@@ -4,7 +4,7 @@ class Contractor
 {
   constructor( host )
   {
-    this.cinp = new  CInP( host );
+    this.cinp = new CInP( host );
   }
 
   login = () =>
@@ -43,6 +43,11 @@ class Contractor
   getAddressBlockList = ( site ) =>
   {
     return this.cinp.getFilteredObjects( '/api/v1/Utilities/AddressBlock', 'site', { 'site': site } );
+  }
+
+  getFoundation = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/Building/Foundation:' + id + ':' );
   }
 }
 
