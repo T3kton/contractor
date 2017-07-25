@@ -302,7 +302,7 @@ class CInP
     return this._request( 'CALL', uri, paramater_map, { 'Multi-Object': force_multi_mode } )
       .then( ( result ) =>
         {
-          deferred.resolve( { data: result.data, multiObject: result.headers.get( 'Multi-Object' ) } );
+          return( { data: result.data, multiObject: result.headers.get( 'Multi-Object' ) } );
         }
       )
   };

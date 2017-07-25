@@ -95,7 +95,7 @@ class Structure extends React.Component
       <Table selectable={ false } multiSelectable={ false }>
         <TableHead>
           <TableCell numeric>Id</TableCell>
-          <TableCell>Locator</TableCell>
+          <TableCell>Hostname</TableCell>
           <TableCell>State</TableCell>
           <TableCell>Created</TableCell>
           <TableCell>Updated</TableCell>
@@ -103,7 +103,7 @@ class Structure extends React.Component
         { this.state.structure_list.map( ( item, uri ) => (
           <TableRow key={ uri }>
             <TableCell numeric><Link to={ '/structure/' + item.id }>{ item.id }</Link></TableCell>
-            <TableCell>{ item.locator }</TableCell>
+            <TableCell>{ item.hostname }</TableCell>
             <TableCell>{ item.state }</TableCell>
             <TableCell>{ item.created }</TableCell>
             <TableCell>{ item.updated }</TableCell>

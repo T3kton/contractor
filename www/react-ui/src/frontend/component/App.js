@@ -16,7 +16,9 @@ class App extends React.Component
 {
   state = {
     cur_site: null,
-    leftDrawerVisable: true
+    leftDrawerVisable: true,
+    autoUpdate: false,
+    curJobs: 0
   };
 
   constructor()
@@ -29,16 +31,56 @@ class App extends React.Component
   menuClick = () =>
   {
     this.setState( { leftDrawerVisable: !this.state.leftDrawerVisable} );
-  }
+  };
 
   selectSite = ( site ) =>
   {
     this.setState( { cur_site: site }  );
-  }
+  };
 
   serverError = ( msg, trace ) =>
   {
     this.refs.serverError.show( msg, trace );
+  };
+
+  doUpdate = () =>
+  {
+    if ( this.state.cur_site === undefined )
+    {
+      return;
+    }
+
+    this.contractor.getJobCount( this.state.cur_site )
+     .then( ( result ) =>
+     {
+       this.setState( { curJobs: result.data } );
+     } );
+    //this.refs.content.forceUpdate();
+  };
+
+  toggleAutoUpdate = () =>
+  {
+    var state = !this.state.autoUpdate;
+    if( state )
+    {
+      this.timerID = setInterval( () => this.doUpdate(), 10000 );
+    }
+    else
+    {
+      clearInterval( this.timerID );
+    }
+    this.setState( { autoUpdate: state } );
+  };
+
+  componentDidMount()
+  {
+    this.setState( { autoUpdate: false } );
+    clearInterval( this.timerID );
+  }
+
+  componentWillUnmount()
+  {
+    clearInterval( this.timerID );
   }
 
   render()
@@ -63,13 +105,13 @@ class App extends React.Component
         <Panel>
           <AppBar title="Contractor" leftIcon="menu" rightIcon="face" onLeftIconClick={ this.menuClick }>
             <Chip><SiteSelector onSiteChange={ this.selectSite } curSite={ this.state.cur_site } siteListGetter={ this.contractor.getSiteList } /></Chip>
-            <Chip><FontIcon title='Jobs' value='dvr' /> 0</Chip>
+            <Chip><FontIcon title='Jobs' value='dvr' /> { this.state.curJobs }</Chip>
             <Chip><FontIcon value='announcement' /> 0</Chip>
-            <Button icon='sync' disabled/>
-            <Button icon='update' disabled />
-            <Button icon='settings' disabled />
+            <Button icon='update' inverse={ !this.state.autoUpdate } onClick={ this.toggleAutoUpdate }/>
+            <Button icon='sync' inverse onClick={ this.doUpdate } />
+            <Chip><Button icon='settings' disabled /></Chip>
           </AppBar>
-          <div>
+          <div ref="content">
             <Route exact={true} path="/" component={ Home }/>
             <Route path="/site/:id" render={ ( { match } ) => ( <Site id={ match.params.id } detailGet={ this.contractor.getSite } /> ) } />
             <Route path="/blueprint/f/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getFoundationBluePrint } /> ) } />
