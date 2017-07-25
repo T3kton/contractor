@@ -333,7 +333,7 @@ class BaseAddress( models.Model ):
 
     return real.type
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilitied.models.BaseAddress' }, paramater_type_list=[ 'String' ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.BaseAddress' }, paramater_type_list=[ 'String' ] )
   @staticmethod
   def lookup( ip_address ):
     try:
