@@ -34,7 +34,7 @@ class Structure extends React.Component
           data.blueprint = CInP.extractIds( data.blueprint )[0];
           data.foundation = CInP.extractIds( data.foundation )[0];
           data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, data.config_values[ key ] ] ) );
-          this.setState( { structure: result.data } );
+          this.setState( { structure: data } );
         } );
     }
     else

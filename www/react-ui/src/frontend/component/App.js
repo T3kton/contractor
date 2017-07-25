@@ -6,6 +6,8 @@ import Site from './Site';
 import Foundation from './Foundation';
 import Structure from './Structure';
 import BluePrint from './BluePrint';
+import AddressBlock from './AddressBlock';
+import Job from './Job';
 import SiteSelector from './SiteSelector';
 import ServerError from './ServerError';
 import Contractor from './Contractor';
@@ -54,7 +56,7 @@ class App extends React.Component
             <Link to="/blueprints"><Button icon="import_contacts">BluePrints</Button></Link>
             <Link to="/foundations"><Button icon="storage">Foundations</Button></Link>
             <Link to="/structures"><Button icon="account_balance">Structures</Button></Link>
-            <Link to="/networks"><Button icon="compare_arrows">Networks</Button></Link>
+            <Link to="/addressblocks"><Button icon="compare_arrows">Address Blocks</Button></Link>
             <Link to="/jobs"><Button icon="dvr">Jobs</Button></Link>
           </Navigation>
         </NavDrawer>
@@ -74,12 +76,15 @@ class App extends React.Component
             <Route path="/blueprint/s/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getStructureBluePrint } /> ) } />
             <Route path="/foundation/:id" render={ ( { match } ) => ( <Foundation id={ match.params.id } detailGet={ this.contractor.getFoundation } /> ) } />
             <Route path="/structure/:id" render={ ( { match } ) => ( <Structure id={ match.params.id } detailGet={ this.contractor.getStructure } /> ) } />
+            <Route path="/addressblock/:id" render={ ( { match } ) => ( <AddressBlock id={ match.params.id } detailGet={ this.contractor.getAddressBlock } addressListGetter={ this.contractor.getAddressBlockAddresses } /> ) } />
+            <Route path="/job/f/:id" render={ ( { match } ) => ( <Job id={ match.params.id } detailGet={ this.contractor.getFoundationJob } /> ) } />
+            <Route path="/job/s/:id" render={ ( { match } ) => ( <Job id={ match.params.id } detailGet={ this.contractor.getStructureJob } /> ) } />
             <Route exact={true} path="/sites" render={ () => ( <Site listGet={ this.contractor.getSiteList } /> ) } />
-            <Route exact={true} path="/blueprints" render={ () => ( <BluePrint listGet={ this.contractor.getBluePrintList } /> ) }/>
+            <Route exact={true} path="/blueprints" render={ () => ( <BluePrint listGetF={ this.contractor.getFoundationBluePrintList } listGetS={ this.contractor.getStructureBluePrintList } /> ) }/>
             <Route exact={true} path="/foundations" render={ () => ( <Foundation site={ this.state.cur_site } listGet={ this.contractor.getFoundationList } /> ) } />
             <Route exact={true} path="/structures" render={ () => ( <Structure site={ this.state.cur_site } listGet={ this.contractor.getStructureList } /> ) } />
-            <Route exact={true} path="/networks" render={ () => ( <h2>Networks</h2> ) }/>
-            <Route exact={true} path="/jobs" render={ () => ( <h2>Jobs</h2> ) }/>
+            <Route exact={true} path="/addressblocks" render={ () => ( <AddressBlock site={ this.state.cur_site } listGet={ this.contractor.getAddressBlockList } /> ) } />
+            <Route exact={true} path="/jobs" render={ () => ( <Job site={ this.state.cur_site } listGetF={ this.contractor.getFoundationJobList } listGetS={ this.contractor.getStructureJobList } /> ) }/>
           </div>
         </Panel>
       </Layout>

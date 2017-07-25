@@ -32,7 +32,7 @@ class Site extends React.Component
           var data = result.data;
           data.parent = CInP.extractIds( data.parent )[0];
           data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, data.config_values[ key ] ] ) );
-          this.setState( { site: result.data } );
+          this.setState( { site: data } );
         } );
     }
     else

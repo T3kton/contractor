@@ -33,7 +33,7 @@ class Foundation extends React.Component
           data.site = CInP.extractIds( data.site )[0];
           data.blueprint = CInP.extractIds( data.blueprint )[0];
           data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, data.config_values[ key ] ] ) );
-          this.setState( { foundation: result.data } );
+          this.setState( { foundation: data } );
         } );
     }
     else

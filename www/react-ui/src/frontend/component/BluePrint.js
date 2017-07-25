@@ -7,7 +7,8 @@ import { Link } from 'react-router-dom';
 class BluePrint extends React.Component
 {
   state = {
-      blueprint_list: [],
+      blueprintF_list: [],
+      blueprintS_list: [],
       blueprint: null
   };
 
@@ -18,7 +19,7 @@ class BluePrint extends React.Component
 
   componentWillReceiveProps( newProps )
   {
-    this.setState( { blueprint_list: [], blueprint: null } );
+    this.setState( { blueprintF_list: [], blueprintS_list: [], blueprint: null } );
     this.update( newProps );
   }
 
@@ -32,12 +33,12 @@ class BluePrint extends React.Component
           var data = result.data;
           data.scripts = data.scripts.map( ( entry ) => ( CInP.extractIds( entry )[0] ) );
           data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, data.config_values[ key ] ] ) );
-          this.setState( { blueprint: result.data } );
+          this.setState( { blueprint: data } );
         } );
     }
     else
     {
-      props.listGet()
+      props.listGetF()
         .then( ( result ) =>
         {
           var blueprint_list = [];
@@ -52,8 +53,25 @@ class BluePrint extends React.Component
                             } );
           }
 
-          this.setState( { blueprint_list: blueprint_list } );
+          this.setState( { blueprintF_list: blueprint_list } );
         } );
+        props.listGetS()
+          .then( ( result ) =>
+          {
+            var blueprint_list = [];
+            for ( var name in result.data )
+            {
+              var blueprint = result.data[ name ];
+              name = CInP.extractIds( name )[0];
+              blueprint_list.push( { name: name,
+                                description: blueprint.description,
+                                created: blueprint.created,
+                                updated: blueprint.updated,
+                              } );
+            }
+
+            this.setState( { blueprintS_list: blueprint_list } );
+          } );
     }
   }
 
@@ -83,22 +101,42 @@ class BluePrint extends React.Component
     }
 
     return (
-      <Table selectable={ false } multiSelectable={ false }>
-        <TableHead>
-          <TableCell>Name</TableCell>
-          <TableCell>Description</TableCell>
-          <TableCell>Created</TableCell>
-          <TableCell>Updated</TableCell>
-        </TableHead>
-        { this.state.blueprint_list.map( ( item, uri ) => (
-          <TableRow key={ uri }>
-            <TableCell><Link to={ '/blueprint/' + item.name }>{ item.name }</Link></TableCell>
-            <TableCell>{ item.description }</TableCell>
-            <TableCell>{ item.created }</TableCell>
-            <TableCell>{ item.updated }</TableCell>
-          </TableRow>
-        ) ) }
-      </Table>
+      <div>
+        <h3>Foundation BluePrints</h3>
+        <Table selectable={ false } multiSelectable={ false }>
+          <TableHead>
+            <TableCell>Name</TableCell>
+            <TableCell>Description</TableCell>
+            <TableCell>Created</TableCell>
+            <TableCell>Updated</TableCell>
+          </TableHead>
+          { this.state.blueprintF_list.map( ( item, uri ) => (
+            <TableRow key={ uri }>
+              <TableCell><Link to={ '/blueprint/f/' + item.name }>{ item.name }</Link></TableCell>
+              <TableCell>{ item.description }</TableCell>
+              <TableCell>{ item.created }</TableCell>
+              <TableCell>{ item.updated }</TableCell>
+            </TableRow>
+          ) ) }
+        </Table>
+        <h3>Structure BluePrints</h3>
+        <Table selectable={ false } multiSelectable={ false }>
+          <TableHead>
+            <TableCell>Name</TableCell>
+            <TableCell>Description</TableCell>
+            <TableCell>Created</TableCell>
+            <TableCell>Updated</TableCell>
+          </TableHead>
+          { this.state.blueprintS_list.map( ( item, uri ) => (
+            <TableRow key={ uri }>
+              <TableCell><Link to={ '/blueprint/s/' + item.name }>{ item.name }</Link></TableCell>
+              <TableCell>{ item.description }</TableCell>
+              <TableCell>{ item.created }</TableCell>
+              <TableCell>{ item.updated }</TableCell>
+            </TableRow>
+          ) ) }
+        </Table>
+      </div>
     );
 
   }

@@ -55,6 +55,16 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Utilities/AddressBlock', 'site', { 'site': site } );
   }
 
+  getFoundationJobList = ( site ) =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Foreman/FoundationJob', 'site', { 'site': site } );
+  }
+
+  getStructureJobList = ( site ) =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Foreman/StructureJob', 'site', { 'site': site } );
+  }
+
   getSite = ( id ) =>
   {
     return this.cinp.get( '/api/v1/Site/Site:' + id + ':' );
@@ -84,84 +94,40 @@ class Contractor
   {
     return this.cinp.get( '/api/v1/Utilities/AddressBlock:' + id + ':' );
   }
-}
 
-/*
-
-      contractor.getAddressBlockAddresses = function( address_block )
-      {
-        var deferred = $.Deferred();
-        var full_result = {};
-        var cinp = this.cinp;
-
-        $.when( cinp.getFilteredObjects( '/api/v1/Utilities/Address', 'address_block', { 'address_block': address_block } ) )
-          .then(
-            function( result )
-            {
-              $.extend( full_result, result )
-              $.when( cinp.getFilteredObjects( '/api/v1/Utilities/ReservedAddress', 'address_block', { 'address_block': address_block } ) )
-              .then(
-                function( result )
-                {
-                  $.extend( full_result, result )
-                  $.when( cinp.getFilteredObjects( '/api/v1/Utilities/DynamicAddress', 'address_block', { 'address_block': address_block } ) )
-                  .then(
-                    function( result )
-                    {
-                      $.extend( full_result, result )
-                      deferred.resolve( full_result );
-                    }
-                  )
-                  .fail(
-                    function( reason )
-                    {
-                      deferred.reject( reason );
-                    }
-                  );
-                }
-              )
-              .fail(
-                function( reason )
-                {
-                  deferred.reject( reason );
-                }
-              );
-            }
-          )
-          .fail(
-            function( reason )
-            {
-              deferred.reject( reason );
-            }
-          );
-
-        return deferred.promise();
-      }
-
-
-      contractor.getFoundationJobList = function( site )
-      {
-        return this.cinp.getFilteredObjects( '/api/v1/Foreman/FoundationJob', 'site', { 'site': site } );
-      }
-
-      contractor.getStructureJobList = function( site )
-      {
-        return this.cinp.getFilteredObjects( '/api/v1/Foreman/StructureJob', 'site', { 'site': site } );
-      }
-
-      contractor.getFoundationBluePrints = function()
-      {
-        var deferred = $.Deferred();
-
-        $.when( this.cinp.getFilteredObjects( '/api/v1/BluePrint/FoundationBluePrint', nil, {} ) ).then();
-
-        return deferred.promise();
-      }
-
-      return contractor;
-    };
+  getFoundationJob = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/Foreman/FoundationJob:' + id + ':' );
   }
-)();
-*/
+
+  getStructureJob = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/Foreman/StructureJob' + id + ':' );
+  }
+
+  getAddressBlockAddresses = ( addressBlockId ) =>
+  {
+    var full_result = {};
+
+    var addressBlock = '/api/v1/Utilities/AddressBlock:' + addressBlockId + ':';
+
+    return this.cinp.getFilteredObjects( '/api/v1/Utilities/Address', 'address_block', { 'address_block': addressBlock } )
+      .then( ( result ) =>
+      {
+        Object.assign( full_result, result.data );
+        return this.cinp.getFilteredObjects( '/api/v1/Utilities/ReservedAddress', 'address_block', { 'address_block': addressBlock } );
+      }
+      ).then( ( result ) =>
+      {
+        Object.assign( full_result, result.data );
+        return this.cinp.getFilteredObjects( '/api/v1/Utilities/DynamicAddress', 'address_block', { 'address_block': addressBlock } );
+      }
+      ).then( ( result ) =>
+      {
+        Object.assign( full_result, result.data );
+        return Promise.resolve( full_result );
+      } );
+  }
+}
 
 export default Contractor;
