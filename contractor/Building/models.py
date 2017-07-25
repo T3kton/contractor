@@ -361,8 +361,8 @@ class ComplexStructure( models.Model ):
 @cinp.model( property_list=( 'state', ) )
 class Dependancy( models.Model ):
   LINK_OPTIONS = ( ( 'soft', 'soft' ), ( 'hard', 'hard' ) )  # a hardlink if the structure is set back pulls the foundation back with it, soft does not
-  foundation = models.ForeignKey( Foundation, on_delete=models.CASCADE )
-  structure = models.ForeignKey( Structure, on_delete=models.CASCADE )
+  foundation = models.ForeignKey( Foundation, on_delete=models.CASCADE )  # this is what id depending
+  structure = models.ForeignKey( Structure, on_delete=models.CASCADE )  # depending on this
   link = models.CharField( max_length=4, choices=LINK_OPTIONS )
   script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job must complete before built_at is set
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
@@ -394,8 +394,9 @@ class Dependancy( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not name_regex.match( self.name ):
-      errors[ 'name' ] = '"{0}" is invalid'.format( self.name[ 0:50 ] )
+
+    if self.script_name is not None and not name_regex.match( self.script_name ):
+      errors[ 'script_name' ] = '"{0}" is invalid'.format( self.script_name )
 
     if errors:
       raise ValidationError( errors )
@@ -404,4 +405,4 @@ class Dependancy( models.Model ):
     unique_together = ( ( 'structure', 'foundation' ), )
 
   def __str__( self ):
-    return 'Complex "{0}"({1})'.format( self.description, self.name )
+    return 'Dependancy of "{0}" on "{1}"'.format( self.foundation, self.structure )

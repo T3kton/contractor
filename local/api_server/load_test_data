@@ -8,7 +8,7 @@ django.setup()
 
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Site.models import Site
-from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure
+from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependancy
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
 from contractor_plugins.VirtualBox.models import VirtualBoxFoundation, VirtualBoxComplex
 from contractor_plugins.AWS.models import AWSEC2Foundation
@@ -157,16 +157,16 @@ fni.full_clean()
 fni.save()
 
 print( 'creating docker foundation(s)...' )
-cpx_dkr = DockerComplex( site=s1, name='localdkr', description='docker complex' )
-cpx_dkr.full_clean()
-cpx_dkr.save()
+cpx_dkr_l = DockerComplex( site=s1, name='localdkr', description='docker local complex' )
+cpx_dkr_l.full_clean()
+cpx_dkr_l.save()
 
-cpx_member = ComplexStructure( complex=cpx_dkr, structure=str_dev )
+cpx_member = ComplexStructure( complex=cpx_dkr_l, structure=str_dev )
 cpx_member.full_clean()
 cpx_member.save()
 
 fdn_dkr1 = DockerFoundation( site=s1, blueprint=fbp_dkr, locator='test1-docker' )
-fdn_dkr1.container_host = cpx_dkr
+fdn_dkr1.container_host = cpx_dkr_l
 fdn_dkr1.config_values = {}
 fdn_dkr1.full_clean()
 fdn_dkr1.save()
@@ -208,7 +208,7 @@ addr = Address( networked=str_vm2, address_block=addr1_block, interface_name='et
 addr.full_clean()
 addr.save()
 
-print( 'creating aws box structure(s)...' )
+print( 'creating aws structure(s)...' )
 str_aws1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testaws1', foundation=fdn_aws1 )
 str_aws1.auto_build = False
 str_aws1.full_clean()
@@ -218,7 +218,7 @@ addr = Address( networked=str_aws1, interface_name='eth0', is_primary=True )
 addr.full_clean()
 addr.save()
 
-print( 'creating docker box structure(s)...' )
+print( 'creating docker structure(s)...' )
 str_dkr1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testdkr1', foundation=fdn_dkr1 )
 str_dkr1.auto_build = True
 str_dkr1.full_clean()
@@ -227,3 +227,67 @@ str_dkr1.save()
 addr = Address( networked=str_dkr1, pointer=Address.objects.get( networked=str_dev, interface_name='lo' ), interface_name='eth0', is_primary=True )
 addr.full_clean()
 addr.save()
+
+print( 'creating docker inside vm structure(s)...' )
+cpx_dkr_r = DockerComplex( site=s1, name='rmtdkr', description='docker remote complex', built_percentage=100 )
+cpx_dkr_r.full_clean()
+cpx_dkr_r.save()
+
+cpx_member = ComplexStructure( complex=cpx_dkr_r, structure=str_vm1 )
+cpx_member.full_clean()
+cpx_member.save()
+
+cpx_member = ComplexStructure( complex=cpx_dkr_r, structure=str_vm2 )
+cpx_member.full_clean()
+cpx_member.save()
+
+fdn_dkr2 = DockerFoundation( site=s1, blueprint=fbp_dkr, locator='test2-docker' )
+fdn_dkr2.container_host = cpx_dkr_r
+fdn_dkr2.config_values = {}
+fdn_dkr2.full_clean()
+fdn_dkr2.save()
+
+iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+iface.full_clean()
+iface.save()
+
+fni = FoundationNetworkInterface( foundation=fdn_dkr2, interface=iface, physical_location='eth0' )
+fni.full_clean()
+fni.save()
+
+fdn_dkr3 = DockerFoundation( site=s1, blueprint=fbp_dkr, locator='test3-docker' )
+fdn_dkr3.container_host = cpx_dkr_r
+fdn_dkr3.config_values = {}
+fdn_dkr3.full_clean()
+fdn_dkr3.save()
+
+iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+iface.full_clean()
+iface.save()
+
+fni = FoundationNetworkInterface( foundation=fdn_dkr3, interface=iface, physical_location='eth0' )
+fni.full_clean()
+fni.save()
+
+print( 'creating remote docker structure(s)...' )
+str_dkr2 = Structure( site=s1, blueprint=sbp_xenial, hostname='testdkr2', foundation=fdn_dkr2 )
+str_dkr2.auto_build = True
+str_dkr2.full_clean()
+str_dkr2.save()
+
+addr = Address( networked=str_dkr2, pointer=Address.objects.get( networked=str_vm1, interface_name='eth0' ), interface_name='eth0', is_primary=True )
+addr.full_clean()
+addr.save()
+
+str_dkr3 = Structure( site=s1, blueprint=sbp_xenial, hostname='testdkr3', foundation=fdn_dkr3 )
+str_dkr3.auto_build = True
+str_dkr3.full_clean()
+str_dkr3.save()
+
+addr = Address( networked=str_dkr3, pointer=Address.objects.get( networked=str_vm1, interface_name='eth0' ), interface_name='eth0', is_primary=True )
+addr.full_clean()
+addr.save()
+
+dep = Dependancy( foundation=fdn_dkr3, structure=str_dkr2, link='soft' )
+dep.full_clean()
+dep.save()
