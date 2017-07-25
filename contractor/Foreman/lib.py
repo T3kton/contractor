@@ -126,10 +126,9 @@ def processJobs( site, module_list, max_jobs=10 ):
     createJob( 'create', target=foundation )
 
   # see if there are any located foundations that need to be prepared, with completed dependancies
-  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True, dependancy__is_built__isnull=False ):
-    # NOTE: the filter get's us one with at least one dependancie done, let's check the others
+  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True ):
     is_ready = True
-    for dependancy in foundation.dependy_set.all():
+    for dependancy in foundation.dependancy_set.all():
       if dependancy.state != 'built':
         is_ready = False  # TODO: check to see if thedepency has a job that can be started <-------------
         break
