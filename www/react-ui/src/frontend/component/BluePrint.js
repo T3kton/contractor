@@ -82,7 +82,7 @@ class BluePrint extends React.Component
       var blueprint = this.state.blueprint;
       return (
         <div>
-          <h1>BluePrint Detail</h1>
+          <h3>BluePrint Detail</h3>
           { blueprint !== null &&
             <table>
               <thead/>

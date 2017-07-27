@@ -4,7 +4,7 @@ import { Table, TableHead, TableRow, TableCell } from 'react-toolbox';
 import { Link } from 'react-router-dom';
 
 
-class AddressBlock extends React.Component
+class Job extends React.Component
 {
   state = {
       jobF_list: [],
@@ -40,7 +40,7 @@ class AddressBlock extends React.Component
           {
             data.structure = CInP.extractIds( data.structure )[0];
           }
-          this.setState( { addressBlock: data } );
+          this.setState( { job: data } );
         } );
     }
     else
@@ -54,12 +54,11 @@ class AddressBlock extends React.Component
             var job = result.data[ id ];
             id = CInP.extractIds( id )[0];
             job_list.push( { id: id,
-                             script: job.script,
+                             script: job.script_name,
                              structure: job.structure,
                              message: job.message,
                              progress: job.progress,
                              state: job.state,
-                             status: job.status,
                              created: job.created,
                              updated: job.updated,
                             } );
@@ -76,12 +75,11 @@ class AddressBlock extends React.Component
             var job = result.data[ id ];
             id = CInP.extractIds( id )[0];
             job_list.push( { id: id,
-                             script: job.script,
+                             script: job.script_name,
                              foundation: job.foundation,
                              message: job.message,
                              progress: job.progress,
                              state: job.state,
-                             status: job.status,
                              created: job.created,
                              updated: job.updated,
                             } );
@@ -136,7 +134,6 @@ class AddressBlock extends React.Component
             <TableCell>Message</TableCell>
             <TableCell>Progress</TableCell>
             <TableCell>State</TableCell>
-            <TableCell>Status</TableCell>
             <TableCell>Created</TableCell>
             <TableCell>Updated</TableCell>
           </TableHead>
@@ -148,7 +145,6 @@ class AddressBlock extends React.Component
               <TableCell>{ item.message }</TableCell>
               <TableCell>{ item.progress }</TableCell>
               <TableCell>{ item.state }</TableCell>
-              <TableCell>{ item.status }</TableCell>
               <TableCell>{ item.created }</TableCell>
               <TableCell>{ item.updated }</TableCell>
             </TableRow>
@@ -163,7 +159,6 @@ class AddressBlock extends React.Component
             <TableCell>Message</TableCell>
             <TableCell>Progress</TableCell>
             <TableCell>State</TableCell>
-            <TableCell>Status</TableCell>
             <TableCell>Created</TableCell>
             <TableCell>Updated</TableCell>
           </TableHead>
@@ -175,7 +170,6 @@ class AddressBlock extends React.Component
               <TableCell>{ item.message }</TableCell>
               <TableCell>{ item.progress }</TableCell>
               <TableCell>{ item.state }</TableCell>
-              <TableCell>{ item.status }</TableCell>
               <TableCell>{ item.created }</TableCell>
               <TableCell>{ item.updated }</TableCell>
             </TableRow>
@@ -187,4 +181,4 @@ class AddressBlock extends React.Component
   }
 };
 
-export default AddressBlock;
+export default Job;

@@ -40,6 +40,11 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Building/Structure', 'site', { 'site': site } );
   };
 
+  getComplexList = ( site ) =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Building/Complex', 'site', { 'site': site } );
+  };
+
   getFoundationBluePrintList = () =>
   {
     return this.cinp.getFilteredObjects( '/api/v1/BluePrint/FoundationBluePrint' );
@@ -65,6 +70,16 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Foreman/StructureJob', 'site', { 'site': site } );
   };
 
+  getTodoList = ( site, isAutoBuild, hasDependancies, foundationClass ) =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Building/Foundation', 'todo', { 'site': site, 'auto_build': isAutoBuild, 'has_dependancies': hasDependancies, 'foundation_class': foundationClass } );
+  };
+
+  getFoundationClassList =  () =>
+  {
+    return this.cinp.call( '/api/v1/Building/Foundation(getFoundationTypes)' )
+  };
+
   getJobCount = ( site ) =>
   {
     return this.cinp.call( '/api/v1/Foreman/BaseJob(jobCount)', { 'site': site } );
@@ -80,9 +95,19 @@ class Contractor
     return this.cinp.get( '/api/v1/Building/Foundation:' + id + ':' );
   };
 
+  getFoundationDependandyList = ( id ) =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Building/Dependancy', 'foundation', { 'foundation': '/api/v1/Building/Foundation:' + id + ':' } );
+  };
+
   getStructure = ( id ) =>
   {
     return this.cinp.get( '/api/v1/Building/Structure:' + id + ':' );
+  };
+
+  getComplex = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/Building/Complex:' + id + ':' );
   };
 
   getFoundationBluePrint = ( id ) =>

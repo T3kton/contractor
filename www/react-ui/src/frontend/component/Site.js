@@ -64,7 +64,7 @@ class Site extends React.Component
       var site = this.state.site;
       return (
         <div>
-          <h1>Site Detail</h1>
+          <h3>Site Detail</h3>
           { site !== null &&
             <table>
               <thead/>

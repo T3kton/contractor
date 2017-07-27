@@ -45,7 +45,7 @@ class AddressBlock extends React.Component
             addressBlockAddress_list.push( { id: id,
                                              type: address.type,
                                              ip_address: address.ip_address,
-                                             offset: address.offest,
+                                             offset: address.offset,
                                              reason: address.reason, // ReservedAddress
                                              networked: address.networked, // Address
                                              created: address.created,

@@ -67,7 +67,7 @@ class Structure extends React.Component
       var structure = this.state.structure;
       return (
         <div>
-          <h1>Structure Detail</h1>
+          <h3>Structure Detail</h3>
           { structure !== null &&
             <table>
               <thead/>
