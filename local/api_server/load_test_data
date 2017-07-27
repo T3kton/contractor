@@ -270,7 +270,7 @@ fni.full_clean()
 fni.save()
 
 print( 'creating remote docker structure(s)...' )
-str_dkr2 = Structure( site=s1, blueprint=sbp_xenial, hostname='testdkr2', foundation=fdn_dkr2 )
+str_dkr2 = Structure( site=s1, blueprint=sbp_xenial, hostname='dkrhttp', foundation=fdn_dkr2 )
 str_dkr2.auto_build = True
 str_dkr2.full_clean()
 str_dkr2.save()
@@ -279,7 +279,7 @@ addr = Address( networked=str_dkr2, pointer=Address.objects.get( networked=str_v
 addr.full_clean()
 addr.save()
 
-str_dkr3 = Structure( site=s1, blueprint=sbp_xenial, hostname='testdkr3', foundation=fdn_dkr3 )
+str_dkr3 = Structure( site=s1, blueprint=sbp_xenial, hostname='dkrproxy', foundation=fdn_dkr3 )
 str_dkr3.auto_build = True
 str_dkr3.full_clean()
 str_dkr3.save()
