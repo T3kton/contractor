@@ -20,7 +20,7 @@ FOUNDATION_SUBCLASS_LIST = []
 COMPLEX_SUBCLASS_LIST = []
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list' ) )
+@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate' ) )
 class Foundation( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
@@ -90,20 +90,25 @@ class Foundation( models.Model ):
 
     return self
 
-  @cinp.action( 'String' )
-  def getRealFoundationURI( self ):  # TODO: this is such a hack, figure  out a better way
-    subclass = self.subclass
-    class_name = type( subclass ).__name__
-    if class_name == 'Foundation':
-      return '/api/v1/Building/Foundation:{0}:'.format( subclass.pk )
+  @cinp.action( { 'type': 'String', 'is_array': True } )
+  @staticmethod
+  def getFoundationTypes():
+    return FOUNDATION_SUBCLASS_LIST
 
-    elif class_name == 'VirtualBoxFoundation':
-      return '/api/v1/VirtualBox/VirtualBoxFoundation:{0}:'.format( subclass.pk )
-
-    elif class_name == 'ManualFoundation':
-      return '/api/v1/Manual/ManualFoundation:{0}:'.format( subclass.pk )
-
-    raise ValueError( 'Unknown Foundation class "{0}"'.format( class_name ) )
+  # @cinp.action( 'String' )
+  # def getRealFoundationURI( self ):  # TODO: this is such a hack, figure  out a better way
+  #   subclass = self.subclass
+  #   class_name = type( subclass ).__name__
+  #   if class_name == 'Foundation':
+  #     return '/api/v1/Building/Foundation:{0}:'.format( subclass.pk )
+  #
+  #   elif class_name == 'VirtualBoxFoundation':
+  #     return '/api/v1/VirtualBox/VirtualBoxFoundation:{0}:'.format( subclass.pk )
+  #
+  #   elif class_name == 'ManualFoundation':
+  #     return '/api/v1/Manual/ManualFoundation:{0}:'.format( subclass.pk )
+  #
+  #   raise ValueError( 'Unknown Foundation class "{0}"'.format( class_name ) )
 
   @cinp.action( 'Map' )
   def getConfig( self ):
@@ -136,6 +141,22 @@ class Foundation( models.Model ):
   @staticmethod
   def filter_site( site ):
     return Foundation.objects.filter( site=site )
+
+  @cinp.list_filter( name='todo', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' }, 'Boolean', 'Boolean', 'String' ] )
+  @staticmethod
+  def filter_todo( site, auto_build, has_dependancies, foundation_class ):
+    args = {}
+    args[ 'site' ] = site
+    if has_dependancies:
+      args[ 'dependancy' ] = True
+
+    if foundation_class is not None:
+      if foundation_class not in FOUNDATION_SUBCLASS_LIST:
+        raise ValueError( 'Invalid foundation class' )
+
+      args[ foundation_class ] = True
+
+    return Foundation.objects.filter( **args  )
 
   @cinp.check_auth()
   @staticmethod
@@ -252,6 +273,16 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
+  def subclass( self ):
+    for attr in COMPLEX_SUBCLASS_LIST:
+      try:
+        return getattr( self, attr )
+      except AttributeError:
+        pass
+
+    return self
+
+  @property
   def state( self ):
     state_list = [ 1 if i.state == 'built' else 0 for i in self.members.all() ]
 
@@ -259,6 +290,15 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
       return 'built'
 
     return 'planned'
+
+  @property
+  def type( self ):
+    return 'Unknown'
+
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @staticmethod
+  def filter_site( site ):
+    return Complex.objects.filter( site=site )
 
   @cinp.check_auth()
   @staticmethod
@@ -385,6 +425,11 @@ class Dependancy( models.Model ):
       return 'built'
 
     return 'planned'
+
+  @cinp.list_filter( name='foundation', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Foundation' } ] )
+  @staticmethod
+  def filter_site( foundation ):
+    return Dependancy.objects.filter( foundation=foundation )
 
   @cinp.check_auth()
   @staticmethod
