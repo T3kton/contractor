@@ -90,8 +90,8 @@ class Site extends React.Component
           <TableCell>Created</TableCell>
           <TableCell>Updated</TableCell>
         </TableHead>
-        { this.state.site_list.map( ( item, uri ) => (
-          <TableRow key={ uri }>
+        { this.state.site_list.map( ( item ) => (
+          <TableRow>
             <TableCell><Link to={ '/site/' + item.name }>{ item.name }</Link></TableCell>
             <TableCell>{ item.description }</TableCell>
             <TableCell>{ item.created }</TableCell>

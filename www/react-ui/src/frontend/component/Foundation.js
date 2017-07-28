@@ -1,5 +1,6 @@
 import React from 'react';
 import CInP from './cinp';
+import ConfigDialog from './ConfigDialog';
 import { Table, TableHead, TableRow, TableCell } from 'react-toolbox';
 import { Link } from 'react-router-dom';
 
@@ -106,7 +107,7 @@ class Foundation extends React.Component
               </table>
               <h3>Depends on</h3>
               <ul>
-              { this.state.foundationDependancy_list.map( ( item, uri ) => (
+              { this.state.foundationDependancy_list.map( ( item ) => (
                 <li><Link to={ '/structure/' + item.structure }>{ item.structure }</Link> - { item.state }</li>
               ) ) }
               </ul>
@@ -126,8 +127,8 @@ class Foundation extends React.Component
           <TableCell>Created</TableCell>
           <TableCell>Updated</TableCell>
         </TableHead>
-        { this.state.foundation_list.map( ( item, uri ) => (
-          <TableRow key={ uri }>
+        { this.state.foundation_list.map( ( item ) => (
+          <TableRow key={ item.id }>
             <TableCell numeric><Link to={ '/foundation/' + item.id }>{ item.id }</Link></TableCell>
             <TableCell>{ item.locator }</TableCell>
             <TableCell>{ item.type }</TableCell>

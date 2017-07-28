@@ -80,9 +80,9 @@ class Contractor
     return this.cinp.call( '/api/v1/Building/Foundation(getFoundationTypes)' )
   };
 
-  getJobCount = ( site ) =>
+  getJobStats = ( site ) =>
   {
-    return this.cinp.call( '/api/v1/Foreman/BaseJob(jobCount)', { 'site': site } );
+    return this.cinp.call( '/api/v1/Foreman/BaseJob(jobStats)', { 'site': site } );
   }
 
   getSite = ( id ) =>
@@ -125,14 +125,29 @@ class Contractor
     return this.cinp.get( '/api/v1/Utilities/AddressBlock:' + id + ':' );
   };
 
-  getFoundationJob = ( id ) =>
+  pauseJob = ( uri ) =>
   {
-    return this.cinp.get( '/api/v1/Foreman/FoundationJob:' + id + ':' );
+    return this.cinp.call( uri + '(pause)' );
   };
 
-  getStructureJob = ( id ) =>
+  resumeJob = ( uri ) =>
   {
-    return this.cinp.get( '/api/v1/Foreman/StructureJob' + id + ':' );
+    return this.cinp.call( uri + '(resume)' );
+  };
+
+  resetJob = ( uri ) =>
+  {
+    return this.cinp.call( uri + '(reset)' );
+  };
+
+  rollbackJob = ( uri ) =>
+  {
+    return this.cinp.call( uri + '(rollback)' );
+  };
+
+  getConfig = ( uri ) =>
+  {
+    return this.cinp.call( uri + '(getConfig)' );
   };
 
   getAddressBlockAddresses = ( addressBlockId ) =>

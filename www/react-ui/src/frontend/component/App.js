@@ -20,7 +20,8 @@ class App extends React.Component
     cur_site: null,
     leftDrawerVisable: true,
     autoUpdate: false,
-    curJobs: 0
+    curJobs: 0,
+    alerts: 0
   };
 
   constructor()
@@ -37,7 +38,7 @@ class App extends React.Component
 
   selectSite = ( site ) =>
   {
-    this.setState( { cur_site: site }  );
+    this.setState( { cur_site: site }, () => { this.doUpdate(); } );
   };
 
   serverError = ( msg, trace ) =>
@@ -52,11 +53,11 @@ class App extends React.Component
       return;
     }
 
-    this.contractor.getJobCount( this.state.cur_site )
-     .then( ( result ) =>
-     {
-       this.setState( { curJobs: result.data } );
-     } );
+    this.contractor.getJobStats( this.state.cur_site )
+      .then( ( result ) =>
+      {
+       this.setState( { curJobs: result.data.running, alerts: result.data.error } );
+      } );
   };
 
   toggleAutoUpdate = () =>
@@ -93,7 +94,7 @@ class App extends React.Component
     <div>
       <Layout>
         <NavDrawer pinned={this.state.leftDrawerVisable}>
-          <Navigation type='vertical'>
+          <Navigation type="vertical">
             <Link to="/"><Button icon="home">Home</Button></Link>
             <Link to="/sites"><Button icon="business">Sites</Button></Link>
             <Link to="/blueprints"><Button icon="import_contacts">BluePrints</Button></Link>
@@ -109,7 +110,7 @@ class App extends React.Component
           <AppBar title="Contractor" leftIcon="menu" rightIcon="face" onLeftIconClick={ this.menuClick }>
             <Chip><SiteSelector onSiteChange={ this.selectSite } curSite={ this.state.cur_site } siteListGetter={ this.contractor.getSiteList } /></Chip>
             <Chip><FontIcon title='Jobs' value='dvr' /> { this.state.curJobs }</Chip>
-            <Chip><FontIcon value='announcement' /> 0</Chip>
+            <Chip><FontIcon title='Alerts' value='announcement' /> { this.state.alerts }</Chip>
             <Button icon='update' inverse={ !this.state.autoUpdate } onClick={ this.toggleAutoUpdate }/>
             <Button icon='sync' inverse onClick={ this.doUpdate } />
             <Chip><Button icon='settings' disabled /></Chip>
@@ -120,11 +121,11 @@ class App extends React.Component
             <Route path="/blueprint/f/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getFoundationBluePrint } /> ) } />
             <Route path="/blueprint/s/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getStructureBluePrint } /> ) } />
             <Route path="/foundation/:id" render={ ( { match } ) => ( <Foundation id={ match.params.id } detailGet={ this.contractor.getFoundation } detailGetDependancies={ this.contractor.getFoundationDependandyList } /> ) } />
-            <Route path="/structure/:id" render={ ( { match } ) => ( <Structure id={ match.params.id } detailGet={ this.contractor.getStructure } /> ) } />
+            <Route path="/structure/:id" render={ ( { match } ) => ( <Structure id={ match.params.id } detailGet={ this.contractor.getStructure } getConfig={ this.contractor.getConfig } /> ) } />
             <Route path="/complex/:id" render={ ( { match } ) => ( <Complex id={ match.params.id } detailGet={ this.contractor.getComplex } /> ) } />
             <Route path="/addressblock/:id" render={ ( { match } ) => ( <AddressBlock id={ match.params.id } detailGet={ this.contractor.getAddressBlock } addressListGetter={ this.contractor.getAddressBlockAddresses } /> ) } />
-            <Route path="/job/f/:id" render={ ( { match } ) => ( <Job id={ match.params.id } detailGet={ this.contractor.getFoundationJob } /> ) } />
-            <Route path="/job/s/:id" render={ ( { match } ) => ( <Job id={ match.params.id } detailGet={ this.contractor.getStructureJob } /> ) } />
+            <Route path="/job/f/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="foundation" contractor={ this.contractor } /> ) } />
+            <Route path="/job/s/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="structure" contractor={ this.contractor } /> ) } />
             <Route exact={true} path="/sites" render={ () => ( <Site listGet={ this.contractor.getSiteList } /> ) } />
             <Route exact={true} path="/blueprints" render={ () => ( <BluePrint listGetF={ this.contractor.getFoundationBluePrintList } listGetS={ this.contractor.getStructureBluePrintList } /> ) }/>
             <Route exact={true} path="/foundations" render={ () => ( <Foundation site={ this.state.cur_site } listGet={ this.contractor.getFoundationList } /> ) } />

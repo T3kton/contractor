@@ -16,12 +16,12 @@ class ServerError extends React.Component
       trace = '';
     }
     this.setState( { active: true, msg: msg, trace: trace } )
-  }
+  };
 
   close = () =>
   {
     this.setState( { active: false } );
-  }
+  };
 
   actions = [
     { label: "Close", onClick: this.close },

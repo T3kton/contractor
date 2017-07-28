@@ -110,8 +110,8 @@ class BluePrint extends React.Component
             <TableCell>Created</TableCell>
             <TableCell>Updated</TableCell>
           </TableHead>
-          { this.state.blueprintF_list.map( ( item, uri ) => (
-            <TableRow key={ uri }>
+          { this.state.blueprintF_list.map( ( item ) => (
+            <TableRow>
               <TableCell><Link to={ '/blueprint/f/' + item.name }>{ item.name }</Link></TableCell>
               <TableCell>{ item.description }</TableCell>
               <TableCell>{ item.created }</TableCell>

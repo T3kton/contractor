@@ -99,8 +99,8 @@ class Todo extends React.Component
             <TableCell>Created</TableCell>
             <TableCell>Updated</TableCell>
           </TableHead>
-          { this.state.foundation_list.map( ( item, uri ) => (
-            <TableRow key={ uri }>
+          { this.state.foundation_list.map( ( item ) => (
+            <TableRow key={ item.id }>
               <TableCell numeric><Link to={ '/foundation/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.locator }</TableCell>
               <TableCell>{ item.autoBuild }</TableCell>

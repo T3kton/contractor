@@ -111,8 +111,8 @@ class AddressBlock extends React.Component
                   <TableCell>Created</TableCell>
                   <TableCell>Updated</TableCell>
                 </TableHead>
-                { this.state.addressBlockAddress_list.map( ( item, uri ) => (
-                  <TableRow key={ uri }>
+                { this.state.addressBlockAddress_list.map( ( item ) => (
+                  <TableRow key={ item.id }>
                     <TableCell numeric>{ item.id }</TableCell>
                     <TableCell>{ item.type }</TableCell>
                     <TableCell>{ item.ip_address }</TableCell>
@@ -138,8 +138,8 @@ class AddressBlock extends React.Component
           <TableCell>Created</TableCell>
           <TableCell>Updated</TableCell>
         </TableHead>
-        { this.state.addressBlock_list.map( ( item, uri ) => (
-          <TableRow key={ uri }>
+        { this.state.addressBlock_list.map( ( item ) => (
+          <TableRow key={ item.id }>
             <TableCell numeric><Link to={ '/addressblock/' + item.id }>{ item.id }</Link></TableCell>
             <TableCell>{ item.subnet }</TableCell>
             <TableCell>{ item.prefix }</TableCell>

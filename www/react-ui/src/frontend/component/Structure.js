@@ -1,5 +1,6 @@
 import React from 'react';
 import CInP from './cinp';
+import ConfigDialog from './ConfigDialog';
 import { Table, TableHead, TableRow, TableCell } from 'react-toolbox';
 import { Link } from 'react-router-dom';
 
@@ -69,23 +70,26 @@ class Structure extends React.Component
         <div>
           <h3>Structure Detail</h3>
           { structure !== null &&
-            <table>
-              <thead/>
-              <tbody>
-                <tr><th>Site</th><td><Link to={ '/site/' + structure.site }>{ structure.site }</Link></td></tr>
-                <tr><th>Foundation</th><td><Link to={ '/foundation/' + structure.foundation }>{ structure.foundation }</Link></td></tr>
-                <tr><th>Hostname</th><td>{ structure.hostname }</td></tr>
-                <tr><th>State</th><td>{ structure.state }</td></tr>
-                <tr><th>Type</th><td>{ structure.type }</td></tr>
-                <tr><th>Blueprint</th><td><Link to={ '/blueprint/s/' + structure.blueprint }>{ structure.blueprint }</Link></td></tr>
-                <tr><th>Config UUID</th><td>{ structure.config_uuid }</td></tr>
-                <tr><th>Auto Build</th><td>{ structure.auto_build }</td></tr>
-                <tr><th>Config Values</th><td><table><thead/><tbody>{ structure.config_values.map( ( value ) => ( <tr><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
-                <tr><th>Created</th><td>{ structure.created }</td></tr>
-                <tr><th>Updated</th><td>{ structure.updated }</td></tr>
-                <tr><th>Built At</th><td>{ structure.built_at }</td></tr>
-              </tbody>
-            </table>
+            <div>
+              <ConfigDialog getConfig={ this.props.getConfig } uri={ '/api/v1/Building/Structure:' + this.props.id + ':' } />
+              <table>
+                <thead/>
+                <tbody>
+                  <tr><th>Site</th><td><Link to={ '/site/' + structure.site }>{ structure.site }</Link></td></tr>
+                  <tr><th>Foundation</th><td><Link to={ '/foundation/' + structure.foundation }>{ structure.foundation }</Link></td></tr>
+                  <tr><th>Hostname</th><td>{ structure.hostname }</td></tr>
+                  <tr><th>State</th><td>{ structure.state }</td></tr>
+                  <tr><th>Type</th><td>{ structure.type }</td></tr>
+                  <tr><th>Blueprint</th><td><Link to={ '/blueprint/s/' + structure.blueprint }>{ structure.blueprint }</Link></td></tr>
+                  <tr><th>Config UUID</th><td>{ structure.config_uuid }</td></tr>
+                  <tr><th>Auto Build</th><td>{ structure.auto_build }</td></tr>
+                  <tr><th>Config Values</th><td><table><thead/><tbody>{ structure.config_values.map( ( value ) => ( <tr><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
+                  <tr><th>Created</th><td>{ structure.created }</td></tr>
+                  <tr><th>Updated</th><td>{ structure.updated }</td></tr>
+                  <tr><th>Built At</th><td>{ structure.built_at }</td></tr>
+                </tbody>
+              </table>
+            </div>
           }
         </div>
       );
@@ -100,8 +104,8 @@ class Structure extends React.Component
           <TableCell>Created</TableCell>
           <TableCell>Updated</TableCell>
         </TableHead>
-        { this.state.structure_list.map( ( item, uri ) => (
-          <TableRow key={ uri }>
+        { this.state.structure_list.map( ( item ) => (
+          <TableRow key={ item.id }>
             <TableCell numeric><Link to={ '/structure/' + item.id }>{ item.id }</Link></TableCell>
             <TableCell>{ item.hostname }</TableCell>
             <TableCell>{ item.state }</TableCell>

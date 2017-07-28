@@ -30,6 +30,7 @@ class Complex extends React.Component
        .then( ( result ) =>
         {
           var data = result.data;
+          data.site = CInP.extractIds( data.site )[0];
           this.setState( { complex: data } );
         } );
     }
@@ -95,8 +96,8 @@ class Complex extends React.Component
           <TableCell>Created</TableCell>
           <TableCell>Updated</TableCell>
         </TableHead>
-        { this.state.complex_list.map( ( item, uri ) => (
-          <TableRow key={ uri }>
+        { this.state.complex_list.map( ( item ) => (
+          <TableRow>
             <TableCell numeric><Link to={ '/complex/' + item.id }>{ item.id }</Link></TableCell>
             <TableCell>{ item.hostname }</TableCell>
             <TableCell>{ item.state }</TableCell>
