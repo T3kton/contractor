@@ -369,9 +369,9 @@ class ComplexStructure( models.Model ):
   #
   #   raise ValueError( 'Unknown Foundation class "{0}"'.format( class_name ) )
   #
-  # @cinp.action( 'Map' )
-  # def getConfig( self ):
-  #   return getConfig( self.subclass )
+  @cinp.action( 'Map' )
+  def getConfig( self ):
+    return getConfig( self.subclass )
 
   @property
   def type( self ):

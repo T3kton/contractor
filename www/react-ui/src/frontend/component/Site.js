@@ -1,5 +1,6 @@
 import React from 'react';
 import CInP from './cinp';
+import ConfigDialog from './ConfigDialog';
 import { Table, TableHead, TableRow, TableCell } from 'react-toolbox';
 import { Link } from 'react-router-dom';
 
@@ -66,17 +67,20 @@ class Site extends React.Component
         <div>
           <h3>Site Detail</h3>
           { site !== null &&
-            <table>
-              <thead/>
-              <tbody>
-                <tr><th>Name</th><td>{ site.name }</td></tr>
-                <tr><th>Parent</th><td><Link to={ '/site/' + site.parent }>{ site.parent }</Link></td></tr>
-                <tr><th>Description</th><td>{ site.description }</td></tr>
-                <tr><th>Config Values</th><td><table><thead/><tbody>{ site.config_values.map( ( value ) => ( <tr><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
-                <tr><th>Created</th><td>{ site.created }</td></tr>
-                <tr><th>Updated</th><td>{ site.updated }</td></tr>
-              </tbody>
-            </table>
+            <div>
+              <ConfigDialog getConfig={ this.props.getConfig } uri={ '/api/v1/Site/Site:' + this.props.id + ':' } />
+              <table>
+                <thead/>
+                <tbody>
+                  <tr><th>Name</th><td>{ site.name }</td></tr>
+                  <tr><th>Parent</th><td><Link to={ '/site/' + site.parent }>{ site.parent }</Link></td></tr>
+                  <tr><th>Description</th><td>{ site.description }</td></tr>
+                  <tr><th>Config Values</th><td><table><thead/><tbody>{ site.config_values.map( ( value ) => ( <tr key={ value[0] }><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
+                  <tr><th>Created</th><td>{ site.created }</td></tr>
+                  <tr><th>Updated</th><td>{ site.updated }</td></tr>
+                </tbody>
+              </table>
+            </div>
           }
         </div>
       );
@@ -91,7 +95,7 @@ class Site extends React.Component
           <TableCell>Updated</TableCell>
         </TableHead>
         { this.state.site_list.map( ( item ) => (
-          <TableRow>
+          <TableRow key={ item.name } >
             <TableCell><Link to={ '/site/' + item.name }>{ item.name }</Link></TableCell>
             <TableCell>{ item.description }</TableCell>
             <TableCell>{ item.created }</TableCell>

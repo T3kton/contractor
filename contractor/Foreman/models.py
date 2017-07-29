@@ -92,10 +92,10 @@ class BaseJob( models.Model ):
     except IndexError:
       return 0.0
 
-  @cinp.action( return_type={ 'type': 'Integer' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
-  def jobCount( site ):
-    return BaseJob.objects.filter( site=site ).count()
+  def jobStats( site ):
+    return { 'running': BaseJob.objects.filter( site=site ).count(), 'error': BaseJob.objects.filter( site=site, state__in=( 'error', 'aborted' ) ).count() }
 
   @cinp.check_auth()
   @staticmethod

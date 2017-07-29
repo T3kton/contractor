@@ -49,7 +49,7 @@ class ConfigDialog extends React.Component
               <TableCell>Value</TableCell>
             </TableHead>
           { this.state.item_list.map( ( item ) => (
-            <TableRow>
+            <TableRow key={ item.name }>
               <TableCell>{ item.name }</TableCell>
               <TableCell>{ item.value }</TableCell>
             </TableRow>

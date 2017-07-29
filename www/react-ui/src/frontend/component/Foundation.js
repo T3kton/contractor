@@ -86,6 +86,7 @@ class Foundation extends React.Component
           <h3>Foundation Detail</h3>
           { foundation !== null &&
             <div>
+              <ConfigDialog getConfig={ this.props.getConfig } uri={ '/api/v1/Building/Foundation:' + this.props.id + ':' } />
               <table>
                 <thead/>
                 <tbody>
@@ -98,7 +99,7 @@ class Foundation extends React.Component
                   <tr><th>Id Map</th><td>{ foundation.id_map }</td></tr>
                   <tr><th>Interfaces</th><td>{ foundation.interfaces }</td></tr>
                   <tr><th>Class List</th><td>{ foundation.class_list }</td></tr>
-                  <tr><th>Config Values</th><td><table><thead/><tbody>{ foundation.config_values.map( ( value ) => ( <tr><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
+                  <tr><th>Config Values</th><td><table><thead/><tbody>{ foundation.config_values.map( ( value ) => ( <tr key={ value[0] }><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
                   <tr><th>Created</th><td>{ foundation.created }</td></tr>
                   <tr><th>Updated</th><td>{ foundation.updated }</td></tr>
                   <tr><th>Located At</th><td>{ foundation.located_at }</td></tr>
@@ -107,8 +108,8 @@ class Foundation extends React.Component
               </table>
               <h3>Depends on</h3>
               <ul>
-              { this.state.foundationDependancy_list.map( ( item ) => (
-                <li><Link to={ '/structure/' + item.structure }>{ item.structure }</Link> - { item.state }</li>
+              { this.state.foundationDependancy_list.map( ( item, index ) => (
+                <li key={ index }><Link to={ '/structure/' + item.structure }>{ item.structure }</Link> - { item.state }</li>
               ) ) }
               </ul>
             </div>

@@ -24,7 +24,7 @@ class Job extends React.Component
       {
         this.update( this.props );
         alert( 'Job Resumed' );
-      } );
+      }, ( error ) => alert( 'Error Resuming job: "' + error.reason + '": "' + error.detail + '"' ) );
   };
 
   pause = () =>
@@ -34,7 +34,7 @@ class Job extends React.Component
       {
         this.update( this.props );
         alert( 'Job Paused' );
-      } );
+      }, ( error ) => alert( 'Error Pausing job: "' + error.reason + '": "' + error.detail + '"' ) );
   };
 
   reset = () =>
@@ -44,7 +44,7 @@ class Job extends React.Component
       {
         this.update( this.props );
         alert( 'Job Reset' );
-      } );
+      }, ( error ) => alert( 'Error Resetting job: "' + error.reason + '": "' + error.detail + '"' ) );
   };
 
   rollback = () =>
@@ -54,7 +54,7 @@ class Job extends React.Component
       {
         this.update( this.props );
         alert( 'Job Rollback' );
-      } );
+      }, ( error ) => alert( 'Error Rolling Back job: "' + error.reason + '": "' + error.detail + '"' ) );
   };
 
   componentDidMount()

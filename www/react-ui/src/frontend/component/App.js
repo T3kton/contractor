@@ -117,12 +117,12 @@ class App extends React.Component
           </AppBar>
           <div ref="content">
             <Route exact={true} path="/" component={ Home }/>
-            <Route path="/site/:id" render={ ( { match } ) => ( <Site id={ match.params.id } detailGet={ this.contractor.getSite } /> ) } />
-            <Route path="/blueprint/f/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getFoundationBluePrint } /> ) } />
-            <Route path="/blueprint/s/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getStructureBluePrint } /> ) } />
-            <Route path="/foundation/:id" render={ ( { match } ) => ( <Foundation id={ match.params.id } detailGet={ this.contractor.getFoundation } detailGetDependancies={ this.contractor.getFoundationDependandyList } /> ) } />
+            <Route path="/site/:id" render={ ( { match } ) => ( <Site id={ match.params.id } detailGet={ this.contractor.getSite } getConfig={ this.contractor.getConfig } /> ) } />
+            <Route path="/blueprint/f/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getFoundationBluePrint } getConfig={ this.contractor.getConfig } /> ) } />
+            <Route path="/blueprint/s/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getStructureBluePrint } getConfig={ this.contractor.getConfig } /> ) } />
+            <Route path="/foundation/:id" render={ ( { match } ) => ( <Foundation id={ match.params.id } detailGet={ this.contractor.getFoundation } detailGetDependancies={ this.contractor.getFoundationDependandyList } getConfig={ this.contractor.getConfig } /> ) } />
             <Route path="/structure/:id" render={ ( { match } ) => ( <Structure id={ match.params.id } detailGet={ this.contractor.getStructure } getConfig={ this.contractor.getConfig } /> ) } />
-            <Route path="/complex/:id" render={ ( { match } ) => ( <Complex id={ match.params.id } detailGet={ this.contractor.getComplex } /> ) } />
+            <Route path="/complex/:id" render={ ( { match } ) => ( <Complex id={ match.params.id } detailGet={ this.contractor.getComplex } getConfig={ this.contractor.getConfig } /> ) } />
             <Route path="/addressblock/:id" render={ ( { match } ) => ( <AddressBlock id={ match.params.id } detailGet={ this.contractor.getAddressBlock } addressListGetter={ this.contractor.getAddressBlockAddresses } /> ) } />
             <Route path="/job/f/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="foundation" contractor={ this.contractor } /> ) } />
             <Route path="/job/s/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="structure" contractor={ this.contractor } /> ) } />

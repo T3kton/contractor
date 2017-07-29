@@ -1,5 +1,6 @@
 import React from 'react';
 import CInP from './cinp';
+import ConfigDialog from './ConfigDialog';
 import { Table, TableHead, TableRow, TableCell } from 'react-toolbox';
 import { Link } from 'react-router-dom';
 
@@ -84,17 +85,21 @@ class BluePrint extends React.Component
         <div>
           <h3>BluePrint Detail</h3>
           { blueprint !== null &&
-            <table>
-              <thead/>
-              <tbody>
-                <tr><th>Name</th><td>{ blueprint.name }</td></tr>
-                <tr><th>Description</th><td>{ blueprint.description }</td></tr>
-                <tr><th>Config Values</th><td><table><thead/><tbody>{ blueprint.config_values.map( ( value ) => ( <tr><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
-                <tr><th>Scripts</th><td><ul>{ blueprint.scripts.map( ( script ) => ( <li>{script}</li> ) ) }</ul></td></tr>
-                <tr><th>Created</th><td>{ blueprint.created }</td></tr>
-                <tr><th>Updated</th><td>{ blueprint.updated }</td></tr>
-              </tbody>
-            </table>
+            <div>
+              <ConfigDialog getConfig={ this.props.getConfig } uri={ '/api/v1/BluePrint/BluePrint:' + this.props.id + ':' } />
+              <table>
+                <thead/>
+                <tbody>
+                  <tr><th>Name</th><td>{ blueprint.name }</td></tr>
+                  <tr><th>Parent</th><td>{ blueprint.parent }</td></tr>
+                  <tr><th>Description</th><td>{ blueprint.description }</td></tr>
+                  <tr><th>Config Values</th><td><table><thead/><tbody>{ blueprint.config_values.map( ( value ) => ( <tr key={ value[0] }><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
+                  <tr><th>Scripts</th><td><ul>{ blueprint.scripts.map( ( script, index ) => ( <li key={ index } >{ script }</li> ) ) }</ul></td></tr>
+                  <tr><th>Created</th><td>{ blueprint.created }</td></tr>
+                  <tr><th>Updated</th><td>{ blueprint.updated }</td></tr>
+                </tbody>
+              </table>
+            </div>
           }
         </div>
       );
@@ -111,7 +116,7 @@ class BluePrint extends React.Component
             <TableCell>Updated</TableCell>
           </TableHead>
           { this.state.blueprintF_list.map( ( item ) => (
-            <TableRow>
+            <TableRow key={ item.name }>
               <TableCell><Link to={ '/blueprint/f/' + item.name }>{ item.name }</Link></TableCell>
               <TableCell>{ item.description }</TableCell>
               <TableCell>{ item.created }</TableCell>
@@ -127,8 +132,8 @@ class BluePrint extends React.Component
             <TableCell>Created</TableCell>
             <TableCell>Updated</TableCell>
           </TableHead>
-          { this.state.blueprintS_list.map( ( item, uri ) => (
-            <TableRow key={ uri }>
+          { this.state.blueprintS_list.map( ( item ) => (
+            <TableRow key={ item.name }>
               <TableCell><Link to={ '/blueprint/s/' + item.name }>{ item.name }</Link></TableCell>
               <TableCell>{ item.description }</TableCell>
               <TableCell>{ item.created }</TableCell>

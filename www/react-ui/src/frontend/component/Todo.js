@@ -34,13 +34,11 @@ class Todo extends React.Component
   handleOptionChange = ( field, value ) =>
   {
     this.setState( { [ field ]: value }, () => this.update( this.props ) );
-    //this.update( this.props );
   };
 
   handleClassChange = ( value ) =>
   {
     this.setState( { foundationClass: value }, () => this.update( this.props ) );
-    //this.update( this.props );
   };
 
   componentDidMount()
@@ -67,8 +65,8 @@ class Todo extends React.Component
           foundation_list.push( { id: id,
                                   locator: foundation.locator,
                                   autoBuild: foundation.can_auto_locate,
-                                  dependancyCount: foundation.dependancy_count,
-                                  complex: foundation.complex,
+                                  dependancyCount: ' ',
+                                  complex: ' ',
                                   created: foundation.created,
                                   updated: foundation.updated
                                 } );

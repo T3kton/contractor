@@ -81,8 +81,19 @@ class CInP
           }
           else
           {
-            response.json().then( ( data ) => resolve( { data: data, status: response.status, headers: response.headers } ),
-                                  ( error ) => this._ajax_fail( method, uri, reject, error ) );
+            response.text()
+              .then( ( data ) =>
+              {
+                if( data )
+                {
+                  data = JSON.parse( data );
+                }
+                else
+                {
+                  data = null;
+                }
+                resolve( { data: data, status: response.status, headers: response.headers } );
+              }, ( error ) => this._ajax_fail( method, uri, reject, error ) );
           }
         },
         ( error ) =>
@@ -127,38 +138,38 @@ class CInP
       {
         if( 'message' in data )
         {
-          reject( 'Invalid Request', data.message );
+          reject( { reason: 'Invalid Request', detail: data.message } );
         }
         else
         {
-          reject( 'Invalid Request', data );
+          reject( { reason: 'Invalid Request', detail: data } );
         }
       }
       else
       {
-        reject( 'Invalid Request', data );
+        reject( { reason: 'Invalid Request', detail: data } );
       }
     }
     else if( response.status == 401 )
     {
-      reject( 'Invalid Session' );
+      reject( { reason: 'Invalid Session' } );
     }
     else if( response.status == 403 )
     {
-      reject( 'Not Authorized' );
+      reject( { reason: 'Not Authorized' } );
     }
     else if( response.status == 404 )
     {
-      reject( 'Not Found' );
+      reject( { reason: 'Not Found' } );
     }
     else if( response.status == 500 )
     {
       this._server_error_handler( data );
-      reject( 'Server Error' );
+      reject( { reason: 'Server Error' } );
     }
     else
     {
-      reject( data );
+      reject( { reason: data } );
     }
   };
 
