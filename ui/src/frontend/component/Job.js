@@ -9,6 +9,7 @@ class Job extends React.Component
   state = {
       jobF_list: [],
       jobS_list: [],
+      jobD_list: [],
       job: null,
       jobURI: null,
       canPause: false,
@@ -79,7 +80,11 @@ class Job extends React.Component
       }
       if( props.jobType == 'structure' )
       {
-        uri = '/api/v1/Foreman/FoundationJob:' + props.id + ':';
+        uri = '/api/v1/Foreman/StructureJob:' + props.id + ':';
+      }
+      if( props.jobType == 'dependancy' )
+      {
+        uri = '/api/v1/Foreman/DependancyJob:' + props.id + ':';
       }
       if( uri === null )
       {
@@ -99,6 +104,10 @@ class Job extends React.Component
           if ( data.structure !== undefined )
           {
             data.structure = CInP.extractIds( data.structure )[0];
+          }
+          if ( data.dependancy !== undefined )
+          {
+            data.dependancy = CInP.extractIds( data.dependancy )[0];
           }
 
           var canPause = false;
@@ -156,6 +165,27 @@ class Job extends React.Component
             job_list.push( { id: id,
                              script: job.script_name,
                              foundation: job.foundation,
+                             message: job.message,
+                             progress: job.progress,
+                             state: job.state,
+                             created: job.created,
+                             updated: job.updated,
+                            } );
+          }
+
+          this.setState( { jobF_list: job_list } );
+        } );
+      props.listGetD( props.site )
+        .then( ( result ) =>
+        {
+          var job_list = [];
+          for ( var id in result.data )
+          {
+            var job = result.data[ id ];
+            id = CInP.extractIds( id )[0];
+            job_list.push( { id: id,
+                             script: job.script_name,
+                             dependancy: job.dependancy,
                              message: job.message,
                              progress: job.progress,
                              state: job.state,

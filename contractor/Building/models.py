@@ -428,8 +428,13 @@ class Dependancy( models.Model ):
 
   @cinp.list_filter( name='foundation', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Foundation' } ] )
   @staticmethod
-  def filter_site( foundation ):
+  def filter_foundation( foundation ):
     return Dependancy.objects.filter( foundation=foundation )
+
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @staticmethod
+  def filter_site( site ):
+    return Dependancy.objects.filter( foundation__site=site )
 
   @cinp.check_auth()
   @staticmethod

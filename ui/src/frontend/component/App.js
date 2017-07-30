@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Route, Link } from 'react-router-dom';
 import Home from './Home';
 import Site from './Site';
 import Foundation from './Foundation';
+import Dependancy from './Dependancy';
 import Structure from './Structure';
 import Complex from './Complex';
 import BluePrint from './BluePrint';
@@ -99,6 +100,7 @@ class App extends React.Component
             <Link to="/sites"><Button icon="business">Sites</Button></Link>
             <Link to="/blueprints"><Button icon="import_contacts">BluePrints</Button></Link>
             <Link to="/foundations"><Button icon="storage">Foundations</Button></Link>
+            <Link to="/dependancies"><Button icon="storage">Dependancies</Button></Link>
             <Link to="/structures"><Button icon="account_balance">Structures</Button></Link>
             <Link to="/complexes"><Button icon="location_city">Complexes</Button></Link>
             <Link to="/addressblocks"><Button icon="compare_arrows">Address Blocks</Button></Link>
@@ -121,18 +123,21 @@ class App extends React.Component
             <Route path="/blueprint/f/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getFoundationBluePrint } getConfig={ this.contractor.getConfig } /> ) } />
             <Route path="/blueprint/s/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getStructureBluePrint } getConfig={ this.contractor.getConfig } /> ) } />
             <Route path="/foundation/:id" render={ ( { match } ) => ( <Foundation id={ match.params.id } detailGet={ this.contractor.getFoundation } detailGetDependancies={ this.contractor.getFoundationDependandyList } getConfig={ this.contractor.getConfig } /> ) } />
+            <Route path="/dependancy/:id" render={ ( { match } ) => ( <Dependancy id={ match.params.id } detailGet={ this.contractor.getDependancy } /> ) } />
             <Route path="/structure/:id" render={ ( { match } ) => ( <Structure id={ match.params.id } detailGet={ this.contractor.getStructure } getConfig={ this.contractor.getConfig } /> ) } />
             <Route path="/complex/:id" render={ ( { match } ) => ( <Complex id={ match.params.id } detailGet={ this.contractor.getComplex } getConfig={ this.contractor.getConfig } /> ) } />
             <Route path="/addressblock/:id" render={ ( { match } ) => ( <AddressBlock id={ match.params.id } detailGet={ this.contractor.getAddressBlock } addressListGetter={ this.contractor.getAddressBlockAddresses } /> ) } />
             <Route path="/job/f/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="foundation" contractor={ this.contractor } /> ) } />
             <Route path="/job/s/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="structure" contractor={ this.contractor } /> ) } />
+            <Route path="/job/d/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="dependancy" contractor={ this.contractor } /> ) } />
             <Route exact={true} path="/sites" render={ () => ( <Site listGet={ this.contractor.getSiteList } /> ) } />
             <Route exact={true} path="/blueprints" render={ () => ( <BluePrint listGetF={ this.contractor.getFoundationBluePrintList } listGetS={ this.contractor.getStructureBluePrintList } /> ) }/>
             <Route exact={true} path="/foundations" render={ () => ( <Foundation site={ this.state.cur_site } listGet={ this.contractor.getFoundationList } /> ) } />
+            <Route exact={true} path="/dependancies" render={ () => ( <Dependancy site={ this.state.cur_site } listGet={ this.contractor.getDependancyList } /> ) } />
             <Route exact={true} path="/structures" render={ () => ( <Structure site={ this.state.cur_site } listGet={ this.contractor.getStructureList } /> ) } />
             <Route exact={true} path="/complexes" render={ () => ( <Complex site={ this.state.cur_site } listGet={ this.contractor.getComplexList } /> ) } />
             <Route exact={true} path="/addressblocks" render={ () => ( <AddressBlock site={ this.state.cur_site } listGet={ this.contractor.getAddressBlockList } /> ) } />
-            <Route exact={true} path="/jobs" render={ () => ( <Job site={ this.state.cur_site } listGetF={ this.contractor.getFoundationJobList } listGetS={ this.contractor.getStructureJobList } /> ) }/>
+            <Route exact={true} path="/jobs" render={ () => ( <Job site={ this.state.cur_site } listGetF={ this.contractor.getFoundationJobList } listGetS={ this.contractor.getStructureJobList } listGetD={ this.contractor.getDependancyJobList } /> ) }/>
             <Route exact={true} path="/todo" render={ () => ( <Todo site={ this.state.cur_site } listGet={ this.contractor.getTodoList } classListGet={ this.contractor.getFoundationClassList } /> ) }/>
           </div>
         </Panel>

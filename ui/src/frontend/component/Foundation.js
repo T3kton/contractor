@@ -44,7 +44,8 @@ class Foundation extends React.Component
           for ( var id in result.data )
           {
             var dependancy = result.data[ id ];
-            dependancy_list.push( { id: id,
+            dependancy_list.push( { id: CInP.extractIds( id )[0],
+                                    foundation: CInP.extractIds( dependancy.foundation )[0],
                                     structure: CInP.extractIds( dependancy.structure )[0],
                                     state: dependancy.state,
                                   } );
@@ -108,8 +109,8 @@ class Foundation extends React.Component
               </table>
               <h3>Depends on</h3>
               <ul>
-              { this.state.foundationDependancy_list.map( ( item, index ) => (
-                <li key={ index }><Link to={ '/structure/' + item.structure }>{ item.structure }</Link> - { item.state }</li>
+              { this.state.foundationDependancy_list.map( ( item ) => (
+                <li key={ item.id }><Link to={ '/dependancy/' + item.id }>{ item.id }</Link> - Foundation: { item.foundation }  Structure: {  item.structure } Status: { item.state }</li>
               ) ) }
               </ul>
             </div>
