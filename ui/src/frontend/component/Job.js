@@ -194,7 +194,7 @@ class Job extends React.Component
                             } );
           }
 
-          this.setState( { jobF_list: job_list } );
+          this.setState( { jobD_list: job_list } );
         } );
     }
   }
@@ -282,6 +282,31 @@ class Job extends React.Component
               <TableCell numeric><Link to={ '/job/s/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.script }</TableCell>
               <TableCell>{ item.structure }</TableCell>
+              <TableCell>{ item.message }</TableCell>
+              <TableCell>{ item.progress }</TableCell>
+              <TableCell>{ item.state }</TableCell>
+              <TableCell>{ item.created }</TableCell>
+              <TableCell>{ item.updated }</TableCell>
+            </TableRow>
+          ) ) }
+        </Table>
+        <h3>Dependancy Jobs</h3>
+        <Table selectable={ false } multiSelectable={ false }>
+          <TableHead>
+            <TableCell numeric>Id</TableCell>
+            <TableCell>Script</TableCell>
+            <TableCell>Dependancy</TableCell>
+            <TableCell>Message</TableCell>
+            <TableCell>Progress</TableCell>
+            <TableCell>State</TableCell>
+            <TableCell>Created</TableCell>
+            <TableCell>Updated</TableCell>
+          </TableHead>
+          { this.state.jobD_list.map( ( item ) => (
+            <TableRow>
+              <TableCell numeric><Link to={ '/job/d/' + item.id }>{ item.id }</Link></TableCell>
+              <TableCell>{ item.script }</TableCell>
+              <TableCell>{ item.dependancy }</TableCell>
               <TableCell>{ item.message }</TableCell>
               <TableCell>{ item.progress }</TableCell>
               <TableCell>{ item.state }</TableCell>

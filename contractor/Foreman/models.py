@@ -231,7 +231,7 @@ class DependancyJob( BaseJob ):
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
-    return DependancyJob.objects.filter( structure__site=site )
+    return DependancyJob.objects.filter( foundation__site=site )
 
   @cinp.check_auth()
   @staticmethod
