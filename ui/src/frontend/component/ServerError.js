@@ -1,5 +1,6 @@
 import React from 'react';
 import { Dialog } from 'react-toolbox';
+import theme from "./ServerErrorTheme.css";
 
 class ServerError extends React.Component
 {
@@ -36,6 +37,7 @@ class ServerError extends React.Component
     onEscKeyDown={this.close}
     onOverlayClick={this.close}
     title='Server Error'
+    theme={theme}
   >
     <p>{this.state.msg}</p>
     <pre>{this.state.trace}</pre>
