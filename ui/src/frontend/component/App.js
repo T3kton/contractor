@@ -11,6 +11,7 @@ import BluePrint from './BluePrint';
 import AddressBlock from './AddressBlock';
 import Job from './Job';
 import Todo from './Todo';
+import SiteGraph from './SiteGraph';
 import SiteSelector from './SiteSelector';
 import ServerError from './ServerError';
 import Contractor from './Contractor';
@@ -100,12 +101,13 @@ class App extends React.Component
             <Link to="/sites"><Button icon="business">Sites</Button></Link>
             <Link to="/blueprints"><Button icon="import_contacts">BluePrints</Button></Link>
             <Link to="/foundations"><Button icon="storage">Foundations</Button></Link>
-            <Link to="/dependancies"><Button icon="storage">Dependancies</Button></Link>
+            <Link to="/dependancies"><Button icon="group_work">Dependancies</Button></Link>
             <Link to="/structures"><Button icon="account_balance">Structures</Button></Link>
             <Link to="/complexes"><Button icon="location_city">Complexes</Button></Link>
             <Link to="/addressblocks"><Button icon="compare_arrows">Address Blocks</Button></Link>
             <Link to="/jobs"><Button icon="dvr">Jobs</Button></Link>
             <Link to="/todo"><Button icon="check_box">Todo</Button></Link>
+            <Link to="/graph"><Button icon="timeline">Graph</Button></Link>
           </Navigation>
         </NavDrawer>
         <Panel>
@@ -139,6 +141,7 @@ class App extends React.Component
             <Route exact={true} path="/addressblocks" render={ () => ( <AddressBlock site={ this.state.cur_site } listGet={ this.contractor.getAddressBlockList } /> ) } />
             <Route exact={true} path="/jobs" render={ () => ( <Job site={ this.state.cur_site } listGetF={ this.contractor.getFoundationJobList } listGetS={ this.contractor.getStructureJobList } listGetD={ this.contractor.getDependancyJobList } /> ) }/>
             <Route exact={true} path="/todo" render={ () => ( <Todo site={ this.state.cur_site } listGet={ this.contractor.getTodoList } classListGet={ this.contractor.getFoundationClassList } /> ) }/>
+            <Route exact={true} path="/graph" render={ () => ( <SiteGraph site={ this.state.cur_site } siteDependancyMap={ this.contractor.getSiteDependancyMap } /> ) }/>
           </div>
         </Panel>
       </Layout>

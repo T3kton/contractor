@@ -85,9 +85,14 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Building/Foundation', 'todo', { 'site': site, 'auto_build': isAutoBuild, 'has_dependancies': hasDependancies, 'foundation_class': foundationClass } );
   };
 
-  getFoundationClassList =  () =>
+  getFoundationClassList = () =>
   {
     return this.cinp.call( '/api/v1/Building/Foundation(getFoundationTypes)' )
+  };
+
+  getSiteDependancyMap = ( site ) =>
+  {
+    return this.cinp.call( site + '(getDependancyMap)' );
   };
 
   getJobStats = ( site ) =>
