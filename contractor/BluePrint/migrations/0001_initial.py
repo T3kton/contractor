@@ -21,6 +21,27 @@ def load_linux_blueprints( app, schema_editor ):
   BluePrintScript = app.get_model( 'BluePrint', 'BluePrintScript' )
   PXE = app.get_model( 'BluePrint', 'PXE' )
 
+  sbpm = StructureBluePrint( name='generic-manual-structure', description='Manual OS' )
+  sbpm.full_clean()
+  sbpm.save()
+
+  s = Script( name='create-manual-structure', description='Install Manual OS' )
+  s.script = """# Install Manual OS
+pause( msg='Resume When OS is Installed' )
+pause( msg='Resume When OS has been verified to be running' )
+"""
+  s.full_clean()
+  s.save()
+  BluePrintScript( blueprint=sbpm, script=s, name='create' ).save()
+
+  s = Script( name='destroy-manual-structure', description='Uninstall Manual OS' )
+  s.script = """# Uninstall Manual OS
+pause( msg='Resume When OS is Uninstalled' )
+"""
+  s.full_clean()
+  s.save()
+  BluePrintScript( blueprint=sbpm, script=s, name='destroy' ).save()
+
   sbpl = StructureBluePrint( name='generic-linux', description='Generic Linux' )
   sbpl.config_values = { 'distro': 'generic' }
   sbpl.full_clean()

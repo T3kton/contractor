@@ -137,6 +137,14 @@ class Foundation( models.Model ):
 
     return 'planned'
 
+  @property
+  def description( self ):
+    return self.locator
+
+  @property
+  def dependancyId( self ):
+    return 'f-{0}'.format( self.pk )
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
@@ -173,7 +181,7 @@ class Foundation( models.Model ):
       raise ValidationError( errors )
 
   def __str__( self ):
-    return 'Foundation #{0} of "{1}" in "{2}"'.format( self.pk, self.blueprint.pk, self.site.pk )
+    return 'Foundation #{0}({1}) of "{2}" in "{3}"'.format( self.pk, self.locator, self.blueprint.pk, self.site.pk )
 
 
 @cinp.model( )
@@ -239,6 +247,14 @@ class Structure( Networked ):
 
     return 'planned'
 
+  @property
+  def description( self ):
+    return self.hostname
+
+  @property
+  def dependancyId( self ):
+    return 's-{0}'.format( self.pk )
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
@@ -294,6 +310,10 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   @property
   def type( self ):
     return 'Unknown'
+
+  @property
+  def dependancyId( self ):
+    return 'c-{0}'.format( self.pk )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
@@ -425,6 +445,14 @@ class Dependancy( models.Model ):
       return 'built'
 
     return 'planned'
+
+  @property
+  def description( self ):
+    return '{0}-{1}'.format( self.foundation.locator, self.structure.hostname )
+
+  @property
+  def dependancyId( self ):
+    return 'd-{0}'.format( self.pk )
 
   @cinp.list_filter( name='foundation', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Foundation' } ] )
   @staticmethod
