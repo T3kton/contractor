@@ -115,7 +115,7 @@ class App extends React.Component
             <Chip><SiteSelector onSiteChange={ this.selectSite } curSite={ this.state.cur_site } siteListGetter={ this.contractor.getSiteList } /></Chip>
             <Chip><FontIcon title='Jobs' value='dvr' /> { this.state.curJobs }</Chip>
             <Chip><FontIcon title='Alerts' value='announcement' /> { this.state.alerts }</Chip>
-            <Button icon='update' inverse={ !this.state.autoUpdate } onClick={ this.toggleAutoUpdate }/>
+            <Button icon='update' inverse={ !this.state.autoUpdate } onClick={ this.toggleAutoUpdate } />
             <Button icon='sync' inverse onClick={ this.doUpdate } />
             <Chip><Button icon='settings' disabled /></Chip>
           </AppBar>
@@ -139,9 +139,9 @@ class App extends React.Component
             <Route exact={true} path="/structures" render={ () => ( <Structure site={ this.state.cur_site } listGet={ this.contractor.getStructureList } /> ) } />
             <Route exact={true} path="/complexes" render={ () => ( <Complex site={ this.state.cur_site } listGet={ this.contractor.getComplexList } /> ) } />
             <Route exact={true} path="/addressblocks" render={ () => ( <AddressBlock site={ this.state.cur_site } listGet={ this.contractor.getAddressBlockList } /> ) } />
-            <Route exact={true} path="/jobs" render={ () => ( <Job site={ this.state.cur_site } listGetF={ this.contractor.getFoundationJobList } listGetS={ this.contractor.getStructureJobList } listGetD={ this.contractor.getDependancyJobList } /> ) }/>
-            <Route exact={true} path="/todo" render={ () => ( <Todo site={ this.state.cur_site } listGet={ this.contractor.getTodoList } classListGet={ this.contractor.getFoundationClassList } /> ) }/>
-            <Route exact={true} path="/graph" render={ () => ( <SiteGraph site={ this.state.cur_site } siteDependancyMap={ this.contractor.getSiteDependancyMap } /> ) }/>
+            <Route exact={true} path="/jobs" render={ () => ( <Job site={ this.state.cur_site } listGetF={ this.contractor.getFoundationJobList } listGetS={ this.contractor.getStructureJobList } listGetD={ this.contractor.getDependancyJobList } /> ) } />
+            <Route exact={true} path="/todo" render={ () => ( <Todo site={ this.state.cur_site } listGet={ this.contractor.getTodoList } classListGet={ this.contractor.getFoundationClassList } /> ) } />
+            <Route exact={true} path="/graph" render={ () => ( <SiteGraph site={ this.state.cur_site } siteDependancyMap={ this.contractor.getSiteDependancyMap } /> ) } />
           </div>
         </Panel>
       </Layout>

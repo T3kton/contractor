@@ -12,15 +12,20 @@ class SiteGraph extends React.Component
   };
 
   graph_options = {
+    height: "100%",
+    width: "100%",
     layout: {
-      hierarchical: true
+      hierarchical: {
+        enabled: true,
+        //edgeMinimization: true,
+        //blockShifting: true,
+        improvedLayout: true,
+        sortMethod: 'directed'
+      }
     },
     edges: {
-      height: "100%",
       color: "#000000",
-      edges:{
-        arrows: 'to',
-      }
+      arrows: 'to'
     }
   };
 
@@ -64,7 +69,8 @@ class SiteGraph extends React.Component
 
   render()
   {
-    return (<Graph graph={ this.state.graph } options={ this.graph_options } events={ this.graph_events } />)
+    let style = { width:"100%", height:"600px" };
+    return (<Graph graph={ this.state.graph } options={ this.graph_options } events={ this.graph_events } style={ style }/>);
   }
 }
 

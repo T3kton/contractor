@@ -29,7 +29,7 @@ class Site( models.Model ):
     result = {}
     external_list = []
 
-    for structure in self.networked_set.filter( structure__isnull=False ):
+    for structure in self.networked_set.filter( structure__isnull=False ).order_by( 'pk' ):
       structure = structure.structure
       dependancy_list = [ structure.foundation.dependancyId ]
       if structure.foundation.site != self:
@@ -37,10 +37,9 @@ class Site( models.Model ):
 
       result[ structure.dependancyId ] = { 'description': structure.description, 'type': 'Structure', 'state': structure.state, 'dependancy_list': dependancy_list, 'external': False }
 
-    for foundation in self.foundation_set.all():
+    for foundation in self.foundation_set.all().order_by( 'pk' ):
       foundation = foundation.subclass
       dependancy_list = list( set( [ i.dependancyId for i in foundation.dependancy_set.all() ] ) )
-      external_list += [ i if i.site != self else None for i in foundation.dependancy_set.all() ]
       try:
         dependancy_list += [ foundation.complex.dependancyId ]
         if foundation.complex.site != self:
@@ -50,14 +49,14 @@ class Site( models.Model ):
 
       result[ foundation.dependancyId ] = { 'description': foundation.description, 'type': 'Foundation', 'state': foundation.state, 'dependancy_list': dependancy_list, 'external': False }
 
-      for dependancy in foundation.dependancy_set.all():
+      for dependancy in foundation.dependancy_set.all().order_by( 'pk' ):  # Dependancy's "site" is the foundation's site, so it is never external
         dependancy_list = [ dependancy.structure.dependancyId ]
         if dependancy.structure.site != self:
           external_list += [ dependancy.structure ]
 
         result[ dependancy.dependancyId ] = { 'description': dependancy.description, 'type': 'Dependancy', 'state': dependancy.state, 'dependancy_list': dependancy_list, 'external': False }
 
-    for complex in self.complex_set.all():
+    for complex in self.complex_set.all().order_by( 'pk' ):
       complex = complex.subclass
       dependancy_list = [ i.structure.dependancyId for i in complex.complexstructure_set.all() ]
       external_list += [ i.structure if i.structure.site != self else None for i in complex.complexstructure_set.all() ]

@@ -448,7 +448,7 @@ class Dependancy( models.Model ):
 
   @property
   def description( self ):
-    return '{0}-{1}'.format( self.foundation.locator, self.structure.hostname )
+    return '{0}-{1}'.format( self.structure.hostname, self.foundation.locator )
 
   @property
   def dependancyId( self ):

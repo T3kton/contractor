@@ -13,7 +13,6 @@ from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Addr
 from contractor_plugins.Manual.models import ManualFoundation, ManualComplex, ManualComplexedFoundation
 
 fbp_manual = FoundationBluePrint.objects.get( pk='generic-manual' )
-sbp_xenial = StructureBluePrint.objects.get( pk='generic-xenial' )
 sbp_manual = StructureBluePrint.objects.get( pk='generic-manual-structure' )
 
 print( 'creating sites...' )
@@ -41,11 +40,7 @@ addr2_block = AddressBlock( site=s2, subnet='169.254.0.0', gateway_offset=1, pre
 addr2_block.full_clean()
 addr2_block.save()
 
-addrlo_block = AddressBlock( site=s1, subnet='127.0.0.0', prefix=8 )
-addrlo_block.full_clean()
-addrlo_block.save()
-
-for i in range( 2, 10 ):
+for i in range( 3, 10 ):
   addr = ReservedAddress( address_block=addr1_block, offset=i, reason='switch reserved' )
   addr.full_clean()
   addr.save()
@@ -59,31 +54,37 @@ for i in range( 220, 225 ):
   addr.full_clean()
   addr.save()
 
-print( 'creating local dev box and cluster...' )
-fdn_dev = ManualFoundation( site=s1, blueprint=fbp_manual, locator='localdev' )
-fdn_dev.full_clean()
-fdn_dev.save()
-fdn_dev.setBuilt()
+print( 'Creating Switch...' )
+fdn_switch = ManualFoundation( site=s1, blueprint=fbp_manual, locator='switch' )
+fdn_switch.full_clean()
+fdn_switch.save()
 
-iface = RealNetworkInterface( name='lo', is_provisioning=True )
+iface = RealNetworkInterface( name='mgnt', is_provisioning=True )
 iface.full_clean()
 iface.save()
 
-fni = FoundationNetworkInterface( foundation=fdn_dev, interface=iface, physical_location='lo' )
+fni = FoundationNetworkInterface( foundation=fdn_switch, interface=iface, physical_location='mgnt' )
 fni.full_clean()
 fni.save()
 
-str_dev = Structure( site=s1, blueprint=sbp_xenial, hostname='localdev', foundation=fdn_dev )
-str_dev.auto_build = False
-str_dev.full_clean()
-str_dev.save()
-str_dev.setBuilt()
+for i in range( 0, 25 ):
+  iface = RealNetworkInterface( name='fe0-{0}'.format( i ) )
+  iface.full_clean()
+  iface.save()
 
-addr = Address( networked=str_dev, address_block=addrlo_block, interface_name='lo', offset=1, is_primary=True )
+  fni = FoundationNetworkInterface( foundation=fdn_switch, interface=iface, physical_location='fe0-{0}'.format( i ) )
+  fni.full_clean()
+  fni.save()
+
+str_switch = Structure( site=s1, blueprint=sbp_manual, hostname='switch', foundation=fdn_switch )
+str_switch.full_clean()
+str_switch.save()
+
+addr = Address( networked=str_switch, address_block=addr1_block, interface_name='mgnt', offset=2, is_primary=True )
 addr.full_clean()
 addr.save()
 
-print( 'Making a complex' )
+print( 'Making a complex...' )
 cpx = ManualComplex( site=s1, name='mnlcpx', description='manual complex', built_percentage=70 )
 cpx.full_clean()
 cpx.save()
@@ -101,6 +102,10 @@ for i in range( 1, 11 ):
   fni.full_clean()
   fni.save()
 
+  dep = Dependancy( foundation=fdn, structure=str_switch, link='soft' )
+  dep.full_clean()
+  dep.save()
+
   strct = Structure( site=s1, blueprint=sbp_manual, hostname='cpx{0}'.format( i ), foundation=fdn )
   strct.auto_build = True
   strct.full_clean()
@@ -114,7 +119,7 @@ for i in range( 1, 11 ):
   cpx_member.full_clean()
   cpx_member.save()
 
-print( 'Adding to Complex' )
+print( 'Adding to Complex...' )
 for i in range( 1, 5 ):
   fdn = ManualComplexedFoundation( site=s1, blueprint=fbp_manual, locator='cpxmbr{0}'.format( i ), complex_host=cpx )
   fdn.full_clean()
