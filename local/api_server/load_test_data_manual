@@ -6,7 +6,7 @@ os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
 import django
 django.setup()
 
-from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
+from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint, Script
 from contractor.Site.models import Site
 from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependancy
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
@@ -119,6 +119,62 @@ for i in range( 1, 11 ):
   cpx_member.full_clean()
   cpx_member.save()
 
+fdn_strmgr = ManualFoundation( site=s1, blueprint=fbp_manual, locator='strgmgr')
+fdn_strmgr.full_clean()
+fdn_strmgr.save()
+
+iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+iface.full_clean()
+iface.save()
+
+fni = FoundationNetworkInterface( foundation=fdn_strmgr, interface=iface, physical_location='eth0' )
+fni.full_clean()
+fni.save()
+
+dep = Dependancy( foundation=fdn_strmgr, structure=str_switch, link='soft' )
+dep.full_clean()
+dep.save()
+
+strct_strmgr = Structure( site=s1, blueprint=sbp_manual, hostname='strgmgr', foundation=fdn_strmgr )
+strct_strmgr.auto_build = True
+strct_strmgr.full_clean()
+strct_strmgr.save()
+
+addr = Address( networked=strct_strmgr, address_block=addr1_block, interface_name='eth0', offset=40, is_primary=True )
+addr.full_clean()
+addr.save()
+
+print( 'Making a storage cluster...' )
+for i in range( 1, 5 ):
+  fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator='strg{0}'.format( i ) )
+  fdn.full_clean()
+  fdn.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  dep = Dependancy( foundation=fdn, structure=str_switch, link='soft' )
+  dep.full_clean()
+  dep.save()
+
+  strct = Structure( site=s1, blueprint=sbp_manual, hostname='strg{0}'.format( i ), foundation=fdn )
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+  addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=40 + i, is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+  dep = Dependancy( foundation=fdn_strmgr, structure=strct, link='soft' )
+  dep.full_clean()
+  dep.save()
+
 print( 'Adding to Complex...' )
 for i in range( 1, 5 ):
   fdn = ManualComplexedFoundation( site=s1, blueprint=fbp_manual, locator='cpxmbr{0}'.format( i ), complex_host=cpx )
@@ -133,6 +189,10 @@ for i in range( 1, 5 ):
   fni.full_clean()
   fni.save()
 
+  dep = Dependancy( foundation=fdn, structure=strct_strmgr, script_name='utility', link='soft' )
+  dep.full_clean()
+  dep.save()
+
   strct = Structure( site=s1, blueprint=sbp_manual, hostname='cpxmbr{0}'.format( i ), foundation=fdn )
   strct.auto_build = True
   strct.full_clean()
@@ -141,3 +201,12 @@ for i in range( 1, 5 ):
   addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=100 + i, is_primary=True )
   addr.full_clean()
   addr.save()
+
+
+if True:  # change to True for demo mode
+  for name in ( 'create-generic-manual', 'destroy-generic-manual', 'utility-generic-manual', 'create-manual-structure', 'destroy-manual-structure', 'utility-manual-structure' ):
+    print( name )
+    script = Script.objects.get( name=name )
+    script.script = 'delay( seconds=5 )'
+    script.full_clean()
+    script.save()

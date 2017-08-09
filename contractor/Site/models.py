@@ -28,6 +28,9 @@ class Site( models.Model ):
   def getDependancyMap( self ):
     result = {}
     external_list = []
+    structure_job_list = [ i.structurejob.structure.pk for i in self.basejob_set.filter( structurejob__isnull=False ) ]
+    foundation_job_list = [ i.foundationjob.foundation.pk for i in self.basejob_set.filter( foundationjob__isnull=False ) ]
+    dependancy_job_list = [ i.dependancyjob.dependancy.pk for i in self.basejob_set.filter( dependancyjob__isnull=False ) ]
 
     for structure in self.networked_set.filter( structure__isnull=False ).order_by( 'pk' ):
       structure = structure.structure
@@ -35,7 +38,7 @@ class Site( models.Model ):
       if structure.foundation.site != self:
         external_list.append( structure.foundation )
 
-      result[ structure.dependancyId ] = { 'description': structure.description, 'type': 'Structure', 'state': structure.state, 'dependancy_list': dependancy_list, 'external': False }
+      result[ structure.dependancyId ] = { 'description': structure.description, 'type': 'Structure', 'state': structure.state, 'dependancy_list': dependancy_list, 'has_job': ( structure.pk in structure_job_list ), 'external': False }
 
     for foundation in self.foundation_set.all().order_by( 'pk' ):
       foundation = foundation.subclass
@@ -47,14 +50,14 @@ class Site( models.Model ):
       except AttributeError:
         pass
 
-      result[ foundation.dependancyId ] = { 'description': foundation.description, 'type': 'Foundation', 'state': foundation.state, 'dependancy_list': dependancy_list, 'external': False }
+      result[ foundation.dependancyId ] = { 'description': foundation.description, 'type': 'Foundation', 'state': foundation.state, 'dependancy_list': dependancy_list, 'has_job': ( foundation.pk in foundation_job_list ), 'external': False }
 
       for dependancy in foundation.dependancy_set.all().order_by( 'pk' ):  # Dependancy's "site" is the foundation's site, so it is never external
         dependancy_list = [ dependancy.structure.dependancyId ]
         if dependancy.structure.site != self:
           external_list += [ dependancy.structure ]
 
-        result[ dependancy.dependancyId ] = { 'description': dependancy.description, 'type': 'Dependancy', 'state': dependancy.state, 'dependancy_list': dependancy_list, 'external': False }
+        result[ dependancy.dependancyId ] = { 'description': dependancy.description, 'type': 'Dependancy', 'state': dependancy.state, 'dependancy_list': dependancy_list, 'has_job': ( dependancy.pk in dependancy_job_list ), 'external': False }
 
     for complex in self.complex_set.all().order_by( 'pk' ):
       complex = complex.subclass

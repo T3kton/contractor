@@ -16,9 +16,11 @@ def createJob( script_name, target ):
   if isinstance( target, Structure ):
     job = StructureJob()
     job.structure = target
+    job.site = target.site
     obj_list.append( ROFoundationPlugin( target.foundation ) )
     obj_list.append( StructurePlugin( target ) )
     obj_list.append( ConfigPlugin( target ) )
+    blueprint = target.blueprint
 
   elif isinstance( target, Foundation ):
     try:
@@ -29,8 +31,10 @@ def createJob( script_name, target ):
 
     job = FoundationJob()
     job.foundation = target
+    job.site = target.site
     obj_list.append( FoundationPlugin( target ) )
     obj_list.append( ConfigPlugin( target ) )
+    blueprint = target.blueprint
 
   elif isinstance( target, Dependancy ):
     if target.structure.state != 'built':
@@ -38,9 +42,11 @@ def createJob( script_name, target ):
 
     job = DependancyJob()
     job.dependancy = target
+    job.site = target.foundation.site  # job belongs to the foundation
     obj_list.append( ROFoundationPlugin( target.foundation ) )
     obj_list.append( ROStructurePlugin( target.structure ) )
     obj_list.append( ConfigPlugin( target.structure ) )
+    blueprint = target.structure.blueprint  # with the structures's blueprint
 
   else:
     raise ValueError( 'target must be a Structure, Foundation, or Dependancy' )
@@ -61,9 +67,7 @@ def createJob( script_name, target ):
     if isinstance( target, Foundation ) and target.state != 'located':
       raise ValueError( 'can only run utility jobs on located Foundations' )
 
-  job.site = target.site
-
-  runner = Runner( parse( target.blueprint.get_script( script_name ) ) )
+  runner = Runner( parse( blueprint.get_script( script_name ) ) )
   for module in RUNNER_MODULE_LIST:
     runner.registerModule( module )
 
@@ -83,7 +87,7 @@ def createJob( script_name, target ):
   return job.pk
 
 
-# auto job creation checklist
+# auto job creation checklist  TODO: add the dependancy info in this checklist
 # 1 - Any Foundation that can be auto located, if locating is possible, it can be
 #         done without foundation dependancies
 #         (located_at is null, built_at is also null)
@@ -106,7 +110,21 @@ def processJobs( site, module_list, max_jobs=10 ):
   if max_jobs > 100:
     max_jobs = 100
 
-  # see if there are any planned foundatons that can be auto located
+  # see if there are any planned dependancies who's structures are done
+  for dependancy in Dependancy.objects.filter( foundation__site=site, built_at__isnull=True, structure__built_at__isnull=False ):
+    if dependancy.script_name is None:
+      dependancy.setBuilt()
+      continue
+
+    try:
+      DependancyJob.objects.get( dependancy=dependancy )
+      continue  # allready has a job, skip it
+    except DependancyJob.DoesNotExist:
+      pass
+
+    createJob( dependancy.script_name, target=dependancy )
+
+  # see if there are any planned foundatons that can be auto located - TODO: Can something with a non built dependancy auto-locate, I think for now yes.
   for foundation in Foundation.objects.filter( site=site, located_at__isnull=True, built_at__isnull=True ):
     foundation = foundation.subclass
     if not foundation.can_auto_locate:

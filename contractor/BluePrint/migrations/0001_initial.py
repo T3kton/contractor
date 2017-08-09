@@ -42,6 +42,14 @@ pause( msg='Resume When OS is Uninstalled' )
   s.save()
   BluePrintScript( blueprint=sbpm, script=s, name='destroy' ).save()
 
+  s = Script( name='utility-manual-structure', description='Utility Script for Manual OS' )
+  s.script = """# Utility Script for Manual OS
+pause( msg='Do the thing, then Resume' )
+"""
+  s.full_clean()
+  s.save()
+  BluePrintScript( blueprint=sbpm, script=s, name='utility' ).save()
+
   sbpl = StructureBluePrint( name='generic-linux', description='Generic Linux' )
   sbpl.config_values = { 'distro': 'generic' }
   sbpl.full_clean()
