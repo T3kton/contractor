@@ -6,42 +6,69 @@ Vagrant.configure(2) do |config|
 
   config.vm.provider "virtualbox" do |vb|
      vb.gui = true
-     vb.memory = "512"
+     vb.memory = "1024"
      vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
      vb.name = 'tekton-contractor'
   end
 
   config.vm.network "forwarded_port", guest: 8080, host: 8080
+  config.vm.network "forwarded_port", guest: 8888, host: 8888
 
   # "install" contractor
-  config.vm.synced_folder "../contractor", "/usr/lib/python3/dist-packages/contractor", create: true, :mount_options => ["rw"]
+  config.vm.synced_folder "../contractor", "/usr/lib/python3/dist-packages/contractor", create: true, :mount_options => ["ro"]
+  config.vm.synced_folder "../../contractor_plugins/contractor_plugins", "/usr/lib/python3/dist-packages/contractor_plugins", create: true, :mount_options => ["ro"]  # remove when the git clone of the  plugins works
   config.vm.synced_folder "../local", "/usr/local/contractor", create: true, :mount_options => ["ro"]
-  config.vm.synced_folder "../www", "/var/www/contractor", create: true, :mount_options => ["ro"]
+  config.vm.synced_folder "../ui", "/tmp/contractor_ui", create: true, :mount_options => ["ro"]
   config.vm.provision "file", source: "../contractor.conf", destination: "/tmp/contractor.conf"
+  config.vm.provision "file", source: "api.service", destination: "/tmp/api.service"
+  config.vm.provision "file", source: "www.service", destination: "/tmp/www.service"
   config.vm.provision "shell", inline: <<-CONTRACTOR_CONFIG
 set -e
 set -x
 
 apt-get update
-apt-get install -y python3-django python3-dateutil sqlite3 apache2 libapache2-mod-wsgi-py3
+apt-get install -y python3-django python3-dateutil python3-setuptools npm git nodejs-legacy python3-gunicorn python3-werkzeug
 
-mv /tmp/contractor.conf /etc/apache2/sites-available/contractor.conf
-sed s/:80/:8080/ -i /etc/apache2/sites-available/contractor.conf
-echo "Listen 8080" >> /etc/apache2/ports.conf
+npm install -g http-server
 
-a2ensite contractor.conf
+mkdir /tmp/build
+cd /tmp/build
+git clone https://github.com/cinp/python.git
+cd python
+./setup.py install
 
-service apache2 reload
+#cd /tmp/build
+#git clone https://github.com/T3kton/contractor_plugins.git
+#cd contractor_plugins
+#./setup.py install
+#--single-version-externally-managed --root=/
+
+cd ~
+rm -fr /tmp/build
+
+mkdir -p /var/www/contractor
+cd /var/www/contractor
+cp -a /tmp/contractor_ui/* .
+npm install
+npm run build
+cp -a src/www/* build
 
 mkdir /opt/contractor
-chmod 777 /opt/contractor
 
 /usr/local/contractor/util/manage.py migrate
 /usr/local/contractor/util/manage.py createsuperuser --noinput --username=root --email=test@test.com
 echo "from django.contrib.auth.models import User; u = User.objects.get(); u.set_password('root'); u.save()" | /usr/local/contractor/util/manage.py shell
-chmod 666 /opt/contractor/db.sqlite3
 
-/usr/local/contractor/util/manage.py loaddata /usr/local/contractor/util/test_data.json
+DEMO_MODE=1 /usr/local/contractor/api_server/load_test_data_manual
+
+mv /tmp/www.service /lib/systemd/system/www.service
+mv /tmp/api.service /lib/systemd/system/api.service
+
+systemctl daemon-reload
+systemctl enable www.service
+systemctl enable api.service
+systemctl start www.service
+systemctl start api.service
 
 CONTRACTOR_CONFIG
 

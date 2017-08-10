@@ -1,7 +1,7 @@
 {
-  "name": "contractor",
+  "name": "contractor-ui",
   "version": "0.1.0",
-  "description": "Contractor",
+  "description": "Contractor UI",
   "main": "index.js",
   "dependencies": {
     "react": "^15.6.1",
@@ -44,6 +44,6 @@
     "build": "node_modules/.bin/cross-env NODE_ENV=production UV_THREADPOOL_SIZE=100 webpack --config webpack.config.js",
     "deploy": "gh-pages -d build"
   },
-  "author": "",
+  "author": "Peter Howe pnhowe@gmail.com",
   "license": "Apache-2.0"
 }
