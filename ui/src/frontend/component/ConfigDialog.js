@@ -1,5 +1,6 @@
 import React from 'react';
 import { Dialog, Table, TableHead, TableRow, TableCell, Button } from 'react-toolbox';
+import theme from './ConfigDialogTheme.css';
 
 class ConfigDialog extends React.Component
 {
@@ -37,11 +38,12 @@ class ConfigDialog extends React.Component
     return (
       <div>
         <Dialog
-          actions={this.actions}
-          active={this.state.active}
-          onEscKeyDown={this.close}
-          onOverlayClick={this.close}
+          actions={ this.actions }
+          active={ this.state.active }
+          onEscKeyDown={ this.close }
+          onOverlayClick={ this.close }
           title='Full Config'
+          theme={ theme }
         >
           <Table selectable={ false } multiSelectable={ false }>
             <TableHead>

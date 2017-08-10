@@ -189,7 +189,7 @@ for i in range( 1, 5 ):
   fni.full_clean()
   fni.save()
 
-  dep = Dependancy( foundation=fdn, structure=strct_strmgr, script_name='utility', link='soft' )
+  dep = Dependancy( foundation=fdn, structure=strct_strmgr, script_name='utility', link='hard' )
   dep.full_clean()
   dep.save()
 

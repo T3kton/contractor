@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dialog } from 'react-toolbox';
-import theme from "./ServerErrorTheme.css";
+import theme from './ServerErrorTheme.css';
 
 class ServerError extends React.Component
 {
@@ -32,15 +32,15 @@ class ServerError extends React.Component
   {
     return (
   <Dialog
-    actions={this.actions}
-    active={this.state.active}
-    onEscKeyDown={this.close}
-    onOverlayClick={this.close}
+    actions={ this.actions }
+    active={ this.state.active }
+    onEscKeyDown={ this.close }
+    onOverlayClick={ this.close }
     title='Server Error'
-    theme={theme}
+    theme={ theme }
   >
-    <p>{this.state.msg}</p>
-    <pre>{this.state.trace}</pre>
+    <p>{ this.state.msg }</p>
+    <pre>{ this.state.trace }</pre>
   </Dialog>
 );
   }

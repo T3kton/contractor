@@ -12,7 +12,7 @@ from contractor.lib.config import getConfig
 cinp = CInP( 'BluePrint', '0.1' )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
+@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ] )
 class BluePrint( models.Model ):
   name = models.CharField( max_length=40, primary_key=True )
   description = models.CharField( max_length=200 )
@@ -30,8 +30,23 @@ class BluePrint( models.Model ):
       else:
         raise ValueError( 'BluePrint "{0}" does not have a script named "{1}"'.format( self.name, name ) )
 
+  @property
+  def subclass( self ):
+    try:
+      return self.foundationblueprint
+    except AttributeError:
+      pass
+
+    try:
+      return self.structureblueprint
+    except AttributeError:
+      pass
+
+    return self
+
+  @cinp.action( 'Map' )
   def getConfig( self ):
-    return getConfig( self )
+    return getConfig( self.subclass )
 
   @cinp.check_auth()
   @staticmethod

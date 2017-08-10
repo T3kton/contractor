@@ -145,6 +145,11 @@ class Contractor
     return this.cinp.get( '/api/v1/BluePrint/StructureBluePrint:' + id + ':' );
   };
 
+  getScript = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/BluePrint/Script:' + id + ':' );
+  };
+
   getAddressBlock = ( id ) =>
   {
     return this.cinp.get( '/api/v1/Utilities/AddressBlock:' + id + ':' );

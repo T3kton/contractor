@@ -98,7 +98,9 @@ class Foundation extends React.Component
                   <tr><th>Can Auto Locate/Auto Build</th><td>{ foundation.can_auto_locate }</td></tr>
                   <tr><th>Blueprint</th><td><Link to={ '/blueprint/f/' + foundation.blueprint }>{ foundation.blueprint }</Link></td></tr>
                   <tr><th>Id Map</th><td>{ foundation.id_map }</td></tr>
-                  <tr><th>Interfaces</th><td>{ foundation.interfaces }</td></tr>
+                  <tr><th>Interfaces</th><td><ul>{ foundation.interfaces.map( ( item, index ) => (
+                    <li key={ index }>{ item }</li>
+                  ) ) }</ul></td></tr>
                   <tr><th>Class List</th><td>{ foundation.class_list }</td></tr>
                   <tr><th>Config Values</th><td><table><thead/><tbody>{ foundation.config_values.map( ( value ) => ( <tr key={ value[0] }><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
                   <tr><th>Created</th><td>{ foundation.created }</td></tr>

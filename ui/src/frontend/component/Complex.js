@@ -69,7 +69,6 @@ class Complex extends React.Component
           <h3>Complex Detail</h3>
           { complex !== null &&
             <div>
-              <ConfigDialog getConfig={ this.props.getConfig } uri={ '/api/v1/Building/Foundation:' + this.props.id + ':' } />
               <table>
                 <thead/>
                 <tbody>
@@ -78,7 +77,9 @@ class Complex extends React.Component
                   <tr><th>Name</th><td>{ complex.name }</td></tr>
                   <tr><th>State</th><td>{ complex.state }</td></tr>
                   <tr><th>Type</th><td>{ complex.type }</td></tr>
-                  <tr><th>Members</th><td>{ complex.members }</td></tr>
+                  <tr><th>Members</th><td><ul>{ complex.members.map( ( item, index ) => (
+                    <li key={ index }>{ item }</li>
+                  ) ) }</ul></td></tr>
                   <tr><th>Built at Percentage</th><td>{ complex.built_percentage }%</td></tr>
                   <tr><th>Created</th><td>{ complex.created }</td></tr>
                   <tr><th>Updated</th><td>{ complex.updated }</td></tr>
