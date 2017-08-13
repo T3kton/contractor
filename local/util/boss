@@ -10,7 +10,7 @@ import django
 django.setup()
 
 from django.core.exceptions import ObjectDoesNotExist
-from contractor.Building.models import Foundation, Structure
+from contractor.Building.models import Foundation, Structure, Dependancy
 from contractor.Foreman.lib import createJob
 from contractor.lib.config import getConfig
 
@@ -25,6 +25,12 @@ def _get_job( target ):
   if isinstance( target, Structure ):
     try:
       return target.structurejob
+    except ( AttributeError, ObjectDoesNotExist ):
+      pass
+
+  if isinstance( target, Dependancy ):
+    try:
+      return target.dependancyjob
     except ( AttributeError, ObjectDoesNotExist ):
       pass
 
@@ -47,13 +53,14 @@ def main():
   group.add_argument( 'id', help='foundation/structure id' )
   type_group = group.add_mutually_exclusive_group()
   type_group.add_argument( '-s', '--structure', help='boss arround a structure', action='store_true' )
-  type_group.add_argument( '-f', '--foundation', help='boss arround a structure', action='store_true' )
+  type_group.add_argument( '-f', '--foundation', help='boss arround a foundation', action='store_true' )
+  type_group.add_argument( '-d', '--dependancy', help='boss arround a dependancy', action='store_true' )
 
   group = parser.add_argument_group( 'task' )
   task_group = group.add_mutually_exclusive_group()
-  task_group.add_argument( '-c', '--do-create', help='submit create job', action='store_true' )
-  task_group.add_argument( '-d', '--do-destroy', help='submit destroy job', action='store_true' )
-  task_group.add_argument( '-j', '--submit-job', help='submit a named job', metavar='JOB NAME' )
+  task_group.add_argument(       '--do-create', help='submit create job', action='store_true' )
+  task_group.add_argument(       '--do-destroy', help='submit destroy job', action='store_true' )
+  task_group.add_argument(       '--run-script', help='submit a script job', metavar='SCRIPT NAME' )
   task_group.add_argument(       '--pause', help='pause active job', action='store_true' )
   task_group.add_argument(       '--resume', help='resume a paused job', action='store_true' )
   task_group.add_argument(       '--reset', help='reset error on active job', action='store_true' )
@@ -67,7 +74,7 @@ def main():
   force_group.add_argument(       '--planned', help='force a foundataion/structure to planned state', action='store_true' )
   force_group.add_argument(       '--located', help='force a foundation to located state', action='store_true' )
   force_group.add_argument(       '--built', help='force a foundataion/structure to built state', action='store_true' )
-  force_group.add_argument(       '--clear-job', help='clear any assiciated  jobs', action='store_true' )
+  force_group.add_argument(       '--clear-job', help='clear any associated jobs', action='store_true' )
 
   args = parser.parse_args()
 
@@ -84,8 +91,14 @@ def main():
     except Structure.DoesNotExist:
       print( 'Unable to find Structure "{0}"'.format( args.id ) )
 
+  elif args.dependancy:
+    try:
+      target = Dependancy.objects.get( pk=args.id )
+    except Structure.DoesNotExist:
+      print( 'Unable to find Dependancy "{0}"'.format( args.id ) )
+
   else:
-    print( '-f or -s must be specified' )
+    print( '-f, -s, -d must be specified' )
     sys.exit( 1 )
 
   print( 'Working with "{0}"'.format( target ) )
@@ -108,13 +121,13 @@ def main():
     print( 'Destroy Job for {0} created, job #{1}.'.format( target, rc ) )
     sys.exit( 0 )
 
-  if args.submit_job:
+  if args.run_script:
     try:
-      rc = createJob( args.submit_job, target )
+      rc = createJob( args.run_script, target )
     except Exception as e:
-      print( 'Error creating "{1}" job: "{0}"'.format( str( e ), args.submit_job ) )
+      print( 'Error creating "{1}" job: "{0}"'.format( str( e ), args.run_script ) )
       sys.exit( 1 )
-    print( '"{2}" Job for {0} created, job #{1}.'.format( target, rc, args.submit_job ) )
+    print( '"{2}" Job for {0} created, job #{1}.'.format( target, rc, args.run_script ) )
     sys.exit( 0 )
 
   if args.reset:
@@ -187,7 +200,7 @@ def main():
   if args.show_job:
     job = _get_job( target )
     if job is None:
-      print( 'No Job jobs' )
+      print( 'No Job' )
       sys.exit( 0 )
 
     pp = pprint.PrettyPrinter()

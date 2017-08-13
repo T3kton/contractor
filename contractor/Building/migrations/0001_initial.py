@@ -71,7 +71,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, verbose_name='ID', serialize=False, primary_key=True)),
                 ('link', models.CharField(max_length=4, choices=[('soft', 'soft'), ('hard', 'hard')])),
-                ('script_name', models.CharField(blank=True, max_length=40, null=True)),
+                ('create_script_name', models.CharField(blank=True, max_length=40, null=True)),
+                ('destroy_script_name', models.CharField(blank=True, max_length=40, null=True)),
                 ('built_at', models.DateTimeField(blank=True, null=True, editable=False)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),

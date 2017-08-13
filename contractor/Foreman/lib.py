@@ -12,6 +12,37 @@ RUNNER_MODULE_LIST = []
 
 
 def createJob( script_name, target ):
+  if isinstance( target, Dependancy ) and script_name not in ( 'create', 'destroy' ):
+    raise ValueError( 'Dependancy Jbo can only have a create or destroy script_name' )
+
+  if script_name == 'create':
+    if target.state == 'built':
+      raise ValueError( 'target allready built' )
+
+    if isinstance( target, Foundation ):
+      if target.state != 'located':
+        raise ValueError( 'can not do create job until Foundation is located' )
+
+    elif isinstance( target, Dependancy ):
+      script_name = target.create_script_name
+      if script_name is None:
+        target.setBuilt()
+        return None
+
+  elif script_name == 'destroy':
+    if target.state != 'built':
+      raise ValueError( 'can only destroy built targets' )
+
+    if isinstance( target, Dependancy ):
+      script_name = target.destroy_script_name
+      if script_name is None:
+        target.setDestroyed()
+        return None
+
+  else:
+    if isinstance( target, Foundation ) and target.state != 'located':
+      raise ValueError( 'Can Only run Scripts Job on Located Foundations' )
+
   obj_list = []
   if isinstance( target, Structure ):
     job = StructureJob()
@@ -51,22 +82,6 @@ def createJob( script_name, target ):
   else:
     raise ValueError( 'target must be a Structure, Foundation, or Dependancy' )
 
-  if script_name == 'create':
-    if target.state == 'built':
-      raise ValueError( 'target allready built' )
-
-    if isinstance( target, Foundation ):
-      if target.state != 'located':
-        raise ValueError( 'can not do create job until Foundation is located' )
-
-  elif script_name == 'destroy':
-    if target.state != 'built':
-      raise ValueError( 'can only destroy built targets' )
-
-  else:
-    if isinstance( target, Foundation ) and target.state != 'located':
-      raise ValueError( 'can only run utility jobs on located Foundations' )
-
   runner = Runner( parse( blueprint.get_script( script_name ) ) )
   for module in RUNNER_MODULE_LIST:
     runner.registerModule( module )
@@ -80,6 +95,7 @@ def createJob( script_name, target ):
   job.state = 'queued'
   job.script_name = script_name
   job.script_runner = pickle.dumps( runner )
+  job.full_clean()
   job.save()
 
   print( '**************** Created  Job "{0}" for "{1}"'.format( script_name, target ))
@@ -112,17 +128,13 @@ def processJobs( site, module_list, max_jobs=10 ):
 
   # see if there are any planned dependancies who's structures are done
   for dependancy in Dependancy.objects.filter( foundation__site=site, built_at__isnull=True, structure__built_at__isnull=False ):
-    if dependancy.script_name is None:
-      dependancy.setBuilt()
-      continue
-
     try:
       DependancyJob.objects.get( dependancy=dependancy )
       continue  # allready has a job, skip it
     except DependancyJob.DoesNotExist:
       pass
 
-    createJob( dependancy.script_name, target=dependancy )
+    createJob( 'create', target=dependancy )  # createJob will map 'create' to the create_script_name
 
   # see if there are any planned foundatons that can be auto located - TODO: Can something with a non built dependancy auto-locate, I think for now yes.
   for foundation in Foundation.objects.filter( site=site, located_at__isnull=True, built_at__isnull=True ):
@@ -148,7 +160,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     is_ready = True
     for dependancy in foundation.dependancy_set.all():
       if dependancy.state != 'built':
-        is_ready = False  # TODO: check to see if thedepency has a job that can be started <-------------
+        is_ready = False  # TODO: check to see if the depency has a job that can be started <-------------
         break
 
     if not is_ready:  # there was a unbuilt dependancy
@@ -196,11 +208,13 @@ def processJobs( site, module_list, max_jobs=10 ):
 
     if runner.aborted:
       job.state = 'aborted'
+      job.full_clean()
       job.save()
       continue
 
     if runner.done:
       job.state = 'done'
+      job.full_clean()
       job.save()
       continue
 
@@ -232,6 +246,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     job.status = runner.status
     print( '____________ job "{0}"   state: "{1}"   progress: "{2}"    message: "{3}"'.format( job, job.state, job.progress, job.message ) )
     job.script_runner = pickle.dumps( runner )
+    job.full_clean()
     job.save()
 
     if len( results ) >= max_jobs:
@@ -258,6 +273,7 @@ def jobResults( job_id, cookie, data ):
   job.status = runner.status
   print( '----------------- job "{0}"   state: "{1}"   progress: "{2}"    message: "{3}"'.format( job, job.state, job.progress, job.message ) )
   job.script_runner = pickle.dumps( runner )
+  job.full_clean()
   job.save()
 
   return result
@@ -276,4 +292,5 @@ def jobError( job_id, cookie, msg ):
 
   job.message = msg[ 0:1024 ]
   job.state = 'error'
+  job.full_clean
   job.save()

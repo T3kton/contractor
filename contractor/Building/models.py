@@ -275,7 +275,7 @@ class Structure( Networked ):
       raise ValidationError( errors )
 
   def __str__( self ):
-    return 'Structure #{0} of "{1}" in "{2}"'.format( self.pk, self.blueprint.pk, self.site.pk )
+    return 'Structure #{0}({1}) of "{2}" in "{3}"'.format( self.pk, self.hostname, self.blueprint.pk, self.site.pk )
 
 
 @cinp.model( property_list=( 'state', 'type' ) )
@@ -424,7 +424,8 @@ class Dependancy( models.Model ):
   foundation = models.ForeignKey( Foundation, on_delete=models.CASCADE )  # this is what id depending
   structure = models.ForeignKey( Structure, on_delete=models.CASCADE )  # depending on this
   link = models.CharField( max_length=4, choices=LINK_OPTIONS )
-  script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job must complete before built_at is set
+  create_script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job must complete before built_at is set
+  destroy_script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job is run before destroying
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -437,7 +438,7 @@ class Dependancy( models.Model ):
     self.built_at = None
     self.save()
     if self.link == 'hard':
-      self.foundation.setDestroyed()
+      self.foundation.setDestroyed()  # TODO: Destroyed or Identified?
 
   @property
   def state( self ):
@@ -473,8 +474,14 @@ class Dependancy( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
 
-    if self.script_name is not None and not name_regex.match( self.script_name ):
-      errors[ 'script_name' ] = '"{0}" is invalid'.format( self.script_name )
+    if self.create_script_name is not None and not name_regex.match( self.create_script_name ):
+      errors[ 'create_script_name' ] = '"{0}" is invalid'.format( self.create_script_name )
+
+    if self.destroy_script_name is not None and not name_regex.match( self.destroy_script_name ):
+      errors[ 'destroy_script_name' ] = '"{0}" is invalid'.format( self.destroy_script_name )
+
+    if self.destroy_script_name is not None and self.destroy_script_name == self.create_script_name:
+      errors[ 'destroy_script_name' ] = 'destroy and create script must be different'
 
     if errors:
       raise ValidationError( errors )

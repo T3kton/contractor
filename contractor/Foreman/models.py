@@ -16,9 +16,9 @@ cinp = CInP( 'Foreman', '0.1' )
 
 @cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
 class BaseJob( models.Model ):
-  JOB_STATE_CHOICES = ( ( 'queued', 'queued' ), ( 'waiting', 'waiting' ), ( 'done', 'done' ), ( 'paused', 'paused' ), ( 'error', 'error' ), ( 'aborted', 'aborted' ) )
+  JOB_STATE_CHOICES = ( 'queued', 'waiting', 'done', 'paused', 'error', 'aborted' )
   site = models.ForeignKey( Site, editable=False, on_delete=models.CASCADE )
-  state = models.CharField( max_length=10, choices=JOB_STATE_CHOICES )
+  state = models.CharField( max_length=10, choices=[ ( i, i ) for i in JOB_STATE_CHOICES ] )
   status = JSONField( default=[], blank=True )
   message = models.CharField( max_length=1024, default='', blank=True )
   script_runner = models.BinaryField( editable=False )
@@ -50,6 +50,7 @@ class BaseJob( models.Model ):
       raise ValueError( 'Can only pause a job if it is queued' )
 
     self.state = 'paused'
+    self.full_clean()
     self.save()
 
   def resume( self ):
@@ -57,6 +58,7 @@ class BaseJob( models.Model ):
       raise ValueError( 'Can only resume a job if it is paused' )
 
     self.state = 'queued'
+    self.full_clean()
     self.save()
 
   def reset( self ):
@@ -69,6 +71,7 @@ class BaseJob( models.Model ):
     self.script_runner = pickle.dumps( runner )
 
     self.state = 'queued'
+    self.full_clean()
     self.save()
 
   def rollback( self ):
@@ -83,6 +86,7 @@ class BaseJob( models.Model ):
     self.status = runner.status
     self.script_runner = pickle.dumps( runner )
     self.state = 'queued'
+    self.full_clean()
     self.save()
 
   @property
@@ -210,7 +214,14 @@ class DependancyJob( BaseJob ):
   dependancy = models.OneToOneField( Dependancy, editable=False, on_delete=models.CASCADE )
 
   def done( self ):
-    self.dependancy.setBuilt()
+    if self.script_name == self.dependancy.destroy_script_name:
+      self.dependancy.setDestroyed()
+
+    elif self.script_name == self.dependancy.create_script_name:
+      self.dependancy.setBuilt()
+
+    else:
+      raise ValueError( 'Sciprt Name "{0}" does not match the create nor destroy script names' )  # Dependancy jobs can only create/destory, not named/utility sjobs
 
   @cinp.action()
   def pause( self ):

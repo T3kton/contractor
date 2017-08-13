@@ -189,7 +189,7 @@ for i in range( 1, 5 ):
   fni.full_clean()
   fni.save()
 
-  dep = Dependancy( foundation=fdn, structure=strct_strmgr, script_name='utility', link='hard' )
+  dep = Dependancy( foundation=fdn, structure=strct_strmgr, create_script_name='utility', destroy_script_name='utility2', link='hard' )
   dep.full_clean()
   dep.save()
 
@@ -202,10 +202,9 @@ for i in range( 1, 5 ):
   addr.full_clean()
   addr.save()
 
-
 if os.environ.get( 'DEMO_MODE', False ):
   print( 'enabling demo mode' )
-  for name in ( 'create-generic-manual', 'destroy-generic-manual', 'utility-generic-manual', 'create-manual-structure', 'destroy-manual-structure', 'utility-manual-structure' ):
+  for name in ( 'create-generic-manual', 'destroy-generic-manual', 'utility-generic-manual', 'utility2-generic-manual', 'create-manual-structure', 'destroy-manual-structure', 'utility-manual-structure', 'utility2-manual-structure'):
     script = Script.objects.get( name=name )
     script.script = 'delay( seconds=5 )'
     script.full_clean()

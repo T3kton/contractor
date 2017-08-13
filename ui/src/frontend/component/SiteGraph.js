@@ -28,6 +28,7 @@ class SiteGraph extends React.Component
     },
     groups: {
       Structure: {
+        physics: false,
         shape: 'icon',
         icon: {
           face: 'Material Icons',
@@ -36,6 +37,7 @@ class SiteGraph extends React.Component
         }
       },
       Foundation: {
+        physics: false,
         shape: 'icon',
         icon: {
           face: 'Material Icons',
@@ -44,6 +46,7 @@ class SiteGraph extends React.Component
         }
       },
       Complex: {
+        physics: false,
         shape: 'icon',
         icon: {
           face: 'Material Icons',
@@ -52,6 +55,7 @@ class SiteGraph extends React.Component
         }
       },
       Dependancy: {
+        physics: false,
         shape: 'icon',
         icon: {
           face: 'Material Icons',
