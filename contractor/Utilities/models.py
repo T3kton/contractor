@@ -439,6 +439,12 @@ class Address( BaseAddress ):
     if not name_regex.match( self.interface_name ):
       errors[ 'interface_name' ] = '"{0}" is invalid'.format( self.interface_name[ 0:50 ] )
 
+    if self.address_block and self.address_block.site != self.networked.site:
+      errors[ 'address_block' ] = 'Address is not in the same site as the Networked it belongs to'
+
+    if errors:  # if either of the above happen, don't bother with the rest
+      raise ValidationError( errors )
+
     try:
       if self.pointer is not None:
         if self.address_block is not None:

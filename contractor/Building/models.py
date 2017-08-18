@@ -25,7 +25,6 @@ class Foundation( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
   locator = models.CharField( max_length=100, unique=True )
-  config_values = MapField( blank=True )
   id_map = JSONField( blank=True )  # ie a dict of asset, chassis, system, etc types
   interfaces = models.ManyToManyField( RealNetworkInterface, through='FoundationNetworkInterface' )
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
@@ -72,12 +71,13 @@ class Foundation( models.Model ):
   def getTscriptFunctions():
     return {}
 
-  def configValues( self ):
+  def configAttributes( self ):
     return {
-              'foundation_id': self.pk,
-              'foundation_type': self.type,
-              'foundation_state': self.state,
-              'foundation_class_list': self.class_list
+              '_foundation_id': self.pk,
+              '_foundation_type': self.type,
+              '_foundation_state': self.state,
+              '_foundation_class_list': self.class_list,
+              '_foundation_locator': self.locator
             }
 
   @property
@@ -228,12 +228,12 @@ class Structure( Networked ):
     for dependancy in self.dependancy_set.all():
       dependancy.setDestroyed()
 
-  def configValues( self ):
+  def configAttributes( self ):
     return {
-             'hostname': self.hostname,
-             'structure': self.pk,
-             'state': self.state,
-             'config_uuid': self.config_uuid
+             '_structure_id': self.pk,
+             '_structure_state': self.state,
+             '_structure_config_uuid': self.config_uuid,
+             '_structure_hostname': self.hostname
            }
 
   @cinp.action( 'Map' )
@@ -357,11 +357,11 @@ class ComplexStructure( models.Model ):
   def getTscriptFunctions():
     return {}
 
-  def configValues( self ):
+  def configAttributes( self ):
     return {
-              'complex_id': self.pk,
-              'complex_type': self.type,
-              'complex_state': self.state,
+              '_complex_id': self.pk,
+              '_complex_type': self.type,
+              '_complex_state': self.state,
             }
 
   @property

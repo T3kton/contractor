@@ -1,35 +1,5 @@
 from datetime import datetime, timezone
 
-"""
-  The Config Value Caculation Process
-
-  config values are applied in layers, for all layers applicable to that target
-the layers are in order from applied last to applied first (ie: the items listed
-first are layerd over the ones under it)
-
- - Site
- - BluePrint
- - Foundation
- - Structure
-
-For Site and BluePrint, the values of the parents are overlied by the children.
-
-Foundation does not it's self have values, however attributes of the foundation,
-and possible hardware configuratoin values would be applied.
-
-config value names must compliy with the regex: ^[{}\-~]?([a-zA-Z0-9]+:)?[a-zA-Z0-9][a-zA-Z0-9_\-]*$
-
-if the first charater is: (also processed in this order)
-  - : remove from the value so far
-  <nothing> : overlay/replace value so far with new value
-  { : prepend to the value so far (same affect as append on dict/maps)
-  } : append to the value so far
-  ~ : mask/remove value so far, (NOTE: value is ignored)
-
-if [a-zA-Z0-9]+: is present, the value key/value is only applied if the pre ':' matches the classes indicated by the foundation
-
-"""
-
 
 VALUE_SORT_ORDER = '-_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz{}~'
 
@@ -134,16 +104,17 @@ def _bluePrintConfig( blueprint, class_list, config ):
 
 
 def _foundationConfig( foundation, class_list, config ):
-  _updateConfig( foundation.config_values, class_list, config )
+  if foundation.complex:
+    config.update( foundation.complex.configAttributes() )
 
-  config.update( foundation.configValues() )
+  config.update( foundation.configAttributes() )
   return foundation.updated
 
 
 def _structureConfig( structure, class_list, config ):
   _updateConfig( structure.config_values, class_list, config )
 
-  config.update( structure.configValues() )
+  config.update( structure.configAttributes() )
   return structure.updated
 
 
@@ -178,6 +149,6 @@ def getConfig( target ):  # combine depth first the config values
   else:
     raise ValueError( 'Don\'t know how to get config for "{0}"'.format( target ) )
 
-  config[ '_last_modified' ] = lastModified
-  config[ '_contractor_host' ] = 'http://127.0.0.1/'
+  config[ '__last_modified' ] = lastModified
+  config[ '__contractor_host' ] = 'http://127.0.0.1/'
   return config
