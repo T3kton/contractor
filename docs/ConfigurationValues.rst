@@ -70,3 +70,162 @@ These values start with `__` and are not overlayable/modifyable by config_values
 values are things that are global to this install of contrator,  such as the base url
 to use to contact it.  `__last_modified` is also added, which is the timestamp of
 the most reset modification date to any of the sources of configuratoin information.
+
+
+Example
+-------
+
+NOTE: for the following examples the ip address attributes and global attributes
+are ommited.
+
+Let's start with a Site with the following values::
+
+  +-------------------------------------------+
+  |                                           |
+  | dns_servers: [ '10.0.0.20', '10.0.0.21' ] |
+  | dns_search: [ 'myservice.com' ]           |
+  | dns_zone: 'myservice.com'                 |
+  |                                           |
+  +-------------------------------------------+
+
+Nice and simple.  This Example is mostly going to deal with dns, but the
+config vaules can be  used for just about anything.
+
+Let's add a Foundation and Structure (NOTE: the Foundation and Structure
+provide more attribute values than what is shown)::
+
+  +-------------------------------------------+
+  |                                           |
+  | dns_servers: [ '10.0.0.20', '10.0.0.21' ] |
+  | dns_search: [ 'myservice.com' ]           |
+  | dns_zone: 'myservice.com'                 |
+  |                                           |
+  | +----------------------+                  |
+  | |                      |                  |
+  | | Structure:           |                  |
+  | |   Hostname: web1     |                  |
+  | |                      |                  |
+  | +----------+-----------+                  |
+  |            |                              |
+  | +----------+-----------+                  |
+  | |                      |                  |
+  | | Foundation:          |                  |
+  | |   Locater: d2r050u20 |                  |
+  | |                      |                  |
+  | +----------------------+                  |
+  |                                           |
+  +-------------------------------------------+
+
+Now if we get the config values for the structure, it's resulting config values
+would be.
+
+  dns_servers: [ '10.0.0.20', '10.0.0.21' ]
+  dns_search: [ 'myservice.com' ]
+  dns_zone: 'myservice.com'
+  _foundation_locator: 'd2r050u20'
+  _structure_hostname: 'web1'
+
+One last thing we forgot, the blueprints::
+
+  +-------------------------------------------+
+  |                                           |
+  | dns_servers: [ '10.0.0.20', '10.0.0.21' ] |
+  | dns_search: [ 'myservice.com' ]           |
+  | dns_zone: 'myservice.com'                 |    +----------------------------------------------------------------------+
+  |                                           |    |                                                                      |
+  | +----------------------+                  |    | Web Server Structure BluePrint:                                      |
+  | |                      +-----------------------+   distro: 'xenial'                                                   |
+  | | Structure:           |                  |    |   extra_packages: [ 'apache2', 'python-django', 'postgres-server' ]  |
+  | |   Hostname: 'web1'   |                  |    |                                                                      |
+  | |                      |                  |    +----------------------------------------------------------------------+
+  | +----------+-----------+                  |
+  |            |                              |    +----------------------------------------------------------------------+
+  | +----------+-------------+                |    |                                                                      |
+  | |                        +---------------------+ Small VM Foundation BluePrint:                                       |
+  | | Foundation:            |                |    |   cpu_count: 2                                                       |
+  | |   Locater: 'd2r050u20' |                |    |   memory: 1024                                                       |
+  | |                        |                |    |                                                                      |
+  | +------------------------+                |    +----------------------------------------------------------------------+
+  |                                           |
+  +-------------------------------------------+
+
+There we go, now the Structures Config Values are::
+
+  dns_servers: [ '10.0.0.20', '10.0.0.21' ]
+  dns_search: [ 'myservice.com' ]
+  dns_zone: 'myservice.com'
+  distro: 'xenial'
+  extra_packages: [ 'apache2', 'python-django', 'postgres-server' ]
+  _foundation_locator: 'd2r050u20'
+  _structure_hostname: 'web1'
+
+And the Foundation's Config Values are::
+
+  dns_servers: [ '10.0.0.20', '10.0.0.21' ]
+  dns_search: [ 'myservice.com' ]
+  dns_zone: 'myservice.com'
+  cou_count: 2
+  memory: 1024
+  _foundation_locator: 'd2r050u20'
+
+Everythnig was fine till our web site got busy, time to expand.  First let's
+move our server to a sub-site and create another sub-site with it's own
+web server::
+
+  +----------------------------------------------------------------------------------------------+
+  |                                                                                              |
+  | dns_servers: [ '10.0.0.20', '10.0.0.21' ]                                                    |
+  | dns_search: [ 'myservice.com' ]                                                              |
+  | dns_zone: 'myservice.com'                                                                    |
+  |                                                                                              |
+  | +-------------------------------------------+  +-------------------------------------------+ |
+  | |                                           |  |                                           | |
+  | | {dns_search: [ 'site1.myservice.com' ]    |  | {dns_search: [ 'site2.myservice.com' ]    | |
+  | | dns_zone: 'site1.myservice.com            |  | dns_zone: 'site2.myservice.com            | |   +----------------------------------------------------------------------+
+  | |                                           |  |                                           | |   |                                                                      |
+  | | +----------------------+                  |  | +----------------------+                  | |   | Web Server Structure BluePrint:                                      |
+  | | |                      +-----------------------+                      +------------------------+   distro: 'xenial'                                                   |
+  | | | Structure:           |                  |  | | Structure:           |                  | |   |   extra_packages: [ 'apache2', 'python-django', 'postgres-server' ]  |
+  | | |   Hostname: 'web1'   |                  |  | |   Hostname: 'web1'   |                  | |   |                                                                      |
+  | | |                      |                  |  | |                      |                  | |   +----------------------------------------------------------------------+
+  | | +----------+-----------+                  |  | +----------+-----------+                  | |
+  | |            |                              |  |            |                              | |   +----------------------------------------------------------------------+
+  | | +----------+-------------+                |  | +----------+-------------+                | |   |                                                                      |
+  | | |                        +---------------------+                        +----------------------+ Small VM Foundation BluePrint:                                       |
+  | | | Foundation:            |                |  | | Foundation:            |                | |   |   cpu_count: 2                                                       |
+  | | |   Locater: 'd2r050u20' |                |  | |   Locater: 'd2r020u20' |                | |   |   memory: 1024                                                       |
+  | | |                        |                |  | |                        |                | |   |                                                                      |
+  | | +------------------------+                |  | +------------------------+                | |   +----------------------------------------------------------------------+
+  | |                                           |  |                                           | |
+  | +-------------------------------------------+  +-------------------------------------------+ |
+  |                                                                                              |
+  +----------------------------------------------------------------------------------------------+
+
+Nice, now we can handle the load.  Site 1's Structure is now::
+
+  dns_servers: [ '10.0.0.20', '10.0.0.21' ]
+  dns_search: [ 'site1.myservice.com', 'myservice.com' ]
+  dns_zone: 'site1.myservice.com'
+  distro: 'xenial'
+  extra_packages: [ 'apache2', 'python-django', 'postgres-server' ]
+  _foundation_locator: 'd2r050u20'
+  _structure_hostname: 'web1'
+
+And Site 2's Structure is::
+
+  dns_servers: [ '10.0.0.20', '10.0.0.21' ]
+  dns_search: [ 'site2.myservice.com', 'myservice.com' ]
+  dns_zone: 'site2.myservice.com'
+  distro: 'xenial'
+  extra_packages: [ 'apache2', 'python-django', 'postgres-server' ]
+  _foundation_locator: 'd2r020u20'
+  _structure_hostname: 'web1'
+
+At some point in the future we add another DNS server, we can add it to the top
+level and it will propagate to everything automatically.  Actually a better DNS
+design would be to add dns servers to site1 and site 2 and prepend thoes to the
+dns server list.  Also if we want another global dns search zone to come after
+'myservice.com', we can add it to the list at the top, and once again.  It will
+Propagate for us.  If there is a site that you do not want to  inherit the
+top level dns_search, you  would omit the **{** from the name, and the value will
+overwrite instead of pre-pend
