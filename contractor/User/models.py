@@ -7,12 +7,13 @@ from django.db import models
 
 from cinp.orm_django import DjangoCInP as CInP
 
+
 def getUser( auth_id, auth_token ):
   if auth_id is None or auth_token is None:
     return None
 
   try:
-    session = Session.objects.get( user=auth_id, session_id=auth_token )
+    session = Session.objects.get( user=auth_id, token=auth_token )
   except ( Session.DoesNotExist, User.DoesNotExist ):
     return None
 
@@ -25,8 +26,8 @@ def getUser( auth_id, auth_token ):
   return session.user
 
 
-#TODO: this has many security issues, spend some time and think this out better
-#TODO: should probably rename it auth as well, will also eventually need SSO abilities
+# TODO: this has many security issues, spend some time and think this out better
+# TODO: should probably rename it auth as well, will also eventually need SSO abilities
 
 cinp = CInP( 'User', '0.1' )
 
@@ -84,7 +85,7 @@ class Session( models.Model ):
   @staticmethod
   def login( username, password ):
     try:
-      user =  User.objects.get( username=username )
+      user = User.objects.get( username=username )
     except User.DoesNotExist:
       raise ValueError( 'User Does Not Exist' )
 
@@ -92,9 +93,9 @@ class Session( models.Model ):
     if password != user.password:
       raise ValueError( 'Invalid Password' )
 
-    token = ''.join( random.choice( string.ascii_letters ) for _  in range( 30 ) )
-    session = Session( session_id=token, user=user )
-    session.last_checkin = datetime.now( timezone.utc )
+    token = ''.join( random.choice( string.ascii_letters ) for _ in range( 30 ) )
+    session = Session( token=token, user=user )
+    session.last_hearbeat = datetime.now( timezone.utc )
     session.save()
     session.hearbeat()
 
