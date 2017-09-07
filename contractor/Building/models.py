@@ -2,7 +2,7 @@ import uuid
 
 from django.utils import timezone
 from django.db import models
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
 from cinp.orm_django import DjangoCInP as CInP
 
@@ -271,6 +271,14 @@ class Structure( Networked ):
     if self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
       errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint.description, self.foundation.blueprint.description )
 
+    try:
+      zone = self.site.zone
+    except ( ObjectDoesNotExist, AttributeError ):
+      zone = None
+
+    if zone is not None and zone.filter( site__structure__hostname=self.hostname ):
+      errors[ 'hostname' ] = 'Hostname "{0}" allready used in DNS Zone "{1}"'.format( self.hostname, zone.pk )
+
     if errors:
       raise ValidationError( errors )
 
@@ -420,10 +428,10 @@ class ComplexStructure( models.Model ):
 
 @cinp.model( property_list=( 'state', ) )
 class Dependancy( models.Model ):
-  LINK_OPTIONS = ( ( 'soft', 'soft' ), ( 'hard', 'hard' ) )  # a hardlink if the structure is set back pulls the foundation back with it, soft does not
+  LINK_CHOICES = ( 'soft', 'hard' )  # a hardlink if the structure is set back pulls the foundation back with it, soft does not
   foundation = models.ForeignKey( Foundation, on_delete=models.CASCADE )  # this is what id depending
   structure = models.ForeignKey( Structure, on_delete=models.CASCADE )  # depending on this
-  link = models.CharField( max_length=4, choices=LINK_OPTIONS )
+  link = models.CharField( max_length=4, choices=[ ( i, i ) for i in LINK_CHOICES ] )
   create_script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job must complete before built_at is set
   destroy_script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job is run before destroying
   built_at = models.DateTimeField( editable=False, blank=True, null=True )

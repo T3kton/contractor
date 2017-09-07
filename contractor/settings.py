@@ -1,5 +1,3 @@
-import os
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '@(a3yjcc-d3uxt)q7n(tvdfhe4$%u2(dvkd9^cg26+4wmih7l7'
 
@@ -12,6 +10,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = (
     'contractor.User',
+    'contractor.Directory',
     'contractor.Site',
     'contractor.BluePrint',
     'contractor.Utilities',

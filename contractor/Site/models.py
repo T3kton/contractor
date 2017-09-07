@@ -5,6 +5,7 @@ from cinp.orm_django import DjangoCInP as CInP
 
 from contractor.fields import MapField, name_regex, config_name_regex
 from contractor.lib.config import getConfig
+from contractor.Directory.models import Zone
 
 # this is the what we want implemented, ie where, how it's grouped and waht is in thoes sites/groups, the logical aspect
 
@@ -14,6 +15,7 @@ cinp = CInP( 'Site', '0.1' )
 @cinp.model()
 class Site( models.Model ):
   name = models.CharField( max_length=40, primary_key=True )
+  zone = models.ForeignKey( Zone, null=True, blank=True )
   description = models.CharField( max_length=200 )
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
   config_values = MapField( blank=True )
