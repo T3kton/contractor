@@ -27,16 +27,12 @@ set -e
 set -x
 
 apt-get update
-apt-get install -y python3-django python3-dateutil python3-setuptools npm git nodejs-legacy python3-gunicorn python3-werkzeug
+apt-get install -y python3-django python3-dateutil python3-setuptools npm git nodejs-legacy python3-gunicorn python3-werkzeug python3-pip
 
 npm install -g http-server
+pip3 install cinp
 
 mkdir /tmp/build
-cd /tmp/build
-git clone https://github.com/cinp/python.git
-cd python
-./setup.py install
-
 #cd /tmp/build
 #git clone https://github.com/T3kton/contractor_plugins.git
 #cd contractor_plugins
