@@ -6,6 +6,7 @@ os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
 import django
 django.setup()
 
+import sys
 import logging
 
 from gunicorn.app.base import BaseApplication
@@ -48,7 +49,6 @@ if __name__ == '__main__':
   app.registerNamespace( '/', 'contractor.Foreman' )
   app.registerNamespace( '/', 'contractor.SubContractor' )
 
-  #app.registerNamespace( '/', name='Foundations', version='0.1' ) put  the plugins in the Foundation Namespace
   app.registerNamespace( '/', 'contractor_plugins.Manual' )
   app.registerNamespace( '/', 'contractor_plugins.VirtualBox' )
 
@@ -63,5 +63,5 @@ if __name__ == '__main__':
   logger.info( 'Server Done...' )
   logger.info( 'Shutting Down...' )
   logger.info( 'Done!' )
-  logger.shutdown
+  logger.shutdown()
   sys.exit( 0 )

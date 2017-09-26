@@ -8,6 +8,7 @@ from contractor.fields import MapField, IpAddressField, hostname_regex, name_reg
 from contractor.BluePrint.models import PXE
 from contractor.Site.models import Site
 from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRNetworkSize, CIDRNetmask
+from contractor.lib.config import _siteConfigInternal
 
 
 cinp = CInP( 'Utilities', '0.1' )
@@ -211,8 +212,9 @@ class AddressBlock( models.Model ):
 
   @property
   def dns_servers( self ):
-    return [ '192.168.200.1' ]
-    # get config from cluster and return dns servers, if none return empty []
+    config = {}
+    _siteConfigInternal( self.site, config )
+    return config.get( 'dns_servers', [] )
 
   @property
   def netmask( self ):

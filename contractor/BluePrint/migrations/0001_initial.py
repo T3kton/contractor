@@ -121,8 +121,10 @@ foundation.power_off()
 
   pxe = PXE( name='ubuntu' )
   pxe.boot_script = """echo Ubuntu Installer
-kernel tftp://192.168.200.10/ubuntu/vmlinuz auto url=http://192.168.200.1:8888/config/pxe_template/ locale=en_US.UTF-8 keyboard-configuration/layoutcode=us domain=example.com hostname={{ hostname }}
-initrd tftp://192.168.200.10/ubuntu/initrd
+#kernel tftp://192.168.200.10/ubuntu/vmlinuz auto url=http://192.168.200.1:8888/config/pxe_template/ locale=en_US.UTF-8 keyboard-configuration/layoutcode=us domain=example.com hostname={{ hostname }}
+#initrd tftp://192.168.200.10/ubuntu/initrd
+kernel tftp://192.168.13.124/ubuntu/vmlinuz auto url=http://192.168.13.124:8888/config/pxe_template/ locale=en_US.UTF-8 keyboard-configuration/layoutcode=us domain=example.com hostname={{ hostname }}
+initrd tftp://192.168.13.124/ubuntu/initrd
 boot
 """
   pxe.template = """
@@ -149,9 +151,10 @@ d-i netcfg/hostname string {{ hostname }}
 
 ### Mirror settings
 d-i mirror/country string manual
-d-i mirror/http/hostname string mirror.mozy.com
-d-i mirror/http/directory string /ubuntu
-d-i mirror/http/proxy string http://192.168.200.10:3128/
+d-i mirror/http/hostname string mirrors.mozy.com
+d-i mirror/http/directory string /ubuntu/
+#d-i mirror/http/proxy string http://192.168.200.10:3128/
+d-i mirror/http/proxy string
 
 # Suite to install.
 d-i mirror/suite string xenial

@@ -61,24 +61,24 @@ def _updateConfig( config_value_map, class_list, config ):
       config[ name ] = value
 
 
-def _siteConfigInternal( site, class_list, config ):
+def _siteConfigInternal( site, config ):
   lastModified = site.updated
 
   if site.parent is not None:
-    lastModified = max( lastModified, _siteConfigInternal( site.parent, class_list, config ) )
+    lastModified = max( lastModified, _siteConfigInternal( site.parent, config ) )
 
-  _updateConfig( site.config_values, class_list, config )
+  _updateConfig( site.config_values, config )
 
   return lastModified
 
 
-def _siteConfig( site, class_list, config ):
+def _siteConfig( site, config ):
   config[ 'domain_name' ] = None
   config[ 'domain_search' ] = []  # TODO: need to make sure these are lists, have to have clean on Site.save do that
   config[ 'dns_servers' ] = []
   config[ 'log_servers' ] = []
 
-  lastModified = _siteConfigInternal( site, class_list, config )
+  lastModified = _siteConfigInternal( site, config )
 
   config[ 'site' ] = site.pk
 
@@ -104,7 +104,7 @@ def _bluePrintConfig( blueprint, class_list, config ):
 
 
 def _foundationConfig( foundation, class_list, config ):
-  if foundation.complex:
+  if getattr( foundation, 'complex', None ):
     config.update( foundation.complex.configAttributes() )
 
   config.update( foundation.configAttributes() )
@@ -130,7 +130,7 @@ def getConfig( target ):  # combine depth first the config values
     class_list = []
 
   if target.__class__.__name__ == 'Site':
-    lastModified = max( lastModified, _siteConfig( target, class_list, config ) )
+    lastModified = max( lastModified, _siteConfig( target, config ) )
 
   elif target.__class__.__name__ in ( 'BluePrint', 'StructureBluePrint', 'FoundationBluePrint' ):
     lastModified = max( lastModified, _bluePrintConfig( target, class_list, config ) )
