@@ -143,6 +143,7 @@ class ExternalFunction( object ):
 
   def run( self ):
     # called after ready is checked and returns False
+    # raising Pause is allowed
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     pass
 
@@ -151,6 +152,8 @@ class ExternalFunction( object ):
     # parms is a dict of the paramaters passed in from the script
     # if the params are not wnat they should be, raise ParamaterError
     # make sure to do strict saninity checks on the in bound paramaters.
+    # do not raise Pause, any exceptions raised will cause setup to be called again, which
+    # is desired when validating paramaters
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     pass
 
@@ -173,7 +176,7 @@ class ExternalFunction( object ):
     # this should return a tuple
     # first paramater is the function inside the plugin to call, second is the value to send to the function
     # this is called initially, then again after fromSubcontractor has returnd results until ready is True
-    # example: return ( 'myfunc', { 'stuff': 'for', 'myfunc': 'to use' } ) #NOTE: the paramater part can be anything that is serilizable
+    # example: return ( 'myfunc', { 'stuff': 'for', 'myfunc': 'to use' } ) # NOTE: the paramater part can be anything that is serilizable
     # if None is returned, contractor will not be notified to do anything
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     # subcontractor threads will be waiting on this function

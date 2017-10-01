@@ -19,6 +19,7 @@ INSTALLED_APPS = (
     'contractor.SubContractor',
     'contractor_plugins.IPUtils',
     'contractor_plugins.Manual',
+    'contractor_plugins.AMT',
     'contractor_plugins.VirtualBox',
     'contractor_plugins.AWS',
     'contractor_plugins.Docker',

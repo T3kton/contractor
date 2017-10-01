@@ -95,6 +95,11 @@ class Site( models.Model ):
         errors[ 'config_values' ] = 'config item name "{0}" is invalid'.format( name )
         break
 
+      if name in ( 'domain_search', 'dns_servers', 'log_servers' ):
+        if not isinstance( self.config_values[ name ], list ):
+          errors[ 'config_values' ] = 'config item "{0}" must be a list'.format( name )
+          break
+
     if errors:
       raise ValidationError( errors )
 

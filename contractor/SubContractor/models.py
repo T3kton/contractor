@@ -75,11 +75,21 @@ class DHCPd():
                                 'ip_address': addr.ip_address,
                                 'netmask': addr_block.netmask,
                                 'gateway': addr_block.gateway_ip,
-                                'dns_server': addr_block.dns_servers[0],
                                 'host_name': addr.structure.hostname,
-                                'domain_name': 'get.from.site.config',
                                 'boot_file': 'undionly_console.kpxe'
                               }
+
+        site_config = addr_block.site.getConfig()
+
+        try:
+          result[ iface.mac ][ 'dns_server' ] = site_config[ 'dns_servers' ][0]
+        except ( KeyError, IndexError ):
+          pass
+
+        try:
+          result[ iface.mac ][ 'domain_name' ] = site_config[ 'domain_name' ]
+        except KeyError:
+          pass
 
     return result
 
