@@ -121,10 +121,8 @@ foundation.power_off()
 
   pxe = PXE( name='ubuntu' )
   pxe.boot_script = """echo Ubuntu Installer
-#kernel tftp://192.168.200.10/ubuntu/vmlinuz auto url=http://192.168.200.1:8888/config/pxe_template/ locale=en_US.UTF-8 keyboard-configuration/layoutcode=us domain=example.com hostname={{ hostname }}
-#initrd tftp://192.168.200.10/ubuntu/initrd
-kernel tftp://192.168.13.124/ubuntu/vmlinuz auto url=http://192.168.13.124:8888/config/pxe_template/ locale=en_US.UTF-8 keyboard-configuration/layoutcode=us domain=example.com hostname={{ hostname }}
-initrd tftp://192.168.13.124/ubuntu/initrd
+kernel http://192.168.13.124:8081/xenial/vmlinuz auto url=http://192.168.13.124:8888/config/pxe_template/ locale=en_US.UTF-8 keyboard-configuration/layoutcode=us domain=example.com hostname={{ hostname }}
+initrd http://192.168.13.124:8081/xenial/initrd
 boot
 """
   pxe.template = """
@@ -141,11 +139,11 @@ d-i netcfg/choose_interface select auto
 # Static network configuration.
 #
 # IPv4 example
-#d-i netcfg/get_ipaddress string 192.168.1.42
-#d-i netcfg/get_netmask string 255.255.255.0
-#d-i netcfg/get_gateway string 192.168.1.1
-#d-i netcfg/get_nameservers string 192.168.1.1
-#d-i netcfg/confirm_static boolean true
+d-i netcfg/get_ipaddress string 192.168.13.200
+d-i netcfg/get_netmask string 255.255.255.0
+d-i netcfg/get_gateway string 192.168.13.1
+d-i netcfg/get_nameservers string 192.168.13.1
+d-i netcfg/confirm_static boolean true
 
 d-i netcfg/hostname string {{ hostname }}
 
@@ -163,8 +161,8 @@ d-i mirror/suite string xenial
 d-i passwd/make-user boolean false
 d-i user-setup/allow-password-weak boolean true
 d-i passwd/root-login boolean true
-d-i passwd/root-password password r00tme
-d-i passwd/root-password-again password r00tme
+d-i passwd/root-password password 0skin3rd
+d-i passwd/root-password-again password 0skin3rd
 d-i user-setup/encrypt-home boolean false
 
 ### Clock and time zone setup
@@ -214,6 +212,58 @@ d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
 
 """
+  pxe.full_clean()
+  pxe.save()
+
+  sbpe = StructureBluePrint( name='generic-esx', description='Generic ESXi' )
+  sbpe.config_values = { }
+  sbpe.full_clean()
+  sbpe.save()
+
+  s = Script( name='create-esx', description='Install ESXi' )
+  s.script = """# pxe boot and install
+  dhcp.set_pxe( interface=structure.provisioning_interface, pxe="esx" )
+  foundation.power_on()
+  delay( seconds=120 )
+  foundation.wait_for_poweroff()
+
+  dhcp.set_pxe( interface=structure.provisioning_interface, pxe="normal-boot" )
+  foundation.power_on()
+
+  iputils.wait_for_port( target=structure.provisioning_ip, port=80 )
+  """
+  s.full_clean()
+  s.save()
+  BluePrintScript( blueprint=sbpe, script=s, name='create' ).save()
+
+  s = Script( name='destroy-esx', description='Uninstall ESXi' )
+  s.script = """# nothing to do, foundation cleanup should wipe/destroy the disks
+  foundation.power_off()
+  #eventually pxe boot to MBR wipper
+  """
+  s.full_clean()
+  s.save()
+  BluePrintScript( blueprint=sbpe, script=s, name='destroy' ).save()
+
+  pxe = PXE( name='esx' )
+  pxe.boot_script = """echo ESX Installer
+kernel -n mboot.c32 http://192.168.13.124:8081/esxi/mboot.c32
+imgargs mboot.c32 -c http://192.168.13.124:8081/esxi/boot.cfg ks=http://192.168.13.124:8888/config/pxe_template/
+boot mboot.c32
+"""
+  pxe.template = """
+accepteula
+
+rootpw 0skin3rd
+
+install --firstdisk --overwritevmfs
+
+network --bootproto=static --ip=192.168.13.200 --netmask=255.255.255.0 --gateway=192.168.13.1 --nameserver=192.168.13.1 --hostname={{ hostname }}
+
+%post --interpreter=busybox
+/sbin/poweroff
+"""
+  pxe.full_clean()
   pxe.save()
 
 
