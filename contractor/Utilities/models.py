@@ -202,7 +202,7 @@ class AddressBlock( models.Model ):
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
-  def gateway_ip( self ):
+  def gateway( self ):
     if self.gateway_offset is None:
       return None
 
@@ -286,7 +286,7 @@ class AddressBlock( models.Model ):
     return 'AddressBlock site "{0}" subnet "{1}/{2}"'.format( self.site, self.subnet, self.prefix )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type' ) )
+@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class BaseAddress( models.Model ):
   address_block = models.ForeignKey( AddressBlock, blank=True, null=True )
   offset = models.IntegerField( blank=True, null=True )
@@ -299,6 +299,34 @@ class BaseAddress( models.Model ):
       return None
 
     return IpToStr( StrToIp( self.address_block.subnet ) + self.offset )
+
+  @property
+  def network( self ):
+    if self.address_block is None:
+      return None
+
+    return self.address_block.subnet
+
+  @property
+  def netmask( self ):
+    if self.address_block is None:
+      return None
+
+    return self.address_block.netmask
+
+  @property
+  def prefix( self ):
+    if self.address_block is None:
+      return None
+
+    return self.address_block.prefix
+
+  @property
+  def gateway( self ):
+    if self.address_block is None:
+      return None
+
+    return self.address_block.gateway
 
   @property
   def subclass( self ):
@@ -379,7 +407,7 @@ class BaseAddress( models.Model ):
     return 'BaseAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
 
 
-@cinp.model( property_list=( 'ip_address', 'type' ) )
+@cinp.model( property_list=( 'ip_address', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class Address( BaseAddress ):
   networked = models.ForeignKey( Networked )
   interface_name = models.CharField( max_length=20 )
@@ -394,6 +422,34 @@ class Address( BaseAddress ):
       return self.pointer.ip_address
 
     return super().ip_address
+
+  @property
+  def network( self ):
+    if self.pointer is not None:
+      return self.pointer.network
+
+    return super().network
+
+  @property
+  def netmask( self ):
+    if self.pointer is not None:
+      return self.pointer.netmask
+
+    return super().netmask
+
+  @property
+  def prefix( self ):
+    if self.pointer is not None:
+      return self.pointer.prefix
+
+    return super().prefix
+
+  @property
+  def gateway( self ):
+    if self.pointer is not None:
+      return self.pointer.gateway
+
+    return super().gateway
 
   @property
   def structure( self ):
@@ -511,7 +567,7 @@ class ReservedAddress( BaseAddress ):
     return 'ReservedAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
 
 
-@cinp.model( property_list=( 'ip_address', 'type' ) )
+@cinp.model( property_list=( 'ip_address', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto detected
   pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
 

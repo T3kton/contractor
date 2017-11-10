@@ -48,7 +48,7 @@ class DHCPd():
     result = []
     addr_block_list = AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False )
     for addr_block in addr_block_list:
-      item = { 'address_list': {}, 'gateway': addr_block.gateway_ip }
+      item = { 'address_list': {}, 'gateway': addr_block.gateway }
       for addr in addr_block.baseaddress_set.filter( dynamicaddress__isnull=False ):
         addr = addr.subclass
         try:  # TODO: this needs to be retought a bit, really should be passing in the bootfile
@@ -74,7 +74,7 @@ class DHCPd():
         result[ iface.mac ] = {
                                 'ip_address': addr.ip_address,
                                 'netmask': addr_block.netmask,
-                                'gateway': addr_block.gateway_ip,
+                                'gateway': addr_block.gateway,
                                 'host_name': addr.structure.hostname,
                                 'boot_file': 'undionly_console.kpxe'
                               }

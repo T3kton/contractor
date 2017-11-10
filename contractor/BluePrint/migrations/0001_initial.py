@@ -121,8 +121,8 @@ foundation.power_off()
 
   pxe = PXE( name='ubuntu' )
   pxe.boot_script = """echo Ubuntu Installer
-kernel http://192.168.13.124:8081/xenial/vmlinuz auto url=http://192.168.13.124:8888/config/pxe_template/ locale=en_US.UTF-8 keyboard-configuration/layoutcode=us domain=example.com hostname={{ hostname }}
-initrd http://192.168.13.124:8081/xenial/initrd
+kernel http://192.168.200.51:8081/xenial/vmlinuz auto url=http://192.168.200.51:8888/config/pxe_template/ locale=en_US.UTF-8 keyboard-configuration/layoutcode=us domain=example.com hostname={{ hostname }}
+initrd http://192.168.200.51:8081/xenial/initrd
 boot
 """
   pxe.template = """
@@ -139,10 +139,10 @@ d-i netcfg/choose_interface select auto
 # Static network configuration.
 #
 # IPv4 example
-d-i netcfg/get_ipaddress string 192.168.13.200
-d-i netcfg/get_netmask string 255.255.255.0
-d-i netcfg/get_gateway string 192.168.13.1
-d-i netcfg/get_nameservers string 192.168.13.1
+d-i netcfg/get_ipaddress string {{ structure_network.eth0.ip_address }}
+d-i netcfg/get_netmask string {{ structure_network.eth0.netmask }}
+d-i netcfg/get_gateway string {{ structure_network.eth0.gateway }}
+d-i netcfg/get_nameservers string {{ dns_servers.0 }}
 d-i netcfg/confirm_static boolean true
 
 d-i netcfg/hostname string {{ hostname }}
@@ -151,8 +151,8 @@ d-i netcfg/hostname string {{ hostname }}
 d-i mirror/country string manual
 d-i mirror/http/hostname string mirrors.mozy.com
 d-i mirror/http/directory string /ubuntu/
-#d-i mirror/http/proxy string http://192.168.200.10:3128/
-d-i mirror/http/proxy string
+d-i mirror/http/proxy string http://192.168.200.53:3128/
+#d-i mirror/http/proxy string
 
 # Suite to install.
 d-i mirror/suite string xenial
@@ -247,8 +247,8 @@ d-i debian-installer/exit/poweroff boolean true
 
   pxe = PXE( name='esx' )
   pxe.boot_script = """echo ESX Installer
-kernel -n mboot.c32 http://192.168.13.124:8081/esxi/mboot.c32
-imgargs mboot.c32 -c http://192.168.13.124:8081/esxi/boot.cfg ks=http://192.168.13.124:8888/config/pxe_template/
+kernel -n mboot.c32 http://192.168.200.51:8081/esxi/mboot.c32
+imgargs mboot.c32 -c http://192.168.200.51:8081/esxi/boot.cfg ks=http://192.168.200.51:8888/config/pxe_template/
 boot mboot.c32
 """
   pxe.template = """
@@ -258,7 +258,7 @@ rootpw 0skin3rd
 
 install --firstdisk --overwritevmfs
 
-network --bootproto=static --ip=192.168.13.200 --netmask=255.255.255.0 --gateway=192.168.13.1 --nameserver=192.168.13.1 --hostname={{ hostname }}
+network --bootproto=static --ip={{ structure_network.eth0.ip_address }} --netmask={{ structure_network.eth0.netmask }} --gateway={{ structure_network.eth0.gateway }} --nameserver={{ dns_servers.0 }} --hostname={{ hostname }}
 
 %post --interpreter=busybox
 /sbin/poweroff

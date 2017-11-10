@@ -134,7 +134,7 @@ def test_addressblock():
   ab.full_clean()
 
   ab = AddressBlock.objects.get( site=s1, subnet='0.0.0.0', prefix=24 )
-  assert ab.gateway_ip is None
+  assert ab.gateway is None
   assert ab.dns_servers == [ '192.168.200.1' ]
   assert ab.netmask == '255.255.255.0'
   assert ab.size == 254
@@ -142,7 +142,7 @@ def test_addressblock():
   assert ab.isIpV4 is True
 
   ab = AddressBlock.objects.get( site=s1, subnet='2.0.0.0', prefix=8, gateway_offset=1 )
-  assert ab.gateway_ip == '2.0.0.1'
+  assert ab.gateway == '2.0.0.1'
   assert ab.dns_servers == [ '192.168.200.1' ]
   assert ab.netmask == '255.0.0.0'
   assert ab.size == 16777214

@@ -77,7 +77,8 @@ class Foundation( models.Model ):
               '_foundation_type': self.type,
               '_foundation_state': self.state,
               '_foundation_class_list': self.class_list,
-              '_foundation_locator': self.locator
+              '_foundation_locator': self.locator,
+              '_foundation_interface_list': [ i.name for i in self.interfaces.all() ]
             }
 
   @property
@@ -229,12 +230,29 @@ class Structure( Networked ):
       dependancy.setDestroyed()
 
   def configAttributes( self ):
-    return {
-             '_structure_id': self.pk,
-             '_structure_state': self.state,
-             '_structure_config_uuid': self.config_uuid,
-             '_structure_hostname': self.hostname
-           }
+    result = {
+               '_structure_id': self.pk,
+               '_structure_state': self.state,
+               '_structure_config_uuid': self.config_uuid,
+             }
+
+    result[ 'hostname' ] = self.hostname
+    result[ 'structure_network' ] = {}
+    for address in self.networked_ptr.address_set.all():
+      tmp = {
+              'ip_address': address.ip_address,
+              'netmask': address.netmask,
+              'prefix': address.prefix,
+              'network': address.network,
+              'gateway': address.gateway
+            }
+
+      if tmp[ 'gateway' ] is None:
+        del tmp[ 'gateway' ]
+
+      result[ 'structure_network' ][ address.interface_name ] = tmp
+
+    return result
 
   @cinp.action( 'Map' )
   def getConfig( self ):
@@ -305,6 +323,9 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
         pass
 
     return self
+
+  def configAttributes( self ):
+    return {}
 
   @property
   def state( self ):

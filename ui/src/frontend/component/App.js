@@ -26,10 +26,11 @@ class App extends React.Component
     alerts: 0
   };
 
-  constructor()
+  constructor( props )
   {
-    super();
-    this.contractor = new Contractor( 'http://127.0.0.1:8888' );
+    super( props );
+    this.contractor = new Contractor( 'http://192.168.200.51:8888' );
+    //this.contractor = new Contractor( 'http://127.0.0.1:8888' );
     this.contractor.cinp.server_error_handler = this.serverError;
   }
 
