@@ -14,7 +14,7 @@ cinp = CInP( 'BluePrint', '0.1' )
 
 @cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ] )
 class BluePrint( models.Model ):
-  name = models.CharField( max_length=40, primary_key=True )
+  name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length
   description = models.CharField( max_length=200 )
   scripts = models.ManyToManyField( 'Script', through='BluePrintScript' )
   config_values = MapField( blank=True )
@@ -59,7 +59,7 @@ class BluePrint( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not name_regex.match( self.name ):
+    if not name_regex.match( self.name ):  # if this regex changes, make sure to update tcalc parser in archetect
       errors[ 'name' ] = 'BluePrint Script name "{0}" is invalid'.format( self.name )
 
     if errors:

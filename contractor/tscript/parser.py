@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from contractor.tscript.parsimonious import Grammar, IncompleteParseError
+from contractor.tscript.parsimonious import Grammar, ParseError, IncompleteParseError
 
 
 tscript_grammar = """
@@ -69,7 +69,7 @@ class types():
   OTHER = 'O'
 
 
-class ParseError( Exception ):
+class ParserError( Exception ):
   def __init__( self, line, column, msg ):
     self.line = line
     self.column = column
@@ -106,6 +106,8 @@ class Parser( object ):
       ast = self.grammar.parse( script )
     except IncompleteParseError as e:
       return 'Incomplete Parsing on line: {0} column: {1}'.format( e.line(), e.column() )
+    except ParseError as e:
+      return 'Error Parsing on line: {0} column: {1}'.format( e.line(), e.column() )
 
     try:
       self._eval( ast )
@@ -120,7 +122,9 @@ class Parser( object ):
     try:
       ast = self.grammar.parse( script )
     except IncompleteParseError as e:
-      raise ParseError( e.line(), e.column(), 'Incomplete Parse' )
+      raise ParserError( e.line(), e.column(), 'Incomplete Parse' )
+    except ParseError as e:
+      raise ParserError( e.line(), e.column(), 'Error Parsing' )
 
     return ( types.SCOPE, { '_children': self._eval( ast ) } )
 

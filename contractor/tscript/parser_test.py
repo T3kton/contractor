@@ -1,7 +1,7 @@
 import pytest
 from datetime import timedelta
 
-from contractor.tscript.parser import parse, lint, ParseError
+from contractor.tscript.parser import parse, lint, ParserError
 
 
 def test_begin():
@@ -47,7 +47,7 @@ def test_begin():
                        ( 'L', ( 'S', { '_children': [] } ), 1 )
                    ] } )
 
-  with pytest.raises( ParseError ) as e:
+  with pytest.raises( ParserError ) as e:
     node = parse( 'begin()' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
@@ -315,16 +315,16 @@ def test_variables():
                ] } )
 
   # all invalid names
-  with pytest.raises( ParseError ):
+  with pytest.raises( ParserError ):
     node = parse( 'a' )
 
-  with pytest.raises( ParseError ):
+  with pytest.raises( ParserError ):
     node = parse( 'a.b' )
 
-  with pytest.raises( ParseError ):
+  with pytest.raises( ParserError ):
     node = parse( '2a' )
 
-  with pytest.raises( ParseError ):
+  with pytest.raises( ParserError ):
     node = parse( 'adsf.2a' )
 
 
@@ -476,7 +476,7 @@ def test_jumppoint():
                ] } )
 
 def test_while():
-  with pytest.raises( ParseError ) as e:
+  with pytest.raises( ParserError ) as e:
     node = parse( 'while True 10' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
@@ -565,7 +565,7 @@ def test_while():
 
 
 def test_ifelse():
-  with pytest.raises( ParseError ) as e:
+  with pytest.raises( ParserError ) as e:
     node = parse( 'if True 10' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
@@ -598,7 +598,7 @@ def test_ifelse():
                           ] ), 1 )
                  ] } )
 
-  with pytest.raises( ParseError ) as e:
+  with pytest.raises( ParserError ) as e:
     node = parse( 'if True then 10 elif False 200 else 42' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
@@ -725,7 +725,7 @@ def test_function():
                  ( 'L', ( 'F', { 'module': 'more', 'name': 'hello', 'paramaters': {} } ), 1 )
                ] } )
 
-  with pytest.raises( ParseError ) as e:
+  with pytest.raises( ParserError ) as e:
     node = parse( 'hello( 10 )' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
@@ -758,14 +758,14 @@ def test_function():
 
 
 def test_assignment():
-  with pytest.raises( ParseError ) as e:
+  with pytest.raises( ParserError ) as e:
     node = parse( 'asdf=' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
   assert lint( 'asdf=' ) == 'Incomplete Parsing on line: 1 column: 1'
 
-  with pytest.raises( ParseError ) as e:
+  with pytest.raises( ParserError ) as e:
     node = parse( 'asdf =' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'

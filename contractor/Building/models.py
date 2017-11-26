@@ -306,7 +306,7 @@ class Structure( Networked ):
 
 @cinp.model( property_list=( 'state', 'type' ) )
 class Complex( models.Model ):  # group of Structures, ie a cluster
-  name = models.CharField( max_length=40, primary_key=True )
+  name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   description = models.CharField( max_length=200 )
   members = models.ManyToManyField( Structure, through='ComplexStructure' )
@@ -330,6 +330,9 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   @property
   def state( self ):
     state_list = [ 1 if i.state == 'built' else 0 for i in self.members.all() ]
+
+    if len( state_list ) == 0:
+      return 'planned'
 
     if ( sum( state_list ) * 100 ) / len( state_list ) >= self.built_percentage:
       return 'built'
