@@ -117,6 +117,10 @@ class Foundation( models.Model ):
 
   @property
   def type( self ):
+    real = self.subclass
+    if real != self:
+      return real.type
+
     return 'Unknown'
 
   @property
@@ -324,9 +328,6 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
 
     return self
 
-  def configAttributes( self ):
-    return {}
-
   @property
   def state( self ):
     state_list = [ 1 if i.state == 'built' else 0 for i in self.members.all() ]
@@ -341,11 +342,32 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
 
   @property
   def type( self ):
+    real = self.subclass
+    if real != self:
+      return real.type
+
     return 'Unknown'
 
   @property
   def dependancyId( self ):
     return 'c-{0}'.format( self.pk )
+
+  def configAttributes( self ):
+    return {}
+
+  def newFoundation( self, hostname ):
+    raise ValueError( 'Root Complex dose not support Foundations' )
+
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.BluePrint.models.StructureBluePrint' }, { 'type': 'String' } ] )
+  def createStructure( self, blueprint, hostname ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
+    self = self.subclass
+    foundation = self.newFoundation( hostname )
+
+    structure = Structure( site=self.site, hostname=hostname, blueprint=blueprint, foundation=foundation, auto_build=True )
+    structure.full_clean()
+    structure.save()
+
+    return structure
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
@@ -427,6 +449,10 @@ class ComplexStructure( models.Model ):
 
   @property
   def type( self ):
+    real = self.subclass
+    if real != self:
+      return real.type
+
     return 'Unknown'
 
   @property

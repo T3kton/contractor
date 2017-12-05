@@ -29,8 +29,7 @@ class App extends React.Component
   constructor( props )
   {
     super( props );
-    this.contractor = new Contractor( 'http://192.168.200.51:8888' );
-    //this.contractor = new Contractor( 'http://127.0.0.1:8888' );
+    this.contractor = new Contractor( window.API_BASE_URI );
     this.contractor.cinp.server_error_handler = this.serverError;
   }
 

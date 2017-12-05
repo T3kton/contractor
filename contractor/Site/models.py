@@ -14,7 +14,7 @@ cinp = CInP( 'Site', '0.1' )
 
 @cinp.model()
 class Site( models.Model ):
-  name = models.CharField( max_length=40, primary_key=True )
+  name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length
   zone = models.ForeignKey( Zone, null=True, blank=True )
   description = models.CharField( max_length=200 )
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
