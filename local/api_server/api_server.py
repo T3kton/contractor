@@ -48,6 +48,7 @@ if __name__ == '__main__':
   app.registerNamespace( '/', 'contractor.Building' )
   app.registerNamespace( '/', 'contractor.Foreman' )
   app.registerNamespace( '/', 'contractor.SubContractor' )
+  app.registerNamespace( '/', 'contractor.PostOffice' )
 
   app.registerNamespace( '/', 'contractor_plugins.Manual' )
   app.registerNamespace( '/', 'contractor_plugins.VirtualBox' )

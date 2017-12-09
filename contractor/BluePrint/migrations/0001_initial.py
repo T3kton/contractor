@@ -258,7 +258,7 @@ rootpw 0skin3rd
 
 install --firstdisk --overwritevmfs
 
-network --bootproto=static --ip={{ structure_network.eth0.ip_address }} --netmask={{ structure_network.eth0.netmask }} --gateway={{ structure_network.eth0.gateway }} --nameserver={{ dns_servers.0 }} --hostname={{ hostname }}
+network --bootproto=static --ip={{ structure_network.eth0.ip_address }} --netmask={{ structure_network.eth0.netmask }}{% if structure_network.eth0.gateway %} --gateway={{ structure_network.eth0.gateway }}{% endif %} --nameserver={{ dns_servers.0 }} --hostname={{ hostname }}
 
 %post --interpreter=busybox
 /sbin/poweroff

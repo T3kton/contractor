@@ -135,7 +135,7 @@ class StructureBluePrint( BluePrint ):
 
 @cinp.model()
 class Script( models.Model ):
-  name = models.CharField( max_length=40, primary_key=True )
+  name = models.CharField( max_length=40, primary_key=True )  # if this changes update the Post.script_name in the PostOffice
   description = models.CharField( max_length=200 )
   script = models.TextField()
   updated = models.DateTimeField( editable=False, auto_now=True )

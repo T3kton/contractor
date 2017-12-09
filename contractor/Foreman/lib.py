@@ -3,6 +3,7 @@ import pickle
 from contractor.Building.models import Foundation, Structure, Dependancy
 from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin
 from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependancyJob
+from contractor.PostOffice.lib import registerEvent
 
 from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner, Pause, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, ScriptError
@@ -196,6 +197,12 @@ def processJobs( site, module_list, max_jobs=10 ):
     print( '_________________________ job "{0}" done!'.format( job ) )
     job = job.realJob
     job.done()
+    if isinstance( job, StructureJob ):
+      registerEvent( job.structure, job )
+
+    elif isinstance( job, FoundationJob ):
+      registerEvent( job.foundation, job )
+
     job.delete()
 
   # iterate over the curent jobs

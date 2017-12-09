@@ -17,6 +17,7 @@ INSTALLED_APPS = (
     'contractor.Building',
     'contractor.Foreman',
     'contractor.SubContractor',
+    'contractor.PostOffice',
     'contractor_plugins.IPUtils',
     'contractor_plugins.Manual',
     'contractor_plugins.AMT',
