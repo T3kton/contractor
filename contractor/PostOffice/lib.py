@@ -64,7 +64,7 @@ def _sendFoundationPost( post, box ):
 
 def _sendStructurePost( post, box ):
   data = box.extra_data
-  data[ 'sctructure' ] = post.structure.pk
+  data[ 'structure' ] = post.structure.pk
   data[ 'script' ] = post.name
   data[ 'at' ] = post.created.isoformat()
   _sendPost( data, box )

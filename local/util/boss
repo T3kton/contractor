@@ -105,7 +105,7 @@ def main():
 
   if args.do_create:
     try:
-      rc = createJob( 'create', target )
+      rc = target.doCreate()
     except Exception as e:
       print( 'Error creating create job: "{0}"'.format( str( e ) ) )
       sys.exit( 1 )
@@ -114,7 +114,7 @@ def main():
 
   if args.do_destroy:
     try:
-      rc = createJob( 'destroy', target )
+      rc = target.doDestroy()
     except Exception as e:
       print( 'Error creating destroy job: "{0}"'.format( str( e ) ) )
       sys.exit( 1 )

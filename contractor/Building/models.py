@@ -20,7 +20,7 @@ FOUNDATION_SUBCLASS_LIST = []
 COMPLEX_SUBCLASS_LIST = []
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate' ) )
+@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate' ), not_allowed_method_list=[ 'CREATE', 'DELETE', 'UPDATE' ] )
 class Foundation( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
@@ -32,6 +32,7 @@ class Foundation( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
+  @cinp.action()
   def setLocated( self ):
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
@@ -41,12 +42,14 @@ class Foundation( models.Model ):
     self.built_at = None
     self.save()
 
+  @cinp.action()
   def setBuilt( self ):
     if self.located_at is None:
       self.located_at = timezone.now()
     self.built_at = timezone.now()
     self.save()
 
+  @cinp.action()
   def setDestroyed( self ):
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
@@ -55,6 +58,16 @@ class Foundation( models.Model ):
     self.built_at = None
     self.located_at = None
     self.save()
+
+  @cinp.action( return_type='Integer' )
+  def doCreate( self ):
+    from contractor.Foreman.lib import createJob
+    return createJob( 'create', self )
+
+  @cinp.action( return_type='Integer' )
+  def doDestroy( self ):
+    from contractor.Foreman.lib import createJob
+    return createJob( 'destroy', self )
 
   @staticmethod
   def getTscriptValues( write_mode=False ):  # locator is handled seperatly
@@ -95,21 +108,6 @@ class Foundation( models.Model ):
   @staticmethod
   def getFoundationTypes():
     return FOUNDATION_SUBCLASS_LIST
-
-  # @cinp.action( 'String' )
-  # def getRealFoundationURI( self ):  # TODO: this is such a hack, figure  out a better way
-  #   subclass = self.subclass
-  #   class_name = type( subclass ).__name__
-  #   if class_name == 'Foundation':
-  #     return '/api/v1/Building/Foundation:{0}:'.format( subclass.pk )
-  #
-  #   elif class_name == 'VirtualBoxFoundation':
-  #     return '/api/v1/VirtualBox/VirtualBoxFoundation:{0}:'.format( subclass.pk )
-  #
-  #   elif class_name == 'ManualFoundation':
-  #     return '/api/v1/Manual/ManualFoundation:{0}:'.format( subclass.pk )
-  #
-  #   raise ValueError( 'Unknown Foundation class "{0}"'.format( class_name ) )
 
   @cinp.action( 'Map' )
   def getConfig( self ):
@@ -217,7 +215,7 @@ class Structure( Networked ):
   config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # unique
   config_values = MapField( blank=True )
   auto_build = models.BooleanField( default=True )
-  build_priority = models.IntegerField( default=100 )
+  # build_priority = models.IntegerField( default=100 )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -257,6 +255,16 @@ class Structure( Networked ):
       result[ 'structure_network' ][ address.interface_name ] = tmp
 
     return result
+
+  @cinp.action( return_type='Integer' )
+  def doCreate( self ):
+    from contractor.Foreman.lib import createJob
+    return createJob( 'create', self )
+
+  @cinp.action( return_type='Integer' )
+  def doDestroy( self ):
+    from contractor.Foreman.lib import createJob
+    return createJob( 'destroy', self )
 
   @cinp.action( 'Map' )
   def getConfig( self ):
@@ -358,16 +366,10 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   def newFoundation( self, hostname ):
     raise ValueError( 'Root Complex dose not support Foundations' )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.BluePrint.models.StructureBluePrint' }, { 'type': 'String' } ] )
-  def createStructure( self, blueprint, hostname ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Foundation' }, paramater_type_list=[ { 'type': 'String' } ] )
+  def createFoundation( self, hostname ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     self = self.subclass
-    foundation = self.newFoundation( hostname )
-
-    structure = Structure( site=self.site, hostname=hostname, blueprint=blueprint, foundation=foundation, auto_build=True )
-    structure.full_clean()
-    structure.save()
-
-    return structure
+    return self.newFoundation( hostname )  # also need to create the network interfaces
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
