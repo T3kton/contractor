@@ -33,6 +33,14 @@ class BluePrint( models.Model ):
   def getConfig( self ):
     return getConfig( self )
 
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    if method == 'DESCRIBE':
+      return True
+
+    return False
+
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
@@ -41,14 +49,6 @@ class BluePrint( models.Model ):
 
     if errors:
       raise ValidationError( errors )
-
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    if method == 'DESCRIBE':
-      return True
-
-    return False
 
   def __str__( self ):
     return 'BluePrint "{0}"({1})'.format( self.description, self.name )
@@ -64,7 +64,7 @@ class FoundationBluePrint( BluePrint ):
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
   foundation_type_list = StringListField( max_length=200 )  # list of the foundation types this blueprint can be used for
   template = JSONField( default={}, blank=True )
-  physical_interface_names = StringListField( max_length=200 )
+  physical_interface_names = StringListField( max_length=200, blank=True )
 
   @cinp.action( 'Map' )
   def getConfig( self ):
@@ -74,6 +74,11 @@ class FoundationBluePrint( BluePrint ):
   def subcontractor( self ):
     return { 'type': None }
 
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
+
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
@@ -82,11 +87,6 @@ class FoundationBluePrint( BluePrint ):
 
     if errors:
       raise ValidationError( errors )
-
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    return True
 
   def __str__( self ):
     return 'FoundationBluePrint "{0}"({1})'.format( self.description, self.name )
@@ -126,6 +126,11 @@ class Script( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
+
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
@@ -140,11 +145,6 @@ class Script( models.Model ):
     if errors:
       raise ValidationError( errors )
 
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    return True
-
   def __str__( self ):
     return 'Script "{0}"({1})'.format( self.description, self.name )
 
@@ -157,6 +157,11 @@ class BluePrintScript( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
+
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
@@ -166,16 +171,11 @@ class BluePrintScript( models.Model ):
     if errors:
       raise ValidationError( errors )
 
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    return True
+  class Meta:
+    unique_together = ( ( 'blueprint', 'name' ), )
 
   def __str__( self ):
     return 'BluePrintScript for BluePrint "{0}" Named "{1}" Script "{2}"'.format( self.blueprint, self.name, self.script )
-
-  class Meta:
-    unique_together = ( ( 'blueprint', 'name' ), )
 
 
 @cinp.model()

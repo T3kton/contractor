@@ -13,6 +13,15 @@ from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRN
 cinp = CInP( 'Utilities', '0.1' )
 
 
+def ipAddress2Native( ip_address ):
+  try:
+    address_block = AddressBlock.objects.get( subnet__lte=ip_address, _max_address__gte=ip_address )
+  except AddressBlock.DoesNotExist:
+    raise ValueError( 'ip_address "{0}" does not exist in any existing Address Blocks'.format( ip_address ) )
+
+  return address_block, StrToIp( ip_address ) - StrToIp( address_block.subnet )
+
+
 @cinp.model( )
 class Networked( models.Model ):
   hostname = models.CharField( max_length=100 )
@@ -27,8 +36,10 @@ class Networked( models.Model ):
 
     return self
 
-  class Meta:
-    unique_together = ( ( 'site', 'hostname' ), )
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -39,10 +50,8 @@ class Networked( models.Model ):
     if errors:
       raise ValidationError( errors )
 
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    return True
+  class Meta:
+    unique_together = ( ( 'site', 'hostname' ), )
 
   def __str__( self ):
     return 'Networked hostname "{0}" in "{1}"'.format( self.hostname, self.site.name )
@@ -53,6 +62,7 @@ class NetworkInterface( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
   name = models.CharField( max_length=20 )
+  is_provisioning = models.BooleanField( default=False )
 
   @property
   def subclass( self ):
@@ -77,6 +87,14 @@ class NetworkInterface( models.Model ):
   def type( self ):
     return 'Unknown'  # This class should not be used directly
 
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    if method == 'DESCRIBE':
+      return True
+
+    return False
+
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
@@ -85,14 +103,6 @@ class NetworkInterface( models.Model ):
 
     if errors:
       raise ValidationError( errors )
-
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    if method == 'DESCRIBE':
-      return True
-
-    return False
 
   def __str__( self ):
     return 'NetworkInterface "{0}"'.format( self.physical_name )
@@ -110,6 +120,11 @@ class RealNetworkInterface( NetworkInterface ):
   @property
   def type( self ):
     return 'Real'
+
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -129,11 +144,6 @@ class RealNetworkInterface( NetworkInterface ):
 
     if errors:
       raise ValidationError( errors )
-
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    return True
 
   def __str__( self ):
     return 'RealNetworkInterface "{0}" mac "{1}"'.format( self.name, self.mac )
@@ -194,6 +204,9 @@ class AddressBlock( models.Model ):
 
   @property
   def gateway_ip( self ):
+    if self.gateway_offset is None:
+      return None
+
     return IpToStr( StrToIp( self.subnet ) + self.gateway_offset )
 
   @property
@@ -210,8 +223,22 @@ class AddressBlock( models.Model ):
     return CIDRNetworkSize( StrToIp( self.subnet ), self.prefix, not self.isIpV4 )
 
   @property
+  def offsetBounds( self ):
+    return CIDRNetworkBounds( StrToIp( self.subnet ), self.prefix, include_unusable=False, as_offsets=True )
+
+  @property
   def isIpV4( self ):
     return IpIsV4( StrToIp( self.subnet ) )
+
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @staticmethod
+  def filter_site( site ):
+    return AddressBlock.objects.filter( site=site )
+
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -223,8 +250,11 @@ class AddressBlock( models.Model ):
       ipv4 = None
       errors[ 'subnet' ] = 'Invalid Ip Address'
 
-    if self.prefix < 1:
+    if self.prefix is None or self.prefix < 1:
       errors[ 'prefix' ] = 'Min Prefix is 1'
+
+    if errors:  # no point in continuing
+      raise ValidationError( errors )
 
     if ipv4 is not None:
       if ipv4:
@@ -235,11 +265,14 @@ class AddressBlock( models.Model ):
           errors[ 'prefix' ] = 'Max Prefix for ipv6 is 128'
 
       if self.gateway_offset is not None:
-        size = CIDRNetworkSize( subnet_ip, self.prefix, False )
-        if self.gateway_offset < 0 or self.gateway_offset >= size:
-          errors[ 'gateway_offset' ] = 'Must be greater than 0 and less than {0}'.format( size )
+        ( low, high ) = CIDRNetworkBounds( subnet_ip, self.prefix, False, True )
+        if low == high:
+          errors[ 'gateway_offset' ] = 'Gateway not possible in single host subnet'
 
-    if errors:  # no point in continuing until the prefix and subnet are good
+        if self.gateway_offset < low or self.gateway_offset > high:
+          errors[ 'gateway_offset' ] = 'Must be greater than {0} and less than {1}'.format( low, high )
+
+    if errors:  # no point in continuing
       raise ValidationError( errors )
 
     ( subnet_ip, last_ip ) = CIDRNetworkBounds( subnet_ip, self.prefix, True )
@@ -255,29 +288,22 @@ class AddressBlock( models.Model ):
     if errors:
       raise ValidationError( errors )
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
-  @staticmethod
-  def filter_site( site ):
-    return AddressBlock.objects.filter( site=site )
-
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    return True
-
   def __str__( self ):
     return 'AddressBlock site "{0}" subnet "{1}/{2}"'.format( self.site, self.subnet, self.prefix )
 
 
 @cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type' ) )
 class BaseAddress( models.Model ):
-  address_block = models.ForeignKey( AddressBlock )
-  offset = models.IntegerField()
+  address_block = models.ForeignKey( AddressBlock, blank=True, null=True )
+  offset = models.IntegerField( blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
   def ip_address( self ):
+    if self.address_block is None or self.offset is None:
+      return None
+
     return IpToStr( StrToIp( self.address_block.subnet ) + self.offset )
 
   @property
@@ -301,47 +327,27 @@ class BaseAddress( models.Model ):
 
   @property
   def type( self ):
-    return 'Unknown'
+    real = self.subclass
+    if real.__class__.__name__ == 'BaseAddress':
+      return 'Unknown'
+
+    return real.type
 
   @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilitied.models.BaseAddress' }, paramater_type_list=[ 'String' ] )
   @staticmethod
-  def lookup( value ):
+  def lookup( ip_address ):
     try:
-      address_block = AddressBlock.objects.get( subnet__lte=value, _max_address__gte=value )
+      address_block = AddressBlock.objects.get( subnet__lte=ip_address, _max_address__gte=ip_address )
     except AddressBlock.DoesNotExist:
       return None
 
-    offset = StrToIp( value ) - StrToIp( address_block.subnet )
+    offset = StrToIp( ip_address ) - StrToIp( address_block.subnet )
     try:
       return BaseAddress.objects.get( address_block=address_block, offset=offset )
     except BaseAddress.DoesNotExist:
       return None
 
     return None
-
-  class Meta:
-    unique_together = ( ( 'address_block', 'offset' ), )
-
-  def clean( self, *args, **kwargs ):
-    super().clean( *args, **kwargs )
-    errors = {}
-    address_block_size = self.address_block.size
-    if address_block_size == 1:
-      if self.offset != 0:
-        errors[ 'offset' ] = 'for blocks of size 1, offset must be 0'
-
-    elif address_block_size == 2:
-      if self.offset not in ( 0, 1 ):
-        errors[ 'offset' ] = 'for blocks of size 2, offset must be 1 or 2'
-
-    else:
-      if self.offset >= self.address_block.size:
-        errors[ 'offset' ] = 'Offset Greater than size of Address Block'
-      if self.offset < 1:
-        errors[ 'offset' ] = 'Offset must be at least 1'
-
-    if errors:
-      raise ValidationError( errors )
 
   @cinp.check_auth()
   @staticmethod
@@ -351,6 +357,30 @@ class BaseAddress( models.Model ):
 
     return False
 
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+
+    if self.offset is not None and self.address_block is None:
+      errors[ 'offset' ] = 'Can not be specified without address_block'
+
+    if self.address_block is not None and self.offset is None:
+      errors[ 'address_block' ] = 'Can not be specified without offset'
+
+    if self.address_block is not None and self.offset is not None:
+      ( min_offset, max_offset ) = self.address_block.offsetBounds
+      if self.offset is None or self.offset < min_offset or self.offset > max_offset:
+        errors[ 'offset' ] = 'Must be greater than {0} and less than {1}'.format( min_offset, max_offset )
+
+      if 'offest' not in errors and self.offset == self.address_block.gateway_offset:
+        errors[ 'offset' ] = 'Conflicts with Gateway'
+
+    if errors:
+      raise ValidationError( errors )
+
+  class Meta:
+    unique_together = ( ( 'address_block', 'offset' ), )
+
   def __str__( self ):
     return 'BaseAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
 
@@ -359,8 +389,17 @@ class BaseAddress( models.Model ):
 class Address( BaseAddress ):
   networked = models.ForeignKey( Networked )
   interface_name = models.CharField( max_length=20 )
+  sub_interface = models.IntegerField( default=None, blank=True, null=True )
+  vlan = models.IntegerField( default=0 )  # vlan = 0: Untagged/Native VLAN     vlan = 4096: Trunked
+  pointer = models.ForeignKey( 'self', blank=True, null=True )
   is_primary = models.BooleanField( default=False )
-  is_provisioning = models.BooleanField( default=False )
+
+  @property
+  def ip_address( self ):
+    if self.pointer is not None:
+      return self.pointer.ip_address
+
+    return super().ip_address
 
   @property
   def structure( self ):
@@ -384,15 +423,6 @@ class Address( BaseAddress ):
   def type( self ):
     return 'Address'
 
-  def clean( self, *args, **kwargs ):
-    super().clean( *args, **kwargs )
-    errors = {}
-    if not name_regex.match( self.interface_name ):
-      errors[ 'interface_name' ] = '"{0}" is invalid'.format( self.interface_name[ 0:50 ] )
-
-    if errors:
-      raise ValidationError( errors )
-
   @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' } ] )
   @staticmethod
   def filter_address_block( address_block ):
@@ -402,6 +432,39 @@ class Address( BaseAddress ):
   @staticmethod
   def checkAuth( user, method, id_list, action=None ):
     return True
+
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+    if not name_regex.match( self.interface_name ):
+      errors[ 'interface_name' ] = '"{0}" is invalid'.format( self.interface_name[ 0:50 ] )
+
+    try:
+      if self.pointer is not None:
+        if self.address_block is not None:
+          errors[ 'address_block' ] = 'Conflicts with Pointer'
+          errors[ 'pointer' ] = 'Conflicts with Address_block'
+        if self.offset is not None:
+          errors[ 'offset' ] = 'Conflicts with Pointer'
+          errors[ 'pointer' ] = 'Conflicts with Offset'
+    except ObjectDoesNotExist:
+      pass
+
+    if not self.sub_interface:
+      self.sub_interface = None
+    else:
+      if self.sub_interface < 0:
+        errors[ 'sub_interface' ] = 'Must be a positive value'
+
+    if self.vlan > 4096 or self.vlan < 0:
+      errors[ 'vlan' ] = 'must be between 0 and 4096'
+
+    if self.is_primary:
+      if self.networked.address_set.filter( is_primary=True ).count() > 0:
+        errors[ 'is_primary' ] = 'Networked allready has a primary ip'
+
+    if errors:
+      raise ValidationError( errors )
 
   def __str__( self ):
     return 'Address in Block "{0}" offset "{1}" networked "{2}" on interface "{3}"'.format( self.address_block, self.offset, self.networked, self.interface_name )
@@ -429,6 +492,18 @@ class ReservedAddress( BaseAddress ):
   def checkAuth( user, method, id_list, action=None ):
     return True
 
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+    if not self.address_block:
+      errors[ 'address_block' ] = 'This field cannot be blank.'
+
+    if not self.offset:
+      errors[ 'offset' ] = 'This field cannot be blank.'
+
+    if errors:
+      raise ValidationError( errors )
+
   def __str__( self ):
     return 'ReservedAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
 
@@ -454,6 +529,18 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
   @staticmethod
   def checkAuth( user, method, id_list, action=None ):
     return True
+
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+    if not self.address_block:
+      errors[ 'address_block' ] = 'This field cannot be blank.'
+
+    if not self.offset:
+      errors[ 'offset' ] = 'This field cannot be blank.'
+
+    if errors:
+      raise ValidationError( errors )
 
   def __str__( self ):
     return 'DynamicAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )

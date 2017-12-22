@@ -4,8 +4,6 @@ import sys
 import argparse
 import pprint
 
-sys.path.insert( 1, '../..' )
-
 os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
 
 import django
@@ -57,6 +55,7 @@ def main():
   task_group.add_argument( '-d', '--do-destroy', help='submit destroy job', action='store_true' )
   task_group.add_argument( '-j', '--submit-job', help='submit a named job', metavar='JOB NAME' )
   task_group.add_argument(       '--pause', help='pause active job', action='store_true' )
+  task_group.add_argument(       '--resume', help='resume a paused job', action='store_true' )
   task_group.add_argument(       '--reset', help='reset error on active job', action='store_true' )
   task_group.add_argument(       '--rollback', help='rollback active job', action='store_true' )
   task_group.add_argument(       '--done', help='set active job to done', action='store_true' )
@@ -143,6 +142,20 @@ def main():
         job.pause()
       except ValueError as e:
         print( 'Error pausing job: "{0}"'.format( str( e ) ) )
+        sys.exit( 1 )
+      sys.exit( 0 )
+
+  if args.resume:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job to Resume' )
+      sys.exit( 1 )
+
+    else:
+      try:
+        job.resume()
+      except ValueError as e:
+        print( 'Error resuming job: "{0}"'.format( str( e ) ) )
         sys.exit( 1 )
       sys.exit( 0 )
 

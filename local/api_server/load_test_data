@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 import os
-import sys
-
-sys.path.insert( 1, '../..' )
 
 os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
 
@@ -11,15 +8,17 @@ django.setup()
 
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Site.models import Site
-from contractor.Building.models import Structure, FoundationNetworkInterface
+from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
-from contractor_plugins.VirtualBox.models import VirtualBoxFoundation
+from contractor_plugins.VirtualBox.models import VirtualBoxFoundation, VirtualBoxComplex
 from contractor_plugins.AWS.models import AWSEC2Foundation
+from contractor_plugins.Docker.models import DockerFoundation, DockerComplex
 from contractor_plugins.Manual.models import ManualFoundation
 
 fbp_manual = FoundationBluePrint.objects.get( pk='generic-manual' )
 fbp_vm = FoundationBluePrint.objects.get( pk='generic-virtualbox' )
-fbp_aws = FoundationBluePrint.objects.get( pk='generic-awsec2' )
+fbp_aws = FoundationBluePrint.objects.get( pk='generic-awsec2-micro' )
+fbp_dkr = FoundationBluePrint.objects.get( pk='generic-docker' )
 sbp_xenial = StructureBluePrint.objects.get( pk='generic-xenial' )
 
 print( 'creating sites...' )
@@ -47,9 +46,21 @@ addr2_block = AddressBlock( site=s2, subnet='169.254.0.0', gateway_offset=1, pre
 addr2_block.full_clean()
 addr2_block.save()
 
-addraws_block = AddressBlock( site=s1, subnet='172.31.0.0', gateway_offset=1, prefix=16 )
-addraws_block.full_clean()
-addraws_block.save()
+addrlo_block = AddressBlock( site=s1, subnet='127.0.0.0', prefix=8 )
+addrlo_block.full_clean()
+addrlo_block.save()
+
+addrawspri_block = AddressBlock( site=s1, subnet='172.31.0.0', gateway_offset=1, prefix=16 )
+addrawspri_block.full_clean()
+addrawspri_block.save()
+
+addrawspub1_block = AddressBlock( site=s1, subnet='52.0.0.0', gateway_offset=1, prefix=6 )
+addrawspub1_block.full_clean()
+addrawspub1_block.save()
+
+addrawspub2_block = AddressBlock( site=s1, subnet='32.0.0.0', gateway_offset=1, prefix=6 )
+addrawspub2_block.full_clean()
+addrawspub2_block.save()
 
 for i in range( 2, 10 ):
   addr = ReservedAddress( address_block=addr1_block, offset=i, reason='switch reserved' )
@@ -65,13 +76,51 @@ for i in range( 220, 225 ):
   addr.full_clean()
   addr.save()
 
+print( 'creating local dev box and cluster...' )
+fdn_dev = ManualFoundation( site=s1, blueprint=fbp_manual, locator='localdev' )
+fdn_dev.full_clean()
+fdn_dev.save()
+fdn_dev.setBuilt()
+
+iface = RealNetworkInterface( name='lo', is_provisioning=True )
+iface.full_clean()
+iface.save()
+
+fni = FoundationNetworkInterface( foundation=fdn_dev, interface=iface, physical_location='lo' )
+fni.full_clean()
+fni.save()
+
+str_dev = Structure( site=s1, blueprint=sbp_xenial, hostname='localdev', foundation=fdn_dev )
+str_dev.auto_build = False
+str_dev.full_clean()
+str_dev.save()
+str_dev.setBuilt()
+
+addr = Address( networked=str_dev, address_block=addrlo_block, interface_name='lo', offset=1, is_primary=True )
+addr.full_clean()
+addr.save()
+
+print( 'creating manual foundation(s)...' )
+fdn_manual1 = ManualFoundation( site=s1, blueprint=fbp_manual, locator='oldserver1' )
+fdn_manual1.full_clean()
+fdn_manual1.save()
+
 print( 'creating virtualbox foundation(s)...' )
+cpx_vm = VirtualBoxComplex( site=s1, name='localvm', description='virtualbox complex' )
+cpx_vm.full_clean()
+cpx_vm.save()
+
+cpx_member = ComplexStructure( complex=cpx_vm, structure=str_dev )
+cpx_member.full_clean()
+cpx_member.save()
+
 fdn_vm1 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='test1-vb' )
+fdn_vm1.virtualbox_host = cpx_vm
 fdn_vm1.config_values = { 'memory_size': 512 }
 fdn_vm1.full_clean()
 fdn_vm1.save()
 
-iface = RealNetworkInterface( name='eth0' )
+iface = RealNetworkInterface( name='eth0', is_provisioning=True )
 iface.full_clean()
 iface.save()
 
@@ -80,11 +129,12 @@ fni.full_clean()
 fni.save()
 
 fdn_vm2 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='test2-vb' )
+fdn_vm2.virtualbox_host = cpx_vm
 fdn_vm2.config_values = { 'memory_size': 512 }
 fdn_vm2.full_clean()
 fdn_vm2.save()
 
-iface = RealNetworkInterface( name='eth0' )
+iface = RealNetworkInterface( name='eth0', is_provisioning=True )
 iface.full_clean()
 iface.save()
 
@@ -98,7 +148,7 @@ fdn_aws1.config_values = {}
 fdn_aws1.full_clean()
 fdn_aws1.save()
 
-iface = RealNetworkInterface( name='eth0' )
+iface = RealNetworkInterface( name='eth0', is_provisioning=True )
 iface.full_clean()
 iface.save()
 
@@ -106,18 +156,46 @@ fni = FoundationNetworkInterface( foundation=fdn_aws1, interface=iface, physical
 fni.full_clean()
 fni.save()
 
-print( 'creating manual foundation(s)...' )
-fdn_manual1 = ManualFoundation( site=s1, blueprint=fbp_manual, locator='oldserver1' )
-fdn_manual1.full_clean()
-fdn_manual1.save()
+print( 'creating docker foundation(s)...' )
+cpx_dkr = DockerComplex( site=s1, name='localdkr', description='docker complex' )
+cpx_dkr.full_clean()
+cpx_dkr.save()
 
-print( 'creating structures...' )
+cpx_member = ComplexStructure( complex=cpx_dkr, structure=str_dev )
+cpx_member.full_clean()
+cpx_member.save()
+
+fdn_dkr1 = DockerFoundation( site=s1, blueprint=fbp_dkr, locator='test1-docker' )
+fdn_dkr1.container_host = cpx_dkr
+fdn_dkr1.config_values = {}
+fdn_dkr1.full_clean()
+fdn_dkr1.save()
+
+iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+iface.full_clean()
+iface.save()
+
+fni = FoundationNetworkInterface( foundation=fdn_dkr1, interface=iface, physical_location='eth0' )
+fni.full_clean()
+fni.save()
+
+print( 'creating manual box structure(s)...' )
+str_manual1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testmanual1', foundation=fdn_manual1 )
+str_manual1.auto_build = False
+str_manual1.full_clean()
+str_manual1.save()
+
+addr = Address( networked=str_manual1, address_block=addr1_block, interface_name='eth0', offset=51, is_primary=True )
+addr.full_clean()
+addr.save()
+
+print( 'creating virtual box structure(s)...' )
 str_vm1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm1', foundation=fdn_vm1 )
-str_vm1.auto_build = True
+str_vm1.auto_build = False
 str_vm1.full_clean()
 str_vm1.save()
 
-addr = Address( networked=str_vm1, address_block=addr1_block, interface_name='eth0', offset=101, is_primary=True, is_provisioning=True )
+addr = Address( networked=str_vm1, address_block=addr1_block, interface_name='eth0', offset=101, is_primary=True )
 addr.full_clean()
 addr.save()
 
@@ -126,24 +204,26 @@ str_vm2.auto_build = False
 str_vm2.full_clean()
 str_vm2.save()
 
-addr = Address( networked=str_vm2, address_block=addr1_block, interface_name='eth0', offset=102, is_primary=True, is_provisioning=True )
+addr = Address( networked=str_vm2, address_block=addr1_block, interface_name='eth0', offset=102, is_primary=True )
 addr.full_clean()
 addr.save()
 
-str_aws1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testaws1' )
-str_aws1.foundation = fdn_aws1
+print( 'creating aws box structure(s)...' )
+str_aws1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testaws1', foundation=fdn_aws1 )
+str_aws1.auto_build = False
 str_aws1.full_clean()
 str_aws1.save()
 
-addr = Address( networked=str_aws1, address_block=addr1_block, interface_name='eth0', offset=111, is_primary=True, is_provisioning=True )
+addr = Address( networked=str_aws1, interface_name='eth0', is_primary=True )
 addr.full_clean()
 addr.save()
 
-str_manual1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testmanual1' )
-str_manual1.foundation = fdn_manual1
-str_manual1.full_clean()
-str_manual1.save()
+print( 'creating docker box structure(s)...' )
+str_dkr1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testdkr1', foundation=fdn_dkr1 )
+str_dkr1.auto_build = True
+str_dkr1.full_clean()
+str_dkr1.save()
 
-addr = Address( networked=str_manual1, address_block=None, interface_name='eth0', offset=0, is_primary=True, is_provisioning=True )
+addr = Address( networked=str_dkr1, pointer=Address.objects.get( networked=str_dev, interface_name='lo' ), interface_name='eth0', is_primary=True )
 addr.full_clean()
 addr.save()

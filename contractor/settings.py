@@ -18,10 +18,11 @@ INSTALLED_APPS = (
     'contractor.Building',
     'contractor.Foreman',
     'contractor.SubContractor',
+    'contractor_plugins.IPUtils',
     'contractor_plugins.Manual',
     'contractor_plugins.VirtualBox',
-    'contractor_plugins.IPUtils',
     'contractor_plugins.AWS',
+    'contractor_plugins.Docker',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -68,7 +69,8 @@ WSGI_APPLICATION = 'contractor.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join( os.path.abspath( '../{0}'.format( os.path.dirname( __file__ ) ) ), 'db.sqlite3' ),
+        'NAME': '/opt/contractor/db.sqlite3',
+        # 'NAME': os.path.join( os.path.abspath( '../{0}'.format( os.path.dirname( __file__ ) ) ), 'db.sqlite3' ),
     }
 }
 

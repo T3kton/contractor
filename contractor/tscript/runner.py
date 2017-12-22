@@ -333,7 +333,7 @@ class Runner( object ):
     if len( self.state ) == 0:
       return [ ( 0.0, 'Scope', None ) ]
 
-    item_list = []
+    item_list = []  # ( scope position, scope length, scope type, scope data )
     operation = self.ast
     for step in self.state:  # condense into on loop, last status may be a blocking function with remote  and status values
       step_type = step[0]
@@ -345,8 +345,13 @@ class Runner( object ):
       print( '****** {0}  {1}'.format( operation, step_data ) )
 
       if step_type == types.SCOPE:
-        tmp = operation[1].copy()
-        del tmp[ '_children' ]
+        tmp = {}
+        for item in ( 'description', ):
+          try:
+            tmp[ item ] = operation[1][ item ]
+          except ( KeyError, TypeError ):
+            pass
+
         if step_data is None:  # no point in continuing, we don't know where we are
           item_list.append( ( 0, len( operation[1][ '_children' ] ), 'Scope', tmp ) )
           break
@@ -355,22 +360,40 @@ class Runner( object ):
         operation = operation[1][ '_children' ][ step_data ]
 
       elif step_type == types.WHILE:  # if a while loop is on the stack, we must be in it, keep on going
-        item_list.append( ( 0, 1, 'While', None ) )
-        operation = operation[1][ 'expression' ]
+        item_list.append( ( 0, 1, 'While', { 'doing': step_data[ 'doing' ] } ) )
+        if step_data[ 'doing' ] == 'expression':
+          operation = operation[1][ 'expression' ]
+        elif step_data[ 'doing' ] == 'condition':
+          operation = operation[1][ 'condition' ]
+        else:
+          raise Exception( 'Unknown While doing "{0}"'.format( step_data[ 'doing' ] ) )
 
       elif step_type == types.IFELSE:
-        pass
+        item_list.append( ( step_data[ 'index' ], len( operation[1] ), 'IfElse', { 'doing': step_data[ 'doing' ] } ) )
+        if step_data[ 'doing' ] == 'expression':
+          operation = operation[1][ step_data[ 'index' ] ][ 'expression' ]
+        elif step_data[ 'doing' ] == 'condition':
+          operation = operation[1][ step_data[ 'index' ] ][ 'condition' ]
+        else:
+          raise Exception( 'Unknown IfElse doing "{0}"'.format( step_data[ 'doing' ] ) )
 
       elif step_type == types.LINE:
         operation = operation[1]
 
       elif step_type == types.FUNCTION:
-        tmp = operation[1].copy()
-        tmp[ 'dispatched' ] = step_data.get( 'dispatched', None )
-        try:
-          del tmp[ 'paramaters' ]
-        except KeyError:
-          pass
+        tmp = {}
+        for item in ( 'dispatched', ):
+          try:
+            tmp[ item ] = step_data[ item ]
+          except ( TypeError, KeyError ):
+            pass
+
+        for item in ( 'module', 'name' ):
+          try:
+            tmp[ item ] = operation[1][ item ]
+          except ( TypeError, KeyError ):
+            pass
+
         item_list.append( ( 0, 1, 'Function', tmp ) )
 
       elif step_type == types.ASSIGNMENT:
@@ -381,19 +404,31 @@ class Runner( object ):
         else:
           raise Exception( 'status - assignment confused' )
 
-      elif step_type in ( types.INFIX, types.CONSTANT, types.VARIABLE, types.GOTO ):
+      elif step_type == types.INFIX:
+        try:
+          step_data[ 'left' ]
+          try:
+            step_data[ 'right' ]
+            raise Exception( 'Unknown Infix doing "{0}"'.format( step_data[ 'doing' ] ) )
+          except KeyError:
+            operation = operation[1][ 'right' ]
+        except (TypeError, KeyError ):  # NOTE: TypeError occurs when there is no step data, in this case we are still after the left side
+          operation = operation[1][ 'left' ]
+
+      elif step_type in ( types.CONSTANT, types.VARIABLE, types.GOTO ):
         pass
+        # raise Exception( 'Not suposed to get here, interesting.' )
 
       else:
         raise Exception( 'Confused step type "{0}"'.format( step_type ) )
 
-    print( item_list )
+    print( '~~~~~~ {0}'.format( item_list ) )
 
     result = []
     last_perc_complete = 0
     for item in reversed( item_list ):  # work backwards, as we go up, we scale the last perc_complete acording to the % of the curent scope
       # before + -> scaling the last % complete .... after the +  -> the curent %
-      perc_complete = ( 1.0 / item[1] ) * last_perc_complete + ( 100.0 * item[0]) / item[1]
+      perc_complete = ( 1.0 / item[1] ) * last_perc_complete + ( 100.0 * item[0] ) / item[1]
       result.insert( 0, ( perc_complete, item[2], item[3] ) )
       last_perc_complete = perc_complete
 
@@ -675,9 +710,9 @@ class Runner( object ):
       right_val = self.state[ state_index ][1][ 'right' ]
 
       if op_data[ 'operator' ] in infix_math_operator_map:  # the number group
-        if not isinstance( left_val, ( int, float ) ):
+        if not isinstance( left_val, ( int, float, bool ) ):
           raise ParamaterError( 'left of operator', 'must be numeric', self.cur_line )
-        if not isinstance( right_val, ( int, float ) ):
+        if not isinstance( right_val, ( int, float, bool ) ):
           raise ParamaterError( 'right of operator', 'must be numeric', self.cur_line )
 
         value = infix_math_operator_map[ op_data[ 'operator' ] ]( left_val, right_val )

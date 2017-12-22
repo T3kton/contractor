@@ -24,6 +24,11 @@ class Site( models.Model ):
   def getConfig( self ):
     return getConfig( self )
 
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, method, id_list, action=None ):
+    return True
+
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
@@ -38,11 +43,6 @@ class Site( models.Model ):
 
     if errors:
       raise ValidationError( errors )
-
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    return True
 
   def __str__( self ):
     return 'Site "{0}"({1})'.format( self.description, self.name )

@@ -352,6 +352,51 @@ def test_cidrnetworkbounds():
   assert CIDRNetworkBounds( StrToIp( '1.2.3.4' ), 0, True ) == ( StrToIp( '0.0.0.0' ), StrToIp( '255.255.255.255' ) )
   assert CIDRNetworkBounds( StrToIp( '2001::' ), 0, True ) == ( StrToIp( '::' ), StrToIp( 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff' ) )
 
+  assert CIDRNetworkBounds( StrToIp( '10.0.0.0' ), 8, False, True ) == ( 1, 16777214 )
+  assert CIDRNetworkBounds( StrToIp( '10.0.0.0' ), 8, True, True ) == ( 0, 16777215 )
+  assert CIDRNetworkBounds( StrToIp( '10.0.0.1' ), 8, False, True ) == ( 1, 16777214 )
+  assert CIDRNetworkBounds( StrToIp( '10.0.0.1' ), 8, True, True ) == ( 0, 16777215 )
+  assert CIDRNetworkBounds( StrToIp( '10.3.0.0' ), 8, False, True ) == ( 1, 16777214 )
+  assert CIDRNetworkBounds( StrToIp( '10.3.0.0' ), 8, True, True ) == ( 0, 16777215 )
+
+  assert CIDRNetworkBounds( StrToIp( '10.0.0.0' ), 24, False, True ) == ( 1, 254 )
+  assert CIDRNetworkBounds( StrToIp( '10.0.0.0' ), 24, True, True ) == ( 0, 255 )
+  assert CIDRNetworkBounds( StrToIp( '10.0.0.1' ), 24, False, True ) == ( 1, 254 )
+  assert CIDRNetworkBounds( StrToIp( '10.0.0.1' ), 24, True, True ) == ( 0, 255 )
+  assert CIDRNetworkBounds( StrToIp( '10.3.0.0' ), 24, False, True ) == ( 1, 254 )
+  assert CIDRNetworkBounds( StrToIp( '10.3.0.0' ), 24, True, True ) == ( 0, 255 )
+
+  assert CIDRNetworkBounds( StrToIp( '2001::' ), 112, False, True ) == ( 1, 65534 )
+  assert CIDRNetworkBounds( StrToIp( '2001::' ), 112, True, True ) == ( 0, 65535 )
+  assert CIDRNetworkBounds( StrToIp( '2001::1' ), 112, False, True ) == ( 1, 65534 )
+  assert CIDRNetworkBounds( StrToIp( '2001::1' ), 112, True, True ) == ( 0, 65535 )
+  assert CIDRNetworkBounds( StrToIp( '2001::f001' ), 112, False, True ) == ( 1, 65534 )
+  assert CIDRNetworkBounds( StrToIp( '2001::f001' ), 112, True, True ) == ( 0, 65535 )
+
+  assert CIDRNetworkBounds( StrToIp( '2001::' ), 120, False, True ) == ( 1, 254 )
+  assert CIDRNetworkBounds( StrToIp( '2001::' ), 120, True, True ) == ( 0, 255 )
+  assert CIDRNetworkBounds( StrToIp( '2001::1' ), 120, False, True ) == ( 1, 254 )
+  assert CIDRNetworkBounds( StrToIp( '2001::1' ), 120, True, True ) == ( 0, 255 )
+  assert CIDRNetworkBounds( StrToIp( '2001::f001' ), 120, False, True ) == ( 1, 254 )
+  assert CIDRNetworkBounds( StrToIp( '2001::f001' ), 120, True, True ) == ( 0, 255 )
+
+  assert CIDRNetworkBounds( StrToIp( '10.3.2.5' ), 32, False, True ) == ( 0, 0 )
+  assert CIDRNetworkBounds( StrToIp( '10.3.2.5' ), 32, True, True ) == ( 0, 0 )
+
+  assert CIDRNetworkBounds( StrToIp( '10.3.2.5' ), 31, False, True ) == ( 0, 1 )
+  assert CIDRNetworkBounds( StrToIp( '10.3.2.5' ), 31, True, True ) == ( 0, 1 )
+
+  assert CIDRNetworkBounds( StrToIp( '2001::f009' ), 128, False, True ) == ( 0, 0 )
+  assert CIDRNetworkBounds( StrToIp( '2001::f009' ), 128, True, True ) == ( 0, 0 )
+
+  assert CIDRNetworkBounds( StrToIp( '2001::f009' ), 127, False, True ) == ( 0, 1 )
+  assert CIDRNetworkBounds( StrToIp( '2001::f009' ), 127, True, True ) == ( 0, 1 )
+
+  assert CIDRNetworkBounds( StrToIp( '254.0.0.0' ), 8, True, True ) == ( 0, 16777215 )
+  assert CIDRNetworkBounds( StrToIp( '255.0.0.0' ), 8, True, True ) == ( 0, 16777215 )
+  assert CIDRNetworkBounds( StrToIp( '1.2.3.4' ), 0, True, True ) == ( 0, 4294967295 )
+  assert CIDRNetworkBounds( StrToIp( '2001::' ), 0, True, True ) == ( 0, 340282366920938463463374607431768211455 )
+
   with pytest.raises( ValueError ):
     CIDRNetworkBounds( -1, 0 )
   with pytest.raises( ValueError ):
