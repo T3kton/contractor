@@ -21,26 +21,26 @@ class Post( models.Model ):
     abstract = True
 
 
-@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
+@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
 class FoundationPost( Post ):
   foundation = models.ForeignKey( Foundation, on_delete=models.CASCADE, related_name='+' )
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):
     return 'FoundationPost for "{0}" on "{1}"'.format( self.foundation, self.name )
 
 
-@cinp.model( not_allowed_method_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
+@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
 class StructurePost( Post ):
   structure = models.ForeignKey( Structure, on_delete=models.CASCADE, related_name='+' )
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):
@@ -95,7 +95,7 @@ class FoundationBox( Box ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):
@@ -112,7 +112,7 @@ class StructureBox( Box ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):

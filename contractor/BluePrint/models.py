@@ -12,7 +12,7 @@ from contractor.lib.config import getConfig
 cinp = CInP( 'BluePrint', '0.1' )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ] )
+@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ] )
 class BluePrint( models.Model ):
   name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length
   description = models.CharField( max_length=200 )
@@ -50,8 +50,8 @@ class BluePrint( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    if method == 'DESCRIBE':
+  def checkAuth( user, verb, id_list, action=None ):
+    if verb == 'DESCRIBE':
       return True
 
     return False
@@ -91,7 +91,7 @@ class FoundationBluePrint( BluePrint ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -109,7 +109,7 @@ class FoundationBluePrint( BluePrint ):
 
 @cinp.model(  )
 class StructureBluePrint( BluePrint ):
-  parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
+  parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )  # TODO: go through a "through" field and have a foundation class select which parent, this way there can be a container parent and a VM parent and simmaler
   foundation_blueprint_list = models.ManyToManyField( FoundationBluePrint )  # list of possible foundations this blueprint could be implemented on
 
   @property
@@ -126,7 +126,7 @@ class StructureBluePrint( BluePrint ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):
@@ -143,7 +143,7 @@ class Script( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -174,7 +174,7 @@ class BluePrintScript( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -203,7 +203,7 @@ class PXE( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):

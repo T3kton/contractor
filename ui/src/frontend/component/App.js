@@ -95,7 +95,7 @@ class App extends React.Component
     <ServerError ref="serverError" />
     <div>
       <Layout>
-        <NavDrawer pinned={this.state.leftDrawerVisable}>
+        <NavDrawer pinned={ this.state.leftDrawerVisable }>
           <Navigation type="vertical">
             <Link to="/"><Button icon="home">Home</Button></Link>
             <Link to="/sites"><Button icon="business">Sites</Button></Link>

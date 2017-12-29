@@ -37,7 +37,7 @@ class Networked( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -56,7 +56,7 @@ class Networked( models.Model ):
     return 'Networked hostname "{0}" in "{1}"'.format( self.hostname, self.site.name )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
+@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class NetworkInterface( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -88,8 +88,8 @@ class NetworkInterface( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    if method == 'DESCRIBE':
+  def checkAuth( user, verb, id_list, action=None ):
+    if verb == 'DESCRIBE':
       return True
 
     return False
@@ -122,7 +122,7 @@ class RealNetworkInterface( NetworkInterface ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -161,7 +161,7 @@ class AbstractNetworkInterface( NetworkInterface ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):
@@ -184,7 +184,7 @@ class AggragatedNetworkInterface( AbstractNetworkInterface ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):
@@ -231,7 +231,7 @@ class AddressBlock( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -286,7 +286,7 @@ class AddressBlock( models.Model ):
     return 'AddressBlock site "{0}" subnet "{1}/{2}"'.format( self.site, self.subnet, self.prefix )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
+@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class BaseAddress( models.Model ):
   address_block = models.ForeignKey( AddressBlock, blank=True, null=True )
   offset = models.IntegerField( blank=True, null=True )
@@ -373,8 +373,8 @@ class BaseAddress( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    if method == 'DESCRIBE':
+  def checkAuth( user, verb, id_list, action=None ):
+    if verb == 'DESCRIBE':
       return True
 
     return False
@@ -480,7 +480,7 @@ class Address( BaseAddress ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -548,7 +548,7 @@ class ReservedAddress( BaseAddress ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -586,7 +586,7 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
