@@ -95,6 +95,9 @@ class AddressBlock extends React.Component
                   <tr><th>Subnet</th><td>{ addressBlock.subnet }</td></tr>
                   <tr><th>Prefix</th><td>{ addressBlock.prefix }</td></tr>
                   <tr><th>Gateway</th><td>{ addressBlock.gateway }</td></tr>
+                  <tr><th>Netmask</th><td>{ addressBlock.netmask }</td></tr>
+                  <tr><th>Size (Number of Ips)</th><td>{ addressBlock.size }</td></tr>
+                  <tr><th>IsIPv4</th><td>{ addressBlock.isIpV4 }</td></tr>
                   <tr><th>Max Address</th><td>{ addressBlock._max_address }</td></tr>
                   <tr><th>Created</th><td>{ addressBlock.created }</td></tr>
                   <tr><th>Updated</th><td>{ addressBlock.updated }</td></tr>

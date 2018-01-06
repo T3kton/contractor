@@ -18,7 +18,7 @@ class ConfigDialog extends React.Component
 
         for( var name in result.data )
         {
-          item_list.push( { name: name, value: result.data[ name ] } );
+          item_list.push( { name: name, value: JSON.stringify( result.data[ name ] ) } );
         }
         this.setState( { active: true, item_list: item_list } );
       } );
@@ -50,8 +50,8 @@ class ConfigDialog extends React.Component
               <TableCell>Name</TableCell>
               <TableCell>Value</TableCell>
             </TableHead>
-          { this.state.item_list.map( ( item ) => (
-            <TableRow key={ item.name }>
+          { this.state.item_list.map( ( item, index ) => (
+            <TableRow key={ index }>
               <TableCell>{ item.name }</TableCell>
               <TableCell>{ item.value }</TableCell>
             </TableRow>

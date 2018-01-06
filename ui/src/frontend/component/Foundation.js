@@ -34,7 +34,6 @@ class Foundation extends React.Component
           var data = result.data;
           data.site = CInP.extractIds( data.site )[0];
           data.blueprint = CInP.extractIds( data.blueprint )[0];
-          data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, data.config_values[ key ] ] ) );
           this.setState( { foundation: data } );
         } );
       props.detailGetDependancies( props.id )
@@ -102,7 +101,6 @@ class Foundation extends React.Component
                     <li key={ index }>{ item }</li>
                   ) ) }</ul></td></tr>
                   <tr><th>Class List</th><td>{ foundation.class_list }</td></tr>
-                  <tr><th>Config Values</th><td><table><thead/><tbody>{ foundation.config_values.map( ( value ) => ( <tr key={ value[0] }><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
                   <tr><th>Created</th><td>{ foundation.created }</td></tr>
                   <tr><th>Updated</th><td>{ foundation.updated }</td></tr>
                   <tr><th>Located At</th><td>{ foundation.located_at }</td></tr>

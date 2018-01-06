@@ -34,7 +34,7 @@ class Structure extends React.Component
           data.site = CInP.extractIds( data.site )[0];
           data.blueprint = CInP.extractIds( data.blueprint )[0];
           data.foundation = CInP.extractIds( data.foundation )[0];
-          data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, data.config_values[ key ] ] ) );
+          data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, JSON.stringify( data.config_values[ key ] ) ] ) );
           this.setState( { structure: data } );
         } );
     }
@@ -83,7 +83,7 @@ class Structure extends React.Component
                   <tr><th>Blueprint</th><td><Link to={ '/blueprint/s/' + structure.blueprint }>{ structure.blueprint }</Link></td></tr>
                   <tr><th>Config UUID</th><td>{ structure.config_uuid }</td></tr>
                   <tr><th>Auto Build</th><td>{ structure.auto_build }</td></tr>
-                  <tr><th>Config Values</th><td><table><thead/><tbody>{ structure.config_values.map( ( value ) => ( <tr><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
+                  <tr><th>Config Values</th><td><table><thead/><tbody>{ structure.config_values.map( ( item, index ) => ( <tr key={ index }><th>{ item[0] }</th><td>{ item[1] }</td></tr> ) ) }</tbody></table></td></tr>
                   <tr><th>Created</th><td>{ structure.created }</td></tr>
                   <tr><th>Updated</th><td>{ structure.updated }</td></tr>
                   <tr><th>Built At</th><td>{ structure.built_at }</td></tr>
