@@ -1,7 +1,11 @@
 import pytest
 from datetime import timedelta
 
-from contractor.tscript.parser import parse, lint, ParserError
+from contractor.tscript.parser import parse, lint, ParserError, Parser
+
+
+def test_gramer_parses():
+  Parser()
 
 
 def test_begin():
@@ -326,6 +330,31 @@ def test_variables():
 
   with pytest.raises( ParserError ):
     node = parse( 'adsf.2a' )
+
+  # prefixed reserved
+  with pytest.raises( ParserError ):
+    node = parse( 'do' )
+
+  node = parse( 'docker' )
+  assert node == ( 'S', { '_children':
+                          [
+                              ( 'L', ( 'V', { 'module': None, 'name': 'docker' } ), 1 )
+                          ] } )
+
+  node = parse( 'got' )
+  assert node == ( 'S', { '_children':
+                          [
+                              ( 'L', ( 'V', { 'module': None, 'name': 'got' } ), 1 )
+                          ] } )
+
+  with pytest.raises( ParserError ):
+    node = parse( 'goto' )
+
+  node = parse( 'gotoing' )
+  assert node == ( 'S', { '_children':
+                          [
+                              ( 'L', ( 'V', { 'module': None, 'name': 'gotoing' } ), 1 )
+                          ] } )
 
 
 def test_arrayitem():

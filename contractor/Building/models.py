@@ -239,7 +239,7 @@ class Structure( Networked ):
              }
 
     result[ 'hostname' ] = self.hostname
-    result[ 'structure_network' ] = {}
+    result[ 'network' ] = {}
     for address in self.networked_ptr.address_set.all():
       tmp = {
               'ip_address': address.ip_address,
@@ -252,7 +252,7 @@ class Structure( Networked ):
       if tmp[ 'gateway' ] is None:
         del tmp[ 'gateway' ]
 
-      result[ 'structure_network' ][ address.interface_name ] = tmp
+      result[ 'network' ][ address.interface_name ] = tmp
 
     return result
 

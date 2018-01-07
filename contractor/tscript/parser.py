@@ -33,8 +33,10 @@ none                = ~"[Nn]one"
 
 array               = "[" ( ( value_expression "," )* value_expression )? ws_s "]"
 
-function            = !"begin(" ( label "." )? label "(" paramater_map ")"
-variable            = !( "begin" / "end" / "while" / "do" / "goto" / other ) ( label "." )? label !"("
+reserved            = ( "begin" / "end" / "while" / "do" / "goto" / other ) !~"[a-zA-Z0-9_]"
+variable            = !reserved ( label "." )? label !"("
+
+function            = !reserved ( label "." )? label "(" paramater_map ")"
 array_item          = variable "[" value_expression "]"
 
 infix               = "(" value_expression ( "^" / "*" / "/" / "%" / "+" / "-" / "&" / "|" / "and"/ "or" / "==" / "!=" / "<=" / ">=" / ">" / "<" ) value_expression ")"

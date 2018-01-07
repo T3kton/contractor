@@ -85,7 +85,7 @@ begin( description="Provision AWS EC2" )
 end
 elif ( foundation.type == "Docker" ) then
 begin( description="Provision Docker" )
-  ssh_port = 4222
+  ssh_port = config.docker_check_port
   foundation.start()
 end
 else
@@ -102,6 +102,7 @@ begin( description="Provision From Installer" )
   foundation.power_on()
 end
 
+if ssh_port then
 begin( description="Verify Running" )
   iputils.wait_for_port( target=structure.provisioning_ip, port=ssh_port )
 end
@@ -121,8 +122,8 @@ foundation.power_off()
 
   pxe = PXE( name='ubuntu' )
   pxe.boot_script = """echo Ubuntu Installer
-kernel http://192.168.200.51:8081/xenial/vmlinuz auto url=http://192.168.200.51:8888/config/pxe_template/ locale=en_US.UTF-8 keyboard-configuration/layoutcode=us domain=example.com hostname={{ hostname }}
-initrd http://192.168.200.51:8081/xenial/initrd
+kernel http://192.168.200.51:8081/ubuntu/vmlinuz auto url=http://192.168.200.51:8888/config/pxe_template/ locale=en_US.UTF-8 keyboard-configuration/layoutcode=us domain=example.com hostname={{ hostname }}
+initrd http://192.168.200.51:8081/ubuntu/initrd
 boot
 """
   pxe.template = """
@@ -130,20 +131,20 @@ d-i debian-installer/locale string en_US
 d-i console-setup/ask_detect boolean false
 d-i keyboard-configuration/xkb-keymap select us
 
+d-i netcfg/enable boolean true
+d-i netcfg/disable_autoconfig boolean true
 d-i netcfg/choose_interface select auto
 
-# If you prefer to configure the network manually, uncomment this line and
-# the static network configuration below.
-#d-i netcfg/disable_autoconfig boolean true
+d-i netcfg/disable_dhcp boolean true
 
-# Static network configuration.
-#
-# IPv4 example
-d-i netcfg/get_ipaddress string {{ structure_network.eth0.ip_address }}
-d-i netcfg/get_netmask string {{ structure_network.eth0.netmask }}
-d-i netcfg/get_gateway string {{ structure_network.eth0.gateway }}
+d-i netcfg/get_ipaddress string {{ network.eth0.ip_address }}
+d-i netcfg/get_netmask string {{ network.eth0.netmask }}
+d-i netcfg/get_gateway string {{ network.eth0.gateway }}
 d-i netcfg/get_nameservers string {{ dns_servers.0 }}
 d-i netcfg/confirm_static boolean true
+
+d-i netcfg/get_hostname string {{ hostname }}
+d-i netcfg/get_domain string {{ domain_name }}
 
 d-i netcfg/hostname string {{ hostname }}
 
@@ -151,11 +152,11 @@ d-i netcfg/hostname string {{ hostname }}
 d-i mirror/country string manual
 d-i mirror/http/hostname string mirrors.mozy.com
 d-i mirror/http/directory string /ubuntu/
-d-i mirror/http/proxy string http://192.168.200.53:3128/
+d-i mirror/http/proxy string http://192.168.13.253:3128/
 #d-i mirror/http/proxy string
 
 # Suite to install.
-d-i mirror/suite string xenial
+d-i mirror/suite string {{ distro_version }}
 
 ### Account setup
 d-i passwd/make-user boolean false
@@ -196,7 +197,7 @@ d-i partman/mount_style select uuid
 ### Package selection
 tasksel tasksel/first multiselect server
 
-d-i pkgsel/include string openssh-server
+d-i pkgsel/include string openssh-server curl {{ ubuntu_packages }}
 d-i pkgsel/upgrade select safe-upgrade
 d-i pkgsel/update-policy select none
 
@@ -211,6 +212,13 @@ d-i grub-installer/bootdev  string /dev/sda
 d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
 
+#d-i preseed/early_command string kill-all-dhcp; netcfg
+d-i preseed/early_command string /bin/killall.sh; /bin/netcfg
+
+{% if postinstall_script %}
+d-i preseed/late_command string chroot /target sh -c "/usr/bin/curl -o /tmp/postinstall http://192.168.200.51:8081/scripts/{{ postinstall_script }} && /bin/sh -x /tmp/postinstall"
+{% endif %}
+
 """
   pxe.full_clean()
   pxe.save()
@@ -222,15 +230,15 @@ d-i debian-installer/exit/poweroff boolean true
 
   s = Script( name='create-esx', description='Install ESXi' )
   s.script = """# pxe boot and install
-  dhcp.set_pxe( interface=structure.provisioning_interface, pxe="esx" )
-  foundation.power_on()
-  delay( seconds=120 )
-  foundation.wait_for_poweroff()
+dhcp.set_pxe( interface=structure.provisioning_interface, pxe="esx" )
+foundation.power_on()
+delay( seconds=120 )
+foundation.wait_for_poweroff()
 
-  dhcp.set_pxe( interface=structure.provisioning_interface, pxe="normal-boot" )
-  foundation.power_on()
+dhcp.set_pxe( interface=structure.provisioning_interface, pxe="normal-boot" )
+foundation.power_on()
 
-  iputils.wait_for_port( target=structure.provisioning_ip, port=80 )
+iputils.wait_for_port( target=structure.provisioning_ip, port=80 )
   """
   s.full_clean()
   s.save()
@@ -238,8 +246,8 @@ d-i debian-installer/exit/poweroff boolean true
 
   s = Script( name='destroy-esx', description='Uninstall ESXi' )
   s.script = """# nothing to do, foundation cleanup should wipe/destroy the disks
-  foundation.power_off()
-  #eventually pxe boot to MBR wipper
+foundation.power_off()
+#eventually pxe boot to MBR wipper
   """
   s.full_clean()
   s.save()
@@ -256,7 +264,10 @@ accepteula
 
 rootpw 0skin3rd
 
-install --firstdisk --overwritevmfs
+clearpart --alldrives --overwritevmfs
+
+#install --firstdisk --overwritevmfs
+install --firstdisk=usb --overwritevmfs
 
 network --bootproto=static --ip={{ structure_network.eth0.ip_address }} --netmask={{ structure_network.eth0.netmask }}{% if structure_network.eth0.gateway %} --gateway={{ structure_network.eth0.gateway }}{% endif %} --nameserver={{ dns_servers.0 }} --hostname={{ hostname }}
 

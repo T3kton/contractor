@@ -191,7 +191,7 @@ class AggragatedNetworkInterface( AbstractNetworkInterface ):
     return 'AggragatedNetworkInterface "{0}"'.format( self.name )
 
 
-@cinp.model()
+@cinp.model( property_list=( 'gateway', 'netmask', 'size', 'isIpV4' ) )
 class AddressBlock( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   subnet = IpAddressField()
