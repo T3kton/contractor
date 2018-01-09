@@ -35,6 +35,25 @@ class Networked( models.Model ):
 
     return self
 
+  @property
+  def primary_ip( self ):
+    try:
+      return self.address_set.get( is_primary=True ).ip_address
+    except Address.DoesNotExist:
+      return None
+
+  @property
+  def provisioning_ip( self ):
+    try:
+      interface_name = self.foundation.interfaces.get( is_provisioning=True ).name
+    except NetworkInterface.DoesNotExist:
+      return None
+
+    try:
+      return self.address_set.get( interface_name=interface_name, is_primary=True ).ip_address
+    except Address.DoesNotExist:
+      return None
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):

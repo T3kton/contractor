@@ -269,7 +269,7 @@ clearpart --alldrives --overwritevmfs
 #install --firstdisk --overwritevmfs
 install --firstdisk=usb --overwritevmfs
 
-network --bootproto=static --ip={{ structure_network.eth0.ip_address }} --netmask={{ structure_network.eth0.netmask }}{% if structure_network.eth0.gateway %} --gateway={{ structure_network.eth0.gateway }}{% endif %} --nameserver={{ dns_servers.0 }} --hostname={{ hostname }}
+network --bootproto=static --ip={{ network.eth0.ip_address }} --netmask={{ network.eth0.netmask }}{% if network.eth0.gateway %} --gateway={{ network.eth0.gateway }}{% endif %} --nameserver={{ dns_servers.0 }} --hostname={{ hostname }}
 
 %post --interpreter=busybox
 /sbin/poweroff

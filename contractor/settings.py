@@ -24,6 +24,7 @@ INSTALLED_APPS = (
     'contractor_plugins.VirtualBox',
     'contractor_plugins.AWS',
     'contractor_plugins.Docker',
+    'contractor_plugins.Vcenter',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
