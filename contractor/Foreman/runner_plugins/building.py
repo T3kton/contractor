@@ -72,6 +72,8 @@ class FoundationPlugin( object ):
       else:
         result[ key ] = ( lambda getter=getter: getter( self.foundation ), None )
 
+    result[ 'id' ] = ( lambda: self.foundation_pk, None )
+    result[ 'class' ] = ( lambda: self.foundation_class, None )
     result[ 'locator' ] = ( lambda: self.foundation_locator, None )
 
     return result
@@ -109,20 +111,10 @@ class StructurePlugin( object ):  # ie: structure with some settable attributes,
   def getValues( self ):
     result = {}
 
-    try:
-      provisioning_interface = self.structure.foundation.interfaces.get( is_provisioning=True )
-    except ObjectDoesNotExist:
-      provisioning_interface = None
-
-    try:
-      provisioning_ip = self.structure.address_set.get( interface_name=provisioning_interface.name, sub_interface=None ) if provisioning_interface is not None else None
-    except ObjectDoesNotExist:
-      provisioning_ip = None
-
     result[ 'id' ] = ( lambda: self.structure.pk, None )
     result[ 'hostname' ] = ( lambda: self.structure.hostname, None )
-    result[ 'provisioning_ip' ] = ( lambda: provisioning_ip.ip_address if provisioning_ip is not None else None, None )
-    result[ 'provisioning_interface' ] = ( lambda: provisioning_interface if provisioning_interface is not None else None, None )
+    result[ 'provisioning_ip' ] = ( lambda: self.structure.provisioning_ip, None )
+    result[ 'provisioning_interface' ] = ( lambda: self.structure.provisioning_interface, None )
 
     return result
 

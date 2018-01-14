@@ -43,6 +43,13 @@ class Networked( models.Model ):
       return None
 
   @property
+  def provisioning_interface( self ):
+    try:
+      return self.structure.foundation.interfaces.get( is_provisioning=True )
+    except ObjectDoesNotExist:
+      return None
+
+  @property
   def provisioning_ip( self ):
     try:
       interface_name = self.foundation.interfaces.get( is_provisioning=True ).name
