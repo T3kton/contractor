@@ -175,6 +175,14 @@ class Contractor
     return this.cinp.call( uri + '(rollback)' );
   };
 
+  getJobState = ( uri ) =>
+  {
+    var variables = this.cinp.call( uri + '(jobRunnerVariables)' );
+    var state = this.cinp.call( uri + '(jobRunnerState)' );
+
+    return Promise.all( [ variables, state ] );
+  };
+
   getConfig = ( uri ) =>
   {
     return this.cinp.call( uri + '(getConfig)' );

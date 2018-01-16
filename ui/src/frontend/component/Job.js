@@ -1,5 +1,6 @@
 import React from 'react';
 import CInP from './cinp';
+import JobStateDialog from './JobStateDialog';
 import { Table, TableHead, TableRow, TableCell, Navagation, Button } from 'react-toolbox';
 import { Link } from 'react-router-dom';
 
@@ -213,6 +214,7 @@ class Job extends React.Component
               <Button onClick={ this.resume } disabled={ !this.state.canResume }>Resume</Button>
               <Button onClick={ this.reset } disabled={ !this.state.canReset }>Reset</Button>
               <Button onClick={ this.rollback } disabled={ !this.state.canRollback }>Rollback</Button>
+              <JobStateDialog getState={ this.props.contractor.getJobState } uri={ this.state.jobURI } />
               <table>
                 <thead/>
                 <tbody>

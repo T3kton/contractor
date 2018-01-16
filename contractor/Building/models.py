@@ -76,7 +76,7 @@ class Foundation( models.Model ):
               'type': ( lambda foundation: foundation.subclass.type, None ),
               'site': ( lambda foundation: foundation.site.pk, None ),
               'blueprint': ( lambda foundation: foundation.blueprint.pk, None ),
-              'id_map': ( lambda foundation: foundation.ip_map, None ),
+              # 'ip_map': ( lambda foundation: foundation.ip_map, None ),
               'interface_list': ( lambda foundation: [ i for i in foundation.interfaces.all() ], None )
             }
 

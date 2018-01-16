@@ -101,6 +101,49 @@ class BaseJob( models.Model ):
   def jobStats( site ):
     return { 'running': BaseJob.objects.filter( site=site ).count(), 'error': BaseJob.objects.filter( site=site, state__in=( 'error', 'aborted', 'paused' ) ).count() }
 
+  @cinp.action( return_type={ 'type': 'Map' } )
+  def jobRunnerVariables( self ):
+    result = {}
+    runner = pickle.loads( self.script_runner )
+
+    for module in runner.value_map:
+      for name in runner.value_map[ module ]:
+        result[ '{0}.{1}'.format( module, name ) ] = str( runner.value_map[ module ][ name ][0]() )
+
+    result.update( runner.variable_map )
+
+    return result
+
+  @cinp.action( return_type={ 'type': 'Map' } )
+  def jobRunnerState( self ):
+    result = {}
+    runner = pickle.loads( self.script_runner )
+
+    blueprint = None
+
+    try:
+      blueprint = self.foundationjob.foundation.blueprint
+    except ObjectDoesNotExist:
+      pass
+
+    try:
+      blueprint = self.structurejob.structure.blueprint
+    except ObjectDoesNotExist:
+      pass
+
+    try:
+      blueprint = self.dependancyjob.dependancy.blueprint
+    except ObjectDoesNotExist:
+      pass
+
+    if blueprint is not None:
+      result[ 'script' ] = blueprint.get_script( self.script_name )
+
+    result[ 'cur_line' ] = runner.cur_line
+    result[ 'state' ] = str( runner.state )
+
+    return result
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
@@ -150,6 +193,14 @@ class FoundationJob( BaseJob ):
   def rollback( self ):
     super().rollback()
 
+  @cinp.action( return_type={ 'type': 'Map' } )
+  def jobRunnerVariables( self ):
+    return super().jobRunnerVariables()
+
+  @cinp.action( return_type={ 'type': 'Map' } )
+  def jobRunnerState( self ):
+    return super().jobRunnerState()
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
@@ -195,6 +246,14 @@ class StructureJob( BaseJob ):
   def rollback( self ):
     super().rollback()
 
+  @cinp.action( return_type={ 'type': 'Map' } )
+  def jobRunnerVariables( self ):
+    return super().jobRunnerVariables()
+
+  @cinp.action( return_type={ 'type': 'Map' } )
+  def jobRunnerState( self ):
+    return super().jobRunnerState()
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
@@ -238,6 +297,14 @@ class DependancyJob( BaseJob ):
   @cinp.action()
   def rollback( self ):
     super().rollback()
+
+  @cinp.action( return_type={ 'type': 'Map' } )
+  def jobRunnerVariables( self ):
+    return super().jobRunnerVariables()
+
+  @cinp.action( return_type={ 'type': 'Map' } )
+  def jobRunnerState( self ):
+    return super().jobRunnerState()
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
