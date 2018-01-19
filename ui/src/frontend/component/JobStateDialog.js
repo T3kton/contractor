@@ -66,7 +66,7 @@ class JobStateDialog extends React.Component
             <p>{ this.state.stack }</p>
           </div>
         </Dialog>
-        <Button onClick={ this.show }>Display Full Config</Button>
+        <Button onClick={ this.show }>Display Internal Job Info</Button>
       </div>
 );
   }

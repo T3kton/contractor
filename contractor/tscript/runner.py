@@ -793,9 +793,11 @@ class Runner( object ):
 
           else:
             try:
-              value = handler( **self.state[ state_index ][1][ 'paramaters' ] )
+              paramaters = self.state[ state_index ][1][ 'paramaters' ]
             except TypeError as e:
               raise ParamaterError( '<unknown>', e, self.cur_line )
+
+            value = handler( **paramaters )
 
         if isinstance( handler, ExternalFunction ):  # else was allready run and set a value above
           handler._runner = self

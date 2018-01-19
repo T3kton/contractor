@@ -229,7 +229,6 @@ class Job extends React.Component
                   <tr><th>Message</th><td>{ job.message }</td></tr>
                   <tr><th>Progress</th><td>{ job.progress }</td></tr>
                   <tr><th>State</th><td>{ job.state }</td></tr>
-                  <tr><th>Status</th><td>{ job.status }</td></tr>
                   <tr><th>Created</th><td>{ job.created }</td></tr>
                   <tr><th>Updated</th><td>{ job.updated }</td></tr>
                 </tbody>
