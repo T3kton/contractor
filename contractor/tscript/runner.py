@@ -1,6 +1,7 @@
 import uuid
 import traceback
 import datetime
+import copy
 from importlib import import_module
 
 from contractor.tscript.parser import types
@@ -657,7 +658,7 @@ class Runner( object ):
         self.state = self.state[ :( state_index + 1 ) ]
 
       target = op_data[ 'target' ][1]
-      value = self.state[ state_index ][1][ 'value' ]
+      value = copy.deepcopy( self.state[ state_index ][1][ 'value' ] )
 
       if target[ 'module' ] is None:  # we don't evaluate the target, it can only be a variable
         if op_data[ 'target' ][0] == types.ARRAY_ITEM:

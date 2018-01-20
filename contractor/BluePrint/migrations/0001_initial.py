@@ -223,60 +223,6 @@ d-i preseed/late_command string chroot /target sh -c "/usr/bin/curl -o /tmp/post
   pxe.full_clean()
   pxe.save()
 
-  sbpe = StructureBluePrint( name='generic-esx', description='Generic ESXi' )
-  sbpe.config_values = { }
-  sbpe.full_clean()
-  sbpe.save()
-
-  s = Script( name='create-esx', description='Install ESXi' )
-  s.script = """# pxe boot and install
-dhcp.set_pxe( interface=structure.provisioning_interface, pxe="esx" )
-foundation.power_on()
-delay( seconds=120 )
-foundation.wait_for_poweroff()
-
-dhcp.set_pxe( interface=structure.provisioning_interface, pxe="normal-boot" )
-foundation.power_on()
-
-iputils.wait_for_port( target=structure.provisioning_ip, port=80 )
-  """
-  s.full_clean()
-  s.save()
-  BluePrintScript( blueprint=sbpe, script=s, name='create' ).save()
-
-  s = Script( name='destroy-esx', description='Uninstall ESXi' )
-  s.script = """# nothing to do, foundation cleanup should wipe/destroy the disks
-foundation.power_off()
-#eventually pxe boot to MBR wipper
-  """
-  s.full_clean()
-  s.save()
-  BluePrintScript( blueprint=sbpe, script=s, name='destroy' ).save()
-
-  pxe = PXE( name='esx' )
-  pxe.boot_script = """echo ESX Installer
-kernel -n mboot.c32 http://192.168.200.51:8081/esxi/mboot.c32
-imgargs mboot.c32 -c http://192.168.200.51:8081/esxi/boot.cfg ks=http://192.168.200.51:8888/config/pxe_template/
-boot mboot.c32
-"""
-  pxe.template = """
-accepteula
-
-rootpw 0skin3rd
-
-clearpart --alldrives --overwritevmfs
-
-#install --firstdisk --overwritevmfs
-install --firstdisk=usb --overwritevmfs
-
-network --bootproto=static --ip={{ network.eth0.ip_address }} --netmask={{ network.eth0.netmask }}{% if network.eth0.gateway %} --gateway={{ network.eth0.gateway }}{% endif %} --nameserver={{ dns_servers.0 }} --hostname={{ hostname }}
-
-%post --interpreter=busybox
-/sbin/poweroff
-"""
-  pxe.full_clean()
-  pxe.save()
-
 
 class Migration(migrations.Migration):
 

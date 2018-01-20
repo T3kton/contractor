@@ -6,6 +6,8 @@ from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, Timeout, Pause
 
 
+#TODO: test the assignment deepcopy, ie: a = {},b = a, make sure changes to b are not reflected in a
+
 class testExternalObject( object ):
   TSCRIPT_NAME = 'test_obj'
 
