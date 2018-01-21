@@ -61,6 +61,15 @@ class Networked( models.Model ):
     except Address.DoesNotExist:
       return None
 
+  @property
+  def fqdn( self ):
+    try:
+      zone = self.site.zone
+    except ( ObjectDoesNotExist, AttributeError ):
+      return self.hostname
+
+    return '{0}.{1}'.format( self.hostname, zone.fqdn )
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
@@ -71,6 +80,14 @@ class Networked( models.Model ):
     errors = {}
     if not hostname_regex.match( self.hostname ):
       errors[ 'hostname' ] = 'Structure hostname "{0}" is invalid'.format( self.hostname )
+
+    try:
+      zone = self.site.zone
+    except ( ObjectDoesNotExist, AttributeError ):
+      zone = None
+
+    if zone is not None and zone.site_set.filter( networked__hostname=self.hostname ).exclude( networked__pk=self.pk ).count():
+      errors[ 'hostname' ] = 'Hostname "{0}" allready used in DNS Zone "{1}"'.format( self.hostname, zone.pk )
 
     if errors:
       raise ValidationError( errors )

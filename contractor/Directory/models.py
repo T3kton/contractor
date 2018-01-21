@@ -62,7 +62,7 @@ class Zone( models.Model ):
       raise ValidationError( errors )
 
   def __str__( self ):
-    return 'Entry of type "{0}" for "{1}"'.format( self.type, self.name )
+    return 'Zone "{0}"({1})'.format( self.name, self.fqdn )
 
 
 @cinp.model()
@@ -93,9 +93,8 @@ class Entry( models.Model ):
     if self.weight < 1 or self.weight > 4096:
       errors[ 'weight' ] = 'Invalid'
 
-    if self.weight < 1 or self.weight > 4096:
-      errors[ 'weight' ] = 'Invalid'
-
+    if self.weight < 1 or self.weight > 65535:
+      errors[ 'port' ] = 'port'
 
     if errors:
       raise ValidationError( errors )

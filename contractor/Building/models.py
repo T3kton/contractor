@@ -2,7 +2,7 @@ import uuid
 
 from django.utils import timezone
 from django.db import models
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
@@ -300,14 +300,6 @@ class Structure( Networked ):
     errors = {}
     if self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
       errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint.description, self.foundation.blueprint.description )
-
-    try:
-      zone = self.site.zone
-    except ( ObjectDoesNotExist, AttributeError ):
-      zone = None
-
-    if zone is not None and zone.filter( site__structure__hostname=self.hostname ):
-      errors[ 'hostname' ] = 'Hostname "{0}" allready used in DNS Zone "{1}"'.format( self.hostname, zone.pk )
 
     if errors:
       raise ValidationError( errors )

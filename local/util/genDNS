@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
-
 import os
+
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
 import json
 from datetime import datetime
 import hashlib
@@ -9,8 +14,8 @@ from contractor.Directory.models import Zone
 from contractor.Directory.lib import genZone, genPtrZones, genMasterFile
 
 CACHE_FILE = '/var/lib/contractor/dns.cache'
-ZONE_DIR = '/opt/dns/'
-MASTER_FILE = '/opt/dns.master'
+ZONE_DIR = '/etc/bind/contractor/zones/'
+MASTER_FILE = '/etc/bind/contractor/dns.master'
 
 
 def serial():
@@ -22,12 +27,11 @@ def serial():
 
 
 def updateFile( filename, txt, cache ):
-  hash = hashlib.sha256( txt )
+  hash = hashlib.sha256( txt.encode() ).hexdigest()
 
-  if cache[ filename ] != hash:
+  if cache.get( filename, '' ) != hash:
     print( 'Writing "{0}"...'.format( filename ) )
-    txt.replace( '**ZONE_SERIAL**', serial() )
-    open( os.path.join( ZONE_DIR, filename ), 'w' ).write( txt )
+    open( os.path.join( ZONE_DIR, filename ), 'w' ).write( txt.replace( '**ZONE_SERIAL**', serial() ) )
     cache[ filename ] = hash
 
 
