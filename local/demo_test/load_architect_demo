@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+import os
+
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
+from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint, Script
+from contractor.Site.models import Site
+from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependancy
+from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
+from contractor_plugins.Manual.models import ManualFoundation, ManualComplex, ManualComplexedFoundation
+
+fbp_manual = FoundationBluePrint.objects.get( pk='generic-manual' )
+sbp_manual = StructureBluePrint.objects.get( pk='generic-manual-structure' )
+
+print( 'creating sites...' )
+s1 = Site( name='site1', description='Test Site 1' )
+s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'dns_servers' ] = [ '127.0.0.1' ]
+s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.full_clean()
+s1.save()
+
+s2 = Site( name='site2', description='Test Site 2' )
+s2.config_values[ 'domain_name' ] = 's2.site1.local'
+s2.config_values[ '{dns_search' ] = [ 's2.site1.local' ]
+s2.config_values[ 'dns_servers' ] = [ '10.0.0.1' ]
+s2.parent = s1
+s2.full_clean()
+s2.save()
+
+print( 'creating networks...' )
+addr1_block = AddressBlock( site=s1, subnet='192.168.200.0', gateway_offset=1, prefix=24 )
+addr1_block.full_clean()
+addr1_block.save()
+
+addr2_block = AddressBlock( site=s2, subnet='169.254.0.0', gateway_offset=1, prefix=24 )
+addr2_block.full_clean()
+addr2_block.save()
+
+for i in range( 3, 10 ):
+  addr = ReservedAddress( address_block=addr1_block, offset=i, reason='switch reserved' )
+  addr.full_clean()
+  addr.save()
+
+addr = ReservedAddress( address_block=addr1_block, offset=10, reason='resource server' )
+addr.full_clean()
+addr.save()
+
+for i in range( 220, 225 ):
+  addr = DynamicAddress( address_block=addr1_block, offset=i )
+  addr.full_clean()
+  addr.save()
+
+for i in range( 1, 6 ):
+  print( 'Making a complex {0}...'.format( i ) )
+  fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator='host{0:02}'.format( i ) )
+  fdn.full_clean()
+  fdn.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=sbp_manual, hostname='host{0:02}'.format( i ), foundation=fdn )
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+  addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=20 + i, is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+  cpx = ManualComplex( site=s1, name='cplx{0:02}'.format( i ), description='manual complex {0}'.format( i ) )
+  cpx.full_clean()
+  cpx.save()
+
+  cpx_member = ComplexStructure( complex=cpx, structure=strct )
+  cpx_member.full_clean()
+  cpx_member.save()
+
+
+#if os.environ.get( 'DEMO_MODE', False ):
+if True:
+  print( 'enabling demo mode' )
+  for name in ( 'create-generic-manual', 'destroy-generic-manual', 'utility-generic-manual', 'utility2-generic-manual', 'create-manual-structure', 'destroy-manual-structure', 'utility-manual-structure', 'utility2-manual-structure'):
+    script = Script.objects.get( name=name )
+    script.script = 'delay( seconds=5 )'
+    script.full_clean()
+    script.save()
