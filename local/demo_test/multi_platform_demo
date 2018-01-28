@@ -13,11 +13,10 @@ from contractor.Building.models import Structure, FoundationNetworkInterface, Co
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, DynamicAddress
 from contractor_plugins.Manual.models import ManualFoundation
 from contractor_plugins.AMT.models import AMTFoundation
-from contractor_plugins.Docker.models import DockerFoundation, DockerComplex
+from contractor_plugins.Docker.models import DockerFoundation, DockerComplex, DockerPort
 from contractor_plugins.Vcenter.models import VcenterFoundation, VcenterComplex
 from contractor_plugins.VirtualBox.models import VirtualBoxFoundation, VirtualBoxComplex
 from contractor_plugins.AWS.models import AWSEC2Foundation
-
 
 fbp_amt = FoundationBluePrint.objects.get( pk='generic-amt' )
 fbp_manual = FoundationBluePrint.objects.get( pk='generic-manual' )
@@ -37,17 +36,23 @@ sbp_docker.parent = sbp_xenial
 sbp_docker.full_clean()
 sbp_docker.save()
 
-sbp_demo_web = StructureBluePrint( name='demo-web', description='Demo Web Server' )
-sbp_demo_web.config_values = { '}ubuntu_packages': 'nginx-full', 'postinstall_script': 'websetup', 'docker_image': '192.168.200.52:5000/demoweb:latest' }
-sbp_demo_web.parent = sbp_xenial
-sbp_demo_web.full_clean()
-sbp_demo_web.save()
-
 sbp_demo_ssh = StructureBluePrint( name='demo-ssh', description='Demo SSH Server' )
-sbp_demo_ssh.config_values = { '}ubuntu_packages': 'openssh-server', 'postinstall_script': 'sshsetup', 'docker_image': '192.168.200.52:5000/demossh:latest' }
+sbp_demo_ssh.config_values[ '}ubuntu_packages' ] = 'openssh-server'
+sbp_demo_ssh.config_values[ 'postinstall_script' ] = 'sshsetup'
+sbp_demo_ssh.config_values[ 'docker_image' ] = '192.168.200.52:5000/demossh:latest'
+sbp_demo_ssh.config_values[ 'docker_port_list' ] = [ '22/tcp' ]
 sbp_demo_ssh.parent = sbp_xenial
 sbp_demo_ssh.full_clean()
 sbp_demo_ssh.save()
+
+sbp_demo_web = StructureBluePrint( name='demo-web', description='Demo Web Server' )
+sbp_demo_web.config_values[ '}ubuntu_packages' ] = 'nginx-full'
+sbp_demo_web.config_values[ 'postinstall_script' ] = 'websetup'
+sbp_demo_web.config_values[ 'docker_image' ] = '192.168.200.52:5000/demoweb:latest'
+sbp_demo_web.config_values[ 'docker_port_list' ] = [ '80/tcp', '22/tcp' ]
+sbp_demo_web.parent = sbp_xenial
+sbp_demo_web.full_clean()
+sbp_demo_web.save()
 
 print( 'creating sites...' )
 zl = Zone()
@@ -70,6 +75,7 @@ s1.zone = zs1
 s1.config_values[ 'domain_name' ] = 'site1.local'
 s1.config_values[ 'dns_servers' ] = [ '192.168.200.51' ]
 s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'http_proxy' ] = 'http://192.168.200.50:3128/'
 s1.full_clean()
 s1.save()
 
@@ -86,6 +92,7 @@ for i in range( 10, 19 ):
   addr.save()
 
 suport_devices = {
+                   'packrat': 50,
                    'contractor': 51,
                    'subcontractor': 52,
                  }
@@ -118,12 +125,12 @@ aws_instances = {
                 }
 
 docker_containers = {
-                     'web-c01': [ sbp_demo_web, { '80/tcp': 7001 }, 7001 ],
-                     'web-c02': [ sbp_demo_web, { '80/tcp': 7002 }, 7002 ],
-                     'ssh-c01': [ sbp_demo_ssh, { '22/tcp': 6001 }, 6001 ],
-                     'ssh-c02': [ sbp_demo_ssh, { '22/tcp': 6002 }, 6002 ],
-                     # 'ssh-c03': [ sbp_demo_ssh, { '22/tcp': 6003 }, 6003 ],
-                     # 'ssh-c04': [ sbp_demo_ssh, { '22/tcp': 6004 }, 6004 ],
+                     'web-c01': [ sbp_demo_web ],
+                     'web-c02': [ sbp_demo_web ],
+                     'ssh-c01': [ sbp_demo_ssh ],
+                     'ssh-c02': [ sbp_demo_ssh ],
+                     # 'ssh-c03': [ sbp_demo_ssh ],
+                     # 'ssh-c04': [ sbp_demo_ssh ],
                    }
 
 
@@ -235,6 +242,7 @@ for hostname in esx_vms:
 
   tmp = hosts.pop()
   hosts.insert( 0, tmp )
+
   fdn = VcenterFoundation( site=s1, blueprint=fbp_vcenter, locator=hostname )
   fdn.vcenter_host = tmp
   fdn.full_clean()
@@ -357,16 +365,21 @@ for strct in Structure.objects.all():
   cs.full_clean()
   cs.save()
 
+  for i in range( 6000, 6050 ):
+    port = DockerPort( address_offset=0, port=i )
+    port.complex = dc
+    port.full_clean()
+    port.save()
+
 print( 'Creating Docker Structures...' )
 hosts = list( DockerComplex.objects.all() )
 for hostname in docker_containers:
   container = docker_containers[ hostname ]
   blueprint = container[0]
-  port_map = container[1]
-  check_port = container[2]
 
   tmp = hosts.pop()
   hosts.insert( 0, tmp )
+
   fdn = DockerFoundation( site=s1, blueprint=fbp_docker, locator=hostname )
   fdn.docker_host = tmp
   fdn.full_clean()
@@ -381,12 +394,6 @@ for hostname in docker_containers:
   fni.save()
 
   strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
-  strct.config_values[ 'docker_port_map' ] = port_map
-  strct.config_values[ 'docker_check_port' ] = check_port
   strct.auto_build = True
   strct.full_clean()
   strct.save()
-
-  addr = Address( networked=strct, pointer=fdn.docker_host.members.get().networked_ptr.address_set.get( is_primary=True ), interface_name='eth0', is_primary=True )
-  addr.full_clean()
-  addr.save()

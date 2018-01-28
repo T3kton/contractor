@@ -95,7 +95,7 @@ begin( description="Provision From Installer" )
 
   dhcp.set_pxe( interface=structure.provisioning_interface, pxe="ubuntu" )
   foundation.power_on()
-  delay( seconds=120 )
+  delay( seconds=300 )
   foundation.wait_for_poweroff()
 
   dhcp.set_pxe( interface=structure.provisioning_interface, pxe="normal-boot" )
@@ -152,8 +152,7 @@ d-i netcfg/hostname string {{ hostname }}
 d-i mirror/country string manual
 d-i mirror/http/hostname string mirrors.mozy.com
 d-i mirror/http/directory string /ubuntu/
-d-i mirror/http/proxy string http://192.168.13.253:3128/
-#d-i mirror/http/proxy string
+d-i mirror/http/proxy string {{ http_proxy }}
 
 # Suite to install.
 d-i mirror/suite string {{ distro_version }}

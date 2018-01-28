@@ -1,22 +1,31 @@
-from django.core.exceptions import ObjectDoesNotExist
-
 from contractor.lib.config import getConfig
 
 
-class ConfigPlugin( object ):  # this is purley Read Only, if wiring is needed have to set it to the structure/foundation's config_values, and figure out a way to reload
+def getWrapper( target, key ):  # TODO: find a way to make this less expensive, mabey something that can detect if the target has changed, without calling getConfig
+  config = getConfig( target )
+  return config[ key ]
+
+
+class ConfigPlugin( object ):
   TSCRIPT_NAME = 'config'
 
   def __init__( self, target ):
     super().__init__()
-    if isinstance( target, dict ):
-      self.config = target
+    if isinstance( target, tuple ):
+      self.target_class = target[0]
+      self.target_pk = target[1]
+      self.target = self.target_class.objects.get( pk=self.target_pk )
+
     else:
-      self.config = getConfig( target )
+      self.target_class = target.__class__
+      self.target_pk = target.pk
+      self.target = target.subclass
 
   def getValues( self ):
+    config = getConfig( self.target )
     result = {}
-    for key in self.config:
-      result[ key ] = ( lambda key=key: self.config[ key ], None )
+    for key in config:
+      result[ key ] = ( lambda key=key: getWrapper( self.target, key ), None )
 
     return result
 
@@ -26,36 +35,29 @@ class ConfigPlugin( object ):  # this is purley Read Only, if wiring is needed h
     return result
 
   def __reduce__( self ):
-    return ( self.__class__, ( self.config, ) )
+    return ( self.__class__, ( ( self.target_class, self.target_pk ), ) )
 
 
 class FoundationPlugin( object ):
   TSCRIPT_NAME = 'foundation'
 
-  def __init__( self, foundation ):  # most of the time all that is needed is the locator, so we are going to cache that and only go get the object if other than locator is needed
+  def __init__( self, foundation, write=True ):
     super().__init__()
     self._dirty_list = []
     if isinstance( foundation, tuple ):
-      self._foundation = None
       self.foundation_class = foundation[0]
       self.foundation_pk = foundation[1]
-      self.foundation_locator = foundation[2]
+      self.foundation = self.foundation_class.objects.get( pk=self.foundation_pk )
 
     else:
-      self._foundation = foundation.subclass
-      self.foundation_class = self._foundation.__class__
-      self.foundation_pk = foundation.pk
-      self.foundation_locator = foundation.locator
+      self.foundation = foundation.subclass
+      self.foundation_class = self.foundation.__class__
+      self.foundation_pk = self.foundation.pk
 
-    self.value_map = self.foundation_class.getTscriptValues( True )
+    self.write = write
+
+    self.value_map = self.foundation_class.getTscriptValues( write )
     self.function_map = self.foundation_class.getTscriptFunctions()
-
-  @property
-  def foundation( self ):
-    if self._foundation is None:
-      self._foundation = self.foundation_class.objects.get( pk=self.foundation_pk )
-
-    return self._foundation
 
   def _setValue( self, name, val ):
     setter = self.value_map[ name ][1]
@@ -67,14 +69,14 @@ class FoundationPlugin( object ):
     for key in self.value_map:
       getter = self.value_map[ key ][0]
       setter = self.value_map[ key ][1]
-      if setter is not None:
+      if setter is not None and self.write:
         result[ key ] = ( lambda getter=getter: getter( self.foundation ), lambda val, name=key: self._setValue( name, val ) )
       else:
         result[ key ] = ( lambda getter=getter: getter( self.foundation ), None )
 
     result[ 'id' ] = ( lambda: self.foundation_pk, None )
     result[ 'class' ] = ( lambda: self.foundation_class, None )
-    result[ 'locator' ] = ( lambda: self.foundation_locator, None )
+    result[ 'foundation' ] = ( lambda: self.foundation, None )
 
     return result
 
@@ -87,18 +89,16 @@ class FoundationPlugin( object ):
     return result
 
   def __reduce__( self ):
-    if self._foundation is not None and self._dirty_list:
-      self._foundation.full_clean()
-      self._foundation.save( update_fields=self._dirty_list )
+    if self.write and self._dirty_list:
+      self.foundation.full_clean()
+      self.foundation.save( update_fields=self._dirty_list )
 
-    return ( self.__class__, ( ( self.foundation_class, self.foundation_pk, self.foundation_locator ), ) )
+    return ( self.__class__, ( ( self.foundation_class, self.foundation_pk ), self.write ) )
 
 
 class ROFoundationPlugin( FoundationPlugin ):
-  def __init__( self, foundation ):
-    super().__init__( foundation )
-    # the same as Foundation plugin, except we want read only value_map, so replace value_map with this and call it good
-    self.value_map = self.foundation_class.getTscriptValues( False )
+  def __init__( self, foundation, _=None ):
+    super().__init__( foundation, write=False )
 
 
 class StructurePlugin( object ):  # ie: structure with some settable attributes, 'config' is structures (with the foundation merged in of course)
