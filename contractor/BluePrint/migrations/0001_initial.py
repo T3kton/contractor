@@ -77,7 +77,7 @@ pause( msg='Do the thing, then Resume' )
 
   s = Script( name='create-linux', description='Install Linux' )
   s.script = """# pxe boot and install
-ssh_port = 22
+check_port = 22
 
 if ( foundation.type == "AWSEC2" ) then
 begin( description="Provision AWS EC2" )
@@ -85,7 +85,7 @@ begin( description="Provision AWS EC2" )
 end
 elif ( foundation.type == "Docker" ) then
 begin( description="Provision Docker" )
-  ssh_port = config.docker_check_port
+  check_port = config.docker_check_port
   foundation.start()
 end
 else
@@ -102,9 +102,9 @@ begin( description="Provision From Installer" )
   foundation.power_on()
 end
 
-if ssh_port then
+if check_port then
 begin( description="Verify Running" )
-  iputils.wait_for_port( target=structure.provisioning_ip, port=ssh_port )
+  iputils.wait_for_port( target=structure.provisioning_ip, port=check_port )
 end
 """
   s.full_clean()
@@ -112,9 +112,20 @@ end
   BluePrintScript( blueprint=sbpl, script=s, name='create' ).save()
 
   s = Script( name='destroy-linux', description='Uninstall Linux' )
-  s.script = """# nothing to do, foundation cleanup should wipe/destroy the disks
-foundation.power_off()
-#eventually pxe boot to MBR wipper
+  s.script = """# foundation cleanup should wipe/destroy the disks
+if ( foundation.type == "AWSEC2" ) then
+begin( description="Stop AWS EC2" )
+  # foundation will kill it
+end
+elif ( foundation.type == "Docker" ) then
+begin( description="Stop Docker" )
+  foundation.stop()
+end
+else
+begin( description="Power Off" )
+  foundation.power_off()
+  # Wipe MBR/Disk
+end
 """
   s.full_clean()
   s.save()
