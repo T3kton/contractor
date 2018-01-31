@@ -1,4 +1,5 @@
 import re
+import random
 from django.db import models
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
@@ -7,7 +8,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, IpAddressField, hostname_regex, name_regex
 from contractor.BluePrint.models import PXE
 from contractor.Site.models import Site
-from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRNetworkSize, CIDRNetmask
+from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRNetworkSize, CIDRNetmask, CIDRNetworkRange
 
 cinp = CInP( 'Utilities', '0.1' )
 
@@ -267,6 +268,30 @@ class AddressBlock( models.Model ):
   def isIpV4( self ):
     return IpIsV4( StrToIp( self.subnet ) )
 
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.Address' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, { 'type': 'String' }, { 'type': 'Boolean' } ] )
+  def nextAddress( self, structure, interface_name, is_primary ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
+    address = Address( networked=structure, interface_name=interface_name, is_primary=is_primary )
+    if structure.foundation.subclass.__class__.__name__ == 'DockerFoundation':
+      # address.pointer = Address.objects.get( networked=structure.foundation.docker_host.members[0], interface_name='eth0' )
+      return None  # set map_ports will do the address
+
+    else:  # TODO: either retry till all_offsets is empty, or lock the Address table(s)
+      all_offsets = set( CIDRNetworkRange( StrToIp( self.subnet ), self.prefix, False, True ) )
+      if self.gateway_offset is not None:
+        all_offsets = all_offsets - set( [ self.gateway_offset ] )
+
+      if not all_offsets:
+        raise ValueError( 'No Available Offsets' )
+
+      used_offsets = set( BaseAddress.objects.filter( address_block=self, offset__isnull=False ).values_list( 'offset', flat=True ) )
+      address.address_block = self
+      address.offset = random.choice( list( all_offsets - used_offsets ) )
+
+    address.full_clean()
+    address.save()
+
+    return address
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
@@ -520,6 +545,11 @@ class Address( BaseAddress ):
   @staticmethod
   def filter_address_block( address_block ):
     return Address.objects.filter( address_block=address_block )
+
+  @cinp.list_filter( name='structure', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ] )
+  @staticmethod
+  def filter_structure( structure ):
+    return Address.objects.filter( networked=structure )
 
   @cinp.check_auth()
   @staticmethod

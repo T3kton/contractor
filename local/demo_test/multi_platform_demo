@@ -10,7 +10,7 @@ from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Site.models import Site
 from contractor.Directory.models import Zone
 from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure
-from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, DynamicAddress
+from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, DynamicAddress, ReservedAddress
 from contractor_plugins.Manual.models import ManualFoundation
 from contractor_plugins.AMT.models import AMTFoundation
 from contractor_plugins.Docker.models import DockerFoundation, DockerComplex, DockerPort
@@ -86,7 +86,12 @@ addr1_block.save()
 
 # plato is at 21, laptops at 5X
 
-for i in range( 10, 19 ):
+for i in set( range( 2, 60 ) ) - set( range( 11, 20 ) ) - set( [ 50, 51, 52 ] ):
+  addr = ReservedAddress( address_block=addr1_block, offset=i, reason='reserved for infrastructure' )
+  addr.full_clean()
+  addr.save()
+
+for i in range( 11, 20 ):
   addr = DynamicAddress( address_block=addr1_block, offset=i )
   addr.full_clean()
   addr.save()
@@ -373,6 +378,7 @@ for strct in Structure.objects.all():
 
 print( 'Creating Docker Structures...' )
 hosts = list( DockerComplex.objects.all() )
+
 for hostname in docker_containers:
   container = docker_containers[ hostname ]
   blueprint = container[0]

@@ -146,8 +146,8 @@ def CIDRNetworkBounds( ip, prefix, include_unusable=False, as_offsets=False ):
       return ( base_ip + 1, base_ip + net - 1)
 
 
-def CIDRNetworkRange( value, prefix, include_unusable=False ):
-  ( start, end ) = CIDRNetworkBounds( value, prefix, include_unusable )
+def CIDRNetworkRange( value, prefix, include_unusable=False, as_offsets=False ):
+  ( start, end ) = CIDRNetworkBounds( value, prefix, include_unusable, as_offsets )
 
   for i in range( start, ( end + 1 ) ):
     yield i

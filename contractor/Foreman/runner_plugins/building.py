@@ -17,9 +17,9 @@ class ConfigPlugin( object ):
       self.target = self.target_class.objects.get( pk=self.target_pk )
 
     else:
-      self.target_class = target.__class__
-      self.target_pk = target.pk
       self.target = target.subclass
+      self.target_class = self.target.__class__
+      self.target_pk = self.target.pk
 
   def getValues( self ):
     config = getConfig( self.target )

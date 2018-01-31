@@ -125,6 +125,11 @@ class Contractor
     return this.cinp.get( '/api/v1/Building/Structure:' + id + ':' );
   };
 
+  getStructureAddressList = ( id ) =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Utilities/Address', 'structure', { 'structure': '/api/v1/Building/Structure:' + id + ':' } );
+  };
+
   getComplex = ( id ) =>
   {
     return this.cinp.get( '/api/v1/Building/Complex:' + id + ':' );

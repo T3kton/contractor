@@ -51,7 +51,7 @@ class ScriptDialog extends React.Component
               <tr><th>Name</th><td>{ this.state.script.name }</td></tr>
               <tr><th>Description</th><td>{ this.state.script.description }</td></tr>
             { this.state.script.script_lines.map( ( item, index ) => (
-              <tr key={ index }><td>{ index }</td><td>{ item }</td></tr>
+              <tr key={ index }><td>{ index }</td><td><pre>{ item }</pre></td></tr>
             ) ) }
             </tbody>
           </table>

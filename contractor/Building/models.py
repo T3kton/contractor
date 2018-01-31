@@ -104,15 +104,6 @@ class Foundation( models.Model ):
 
     return self
 
-  @cinp.action( { 'type': 'String', 'is_array': True } )
-  @staticmethod
-  def getFoundationTypes():
-    return FOUNDATION_SUBCLASS_LIST
-
-  @cinp.action( 'Map' )
-  def getConfig( self ):
-    return getConfig( self.subclass )
-
   @property
   def type( self ):
     real = self.subclass
@@ -147,6 +138,15 @@ class Foundation( models.Model ):
   @property
   def dependancyId( self ):
     return 'f-{0}'.format( self.pk )
+
+  @cinp.action( { 'type': 'String', 'is_array': True } )
+  @staticmethod
+  def getFoundationTypes():
+    return FOUNDATION_SUBCLASS_LIST
+
+  @cinp.action( 'Map' )
+  def getConfig( self ):
+    return getConfig( self.subclass )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
@@ -256,20 +256,6 @@ class Structure( Networked ):
 
     return result
 
-  @cinp.action( return_type='Integer' )
-  def doCreate( self ):
-    from contractor.Foreman.lib import createJob
-    return createJob( 'create', self )
-
-  @cinp.action( return_type='Integer' )
-  def doDestroy( self ):
-    from contractor.Foreman.lib import createJob
-    return createJob( 'destroy', self )
-
-  @cinp.action( 'Map' )
-  def getConfig( self ):
-    return getConfig( self )
-
   @property
   def state( self ):
     if self.built_at is not None:
@@ -284,6 +270,20 @@ class Structure( Networked ):
   @property
   def dependancyId( self ):
     return 's-{0}'.format( self.pk )
+
+  @cinp.action( return_type='Integer' )
+  def doCreate( self ):
+    from contractor.Foreman.lib import createJob
+    return createJob( 'create', self )
+
+  @cinp.action( return_type='Integer' )
+  def doDestroy( self ):
+    from contractor.Foreman.lib import createJob
+    return createJob( 'destroy', self )
+
+  @cinp.action( 'Map' )
+  def getConfig( self ):
+    return getConfig( self )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod

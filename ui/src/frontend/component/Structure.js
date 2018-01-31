@@ -9,7 +9,8 @@ class Structure extends React.Component
 {
   state = {
       structure_list: [],
-      structure: null
+      structure: null,
+      address_list: []
   };
 
   componentDidMount()
@@ -36,6 +37,25 @@ class Structure extends React.Component
           data.foundation = CInP.extractIds( data.foundation )[0];
           data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, JSON.stringify( data.config_values[ key ] ) ] ) );
           this.setState( { structure: data } );
+
+          props.getAddressList( props.id )
+            .then( ( result ) =>
+            {
+              var address_list = [];
+              for ( var id in result.data )
+              {
+                var address = result.data[ id ];
+                id = CInP.extractIds( id )[0];
+                address_list.push( { id: id,
+                                        offset: address.offset,
+                                        ip_address: address.ip_address,
+                                        created: address.created,
+                                        updated: address.updated,
+                                      } );
+              }
+
+              this.setState( { address_list: address_list } );
+            } );
         } );
     }
     else
@@ -87,6 +107,15 @@ class Structure extends React.Component
                   <tr><th>Created</th><td>{ structure.created }</td></tr>
                   <tr><th>Updated</th><td>{ structure.updated }</td></tr>
                   <tr><th>Built At</th><td>{ structure.built_at }</td></tr>
+                  <tr><th colSpan="2">Ip Addresses</th></tr>
+                  <tr><td colSpan="2"><table>
+                  <thead><tr><th>Offset</th><th>Ip Address</th><th>Created</th><th>Updated</th></tr></thead>
+                  <tbody>
+                  { this.state.address_list.map( ( item ) => (
+                    <tr key={ item.id }><td>{ item.offset }</td><td>{ item.ip_address }</td><td>{ item.created }</td><td>{ item.updated }</td></tr>
+                  ) ) }
+                  </tbody>
+                  </table></td></tr>
                 </tbody>
               </table>
             </div>
