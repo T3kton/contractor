@@ -107,6 +107,22 @@ class BluePrint extends React.Component
                   <tr><th>Description</th><td>{ blueprint.description }</td></tr>
                   <tr><th>Config Values</th><td><table><thead/><tbody>{ blueprint.config_values.map( ( value ) => ( <tr key={ value[0] }><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
                   <tr><th>Scripts</th><td><ul>{ blueprint.scripts.map( ( script, index ) => ( <li key={ index } >{ script } <ScriptDialog getScript={ this.props.getScript } id={ script }/></li> ) ) }</ul></td></tr>
+                  { blueprint.foundation_blueprint_list !== undefined &&
+                    <tr><th >Foundation Blueprint</th><td><ul>
+                    {
+                      blueprint.foundation_blueprint_list.map( ( item, index ) => ( <li key={ index } ><Link to={ '/blueprint/f/' + CInP.extractIds( item )[0] }>{ CInP.extractIds( item )[0] }</Link></li> ) )
+                    }
+                    </ul></td></tr>
+                  }
+                  { blueprint.foundation_type_list !== undefined &&
+                    <tr><th>Type List</th><td>{ blueprint.foundation_type_list }</td></tr>
+                  }
+                  { blueprint.template !== undefined &&
+                    <tr><th>Template</th><td>{ JSON.stringify( blueprint.template ) }</td></tr>
+                  }
+                  { blueprint.physical_interface_names !== undefined &&
+                    <tr><th>Physical Interface Names</th><td>{ blueprint.physical_interface_names }</td></tr>
+                  }
                   <tr><th>Created</th><td>{ blueprint.created }</td></tr>
                   <tr><th>Updated</th><td>{ blueprint.updated }</td></tr>
                 </tbody>
