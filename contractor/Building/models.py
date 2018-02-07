@@ -3,6 +3,7 @@ import uuid
 from django.utils import timezone
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 from cinp.orm_django import DjangoCInP as CInP
 
@@ -473,8 +474,10 @@ class ComplexStructure( models.Model ):
 @cinp.model( property_list=( 'state', ) )
 class Dependancy( models.Model ):
   LINK_CHOICES = ( 'soft', 'hard' )  # a hardlink if the structure is set back pulls the foundation back with it, soft does not
-  foundation = models.ForeignKey( Foundation, on_delete=models.CASCADE )  # this is what id depending
-  structure = models.ForeignKey( Structure, on_delete=models.CASCADE )  # depending on this
+  structure = models.ForeignKey( Structure, on_delete=models.CASCADE, blank=True, null=True )  # depending on this
+  dependancy = models.ForeignKey( 'self', on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # or this
+  foundation = models.OneToOneField( Foundation, on_delete=models.CASCADE, blank=True, null=True )  # this is what id depending
+  script_structure = models.ForeignKey( Structure, on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # if this is specified, the script runs on this
   link = models.CharField( max_length=4, choices=[ ( i, i ) for i in LINK_CHOICES ] )
   create_script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job must complete before built_at is set
   destroy_script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job is run before destroying
@@ -489,8 +492,12 @@ class Dependancy( models.Model ):
   def setDestroyed( self ):
     self.built_at = None
     self.save()
+    for dependancy in Dependancy.objects.filter( dependancy=self ):
+      dependancy.setDestroyed()
+
     if self.link == 'hard':
-      self.foundation.setDestroyed()  # TODO: Destroyed or Identified?
+      if self.foundation is not None:
+        self.foundation.setDestroyed()  # TODO: Destroyed or Identified?
 
   @property
   def state( self ):
@@ -500,8 +507,36 @@ class Dependancy( models.Model ):
     return 'planned'
 
   @property
+  def site( self ):
+    if self.foundation is not None:
+      return self.foundation.site
+    elif self.script_structure is not None:
+      return self.script_structure.site
+    elif self.dependancy is not None:
+      return self.dependancy.site
+    else:
+      return self.structure.site
+
+  @property
+  def blueprint( self ):
+    if self.script_structure is not None:
+      return self.script_structure.blueprint
+    else:
+      return self.structure.blueprint
+
+  @property
   def description( self ):
-    return '{0}-{1}'.format( self.structure.hostname, self.foundation.locator )
+    left = None
+    if self.structure is not None:
+      left = self.structure.hostname
+    else:
+      left = self.dependancy.description
+
+    right = ''
+    if self.foundation is not None:
+      right = self.foundation.locator
+
+    return '{0}-{1}'.format( left, right )
 
   @property
   def dependancyId( self ):
@@ -515,7 +550,11 @@ class Dependancy( models.Model ):
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
-    return Dependancy.objects.filter( foundation__site=site )
+    return Dependancy.objects.filter( Q( foundation__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__isnull=True, dependancy__structure__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__isnull=True, structure__site=site )
+                                      )
 
   @cinp.check_auth()
   @staticmethod
@@ -525,6 +564,16 @@ class Dependancy( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
+
+    if self.dependancy is None and self.structure is None:
+      errors[ 'structure' ] = 'Either structure or dependancy is required'
+
+    if self.structure is None and self.script_structure is None:
+      if self.create_script_name is not None:
+        errors[ 'create_script_name' ] = 'structure or script_sctructure are required for scripts'
+
+      if self.destroy_script_name is not None:
+        errors[ 'destroy_script_name' ] = 'structure or script_sctructure are required for scripts'
 
     if self.create_script_name is not None and not name_regex.match( self.create_script_name ):
       errors[ 'create_script_name' ] = '"{0}" is invalid'.format( self.create_script_name )
@@ -538,8 +587,11 @@ class Dependancy( models.Model ):
     if errors:
       raise ValidationError( errors )
 
-  class Meta:
-    unique_together = ( ( 'structure', 'foundation' ), )
-
   def __str__( self ):
-    return 'Dependancy of "{0}" on "{1}"'.format( self.foundation, self.structure )
+    structure = None
+    if self.structure is not None:
+      structure = self.structure
+    else:
+      structure = self.dependancy.structure
+
+    return 'Dependancy of "{0}" on "{1}"'.format( self.foundation, structure )

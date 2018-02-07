@@ -132,7 +132,11 @@ class BaseJob( models.Model ):
       pass
 
     try:
-      blueprint = self.dependancyjob.dependancy.blueprint
+      dependancy = self.dependancyjob.dependancy
+      if dependancy.script_structure is not None:
+        blueprint = dependancy.script_structure.blueprint
+      else:
+        blueprint = dependancy.structure.blueprint
     except ObjectDoesNotExist:
       pass
 
@@ -280,7 +284,7 @@ class DependancyJob( BaseJob ):
       self.dependancy.setBuilt()
 
     else:
-      raise ValueError( 'Sciprt Name "{0}" does not match the create nor destroy script names' )  # Dependancy jobs can only create/destory, not named/utility sjobs
+      raise ValueError( 'Sciprt Name "{0}" does not match the create nor destroy script names' )  # Dependancy jobs can only create/destory, no named/utility jobs
 
   @cinp.action()
   def pause( self ):
@@ -317,4 +321,4 @@ class DependancyJob( BaseJob ):
     return True
 
   def __str__( self ):
-    return 'DependancyJob #{0} for "{1}" in "{2}"'.format( self.pk, self.dependancy.pk, self.dependancy.structure.site.pk )
+    return 'DependancyJob #{0} for "{1}" in "{2}"'.format( self.pk, self.dependancy.pk, self.dependancy.site.pk )

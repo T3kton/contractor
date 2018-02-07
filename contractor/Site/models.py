@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
@@ -28,6 +29,7 @@ class Site( models.Model ):
 
   @cinp.action( 'Map' )
   def getDependancyMap( self ):
+    from contractor.Building.models import Dependancy
     result = {}
     external_list = []
     structure_job_list = [ i.structurejob.structure.pk for i in self.basejob_set.filter( structurejob__isnull=False ) ]
@@ -44,7 +46,12 @@ class Site( models.Model ):
 
     for foundation in self.foundation_set.all().order_by( 'pk' ):
       foundation = foundation.subclass
-      dependancy_list = list( set( [ i.dependancyId for i in foundation.dependancy_set.all() ] ) )
+      #dependancy_list = list( set( [ i.dependancyId for i in foundation.dependancy_set.all() ] ) )
+      dependancy_list = []
+      try:
+        dependancy_list.append( foundation.dependancy.dependancyId )
+      except Dependancy.DoesNotExist:
+        pass
       try:
         dependancy_list += [ foundation.complex.dependancyId ]
         if foundation.complex.site != self:
@@ -54,12 +61,20 @@ class Site( models.Model ):
 
       result[ foundation.dependancyId ] = { 'description': foundation.description, 'type': 'Foundation', 'state': foundation.state, 'dependancy_list': dependancy_list, 'has_job': ( foundation.pk in foundation_job_list ), 'external': False }
 
-      for dependancy in foundation.dependancy_set.all().order_by( 'pk' ):  # Dependancy's "site" is the foundation's site, so it is never external
-        dependancy_list = [ dependancy.structure.dependancyId ]
-        if dependancy.structure.site != self:
-          external_list += [ dependancy.structure ]
+    for dependancy in Dependancy.objects.filter( Q( foundation__site=self ) |
+                                                 Q( foundation__isnull=True, script_structure__site=self ) |
+                                                 Q( foundation__isnull=True, script_structure__isnull=True, dependancy__structure__site=self ) |
+                                                 Q( foundation__isnull=True, script_structure__isnull=True, structure__site=self )
+                                                 ).order_by( 'pk' ):
 
-        result[ dependancy.dependancyId ] = { 'description': dependancy.description, 'type': 'Dependancy', 'state': dependancy.state, 'dependancy_list': dependancy_list, 'has_job': ( dependancy.pk in dependancy_job_list ), 'external': False }
+      if dependancy.dependancy is not None:
+        dependancy_list = [ dependancy.dependancy.dependancyId ]
+      else:
+        dependancy_list = [ dependancy.structure.dependancyId ]
+      if dependancy.site != self:
+        external_list += [ dependancy.structure ]
+
+      result[ dependancy.dependancyId ] = { 'description': dependancy.description, 'type': 'Dependancy', 'state': dependancy.state, 'dependancy_list': dependancy_list, 'has_job': ( dependancy.pk in dependancy_job_list ), 'external': False }
 
     for complex in self.complex_set.all().order_by( 'pk' ):
       complex = complex.subclass

@@ -28,7 +28,7 @@ class BluePrint( models.Model ):
       if self.parent is not None:
         return self.parent.get_script( name )
       else:
-        raise ValueError( 'BluePrint "{0}" does not have a script named "{1}"'.format( self.name, name ) )
+        return None
 
   @property
   def subclass( self ):

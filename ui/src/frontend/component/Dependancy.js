@@ -31,7 +31,9 @@ class Dependancy extends React.Component
         {
           var data = result.data;
           data.structure = CInP.extractIds( data.structure )[0];
+          data.dependancy = CInP.extractIds( data.dependancy )[0];
           data.foundation = CInP.extractIds( data.foundation )[0];
+          data.script_structure = CInP.extractIds( data.script_structure )[0];
           this.setState( { dependancy: data } );
         } );
     }
@@ -72,9 +74,12 @@ class Dependancy extends React.Component
             <table>
               <thead/>
               <tbody>
-                <tr><th>Foundation</th><td><Link to={ '/foundation/' + dependancy.foundation }>{ dependancy.foundation }</Link></td></tr>
                 <tr><th>Structure</th><td><Link to={ '/structure/' + dependancy.structure }>{ dependancy.structure }</Link></td></tr>
-                <tr><th>Script Name</th><td>{ dependancy.script_name }</td></tr>
+                <tr><th>Dependancy</th><td><Link to={ '/dependancy/' + dependancy.dependancy }>{ dependancy.dependancy }</Link></td></tr>
+                <tr><th>Foundation</th><td><Link to={ '/foundation/' + dependancy.foundation }>{ dependancy.foundation }</Link></td></tr>
+                <tr><th>Script Structure</th><td><Link to={ '/structure/' + dependancy.script_structure }>{ dependancy.script_structure }</Link></td></tr>
+                <tr><th>Create Script Name</th><td>{ dependancy.create_script_name }</td></tr>
+                <tr><th>Destroy Script Name</th><td>{ dependancy.destroy_script_name }</td></tr>
                 <tr><th>State</th><td>{ dependancy.state }</td></tr>
                 <tr><th>Link</th><td>{ dependancy.link }</td></tr>
                 <tr><th>Created</th><td>{ dependancy.created }</td></tr>

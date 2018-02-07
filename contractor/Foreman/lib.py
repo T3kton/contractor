@@ -1,4 +1,5 @@
 import pickle
+from django.db.models import Q
 
 from contractor.Building.models import Foundation, Structure, Dependancy
 from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin
@@ -14,7 +15,7 @@ RUNNER_MODULE_LIST = []
 
 def createJob( script_name, target ):
   if isinstance( target, Dependancy ) and script_name not in ( 'create', 'destroy' ):
-    raise ValueError( 'Dependancy Jbo can only have a create or destroy script_name' )
+    raise ValueError( 'Dependancy Job can only have a create or destroy script_name' )
 
   if script_name == 'create':
     if target.state == 'built':
@@ -48,11 +49,9 @@ def createJob( script_name, target ):
   if isinstance( target, Structure ):
     job = StructureJob()
     job.structure = target
-    job.site = target.site
     obj_list.append( ROFoundationPlugin( target.foundation ) )
     obj_list.append( StructurePlugin( target ) )
     obj_list.append( ConfigPlugin( target ) )
-    blueprint = target.blueprint
 
   elif isinstance( target, Foundation ):
     try:
@@ -63,27 +62,45 @@ def createJob( script_name, target ):
 
     job = FoundationJob()
     job.foundation = target
-    job.site = target.site
     obj_list.append( FoundationPlugin( target ) )
     obj_list.append( ConfigPlugin( target ) )
-    blueprint = target.blueprint
 
   elif isinstance( target, Dependancy ):
-    if target.structure.state != 'built':
-      raise ValueError( 'Can not start Dependancy job until Structure is built')
+    if target.dependancy is not None:
+      if target.dependancy.state != 'built':
+        raise ValueError( 'Can not start Dependancy job until Dependancy is built')
+    else:
+      if target.structure.state != 'built':
+        raise ValueError( 'Can not start Dependancy job until Structure is built')
 
     job = DependancyJob()
     job.dependancy = target
-    job.site = target.foundation.site  # job belongs to the foundation
-    obj_list.append( ROFoundationPlugin( target.foundation ) )
-    obj_list.append( ROStructurePlugin( target.structure ) )
-    obj_list.append( ConfigPlugin( target.structure ) )
-    blueprint = target.structure.blueprint  # with the structures's blueprint
+    structure = None
+    if target.script_structure:
+      structure = target.script_structure
+    else:
+      structure = target.structure
+    # TODO: need a plugin to bring in the target foundation
+    obj_list.append( ROFoundationPlugin( structure.foundation ) )
+    obj_list.append( ROStructurePlugin( structure ) )
+    obj_list.append( ConfigPlugin( structure ) )
 
   else:
     raise ValueError( 'target must be a Structure, Foundation, or Dependancy' )
 
-  runner = Runner( parse( blueprint.get_script( script_name ) ) )
+  job.site = target.site
+  blueprint = target.blueprint
+
+  script = blueprint.get_script( script_name )
+  if script is None:
+    if script_name == 'create':
+      target.setBuilt()
+    elif script_name == 'destroy':
+      target.setDestroyed()
+
+    return None
+
+  runner = Runner( parse( script ) )
   for module in RUNNER_MODULE_LIST:
     runner.registerModule( module )
 
@@ -128,7 +145,15 @@ def processJobs( site, module_list, max_jobs=10 ):
     max_jobs = 100
 
   # see if there are any planned dependancies who's structures are done
-  for dependancy in Dependancy.objects.filter( foundation__site=site, built_at__isnull=True, structure__built_at__isnull=False ):
+  for dependancy in Dependancy.objects.filter( built_at__isnull=True ).filter(
+                                      Q( structure__built_at__isnull=False ) |
+                                      Q( dependancy__built_at__isnull=False )
+                                    ).filter(
+                                      Q( foundation__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__isnull=True, dependancy__structure__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__isnull=True, structure__site=site )
+                                    ):
     try:
       DependancyJob.objects.get( dependancy=dependancy )
       continue  # allready has a job, skip it
@@ -157,15 +182,8 @@ def processJobs( site, module_list, max_jobs=10 ):
     createJob( 'create', target=foundation )
 
   # see if there are any located foundations that need to be prepared, with completed dependancies
-  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True ):
-    is_ready = True
-    for dependancy in foundation.dependancy_set.all():
-      if dependancy.state != 'built':
-        is_ready = False  # TODO: check to see if the depency has a job that can be started <-------------
-        break
-
-    if not is_ready:  # there was a unbuilt dependancy
-      continue
+  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True, dependancy__built_at__isnull=False ):
+    # TODO: check to see if the depency has a job that can be started <-------------
 
     foundation = foundation.subclass
     try:
