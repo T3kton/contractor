@@ -45,6 +45,9 @@ def _getNetworkedEntries( networked ):
   networked = networked.subclass
   result = {}
 
+  if networked.primary_ip is None:
+    return result
+
   result[ 'A' ] = [ { 'name': networked.hostname, 'address': networked.primary_ip } ]
   result[ 'CNAME' ] = []
   result[ 'TXT' ] = []
@@ -64,14 +67,14 @@ def genZone( zone, ptr_list, zone_file_list ):
     record_map[ 'NS' ].append( { 'name': '@', 'server': ns } )
     ( hostname, domain ) = ns.split( '.', 1 )
     if domain != zone_fqdn:
-      record_map[ 'A' ].append( { 'name': ns, 'address': '192.168.200.53' }  )
+      record_map[ 'A' ].append( { 'name': ns, 'address': '192.168.200.51' }  )
 
   for subZone in zone.zone_set.all():
     for ns in subZone.ns_list:
       record_map[ 'NS' ].append( { 'name': subZone.name, 'server': ns } )
       ( hostname, domain ) = ns.split( '.', 1 )
       if domain != zone_fqdn:
-        record_map[ 'A' ].append( { 'name': ns, 'address': '192.168.200.53' }  )
+        record_map[ 'A' ].append( { 'name': ns, 'address': '192.168.200.51' }  )
 
   for site in zone.site_set.all():
     for networked in site.networked_set.all():
