@@ -46,7 +46,7 @@ class Site( models.Model ):
 
     for foundation in self.foundation_set.all().order_by( 'pk' ):
       foundation = foundation.subclass
-      #dependancy_list = list( set( [ i.dependancyId for i in foundation.dependancy_set.all() ] ) )
+      # dependancy_list = list( set( [ i.dependancyId for i in foundation.dependancy_set.all() ] ) )
       dependancy_list = []
       try:
         dependancy_list.append( foundation.dependancy.dependancyId )
@@ -103,7 +103,7 @@ class Site( models.Model ):
     errors = {}
 
     if not name_regex.match( self.name ):
-      errors[ 'name' ] = 'name "{0}" is invalid'.format( self.name )
+      errors[ 'name' ] = 'Invalid'
 
     for name in self.config_values:
       if not config_name_regex.match( name ):

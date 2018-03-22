@@ -12,6 +12,8 @@ from contractor.tscript.runner import Runner, Pause, ExecutionError, Unrecoverab
 
 RUNNER_MODULE_LIST = []
 
+# TODO: make sure a dependancy can't create a job for a structure with a job, or a structure that is not built
+
 
 def createJob( script_name, target ):
   if isinstance( target, Dependancy ) and script_name not in ( 'create', 'destroy' ):

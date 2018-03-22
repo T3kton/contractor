@@ -102,10 +102,10 @@ class Networked( models.Model ):
 
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class NetworkInterface( models.Model ):
-  updated = models.DateTimeField( editable=False, auto_now=True )
-  created = models.DateTimeField( editable=False, auto_now_add=True )
   name = models.CharField( max_length=20 )
   is_provisioning = models.BooleanField( default=False )
+  updated = models.DateTimeField( editable=False, auto_now=True )
+  created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
   def subclass( self ):
@@ -237,6 +237,7 @@ class AggragatedNetworkInterface( AbstractNetworkInterface ):
 
 @cinp.model( property_list=( 'gateway', 'netmask', 'size', 'isIpV4' ) )
 class AddressBlock( models.Model ):
+  name = models.CharField( max_length=40, primary_key=True )
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   subnet = IpAddressField()
   prefix = models.IntegerField()

@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AddressBlock',
             fields=[
-                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
+                ('name', models.CharField(primary_key=True, serialize=False, max_length=40)),
                 ('subnet', contractor.fields.IpAddressField()),
                 ('prefix', models.IntegerField()),
                 ('gateway_offset', models.IntegerField(blank=True, null=True)),

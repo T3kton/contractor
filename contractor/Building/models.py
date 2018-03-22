@@ -178,6 +178,10 @@ class Foundation( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
+
+    if not name_regex.match( self.locator ):
+      errors[ 'locator' ] = 'Invalid'
+
     if self.type not in self.blueprint.foundation_type_list:
       errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint.description, self.type )
 

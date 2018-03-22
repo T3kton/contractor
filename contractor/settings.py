@@ -25,6 +25,8 @@ INSTALLED_APPS = (
     'contractor_plugins.AMT',
     'contractor_plugins.AWS',
     'contractor_plugins.Docker',
+    'other_plugins.text_file',
+    'other_plugins.status_indicator',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
