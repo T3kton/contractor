@@ -81,8 +81,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Foundation',
             fields=[
-                ('id', models.AutoField(serialize=False, verbose_name='ID', auto_created=True, primary_key=True)),
-                ('locator', models.CharField(max_length=100, unique=True)),
+                ('locator', models.CharField(serialize=False, max_length=100, primary_key=True)),
                 ('id_map', contractor.fields.JSONField(blank=True)),
                 ('located_at', models.DateTimeField(null=True, blank=True, editable=False)),
                 ('built_at', models.DateTimeField(null=True, blank=True, editable=False)),

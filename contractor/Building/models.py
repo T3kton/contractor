@@ -23,9 +23,9 @@ COMPLEX_SUBCLASS_LIST = []
 
 @cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate' ), not_allowed_verb_list=[ 'CREATE', 'DELETE', 'UPDATE' ] )
 class Foundation( models.Model ):
+  locator = models.CharField( max_length=100, primary_key=True )
   site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
-  locator = models.CharField( max_length=100, unique=True )
   id_map = JSONField( blank=True )  # ie a dict of asset, chassis, system, etc types
   interfaces = models.ManyToManyField( RealNetworkInterface, through='FoundationNetworkInterface' )
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
