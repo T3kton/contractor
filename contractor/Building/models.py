@@ -21,10 +21,10 @@ FOUNDATION_SUBCLASS_LIST = []
 COMPLEX_SUBCLASS_LIST = []
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate' ), not_allowed_verb_list=[ 'CREATE', 'DELETE', 'UPDATE' ] )
+@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'DELETE', 'UPDATE' ] )
 class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )
-  site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
+  site = models.ForeignKey( Site, on_delete=models.PROTECT )
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
   id_map = JSONField( blank=True )  # ie a dict of asset, chassis, system, etc types
   interfaces = models.ManyToManyField( RealNetworkInterface, through='FoundationNetworkInterface' )
@@ -168,7 +168,7 @@ class Foundation( models.Model ):
 
       args[ foundation_class ] = True
 
-    return Foundation.objects.filter( **args  )
+    return Foundation.objects.filter( **args )
 
   @cinp.check_auth()
   @staticmethod
@@ -294,6 +294,11 @@ class Structure( Networked ):
   @staticmethod
   def filter_site( site ):
     return Structure.objects.filter( site=site )
+
+  @cinp.list_filter( name='complex', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Complex' } ] )
+  @staticmethod
+  def filter_complex( complex ):
+    return complex.members.all()
 
   @cinp.check_auth()
   @staticmethod
@@ -457,6 +462,11 @@ class ComplexStructure( models.Model ):
   @property
   def state( self ):
     return 'Built'
+
+  @cinp.list_filter( name='complex', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Complex' } ] )
+  @staticmethod
+  def filter_complex( complex ):
+    return ComplexStructure.objects.filter( complex=complex )
 
   @cinp.check_auth()
   @staticmethod
