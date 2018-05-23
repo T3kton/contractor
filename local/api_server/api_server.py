@@ -38,7 +38,7 @@ if __name__ == '__main__':
   logger.info( 'Starting up...' )
 
   logger.debug( 'Creating Server...' )
-  app = WerkzeugServer( root_path='/api/v1/', root_version='1.0', debug=DEBUG, get_user=getUser, cors_allow_list=[ '*' ] )
+  app = WerkzeugServer( root_path='/api/v1/', root_version='0.9', debug=DEBUG, get_user=getUser, cors_allow_list=[ '*' ] )
   logger.debug( 'Registering Models...' )
 
   app.registerNamespace( '/', 'contractor.User' )

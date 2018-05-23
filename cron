@@ -1,2 +1,0 @@
-*/15 * * * * /usr/bin/contractor_dns
-*/5 * * * * /usr/local/bin/postMaster
