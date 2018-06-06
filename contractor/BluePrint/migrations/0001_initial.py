@@ -57,13 +57,57 @@ pause( msg='Do the thing, then Resume' )
 
   sbpu = StructureBluePrint( name='generic-ubuntu', description='Generic Ubuntu' )
   sbpu.config_values = { 'distro': 'ubuntu' }
-  sbpu.parent = sbpl
+  sbpu.full_clean()
+  sbpu.save()
+  sbpu.parent_list = [ sbpl ]
   sbpu.full_clean()
   sbpu.save()
 
+  sbpc = StructureBluePrint( name='generic-centos', description='Generic CentOS' )
+  sbpc.config_values = { 'distro': 'ubuntu' }
+  sbpc.full_clean()
+  sbpc.save()
+  sbpc.parent_list = [ sbpl ]
+  sbpc.full_clean()
+  sbpc.save()
+
+  sbpx = StructureBluePrint( name='generic-trusty', description='Generic Ubuntu Trusty (12.04 LTS)' )
+  sbpx.config_values = { 'distro_version': 'trusty' }
+  sbpx.full_clean()
+  sbpx.save()
+  sbpx.parent_list = [ sbpu ]
+  sbpx.full_clean()
+  sbpx.save()
+
+  sbpx = StructureBluePrint( name='generic-precise', description='Generic Ubuntu Precise (14.04 LTS)' )
+  sbpx.config_values = { 'distro_version': 'precise' }
+  sbpx.full_clean()
+  sbpx.save()
+  sbpx.parent_list = [ sbpu ]
+  sbpx.full_clean()
+  sbpx.save()
+
   sbpx = StructureBluePrint( name='generic-xenial', description='Generic Ubuntu Xenial (16.04 LTS)' )
   sbpx.config_values = { 'distro_version': 'xenial', 'awsec2_image_id': 'ami-efd0428f', 'docker_image': 'xenial/ssh' }
-  sbpx.parent = sbpu
+  sbpx.full_clean()
+  sbpx.save()
+  sbpx.parent_list = [ sbpu ]
+  sbpx.full_clean()
+  sbpx.save()
+
+  sbpx = StructureBluePrint( name='generic-bionic', description='Generic Ubuntu bionic (18.04 LTS)' )
+  sbpx.config_values = { 'distro_version': 'bionic' }
+  sbpx.full_clean()
+  sbpx.save()
+  sbpx.parent_list = [ sbpu ]
+  sbpx.full_clean()
+  sbpx.save()
+
+  sbpx = StructureBluePrint( name='generic-centos6', description='Generic CentOS 6' )
+  sbpx.config_values = { 'distro_version': '6' }
+  sbpx.full_clean()
+  sbpx.save()
+  sbpx.parent_list = [ sbpc ]
   sbpx.full_clean()
   sbpx.save()
 
@@ -235,7 +279,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='BluePrint',
             fields=[
-                ('name', models.CharField(max_length=40, primary_key=True, serialize=False)),
+                ('name', models.CharField(primary_key=True, max_length=40, serialize=False)),
                 ('description', models.CharField(max_length=200)),
                 ('config_values', contractor.fields.MapField(blank=True, default={})),
                 ('updated', models.DateTimeField(auto_now=True)),
@@ -245,7 +289,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='BluePrintScript',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, verbose_name='ID', serialize=False)),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=50)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -254,7 +298,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PXE',
             fields=[
-                ('name', models.CharField(max_length=50, primary_key=True, serialize=False)),
+                ('name', models.CharField(primary_key=True, max_length=50, serialize=False)),
                 ('boot_script', models.TextField()),
                 ('template', models.TextField()),
                 ('updated', models.DateTimeField(auto_now=True)),
@@ -264,7 +308,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Script',
             fields=[
-                ('name', models.CharField(max_length=40, primary_key=True, serialize=False)),
+                ('name', models.CharField(primary_key=True, max_length=40, serialize=False)),
                 ('description', models.CharField(max_length=200)),
                 ('script', models.TextField()),
                 ('updated', models.DateTimeField(auto_now=True)),
@@ -274,20 +318,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='FoundationBluePrint',
             fields=[
-                ('blueprint_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, to='BluePrint.BluePrint', serialize=False)),
+                ('blueprint_ptr', models.OneToOneField(primary_key=True, parent_link=True, auto_created=True, to='BluePrint.BluePrint', serialize=False)),
                 ('foundation_type_list', contractor.fields.StringListField(max_length=200, default=[])),
-                ('template', contractor.fields.JSONField(default={}, blank=True)),
-                ('physical_interface_names', contractor.fields.StringListField(max_length=200, default=[], blank=True)),
-                ('parent', models.ForeignKey(blank=True, null=True, to='BluePrint.FoundationBluePrint')),
+                ('template', contractor.fields.JSONField(blank=True, default={})),
+                ('physical_interface_names', contractor.fields.StringListField(blank=True, max_length=200, default=[])),
+                ('parent_list', models.ManyToManyField(to='BluePrint.FoundationBluePrint', blank=True)),
             ],
             bases=('BluePrint.blueprint',),
         ),
         migrations.CreateModel(
             name='StructureBluePrint',
             fields=[
-                ('blueprint_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, to='BluePrint.BluePrint', serialize=False)),
+                ('blueprint_ptr', models.OneToOneField(primary_key=True, parent_link=True, auto_created=True, to='BluePrint.BluePrint', serialize=False)),
                 ('foundation_blueprint_list', models.ManyToManyField(to='BluePrint.FoundationBluePrint')),
-                ('parent', models.ForeignKey(blank=True, null=True, to='BluePrint.StructureBluePrint')),
+                ('parent_list', models.ManyToManyField(to='BluePrint.StructureBluePrint', blank=True)),
             ],
             bases=('BluePrint.blueprint',),
         ),

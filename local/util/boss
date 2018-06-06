@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 import os
-import sys
-import argparse
-import pprint
-
 os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
 
 import django
 django.setup()
 
+import sys
+import argparse
+import pprint
 from django.core.exceptions import ObjectDoesNotExist
 from contractor.Building.models import Foundation, Structure, Dependancy
 from contractor.Foreman.lib import createJob

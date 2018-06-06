@@ -9,9 +9,6 @@ from cinp.orm_django import DjangoCInP as CInP
 
 
 def getUser( auth_id, auth_token ):
-  if auth_id is None or auth_token is None:
-    return None
-
   try:
     session = Session.objects.get( user=auth_id, token=auth_token )
   except ( Session.DoesNotExist, User.DoesNotExist ):
@@ -32,7 +29,7 @@ def getUser( auth_id, auth_token ):
 cinp = CInP( 'User', '0.1' )
 
 
-@cinp.model( property_list=[ 'isActive' ], not_allowed_verb_list=[ 'LIST', 'DELETE', 'CREATE', 'CALL' ], hide_field_list=[ 'password' ] )
+@cinp.model( property_list=[ 'isActive' ], not_allowed_verb_list=[ 'LIST', 'DELETE', 'CREATE' ], hide_field_list=[ 'password' ] )
 class User( models.Model ):
   username = models.CharField( max_length=40, primary_key=True )
   password = models.CharField( editable=False, max_length=64 )

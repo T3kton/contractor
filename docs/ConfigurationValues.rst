@@ -54,6 +54,11 @@ For a Structure
   Global attribute values
 
 
+NOTE:
+  Sites configs are applied from the top most parent down with the child overlaing the parent.
+  BluePrint configs are applied Top down, and across each leayer, the order of sibilings is not predictable.
+  BluePrint scripts are searched BFS (Breath First Search), the order of sibilings is not predictable.
+
 Attribute Values
 ----------------
 

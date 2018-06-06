@@ -123,8 +123,10 @@ class StringListField( models.CharField ):
   def __init__( self, *args, **kwargs ):
     if 'default' not in kwargs:
       kwargs[ 'default' ] = []
-    if 'null' in kwargs:  # the field needs to be valid JSON, None is not valid
+    try:
       del kwargs[ 'null' ]
+    except KeyError:
+      pass
 
     if not isinstance( kwargs[ 'default' ], list ):
       raise ValueError( 'default value must be a list' )

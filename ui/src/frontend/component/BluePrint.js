@@ -33,17 +33,17 @@ class BluePrint extends React.Component
        .then( ( result ) =>
         {
           var data = result.data;
-          if ( data.parent )
+          data.parent_list = data.parent_list.map( ( parent ) =>
           {
-            if ( data.parent.startsWith( '/api/v1/BluePrint/StructureBluePrint' ) )
+            if ( parent.startsWith( '/api/v1/BluePrint/StructureBluePrint' ) )
             {
-              data.parent = 's/' + CInP.extractIds( data.parent )[0];
+              return 's/' + CInP.extractIds( parent )[0];
             }
-            if ( data.parent.startsWith( '/api/v1/BluePrint/FoundationBluePrint' ) )
+            else if ( parent.startsWith( '/api/v1/BluePrint/FoundationBluePrint' ) )
             {
-              data.parent = 'f/' + CInP.extractIds( data.parent )[0];
+              return 'f/' + CInP.extractIds( parent )[0];
             }
-          }
+          } );
           data.scripts = data.scripts.map( ( entry ) => ( CInP.extractIds( entry )[0] ) );
           data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, data.config_values[ key ] ] ) );
           this.setState( { blueprint: data } );
@@ -103,7 +103,7 @@ class BluePrint extends React.Component
                 <thead/>
                 <tbody>
                   <tr><th>Name</th><td>{ blueprint.name }</td></tr>
-                  <tr><th>Parent</th><td><Link to={ '/blueprint/' + blueprint.parent }>{ blueprint.parent }</Link></td></tr>
+                  <tr><th>Parents</th><td><ul>{ blueprint.parent_list.map( ( parent ) => ( <li><Link to={ '/blueprint/' + parent }>{ parent }</Link></li> ) ) }</ul></td></tr>
                   <tr><th>Description</th><td>{ blueprint.description }</td></tr>
                   <tr><th>Config Values</th><td><table><thead/><tbody>{ blueprint.config_values.map( ( value ) => ( <tr key={ value[0] }><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
                   <tr><th>Scripts</th><td><ul>{ blueprint.scripts.map( ( script, index ) => ( <li key={ index } >{ script } <ScriptDialog getScript={ this.props.getScript } id={ script }/></li> ) ) }</ul></td></tr>

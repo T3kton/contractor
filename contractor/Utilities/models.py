@@ -293,6 +293,18 @@ class AddressBlock( models.Model ):
 
     return address
 
+  @cinp.action( return_type='Map' )
+  def usage( self ):
+    result = {}
+    result[ 'total' ] = self.size
+    result[ 'static' ] = Address.objects.filter( address_block=self ).count()
+    result[ 'reserved' ] = ReservedAddress.objects.filter( address_block=self ).count()
+    result[ 'dynamic' ] = DynamicAddress.objects.filter( address_block=self ).count()
+    if self.gateway_offset:
+      result[ 'reserved' ] += 1
+
+    return result
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):

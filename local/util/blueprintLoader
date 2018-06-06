@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+import os
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
+import sys
+import json
+from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint, BluePrintScript, Script
+
+
+# TODO: also need to load scripts
+
+
+def loadCommon( blueprint, target ):
+  for name in ( 'description', 'config_values' ):
+    try:
+      setattr( blueprint, name, target[ name ] )
+    except KeyError:
+      pass
+
+
+def setScripts( blueprint, target ):
+  script_map = {}
+
+  for name, script in target.get( 'scripts', {} ).items():
+    try:
+      script_map[ name ] = Script.objects.get( name=script )
+    except Script.DoesNotExist:
+      print( 'Unable to find Script "{0}"'.format( script ) )
+      os.exit( 1 )
+
+  for name, script in script_map:
+    try:
+      bps = BluePrintScript.objects.get( blueprint=blueprint, name=name )
+      if bps.script != script:
+        bps.script = script
+        bps.full_clean()
+        bps.save()
+
+    except BluePrintScript.DoesNotExist:
+      bps = BluePrintScript( blueprint=blueprint, script=script, name=name )
+      bps.full_clean()
+      bps.save()
+
+  for bps in BluePrintScript.objects.filter( blueprint=blueprint ):
+    if bps.name not in script_map:
+      bps.delete()
+
+
+def loadStructureBlueprint( name, target ):
+  try:
+    blueprint = StructureBluePrint.objects.get( name=name )
+  except StructureBluePrint.DoesNotExist:
+    blueprint = StructureBluePrint( name=name )
+
+  loadCommon( blueprint, target )
+
+  blueprint.foundation_blueprint_list = target.get( 'foundation_blueprints', [] )
+
+  blueprint.full_clean()
+  blueprint.save()
+
+  parent_list = []
+  for parent in target.get( 'parents', [] ):
+    try:
+      parent_list.append( StructureBluePrint.objects.get( name=parent ) )
+    except StructureBluePrint.DoesNotExist:
+      print( 'Unable to find StructureBluePrint "{0}" as parent to "{1}"'.format( parent, name ) )
+      sys.exit( 1 )
+
+  if blueprint.parent_list != parent_list:
+    blueprint.parent_list = parent_list
+    blueprint.full_clean()
+    blueprint.save()
+
+  setScripts( blueprint, target )
+
+
+def loadFoundationBlueprint( name, target ):
+  try:
+    blueprint = FoundationBluePrint.objects.get( name=name )
+  except FoundationBluePrint.DoesNotExist:
+    blueprint = FoundationBluePrint( name=name )
+
+  loadCommon( blueprint, target )
+
+  blueprint.foundation_type_list = target.get( 'foundation_types', [] )
+  blueprint.template = target.get( 'template', '' )
+  blueprint.physical_interface_names = target.get( 'physical_interface_names', [] )
+
+  blueprint.full_clean()
+  blueprint.save()
+
+  parent_list = []
+  for parent in target.get( 'parents', [] ):
+    try:
+      parent_list.append( FoundationBluePrint.objects.get( parent ) )
+    except FoundationBluePrint.DoesNotExist:
+      print( 'Unable to find FoundationBluePrint "{0}" as parent to "{1}"'.format( parent, name ) )
+      sys.exit( 1 )
+
+  if blueprint.parent_list != parent_list:
+    blueprint.parent_list = parent_list
+    blueprint.full_clean()
+    blueprint.save()
+
+  setScripts( blueprint, target )
+
+
+try:
+  filename = sys.argv[1]
+except IndexError:
+  print( 'Usage {0} <blueprint file.json>'.format( sys.argv[0] ) )
+  sys.exit( 1 )
+
+try:
+  blueprint_list = json.loads( open( filename, 'r' ).read() )
+except ( FileNotFoundError, json.JSONDecodeError ):
+  print( 'Error opening and/or parsing "{0}"'.format( filename ) )
+  sys.exit( 1 )
+
+if not isinstance( blueprint_list, list ):
+  print( 'blueprint should be a JSON encoded list' )
+  sys.exit( 1 )
+
+for blueprint in blueprint_list:
+  try:
+    name = blueprint[ 'name' ]
+  except KeyError:
+    print( 'Unable to get name for "{0}"'.format( blueprint ) )
+    sys.exit( 1 )
+
+  try:
+    btype = blueprint[ 'type' ]
+  except KeyError:
+    print( 'Unable to get type for "{0}"'.format( name ) )
+    sys.exit( 1 )
+
+  if btype == 'structure':
+    loadStructureBlueprint( name, blueprint )
+
+  elif btype == 'foundation':
+    loadFoundationBlueprint( name, blueprint )
+
+  else:
+    print( 'Unknown blueprint type "{0}" for "{1}"'.format( btype, name ) )
+    sys.exit( 1 )
+
+print( 'Done' )
+sys.exit( 0 )

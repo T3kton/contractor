@@ -25,10 +25,12 @@ class BluePrint( models.Model ):
     try:
       return self.blueprintscript_set.get( name=name ).script.script
     except BluePrintScript.DoesNotExist:
-      if self.parent is not None:
-        return self.parent.get_script( name )
-      else:
-        return None
+      for parent in self.parent_list:
+        tmp = parent.get_script( name )
+        if tmp is not None:
+          return tmp
+
+      return None
 
   @property
   def subclass( self ):
@@ -76,7 +78,7 @@ class BluePrint( models.Model ):
 # will need a working pool of "eth0" type ips for the prepare
 @cinp.model( property_list=( 'subcontractor', ) )
 class FoundationBluePrint( BluePrint ):
-  parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
+  parent_list = models.ManyToManyField( 'self', blank=True, symmetrical=False )
   foundation_type_list = StringListField( max_length=200 )  # list of the foundation types this blueprint can be used for
   template = JSONField( default={}, blank=True )
   physical_interface_names = StringListField( max_length=200, blank=True )
@@ -109,14 +111,14 @@ class FoundationBluePrint( BluePrint ):
 
 @cinp.model(  )
 class StructureBluePrint( BluePrint ):
-  parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )  # TODO: go through a "through" field and have a foundation class select which parent, this way there can be a container parent and a VM parent and simmaler
+  parent_list = models.ManyToManyField( 'self', blank=True, symmetrical=False )  # TODO: go through a "through" field and have a foundation class select which parent, this way there can be a container parent and a VM parent and simmaler
   foundation_blueprint_list = models.ManyToManyField( FoundationBluePrint )  # list of possible foundations this blueprint could be implemented on
 
   @property
   def combined_foundation_blueprint_list( self ):
     result = list( self.foundation_blueprint_list.all() )
-    if self.parent is not None:
-      result += self.parent.combined_foundation_blueprint_list
+    for parent in self.parent_list:
+      result += parent.combined_foundation_blueprint_list
 
     return list( set( result ) )
 

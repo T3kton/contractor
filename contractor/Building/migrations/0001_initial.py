@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-import contractor.Building.models
+import contractor.fields
 import django.db.models.deletion
 import contractor.Building.models
 
@@ -49,7 +49,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Complex',
             fields=[
-                ('name', models.CharField(serialize=False, max_length=40, primary_key=True)),
+                ('name', models.CharField(max_length=40, serialize=False, primary_key=True)),
                 ('description', models.CharField(max_length=200)),
                 ('built_percentage', models.IntegerField(default=90)),
                 ('updated', models.DateTimeField(auto_now=True)),
@@ -59,7 +59,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ComplexStructure',
             fields=[
-                ('id', models.AutoField(serialize=False, verbose_name='ID', auto_created=True, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, verbose_name='ID', serialize=False, primary_key=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('complex', models.ForeignKey(to='Building.Complex')),
@@ -68,20 +68,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Dependancy',
             fields=[
-                ('id', models.AutoField(serialize=False, verbose_name='ID', auto_created=True, primary_key=True)),
-                ('link', models.CharField(choices=[('soft', 'soft'), ('hard', 'hard')], max_length=4)),
+                ('id', models.AutoField(auto_created=True, verbose_name='ID', serialize=False, primary_key=True)),
+                ('link', models.CharField(max_length=4, choices=[('soft', 'soft'), ('hard', 'hard')])),
                 ('create_script_name', models.CharField(null=True, max_length=40, blank=True)),
                 ('destroy_script_name', models.CharField(null=True, max_length=40, blank=True)),
                 ('built_at', models.DateTimeField(null=True, blank=True, editable=False)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('dependancy', models.ForeignKey(null=True, related_name='+', blank=True, to='Building.Dependancy')),
+                ('dependancy', models.ForeignKey(null=True, related_name='+', to='Building.Dependancy', blank=True)),
             ],
         ),
         migrations.CreateModel(
             name='Foundation',
             fields=[
-                ('locator', models.CharField(serialize=False, max_length=100, primary_key=True)),
+                ('locator', models.CharField(max_length=100, serialize=False, primary_key=True)),
                 ('id_map', contractor.fields.JSONField(blank=True)),
                 ('located_at', models.DateTimeField(null=True, blank=True, editable=False)),
                 ('built_at', models.DateTimeField(null=True, blank=True, editable=False)),
@@ -93,7 +93,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='FoundationNetworkInterface',
             fields=[
-                ('id', models.AutoField(serialize=False, verbose_name='ID', auto_created=True, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, verbose_name='ID', serialize=False, primary_key=True)),
                 ('physical_location', models.CharField(max_length=100)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -104,9 +104,9 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Structure',
             fields=[
-                ('networked_ptr', models.OneToOneField(auto_created=True, serialize=False, to='Utilities.Networked', parent_link=True, primary_key=True)),
-                ('config_uuid', models.CharField(max_length=36, default=contractor.Building.models.getUUID, unique=True)),
-                ('config_values', contractor.fields.MapField(blank=True, default={})),
+                ('networked_ptr', models.OneToOneField(to='Utilities.Networked', auto_created=True, parent_link=True, serialize=False, primary_key=True)),
+                ('config_uuid', models.CharField(max_length=36, unique=True, default=contractor.Building.models.getUUID)),
+                ('config_values', contractor.fields.MapField(default={}, blank=True)),
                 ('auto_build', models.BooleanField(default=True)),
                 ('built_at', models.DateTimeField(null=True, blank=True, editable=False)),
                 ('updated', models.DateTimeField(auto_now=True)),
@@ -119,7 +119,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='foundation',
             name='interfaces',
-            field=models.ManyToManyField(through='Building.FoundationNetworkInterface', to='Utilities.RealNetworkInterface'),
+            field=models.ManyToManyField(to='Utilities.RealNetworkInterface', through='Building.FoundationNetworkInterface'),
         ),
         migrations.AddField(
             model_name='foundation',
@@ -129,17 +129,17 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dependancy',
             name='foundation',
-            field=models.OneToOneField(null=True, blank=True, to='Building.Foundation'),
+            field=models.OneToOneField(null=True, to='Building.Foundation', blank=True),
         ),
         migrations.AddField(
             model_name='dependancy',
             name='script_structure',
-            field=models.ForeignKey(null=True, related_name='+', blank=True, to='Building.Structure'),
+            field=models.ForeignKey(null=True, related_name='+', to='Building.Structure', blank=True),
         ),
         migrations.AddField(
             model_name='dependancy',
             name='structure',
-            field=models.ForeignKey(null=True, blank=True, to='Building.Structure'),
+            field=models.ForeignKey(null=True, to='Building.Structure', blank=True),
         ),
         migrations.AddField(
             model_name='complexstructure',
@@ -149,7 +149,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='complex',
             name='members',
-            field=models.ManyToManyField(through='Building.ComplexStructure', to='Building.Structure'),
+            field=models.ManyToManyField(to='Building.Structure', through='Building.ComplexStructure'),
         ),
         migrations.AddField(
             model_name='complex',

@@ -83,8 +83,8 @@ def _siteConfig( site, class_list, config ):
 def _bluePrintConfigInternal( blueprint, class_list, config ):
   lastModified = blueprint.updated
 
-  if blueprint.parent is not None:
-    lastModified = max( lastModified, _bluePrintConfigInternal( blueprint.parent, class_list, config ) )
+  for parent in blueprint.parent_list.all():
+    lastModified = max( lastModified, _bluePrintConfigInternal( parent, class_list, config ) )
 
   _updateConfig( blueprint.config_values, class_list, config )
   return lastModified
