@@ -57,10 +57,20 @@ def loadStructureBlueprint( name, target ):
 
   loadCommon( blueprint, target )
 
-  blueprint.foundation_blueprint_list = target.get( 'foundation_blueprints', [] )
-
   blueprint.full_clean()
   blueprint.save()
+
+  foundation_blueprint_list = []
+  for name in target.get( 'foundation_blueprints', [] ):
+    try:
+      foundation_blueprint_list.append( FoundationBluePrint.objects.get( name=name ) )
+    except FoundationBluePrint.DoesNotExist:
+      print( 'Unable to find Foundation BluePrint "{0}"'.format( name ) )
+
+  if blueprint.foundation_blueprint_list != foundation_blueprint_list:
+    blueprint.foundation_blueprint_list = foundation_blueprint_list
+    blueprint.full_clean()
+    blueprint.save()
 
   parent_list = []
   for parent in target.get( 'parents', [] ):
@@ -137,6 +147,8 @@ for blueprint in blueprint_list:
   except KeyError:
     print( 'Unable to get type for "{0}"'.format( name ) )
     sys.exit( 1 )
+
+  print( 'Loading "{0}"...'.format( name ) )
 
   if btype == 'structure':
     loadStructureBlueprint( name, blueprint )

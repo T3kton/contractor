@@ -1,6 +1,17 @@
 all: build-ui
 
 install: install-ui
+	mkdir -p $(DESTDIR)var/www/contractor/api
+	mkdir -p $(DESTDIR)etc/apache2/sites-available
+	mkdir -p $(DESTDIR)etc/contractor
+	mkdir -p $(DESTDIR)usr/local/contractor/cron
+	mkdir -p $(DESTDIR)usr/local/contractor/util
+
+	install -m 644 api/contractor.wsgi $(DESTDIR)var/www/contractor/api
+	install -m 644 apache.conf $(DESTDIR)etc/apache2/sites-available/contractor.conf
+	install -m 644 master.conf.sample $(DESTDIR)etc/contractor
+	install -m 755 local/cron/* $(DESTDIR)usr/local/contractor/cron
+	install -m 755 local/util/* $(DESTDIR)usr/local/contractor/util
 
 test-requires:
 	python3-pytest python3-pytest-cov python3-pytest-django python3-pytest-mock
@@ -13,8 +24,9 @@ build-ui:
 
 install-ui:
 	mkdir -p $(DESTDIR)/var/www/contractor/ui/
-	cp ui/build/* $(DESTDIR)/var/www/contractor/ui/
-	cp ui/src/www/* $(DESTDIR)/var/www/contractor/ui/
+	install -m 644 ui/build/* $(DESTDIR)/var/www/contractor/ui/
+	install -m 644 ui/src/www/* $(DESTDIR)/var/www/contractor/ui/
+	echo "window.API_BASE_URI = 'http://' + window.location.hostname;" > $(DESTDIR)var/www/contractor/ui/env.js
 
 clean-ui:
 	rm -fr ui/build

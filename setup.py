@@ -19,11 +19,12 @@ class build( build_py ):
           continue
         self.build_module( module, module_file, package )
 
-setup( name='contractor',
+setup(
+       name='contractor',
        version='1.0',
        description='Contractor, builder of all',
        author='Peter Howe',
        author_email='pnhowe@gmail.com',
        packages=find_packages(),
        cmdclass={ 'build_py': build }
-     )
+      )

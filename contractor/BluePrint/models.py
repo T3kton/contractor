@@ -25,7 +25,7 @@ class BluePrint( models.Model ):
     try:
       return self.blueprintscript_set.get( name=name ).script.script
     except BluePrintScript.DoesNotExist:
-      for parent in self.parent_list:
+      for parent in self.parent_list.all():
         tmp = parent.get_script( name )
         if tmp is not None:
           return tmp
@@ -117,7 +117,7 @@ class StructureBluePrint( BluePrint ):
   @property
   def combined_foundation_blueprint_list( self ):
     result = list( self.foundation_blueprint_list.all() )
-    for parent in self.parent_list:
+    for parent in self.parent_list.all():
       result += parent.combined_foundation_blueprint_list
 
     return list( set( result ) )

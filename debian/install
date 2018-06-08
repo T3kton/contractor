@@ -1,4 +1,0 @@
-contractor.conf	/etc/apache2/sites-available
-master.conf.sample	/etc/contractor
-local/* /usr/local/contractor
-
