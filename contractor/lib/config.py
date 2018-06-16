@@ -146,4 +146,6 @@ def getConfig( target ):  # combine depth first the config values
 
   config[ '__last_modified' ] = lastModified
   config[ '__contractor_host' ] = 'http://127.0.0.1/'
+  config[ '__pxe_template_location' ] = 'http://192.168.200.51:8888/config/pxe_template/'
+
   return config

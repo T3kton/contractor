@@ -6,6 +6,18 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# get plugins
+
+import os
+from contractor import plugins
+
+plugin_list = []
+plugin_dir = os.path.dirname( plugins.__file__ )
+for item in os.scandir( plugin_dir ):
+  if not item.is_dir() or not os.path.exists( os.path.join( plugin_dir, item.name, 'models.py' ) ):
+    continue
+  plugin_list.append( 'contractor.plugins.{0}'.format( item.name ) )
+
 # Application definition
 
 INSTALLED_APPS = (
@@ -18,13 +30,7 @@ INSTALLED_APPS = (
     'contractor.Foreman',
     'contractor.SubContractor',
     'contractor.PostOffice',
-    'contractor_plugins.IPUtils',
-    'contractor_plugins.Manual',
-    'contractor_plugins.VirtualBox',
-    'contractor_plugins.Vcenter',
-    'contractor_plugins.AMT',
-    'contractor_plugins.AWS',
-    'contractor_plugins.Docker',
+    *plugin_list,
     'other_plugins.text_file',
     'other_plugins.status_indicator',
     'django.contrib.auth',

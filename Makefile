@@ -33,6 +33,23 @@ clean-ui:
 
 clean: clean-ui
 
+.PHONY:: test build-ui install-ui clean-ui
+
+respkg-distros:
+	echo xenial
+
+respkg-requires:
+	echo respkg
+
+respkg:
+	cd resources && respkg -b ../contractor-os-base_0.0.respkg -n contractor-os-base -e 0.0 -c "Contractor - OS Base" -t load_os_base.sh -d os_base
+	touch respkg
+
+respkg-file:
+	echo $(shell ls *.respkg)
+
+.PHONY:: respkg-distros respkg-requires respkg respkg-file
+
 dpkg-distros:
 	echo xenial
 
@@ -43,4 +60,7 @@ dpkg:
 	dpkg-buildpackage -b -us -uc
 	touch dpkg
 
-.PHONY: test build-ui install-ui clean-ui dpkg-distros dpkg-requires dpkg
+dpkg-file:
+	echo $(shell ls ../contractor_*.deb):xenial
+
+.PHONY:: dpkg-distros dpkg-requires dpkg dpkg-file

@@ -7,36 +7,6 @@ import django.db.models.deletion
 import contractor.Building.models
 
 
-def load_foundation_blueprints( app, schema_editor ):
-  FoundationBluePrint = app.get_model( 'BluePrint', 'FoundationBluePrint' )
-  Script = app.get_model( 'BluePrint', 'Script' )
-  BluePrintScript = app.get_model( 'BluePrint', 'BluePrintScript' )
-
-  fbp = FoundationBluePrint( name='unknown', description='Unknown Foundation' )
-  fbp.config_values = {}
-  fbp.template = {}
-  fbp.foundation_type_list = [ 'Unknown' ]
-  fbp.physical_interface_names = [ 'eth0', 'eth1', 'eth2', 'eth3' ]
-  fbp.full_clean()
-  fbp.save()
-
-  s = Script( name='create-unknown', description='Create Unknown' )
-  s.script = """# Create Unknown(Base) Foundation
-error( 'can not create/commission unknown/base foundation' )
-  """
-  s.full_clean()
-  s.save()
-  BluePrintScript( blueprint=fbp, script=s, name='create' ).save()
-
-  s = Script( name='destroy-unknown', description='Create Unknown' )
-  s.script = """# Destroy Unknown(Base) Foundation
-error( 'can not destroy/decommission unknown/base foundation' )
-  """
-  s.full_clean()
-  s.save()
-  BluePrintScript( blueprint=fbp, script=s, name='destroy' ).save()
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -156,5 +126,4 @@ class Migration(migrations.Migration):
             name='site',
             field=models.ForeignKey(to='Site.Site'),
         ),
-        migrations.RunPython( load_foundation_blueprints ),
     ]
