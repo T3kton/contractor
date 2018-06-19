@@ -77,12 +77,12 @@ on database setup.  The settings.py file is preconfigured to use  sqlite and sto
 the database in parent directory of the settings.py file.  After the database
 connection is setup, create the the database::
 
-  cd /usr/local/contractor/util
+  cd /usr/lib/contractor/util
   ./manage.py migrate
 
 to start the API server::
 
-  cd /usr/loca/contractor/api_server
+  cd /usr/lib/contractor/api_server
   ./api_server.py
 
 

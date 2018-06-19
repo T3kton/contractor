@@ -23,6 +23,7 @@ s1 = Site( name='site1', description='Test Site 1' )
 s1.config_values[ 'domain_name' ] = 'site1.local'
 s1.config_values[ 'dns_servers' ] = [ '192.168.200.53' ]
 s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
 s1.full_clean()
 s1.save()
 

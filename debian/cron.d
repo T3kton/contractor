@@ -1,2 +1,2 @@
-*/15 * * * * root [ -x /usr/local/contractor/cron/genDNS ] && /usr/local/contractor/cron/genDNS
-*/5 * * * * root [ -x /usr/local/contractor/cron/postMaster ] && /usr/local/contractor/cron/postMaster
+*/15 * * * * root [ -x /usr/lib/contractor/cron/genDNS ] && /usr/lib/contractor/cron/genDNS
+*/5 * * * * root [ -x /usr/lib/contractor/cron/postMaster ] && /usr/lib/contractor/cron/postMaster
