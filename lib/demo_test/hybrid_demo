@@ -30,6 +30,7 @@ s1 = Site( name='site1', description='Test Site 1' )
 s1.config_values[ 'domain_name' ] = 'site1.local'
 s1.config_values[ 'dns_servers' ] = [ '192.168.200.20' ]
 s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
 s1.full_clean()
 s1.save()
 
@@ -51,15 +52,15 @@ for i in range( 10, 19 ):
 
 AMT_devices = {
                 # 'nuc1': [ '192.168.200.201', '94:c6:91:13:9b:d5', 101, sbp_esx ],  # inuse
-                #'nuc2': [ '192.168.200.202', '94:c6:91:10:f1:dc', 102, sbp_xenial ],
+                # 'nuc2': [ '192.168.200.202', '94:c6:91:10:f1:dc', 102, sbp_xenial ],
               }
 
 Manual_devices = {
-                   #'manual1': [ 121, sbp_manual ],
-                   #'manual2': [ 122, sbp_manual ],
-                   #'manual3': [ 123, sbp_manual ],
-                   #'manual4': [ 124, sbp_manual ],
-                   #'manual5': [ 125, sbp_manual ],
+                   # 'manual1': [ 121, sbp_manual ],
+                   # 'manual2': [ 122, sbp_manual ],
+                   # 'manual3': [ 123, sbp_manual ],
+                   # 'manual4': [ 124, sbp_manual ],
+                   # 'manual5': [ 125, sbp_manual ],
                  }
 
 VirtualBox_devices = {
@@ -68,7 +69,7 @@ VirtualBox_devices = {
                      }
 
 Docker_devices = {
-                   #'docker1': [ sbp_xenial ],
+                   # 'docker1': [ sbp_xenial ],
                   }
 
 if True:

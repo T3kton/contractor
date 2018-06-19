@@ -82,6 +82,7 @@ s1.config_values[ 'domain_name' ] = 'site1.local'
 s1.config_values[ 'dns_servers' ] = [ '192.168.200.51' ]
 s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
 s1.config_values[ 'http_proxy' ] = 'http://192.168.200.50:3128/'
+s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
 s1.full_clean()
 s1.save()
 

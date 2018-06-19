@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDir=/usr/local/contractor/api_server
-ExecStart=/usr/local/contractor/api_server/api_server.py
+WorkingDir=/usr/lib/contractor/api_server
+ExecStart=/usr/lib/contractor/api_server/api_server.py
 
 [Install]
 WantedBy=mutli-user.target
