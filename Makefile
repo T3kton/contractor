@@ -7,6 +7,7 @@ install: install-ui
 	mkdir -p $(DESTDIR)/etc/contractor
 	mkdir -p $(DESTDIR)/usr/lib/contractor/cron
 	mkdir -p $(DESTDIR)/usr/lib/contractor/util
+	mkdir -p $(DESTDIR)/usr/lib/contractor/setup
 	mkdir -p $(DESTDIR)/var/lib/contractor/
 
 	install -m 644 api/contractor.wsgi $(DESTDIR)/var/www/contractor/api
@@ -14,6 +15,7 @@ install: install-ui
 	install -m 644 master.conf.sample $(DESTDIR)/etc/contractor
 	install -m 755 lib/cron/* $(DESTDIR)/usr/lib/contractor/cron
 	install -m 755 lib/util/* $(DESTDIR)/usr/lib/contractor/util
+	install -m 755 lib/setup/* $(DESTDIR)/usr/lib/contractor/setup
 
 	./setup.py install --root $(DESTDIR) --install-purelib=/usr/lib/python3/dist-packages/ --prefix=/usr --no-compile -O0
 

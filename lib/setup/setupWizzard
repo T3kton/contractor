@@ -130,12 +130,12 @@ addr = Address( networked=str_dev, address_block=addr1_block, interface_name=con
 addr.full_clean()
 addr.save()
 
-print( 'Configuring settings file' )
+print( 'Configuring settings file...' )
 filename = settings.__file__
 
 configured = False
 for line in open( filename, 'r' ).readlines():
-  if line.startswith( 'DNS_NS_LIST =' ):
+  if line.startswith( 'BIND_NS_LIST =' ):
     parts = line.split( '=' )
     if parts[1].strip != '[]':
       configured = True
@@ -145,7 +145,7 @@ for line in open( filename, 'r' ).readlines():
 if not configured:
   data = open( filename, 'r' ).read()
 
-  data.replace( 'BIND_NS_LIST = []', 'BIND_NS_LIST = {0}'.format( [ '{0}.contractor.site1.local.'.format( contractor_iface ) ] ) )
+  data = data.replace( 'BIND_NS_LIST = []', 'BIND_NS_LIST = {0}'.format( [ '{0}.contractor.site1.local'.format( contractor_iface ) ] ) )
 
   open( filename, 'w' ).write( data )
 
@@ -153,7 +153,6 @@ print( 'Generating Bind files...' )
 subprocess.check_call( [ '/usr/lib/contractor/cron/genDNS' ] )
 
 print( 'Configuring Bind...' )
-
 configured = False
 for line in open( '/etc/bind/named.conf.local', 'r' ).readlines():
   if line.strip() == 'include "/etc/bind/contractor/dns.master";':
@@ -166,23 +165,24 @@ if not configured:
 // Do any local configuration here
 //
 
-include "/etc/bind/contractor/dns.master
+include "/etc/bind/contractor/dns.master";
 """ )
-  fp.save()
+  fp.close()
 
-  fp = open( '/etc/bin/named.conf.options', 'w' )
-  fp.write( """options {
+  fp = open( '/etc/bind/named.conf.options', 'w' )
+  fp.write( """options {{
   directory "/var/cache/bind";
 
-  forwarders {
+  forwarders {{
     {0};
-  };
+  }};
 
-  dnssec-validation auto;
+  dnssec-validation no;
 
   auth-nxdomain no;    # conform to RFC1035
-  listen-on-v6 { any; };
-};
+  listen-on-v6 {{ any; }};
+}};
 """.format( contractor_dns ) )
+  fp.close()
 
 print( 'Done!' )

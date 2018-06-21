@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-import contractor.fields
 
 
 class Migration(migrations.Migration):
@@ -14,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Entry',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True, serialize=False)),
+                ('id', models.AutoField(verbose_name='ID', primary_key=True, serialize=False, auto_created=True)),
                 ('type', models.CharField(max_length=20, choices=[('MX', 'MX'), ('SRV', 'SRV'), ('CNAME', 'CNAME'), ('TXT', 'TXT')])),
                 ('name', models.CharField(max_length=255)),
                 ('priority', models.IntegerField(blank=True, null=True)),
@@ -28,18 +27,16 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Zone',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True, serialize=False)),
+                ('id', models.AutoField(verbose_name='ID', primary_key=True, serialize=False, auto_created=True)),
                 ('name', models.CharField(max_length=100)),
                 ('ttl', models.IntegerField(default=3600)),
                 ('refresh', models.IntegerField(default=86400)),
                 ('retry', models.IntegerField(default=7200)),
                 ('expire', models.IntegerField(default=36000)),
                 ('minimum', models.IntegerField(default=172800)),
-                ('email', models.CharField(max_length=150)),
-                ('ns_list', contractor.fields.StringListField(max_length=400, default=[], blank=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('parent', models.ForeignKey(null=True, blank=True, to='Directory.Zone')),
+                ('parent', models.ForeignKey(null=True, to='Directory.Zone', blank=True)),
             ],
         ),
         migrations.AddField(

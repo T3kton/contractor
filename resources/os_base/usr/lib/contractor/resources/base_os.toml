@@ -1,7 +1,7 @@
 [ structure.linux-base ]
   description = 'Base Linux'
   scripts = { 'create' = 'linux-create', 'destroy' = 'linux-destroy' }
-  config_values = { 'root_pass': '$6$rootroot$oLo.loyMV45VA7/0sKV5JH/xBAXiq/igL4hQrGz3yd9XUavmC82tZm1lxW2N.5eLxQUlqp53wXKRzifZApP0/1', 'swap_size': 512 }
+  config_values = { 'root_pass' = '$6$rootroot$oLo.loyMV45VA7/0sKV5JH/xBAXiq/igL4hQrGz3yd9XUavmC82tZm1lxW2N.5eLxQUlqp53wXKRzifZApP0/1', 'swap_size' = 512 }
 
 [ script.linux-create ]
   description ='Install Linux'
