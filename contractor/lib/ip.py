@@ -76,6 +76,13 @@ def CIDRNetworkSize( ip, prefix, include_unusable=False ):
       return ( 2 ** ( 128 - prefix ) ) - 2
 
 
+def CIDRSubnet( ip, prefix, ipv6=None ):
+  if ipv6 is None:
+    ipv6 = not IpIsV4( ip )
+
+  return CIDRNetmask( prefix, ipv6 ) & ip
+
+
 def CIDRNetworkBounds( ip, prefix, include_unusable=False, as_offsets=False ):
   if not isinstance( ip, int ):
     raise ValueError( 'Invalid Ip Address' )
@@ -116,8 +123,7 @@ def CIDRNetworkBounds( ip, prefix, include_unusable=False, as_offsets=False ):
       else:  # I don't think ipv6 requires us to reserve the broadcast anymore, but who knows what kind of broken implementations there are out there, so just to be safe, for now
         return ( 1, net - 1 )
 
-  netmask = CIDRNetmask( prefix, ipv6 )
-  base_ip = netmask & ip
+  base_ip = CIDRSubnet( ip, prefix, ipv6 )
   if not ipv6:
     net -= 0x0000000000000000000000000000ffff00000000  # take this out, otherwise it get's added in twice
     if prefix == 32:

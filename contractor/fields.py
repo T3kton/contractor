@@ -137,6 +137,9 @@ class StringListField( models.CharField ):
     if value is None:
       return value
 
+    if value == '':
+      return []
+
     return value.split( '\t' )
 
   def to_python( self, value ):
@@ -145,6 +148,9 @@ class StringListField( models.CharField ):
 
     if isinstance( value, list ):
       return value
+
+    if value == '':
+      return []
 
     return value.split( '\t' )
 

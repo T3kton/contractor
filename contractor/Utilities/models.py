@@ -37,6 +37,14 @@ class Networked( models.Model ):
     return self
 
   @property
+  def primary_interface( self ):
+    try:
+      address = self.address_set.get( is_primary=True )
+      return address.interface
+    except ObjectDoesNotExist:
+      return None
+
+  @property
   def primary_ip( self ):
     try:
       return self.address_set.get( is_primary=True ).ip_address

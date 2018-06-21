@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+import os
+
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
+import sys
+import subprocess
+
+from contractor import settings
+from contractor.lib.ip import CIDRSubnet, StrToIp, IpToStr
+from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
+from contractor.Building.models import Structure, FoundationNetworkInterface
+from contractor.Site.models import Site
+from contractor.Directory.models import Zone
+from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
+from contractor.plugins.Manual.models import ManualFoundation
+
+print( 'Getting network config...' )
+
+line = subprocess.check_output( [ '/sbin/ip', 'route', 'get', '1.0.0.0' ], universal_newlines=True ).splitlines()[0]
+parts = line.split()
+contractor_iface = parts[4]
+contractor_gateway = parts[2]
+
+print( 'Interface Name: "{0}"'.format( contractor_iface ) )
+
+contractor_ip_address = None
+
+for line in subprocess.check_output( [ '/sbin/ip', 'address', 'show', contractor_iface ], universal_newlines=True ).splitlines():
+  parts = line.split()
+  if parts[0] == 'inet':
+    ( contractor_ip_address, network_prefix ) = parts[1].split( '/' )
+    network_prefix = int( network_prefix )
+    break
+
+if contractor_ip_address is None:
+  print( 'Unable to discover IP Address' )
+  sys.exit( 1 )
+
+contractor_dns = None
+for line in open( '/etc/resolv.conf', 'r' ).readlines():
+  parts = line.split()
+  try:
+    if parts[0] == 'nameserver':
+      contractor_dns = parts[1]
+      break
+
+  except IndexError:
+    continue
+
+if contractor_dns is None:
+  print( 'Unable to discover DNS' )
+  sys.exit( 1 )
+
+network_subnet = IpToStr( CIDRSubnet( StrToIp( contractor_ip_address ), network_prefix ) )
+
+contractor_ip_offset = StrToIp( contractor_ip_address ) - StrToIp( network_subnet )
+
+print( 'Network/Prefix: "{0}/{1}"'.format( network_subnet, network_prefix ) )
+print( ' Contractor Ip: "{0}", offset "{1}"'.format( contractor_ip_address, contractor_ip_offset ) )
+print( '       Gateway: "{0}"'.format( contractor_gateway ) )
+print( '           DNS: "{0}"'.format( contractor_dns ) )
+
+fbp_manual = FoundationBluePrint.objects.get( pk='manual-foundation-base' )
+sbp_xenial = StructureBluePrint.objects.get( pk='ubuntu-xenial-base' )
+
+print( 'creating site...' )
+zl = Zone()
+zl.name = 'local'
+zl.full_clean()
+zl.save()
+
+zs1 = Zone()
+zs1.name = 'site1'
+zs1.parent = zl
+zs1.full_clean()
+zs1.save()
+
+s1 = Site( name='site1', description='Site 1' )
+s1.zone = zs1
+s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'dns_servers' ] = [ contractor_ip_address ]
+s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
+s1.full_clean()
+s1.save()
+
+print( 'creating network...' )
+addr1_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=1, prefix=network_prefix, name='main' )
+addr1_block.full_clean()
+addr1_block.save()
+
+print( 'reserving address offsets from 2 - 20...')
+for i in range( 2, 20 ):
+  addr = ReservedAddress( address_block=addr1_block, offset=i, reason='network reserved' )
+  addr.full_clean()
+  addr.save()
+
+print( 'using offsets 21 - 29 for dynamic pool...' )
+for i in range( 21, 29 ):
+  addr = DynamicAddress( address_block=addr1_block, offset=i )
+  addr.full_clean()
+  addr.save()
+
+
+print( 'contractor entry...' )
+fdn_dev = ManualFoundation( site=s1, blueprint=fbp_manual, locator='contractor' )
+fdn_dev.full_clean()
+fdn_dev.save()
+fdn_dev.setBuilt()
+
+iface = RealNetworkInterface( name=contractor_iface, is_provisioning=True )
+iface.full_clean()
+iface.save()
+
+fni = FoundationNetworkInterface( foundation=fdn_dev, interface=iface, physical_location='eth0' )
+fni.full_clean()
+fni.save()
+
+str_dev = Structure( site=s1, blueprint=sbp_xenial, hostname='contractor', foundation=fdn_dev )
+str_dev.auto_build = False
+str_dev.full_clean()
+str_dev.save()
+str_dev.setBuilt()
+
+addr = Address( networked=str_dev, address_block=addr1_block, interface_name=contractor_iface, offset=contractor_ip_offset, is_primary=True )
+addr.full_clean()
+addr.save()
+
+print( 'Configuring settings file' )
+filename = settings.__file__
+
+configured = False
+for line in open( filename, 'r' ).readlines():
+  if line.startswith( 'DNS_NS_LIST =' ):
+    parts = line.split( '=' )
+    if parts[1].strip != '[]':
+      configured = True
+
+    break
+
+if not configured:
+  data = open( filename, 'r' ).read()
+
+  data.replace( 'BIND_NS_LIST = []', 'BIND_NS_LIST = {0}'.format( [ '{0}.contractor.site1.local.'.format( contractor_iface ) ] ) )
+
+  open( filename, 'w' ).write( data )
+
+print( 'Generating Bind files...' )
+subprocess.check_call( [ '/usr/lib/contractor/cron/genDNS' ] )
+
+print( 'Configuring Bind...' )
+
+configured = False
+for line in open( '/etc/bind/named.conf.local', 'r' ).readlines():
+  if line.strip() == 'include "/etc/bind/contractor/dns.master";':
+    configured = True
+    break
+
+if not configured:
+  fp = open( '/etc/bind/named.conf.local', 'w' )
+  fp.write( """//
+// Do any local configuration here
+//
+
+include "/etc/bind/contractor/dns.master
+""" )
+  fp.save()
+
+  fp = open( '/etc/bin/named.conf.options', 'w' )
+  fp.write( """options {
+  directory "/var/cache/bind";
+
+  forwarders {
+    {0};
+  };
+
+  dnssec-validation auto;
+
+  auth-nxdomain no;    # conform to RFC1035
+  listen-on-v6 { any; };
+};
+""".format( contractor_dns ) )
+
+print( 'Done!' )

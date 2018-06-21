@@ -190,7 +190,7 @@ def loadSFLinks( link_list ):
 try:
   filename = sys.argv[1]
 except IndexError:
-  print( 'Usage {0} <blueprint file.json>'.format( sys.argv[0] ) )
+  print( 'Usage {0} <blueprint file.toml>'.format( sys.argv[0] ) )
   sys.exit( 1 )
 
 try:

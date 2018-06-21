@@ -1,8 +1,8 @@
 import os
 
-MASTER_NS = 'contractor.myzone.local'
-MASTER_NS_IP = '10.0.0.1'
-ALLOW_TRANSFER = [ '127.0.0.1' ]
+from django.conf import settings
+
+from contractor.Directory.models import Zone
 
 TEMPLATES = {}
 TEMPLATES[ 'SOA' ] = """$TTL {ttl}
@@ -15,18 +15,56 @@ $ORIGIN {zone}.
             {minimum}
           )
 """
-TEMPLATES[ 'NS' ] = '{name:<50} IN NS   {server}'
-TEMPLATES[ 'MX' ] = '{name:<50} IN MX   {priority:>4} {target}'
-TEMPLATES[ 'A' ] = '{name:<50} IN A    {address}'
-TEMPLATES[ 'AAAA' ] = '{name:<50} IN AAAA {address}'
-TEMPLATES[ 'PTR' ] = '{value:<50} IN PTR  {target}'
+TEMPLATES[ 'NS' ] = '{name:<50} IN NS    {server}.'
+TEMPLATES[ 'MX' ] = '{name:<50} IN MX    {priority:>4} {target}'
+TEMPLATES[ 'A' ] = '{name:<50} IN A     {address}'
+TEMPLATES[ 'AAAA' ] = '{name:<50} IN AAAA  {address}'
+TEMPLATES[ 'PTR' ] = '{value:<50} IN PTR   {target}'
 TEMPLATES[ 'CNAME' ] = '{name:<50} IN CNAME {target}'
-TEMPLATES[ 'TXT' ] = '{name:<50} IN TXT  {target}'
-TEMPLATES[ 'SRV' ] = '{name:<50} IN SRV  {priority:>4} {weight:>4} {name:<50} {port:>5} {target}'
-TEMPLATES[ 'SIG' ] = '{name:<50} IN SIG  {sig}'
+TEMPLATES[ 'TXT' ] = '{name:<50} IN TXT   {target}'
+TEMPLATES[ 'SRV' ] = '{name:<50} IN SRV   {priority:>4} {weight:>4} {name:<50} {port:>5} {target}'
+TEMPLATES[ 'SIG' ] = '{name:<50} IN SIG   {sig}'
 
-REVERSE_SOA = { 'ttl': 3600, 'refresh': 86400, 'retry': 7200, 'expire': 36000, 'minimum': 172800, 'master': MASTER_NS, 'email': 'hostmaster.site1.local' }
-REVERSE_NS = [ 'contractor.site1.local.' ]
+REVERSE_SOA = { 'ttl': 3600, 'refresh': 86400, 'retry': 7200, 'expire': 36000, 'minimum': 172800, 'master': settings.BIND_NS_LIST[0], 'email': settings.BIND_SOA_EMAIL }
+
+
+def getHostIp( fqdn ):
+  parts = fqdn.split( '.' )
+  if parts[-1] == '':
+    parts.pop()
+
+  # We are going to start at the end, work backward till the zone names stop matching, then try for hostname and possibly interface
+  zone = None
+  try:
+    name = parts.pop()
+    zone = Zone.objects.get( name=name )
+    while parts:
+      name = parts.pop()
+      zone = zone.zone_set.get( name=name )
+  except Zone.DoesNotExist:
+    pass
+
+  if zone is None:
+    raise ValueError( 'Unable to find top level zone "{0}"'.format( name ) )
+
+  hostname = name
+
+  networked = None
+  for site in zone.site_set.all():
+    for networked in site.networked_set.all():
+      if networked.hostname == hostname:
+        break
+
+  if networked is None:
+    raise ValueError( 'Unable to find hostname "{0}" in zone "{1}"'.format( hostname, zone ) )
+
+  if len( parts ) == 1:
+    return networked.address_set.get( interface_name=parts[0] ).ip_address
+
+  elif len( parts ) == 0:
+    return networked.primary_ip
+
+  raise ValueError( 'Not sure what to do with "{0}" for host "{1}" in "{2}"'.format( parts, networked, zone) )
 
 
 def _render( rec_type, parms ):
@@ -48,10 +86,13 @@ def _getNetworkedEntries( networked ):
   if networked.primary_ip is None:
     return result
 
-  result[ 'A' ] = [ { 'name': networked.hostname, 'address': networked.primary_ip } ]
-  result[ 'CNAME' ] = []
+  ip_addr = networked.primary_ip
+  iface = networked.primary_interface
+
+  result[ 'A' ] = [ { 'name': '{0}.{1}'.format( iface.name, networked.hostname ), 'address': ip_addr } ]
+  result[ 'CNAME' ] = [ { 'name': networked.hostname, 'target': '{0}.{1}'.format( iface.name, networked.hostname ) } ]
   result[ 'TXT' ] = []
-  result[ 'PTR' ] = [ { 'target': networked.fqdn, 'value': networked.primary_ip } ]
+  result[ 'PTR' ] = [ { 'target': networked.fqdn, 'value': ip_addr } ]
 
   return result
 
@@ -63,18 +104,11 @@ def genZone( zone, ptr_list, zone_file_list ):
 
   zone_fqdn = zone.fqdn
 
-  for ns in zone.ns_list:
+  for ns in settings.BIND_NS_LIST:
     record_map[ 'NS' ].append( { 'name': '@', 'server': ns } )
-    ( hostname, domain ) = ns.split( '.', 1 )
-    if domain != zone_fqdn:
-      record_map[ 'A' ].append( { 'name': ns, 'address': '192.168.200.51' }  )
-
-  for subZone in zone.zone_set.all():
-    for ns in subZone.ns_list:
-      record_map[ 'NS' ].append( { 'name': subZone.name, 'server': ns } )
-      ( hostname, domain ) = ns.split( '.', 1 )
-      if domain != zone_fqdn:
-        record_map[ 'A' ].append( { 'name': ns, 'address': '192.168.200.51' }  )
+    if ns.endswith( zone_fqdn ):
+      ns_ip = getHostIp( ns )
+      record_map[ 'A' ].append( { 'name': ns[ :-len( zone_fqdn ) - 1], 'address': ns_ip } )
 
   for site in zone.site_set.all():
     for networked in site.networked_set.all():
@@ -93,9 +127,9 @@ def genZone( zone, ptr_list, zone_file_list ):
 
   record_map[ 'SOA' ] = [ {
                             'zone': zone_fqdn,
-                            'master': MASTER_NS,
+                            'master': settings.BIND_NS_LIST[ 0 ],
                             'ttl': zone.ttl,
-                            'email': zone.email.replace( '@', '.' ),
+                            'email': settings.BIND_SOA_EMAIL,
                             'refresh': zone.refresh,
                             'retry': zone.retry,
                             'expire': zone.expire,
@@ -108,11 +142,13 @@ def genZone( zone, ptr_list, zone_file_list ):
 
   result = ''
   for rec_type in ( 'SOA', 'NS', 'SIG', 'SRV', 'A', 'AAAA', 'CNAME', 'TXT' ):
-    result += _render( rec_type, record_map[ rec_type ] )  # TODO: Sort record map
+    result += _render( rec_type, record_map[ rec_type ] )  # TODO: Sort record map, and get rid of duplicates
 
-  zone_file_list.append( ( zone.name, zone_fqdn ) )
+  filename = '{0}.zone'.format( zone_fqdn )
 
-  return zone.name, result
+  zone_file_list.append( ( filename, zone_fqdn ) )
+
+  return filename, result
 
 
 def genPtrZones( ptr_list, zone_file_list ):
@@ -131,7 +167,7 @@ def genPtrZones( ptr_list, zone_file_list ):
     record_map[ 'SOA' ] = REVERSE_SOA.copy()
     record_map[ 'SOA' ][ 'zone' ] = zone
 
-    for ns in REVERSE_NS:
+    for ns in settings.BIND_NS_LIST:
       record_map[ 'NS' ].append( { 'name': '@', 'server': ns } )
 
     record_map[ 'PTR' ] = zone_list[ zone ]
@@ -140,9 +176,11 @@ def genPtrZones( ptr_list, zone_file_list ):
     for rec_type in ( 'SOA', 'NS', 'PTR', 'TXT' ):
       result += _render( rec_type, record_map[ rec_type ] )  # TODO: Sort record map
 
-    zone_file_list.append( ( zone, zone ) )
+    filename = '{0}.zone'.format( zone )
 
-    yield zone, result
+    zone_file_list.append( ( filename, zone ) )
+
+    yield filename, result
 
 
 def genMasterFile( zone_dir, zone_file_list ):

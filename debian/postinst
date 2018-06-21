@@ -29,6 +29,8 @@ case "$1" in
           ln -sf /etc/contractor/master.conf /usr/lib/python3/dist-packages/contractor/settings.py
         fi
 
+        mkdir -p /etc/bind/contractor/zones
+
         /etc/init.d/cron reload
 
         a2ensite contractor.conf
