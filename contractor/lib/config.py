@@ -145,7 +145,9 @@ def getConfig( target ):  # combine depth first the config values
     raise ValueError( 'Don\'t know how to get config for "{0}"'.format( target ) )
 
   config[ '__last_modified' ] = lastModified
-  config[ '__contractor_host' ] = 'http://127.0.0.1/'
-  config[ '__pxe_template_location' ] = 'http://192.168.200.51:8888/config/pxe_template/'
+  config[ '__timestamp' ] = datetime.now( timezone.utc )
+  config[ '__contractor_host' ] = 'http://contractor/'
+  config[ '__pxe_template_location' ] = 'http://contractor/config/pxe_template/'
+  config[ '__pxe_location' ] = 'http://static/pxe/'
 
   return config

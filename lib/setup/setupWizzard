@@ -14,7 +14,7 @@ from contractor.lib.ip import CIDRSubnet, StrToIp, IpToStr
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Building.models import Structure, FoundationNetworkInterface
 from contractor.Site.models import Site
-from contractor.Directory.models import Zone
+from contractor.Directory.models import Zone, Entry
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
 from contractor.plugins.Manual.models import ManualFoundation
 
@@ -130,6 +130,12 @@ addr = Address( networked=str_dev, address_block=addr1_block, interface_name=con
 addr.full_clean()
 addr.save()
 
+e = Entry( zone=zs1, type='CNAME' )
+e.name = 'static'
+e.target = 'contractor.site1.local.'
+e.full_clean()
+e.save()
+
 print( 'Configuring settings file...' )
 filename = settings.__file__
 
@@ -137,7 +143,7 @@ configured = False
 for line in open( filename, 'r' ).readlines():
   if line.startswith( 'BIND_NS_LIST =' ):
     parts = line.split( '=' )
-    if parts[1].strip != '[]':
+    if parts[1].strip() != '[]':
       configured = True
 
     break

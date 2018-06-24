@@ -79,10 +79,10 @@ class Entry( models.Model ):
     if not entry_name_regex.match( self.name ):
       errors[ 'name' ] = 'Invalid'
 
-    if self.weight < 1 or self.weight > 4096:
+    if self.weight is not None and ( self.weight < 1 or self.weight > 4096 ):
       errors[ 'weight' ] = 'Invalid'
 
-    if self.weight < 1 or self.weight > 65535:
+    if self.port is not None and ( self.port < 1 or self.port > 65535 ):
       errors[ 'port' ] = 'port'
 
     if errors:

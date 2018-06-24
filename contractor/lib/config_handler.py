@@ -1,6 +1,5 @@
 import re
-import json
-from django.template import Template, Context
+from jinja2 import Template
 from cinp.server_common import Response
 
 from contractor.Building.models import Foundation, Structure
@@ -110,7 +109,7 @@ def handler( request ):
     elif request_type == 'pxe_template':
       template = Template( pxe.template )
 
-    data = template.render( Context( config ) )
+    data = Template( template.render( **config ) ).render( **config )
     print( 'config_handler sending "{0}" to "{1}"\n    -----------    '.format( request_type, request.remote_addr ) )
     print( data )
     print( '    -----------    ')
@@ -118,6 +117,6 @@ def handler( request ):
 
   elif request_type == 'config':
     _fromPythonMap( config )
-    return Response( 200, data=json.dumps( config ) )
+    return Response( 200, data=config )
 
   return Response( 400, data='Invalid request type', content_type='text' )

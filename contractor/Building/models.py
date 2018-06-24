@@ -241,6 +241,7 @@ class Structure( Networked ):
                '_structure_id': self.pk,
                '_structure_state': self.state,
                '_structure_config_uuid': self.config_uuid,
+               '_provisioning_interface_mac': self.provisioning_interface.mac,
              }
 
     result[ 'hostname' ] = self.hostname

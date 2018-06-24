@@ -84,7 +84,7 @@ class Migration(migrations.Migration):
             name='RealNetworkInterface',
             fields=[
                 ('networkinterface_ptr', models.OneToOneField(serialize=False, primary_key=True, parent_link=True, auto_created=True, to='Utilities.NetworkInterface')),
-                ('mac', models.CharField(max_length=18, blank=True, null=True, unique=True)),
+                ('mac', models.CharField(max_length=18, blank=True, null=True)),
                 ('pxe', models.ForeignKey(null=True, related_name='+', to='BluePrint.PXE', blank=True)),
             ],
             bases=('Utilities.networkinterface',),

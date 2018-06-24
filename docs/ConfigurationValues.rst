@@ -62,7 +62,7 @@ NOTE:
 Attribute Values
 ----------------
 
-These values start with `_` and are not  overlayable/modifyable by config_Values.
+These values start with `_` and are not overlayable/modifyable by config_Values.
 These values are attributes of the structure/foundation/complex, such as the
 structure/foundation/complex id, `_structure_config_uuid`, `_structure_hostname`,
 structure/foundation/complex state.

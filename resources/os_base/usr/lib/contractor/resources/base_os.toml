@@ -22,7 +22,7 @@ begin( description='Provision From Installer' )
 if not structure.provisioning_interface then
   fatal_error( msg='Provisioning Interface Not Defined' )
 
-dhcp.set_pxe( interface=structure.provisioning_interface, pxe=installer_pxe )
+dhcp.set_pxe( interface=structure.provisioning_interface, pxe=config.installer_pxe )
 foundation.power_on()
 delay( seconds=300 )
 foundation.wait_for_poweroff()

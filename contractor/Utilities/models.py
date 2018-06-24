@@ -161,7 +161,7 @@ class NetworkInterface( models.Model ):
 
 @cinp.model( )
 class RealNetworkInterface( NetworkInterface ):
-  mac = models.CharField( max_length=18, unique=True, blank=True, null=True )
+  mac = models.CharField( max_length=18, blank=True, null=True )  # in a globally unique world we would set this to unique, but these virtual days we have to many ways to use the same mac safely, so good luck.
   pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
 
   @property

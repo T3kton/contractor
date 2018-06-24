@@ -617,7 +617,12 @@ class Runner( object ):
 
         value = getter()
 
-      value = value[ self.state[ state_index ][1][ 'index' ] ]
+      index = self.state[ state_index ][1][ 'index' ]
+
+      try:
+        value = value[ index ]
+      except IndexError:
+        raise ParamaterError( 'index', 'Index does not exist' )
 
       self.state[ state_index ][1] = None
       try:

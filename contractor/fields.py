@@ -158,7 +158,7 @@ class StringListField( models.CharField ):
     return '\t'.join( value )
 
 
-class IpAddressField( models.IntegerField ):
+class IpAddressField( models.BinaryField ):  # needs 128 bits of storage, the integer types only goto 64
   description = 'Ip Address Field'
   validators = [ validate_ipaddress ]
   cinp_type = 'String'
@@ -168,7 +168,7 @@ class IpAddressField( models.IntegerField ):
       return None
 
     try:
-      return IpToStr( value )
+      return IpToStr( int.from_bytes( value, 'big' ) )
     except ValueError:
       raise ValidationError( '"%(value)s" is not valid', params={ 'value': value } )
 
@@ -179,13 +179,25 @@ class IpAddressField( models.IntegerField ):
     if isinstance( value, str ):
       return value
 
-    try:
-      return IpToStr( value )
-    except ValueError:
-      raise ValidationError( '"%(value)s" is not valid', params={ 'value': value } )
+    if isinstance( value, int ):
+      try:
+        return IpToStr( value )
+      except ValueError:
+        raise ValidationError( '"%(value)s" is not valid', params={ 'value': value } )
+
+    if isinstance( value, bytes ):
+      try:
+        return IpToStr( int.from_bytes( value, 'big' ) )
+      except ValueError:
+        raise ValidationError( '"%(value)s" is not valid', params={ 'value': value } )
+
+    raise ValidationError( '"%(value)s" type is unexpected type "%(type)s"', params={ 'value': value, 'type': type } )
 
   def get_prep_value( self, value ):
-    return StrToIp( value )
+    if isinstance( value, str ):
+      value = StrToIp( value )
+
+    return value.to_bytes( 16, 'big' )
 
   def value_to_string( self, obj ):
     return self.get_prep_value( self._get_val_from_obj( obj ) )
