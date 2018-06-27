@@ -92,7 +92,7 @@ class Foundation( models.Model ):
               '_foundation_state': self.state,
               '_foundation_class_list': self.class_list,
               '_foundation_locator': self.locator,
-              '_foundation_interface_list': [ i.name for i in self.interfaces.all() ]
+              '_foundation_interface_list': [ i.config for i in self.interfaces.all() ]
             }
 
   @property
@@ -206,7 +206,7 @@ class FoundationNetworkInterface( models.Model ):
     return True
 
   def __str__( self ):
-    return 'FoundationNetworkInterface for "{0}" to "{1}" named "{2}"'.format( self.foundation, self.interface, self.name )
+    return 'FoundationNetworkInterface for "{0}" to "{1}" named "{2}"'.format( self.foundation, self.interface, self.physical_location )
 
 
 def getUUID():

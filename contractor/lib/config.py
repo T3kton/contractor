@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 
-VALUE_SORT_ORDER = '-_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz{}~'
+VALUE_SORT_ORDER = '-_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz<>~'
 
 
 def value_key( item ):
@@ -30,7 +30,7 @@ def _updateConfig( config_value_map, class_list, config ):
 
       config[ name ] = old_value - value
 
-    elif name[0] == '{':
+    elif name[0] == '<':
       name = name[ 1: ]
       try:
         old_value = config[ name ]
@@ -40,7 +40,7 @@ def _updateConfig( config_value_map, class_list, config ):
 
       config[ name ] = value + old_value
 
-    elif name[0] == '}':
+    elif name[0] == '>':
       name = name[ 1: ]
       try:
         old_value = config[ name ]

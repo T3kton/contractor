@@ -138,6 +138,22 @@ class NetworkInterface( models.Model ):
   def type( self ):
     return 'Unknown'  # This class should not be used directly
 
+  @property
+  def config( self ):
+    result = { 'name': self.name, 'mac': self.mac, 'address_list': [] }
+    for address in self.structure.address_set.filter(  interface_name=self.name ):
+      result[ 'address_list' ].append( {
+                                         'address': address.ip_address,
+                                         'gateway': address.address_block.gateway,
+                                         'auto': True,
+                                         'primary': address.is_primary,
+                                         'sub_interface': None,
+                                         'tagged': False,
+                                         'mtu': 1500
+                                       } )
+
+    return result
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
@@ -156,7 +172,7 @@ class NetworkInterface( models.Model ):
       raise ValidationError( errors )
 
   def __str__( self ):
-    return 'NetworkInterface "{0}"'.format( self.physical_name )
+    return 'NetworkInterface "{0}"'.format( self.name )
 
 
 @cinp.model( )
@@ -171,6 +187,13 @@ class RealNetworkInterface( NetworkInterface ):
   @property
   def type( self ):
     return 'Real'
+
+  @property
+  def config( self ):
+    result = super().config
+    result[ 'mac' ] = self.mac
+
+    return result
 
   @cinp.check_auth()
   @staticmethod
@@ -233,6 +256,14 @@ class AggragatedNetworkInterface( AbstractNetworkInterface ):
   @property
   def type( self ):
     return 'Aggragated'
+
+  @property
+  def config( self ):
+    result = super().config
+    result[ 'master' ] = self.master_interface.name
+    result[ 'slaves' ] = [ i.name for i in self.slaves ]
+
+    return result
 
   @cinp.check_auth()
   @staticmethod

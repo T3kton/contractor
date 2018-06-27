@@ -192,7 +192,11 @@ def main():
       sys.exit( 1 )
 
     else:
-      job.status = 'done'
+      if job.state != 'queued':
+        print( 'Can only "done" a job if it is queued' )
+        sys.exit( 1 )
+      job.state = 'done'
+      job.full_clean()
       job.save()
       sys.exit( 0 )
 
