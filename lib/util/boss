@@ -59,6 +59,8 @@ def main():
   task_group = group.add_mutually_exclusive_group()
   task_group.add_argument(       '--do-create', help='submit create job', action='store_true' )
   task_group.add_argument(       '--do-destroy', help='submit destroy job', action='store_true' )
+  task_group.add_argument(       '--do-pre-delete', help='submit destroy job and disable auto-build', action='store_true' )
+  task_group.add_argument(       '--do-delete', help='delete target', action='store_true' )
   task_group.add_argument(       '--run-script', help='submit a script job', metavar='SCRIPT NAME' )
   task_group.add_argument(       '--pause', help='pause active job', action='store_true' )
   task_group.add_argument(       '--resume', help='resume a paused job', action='store_true' )
@@ -111,13 +113,42 @@ def main():
     print( 'Create Job for {0} created, job #{1}.'.format( target, rc ) )
     sys.exit( 0 )
 
-  if args.do_destroy:
+  if args.do_destroy or args.do_pre_delete:  # TODO: can_destroy?
+    if args.do_pre_delete:
+      if isinstance( target, Structure ):
+        if target.auto_build:
+          target.auto_build = False
+          target.full_clean()
+          target.save()
+
+      elif isinstance( target, Foundation ):
+        if target.attached_structure is not None:
+          print( 'Foundations can not have structures when deleting' )
+          os.exit( 1 )
+
+      else:
+        print( 'Can not pre-delete Dependancies' )
+        os.exit( 1 )
+
     try:
       rc = target.doDestroy()
     except Exception as e:
       print( 'Error creating destroy job: "{0}"'.format( str( e ) ) )
       sys.exit( 1 )
     print( 'Destroy Job for {0} created, job #{1}.'.format( target, rc ) )
+    sys.exit( 0 )
+
+  if args.do_delete:
+    if not target.can_delete:
+      print( 'Target has dependancies/structure can not delete' )
+      sys.exit( 1 )
+
+    if target.state == 'built':
+      print( 'Target is built, can not delete' )
+      sys.exit( 1 )
+
+    target.delete()
+    print( 'Target Deleted' )
     sys.exit( 0 )
 
   if args.run_script:
