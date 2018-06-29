@@ -54,14 +54,14 @@ class Networked( models.Model ):
   @property
   def provisioning_interface( self ):
     try:
-      return self.structure.foundation.interfaces.get( is_provisioning=True )
+      return self.structure.foundation.networkinterface_set.get( is_provisioning=True )
     except ObjectDoesNotExist:
       return None
 
   @property
   def provisioning_ip( self ):
     try:
-      interface_name = self.foundation.interfaces.get( is_provisioning=True ).name
+      interface_name = self.structure.foundation.networkinterface_set.get( is_provisioning=True ).name
     except NetworkInterface.DoesNotExist:
       return None
 
@@ -141,16 +141,21 @@ class NetworkInterface( models.Model ):
   @property
   def config( self ):
     result = { 'name': self.name, 'mac': self.mac, 'address_list': [] }
-    for address in self.structure.address_set.filter(  interface_name=self.name ):
-      result[ 'address_list' ].append( {
-                                         'address': address.ip_address,
-                                         'gateway': address.address_block.gateway,
-                                         'auto': True,
-                                         'primary': address.is_primary,
-                                         'sub_interface': None,
-                                         'tagged': False,
-                                         'mtu': 1500
-                                       } )
+    structure = self.foundation.attached_structure
+    if structure is not None:
+      for address in structure.address_set.filter( interface_name=self.name ):
+        result[ 'address_list' ].append( {
+                                           'address': address.ip_address,
+                                           'netmask': address.netmask,
+                                           'prefix': address.prefix,
+                                           'network': address.network,
+                                           'gateway': address.address_block.gateway,
+                                           'auto': True,
+                                           'primary': address.is_primary,
+                                           'sub_interface': None,
+                                           'tagged': False,
+                                           'mtu': 1500
+                                         } )
 
     return result
 
@@ -178,6 +183,8 @@ class NetworkInterface( models.Model ):
 @cinp.model( )
 class RealNetworkInterface( NetworkInterface ):
   mac = models.CharField( max_length=18, blank=True, null=True )  # in a globally unique world we would set this to unique, but these virtual days we have to many ways to use the same mac safely, so good luck.
+  foundation = models.ForeignKey( 'Building.Foundation', related_name='networkinterface_set' )
+  physical_location = models.CharField( max_length=100 )
   pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
 
   @property
@@ -581,7 +588,7 @@ class Address( BaseAddress ):
   @property
   def interface( self ):
     try:
-      return self.networked.structure.foundation.interfaces.get( name=self.interface_name )
+      return self.networked.structure.foundation.networkinterface_set.get( name=self.interface_name )
     except ObjectDoesNotExist:
       return None
 

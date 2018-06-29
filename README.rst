@@ -100,8 +100,7 @@ Building
 --------
 
 Contains Foundation a generic base class for all Foundations provided by plugins.
-Structure the class for Structures that go on Foundations.   FoundationNetworkInterface
-which  describes the physicall network interfaces on a Foundation.  Complex, a
+Structure the class for Structures that go on Foundations.  Complex, a
 grouping of Foundations (ie: a cluster).  Dependancy, allows Foundations to
 depend on Structures and/or jobs to be complete on a structure.
 

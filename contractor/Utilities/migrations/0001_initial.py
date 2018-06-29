@@ -2,8 +2,8 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-import contractor.fields
 import django.db.models.deletion
+import contractor.fields
 
 
 class Migration(migrations.Migration):
@@ -11,17 +11,18 @@ class Migration(migrations.Migration):
     dependencies = [
         ('BluePrint', '0001_initial'),
         ('Site', '0001_initial'),
+        ('Building', '0001_initial'),
     ]
 
     operations = [
         migrations.CreateModel(
             name='AddressBlock',
             fields=[
-                ('name', models.CharField(primary_key=True, serialize=False, max_length=40)),
+                ('name', models.CharField(serialize=False, max_length=40, primary_key=True)),
                 ('subnet', contractor.fields.IpAddressField()),
                 ('prefix', models.IntegerField()),
                 ('gateway_offset', models.IntegerField(blank=True, null=True)),
-                ('_max_address', contractor.fields.IpAddressField(editable=False)),
+                ('_max_address', contractor.fields.IpAddressField()),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('site', models.ForeignKey(to='Site.Site')),
@@ -41,30 +42,30 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('hostname', models.CharField(max_length=100)),
-                ('site', models.ForeignKey(to='Site.Site', on_delete=django.db.models.deletion.PROTECT)),
+                ('site', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='Site.Site')),
             ],
         ),
         migrations.CreateModel(
             name='NetworkInterface',
             fields=[
                 ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
-                ('updated', models.DateTimeField(auto_now=True)),
-                ('created', models.DateTimeField(auto_now_add=True)),
                 ('name', models.CharField(max_length=20)),
                 ('is_provisioning', models.BooleanField(default=False)),
+                ('updated', models.DateTimeField(auto_now=True)),
+                ('created', models.DateTimeField(auto_now_add=True)),
             ],
         ),
         migrations.CreateModel(
             name='AbstractNetworkInterface',
             fields=[
-                ('networkinterface_ptr', models.OneToOneField(serialize=False, primary_key=True, parent_link=True, auto_created=True, to='Utilities.NetworkInterface')),
+                ('networkinterface_ptr', models.OneToOneField(auto_created=True, parent_link=True, primary_key=True, to='Utilities.NetworkInterface', serialize=False)),
             ],
             bases=('Utilities.networkinterface',),
         ),
         migrations.CreateModel(
             name='Address',
             fields=[
-                ('baseaddress_ptr', models.OneToOneField(serialize=False, primary_key=True, parent_link=True, auto_created=True, to='Utilities.BaseAddress')),
+                ('baseaddress_ptr', models.OneToOneField(auto_created=True, parent_link=True, primary_key=True, to='Utilities.BaseAddress', serialize=False)),
                 ('interface_name', models.CharField(max_length=20)),
                 ('sub_interface', models.IntegerField(blank=True, null=True, default=None)),
                 ('vlan', models.IntegerField(default=0)),
@@ -75,24 +76,26 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='DynamicAddress',
             fields=[
-                ('baseaddress_ptr', models.OneToOneField(serialize=False, primary_key=True, parent_link=True, auto_created=True, to='Utilities.BaseAddress')),
-                ('pxe', models.ForeignKey(null=True, related_name='+', to='BluePrint.PXE', blank=True)),
+                ('baseaddress_ptr', models.OneToOneField(auto_created=True, parent_link=True, primary_key=True, to='Utilities.BaseAddress', serialize=False)),
+                ('pxe', models.ForeignKey(to='BluePrint.PXE', blank=True, null=True, related_name='+')),
             ],
             bases=('Utilities.baseaddress',),
         ),
         migrations.CreateModel(
             name='RealNetworkInterface',
             fields=[
-                ('networkinterface_ptr', models.OneToOneField(serialize=False, primary_key=True, parent_link=True, auto_created=True, to='Utilities.NetworkInterface')),
-                ('mac', models.CharField(max_length=18, blank=True, null=True)),
-                ('pxe', models.ForeignKey(null=True, related_name='+', to='BluePrint.PXE', blank=True)),
+                ('networkinterface_ptr', models.OneToOneField(auto_created=True, parent_link=True, primary_key=True, to='Utilities.NetworkInterface', serialize=False)),
+                ('mac', models.CharField(blank=True, null=True, max_length=18)),
+                ('physical_location', models.CharField(max_length=100)),
+                ('foundation', models.ForeignKey(related_name='networkinterface_set', to='Building.Foundation')),
+                ('pxe', models.ForeignKey(to='BluePrint.PXE', blank=True, null=True, related_name='+')),
             ],
             bases=('Utilities.networkinterface',),
         ),
         migrations.CreateModel(
             name='ReservedAddress',
             fields=[
-                ('baseaddress_ptr', models.OneToOneField(serialize=False, primary_key=True, parent_link=True, auto_created=True, to='Utilities.BaseAddress')),
+                ('baseaddress_ptr', models.OneToOneField(auto_created=True, parent_link=True, primary_key=True, to='Utilities.BaseAddress', serialize=False)),
                 ('reason', models.CharField(max_length=50)),
             ],
             bases=('Utilities.baseaddress',),
@@ -100,15 +103,15 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='baseaddress',
             name='address_block',
-            field=models.ForeignKey(null=True, to='Utilities.AddressBlock', blank=True),
+            field=models.ForeignKey(to='Utilities.AddressBlock', blank=True, null=True),
         ),
         migrations.CreateModel(
             name='AggragatedNetworkInterface',
             fields=[
-                ('abstractnetworkinterface_ptr', models.OneToOneField(serialize=False, primary_key=True, parent_link=True, auto_created=True, to='Utilities.AbstractNetworkInterface')),
+                ('abstractnetworkinterface_ptr', models.OneToOneField(auto_created=True, parent_link=True, primary_key=True, to='Utilities.AbstractNetworkInterface', serialize=False)),
                 ('paramaters', contractor.fields.MapField(default={})),
-                ('master_interface', models.ForeignKey(to='Utilities.NetworkInterface', related_name='+')),
-                ('slaves', models.ManyToManyField(to='Utilities.NetworkInterface', related_name='_aggragatednetworkinterface_slaves_+')),
+                ('master_interface', models.ForeignKey(related_name='+', to='Utilities.NetworkInterface')),
+                ('slaves', models.ManyToManyField(related_name='_aggragatednetworkinterface_slaves_+', to='Utilities.NetworkInterface')),
             ],
             bases=('Utilities.abstractnetworkinterface',),
         ),
@@ -128,6 +131,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='address',
             name='pointer',
-            field=models.ForeignKey(null=True, to='Utilities.Address', blank=True),
+            field=models.ForeignKey(to='Utilities.Address', blank=True, null=True),
         ),
     ]

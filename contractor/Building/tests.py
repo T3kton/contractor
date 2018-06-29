@@ -1,3 +1,5 @@
-from django.test import TestCase
+import pytest
 
-# Create your tests here.
+from django.core.exceptions import ValidationError
+
+from contractor.Building.models import Foundation, Structure, Dependancy

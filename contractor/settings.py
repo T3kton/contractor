@@ -104,4 +104,4 @@ STATIC_URL = '/static/'
 
 BIND_ALLOW_TRANSFER = []
 BIND_SOA_EMAIL = 'hostmaster.site1.local'
-BIND_NS_LIST = [ 'enp0s20u2.contractor.site1.local' ]
+BIND_NS_LIST = [ 'eth0.contractor.site1.local' ]

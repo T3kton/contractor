@@ -10,7 +10,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, JSONField, name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
-from contractor.Utilities.models import Networked, RealNetworkInterface
+from contractor.Utilities.models import Networked  # , RealNetworkInterface
 from contractor.lib.config import getConfig
 
 # this is where the plan meats the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
@@ -21,13 +21,12 @@ FOUNDATION_SUBCLASS_LIST = []
 COMPLEX_SUBCLASS_LIST = []
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'DELETE', 'UPDATE' ] )
+@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'DELETE', 'UPDATE' ] )
 class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
   id_map = JSONField( blank=True )  # ie a dict of asset, chassis, system, etc types
-  interfaces = models.ManyToManyField( RealNetworkInterface, through='FoundationNetworkInterface' )
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -37,7 +36,7 @@ class Foundation( models.Model ):
   def setLocated( self ):
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
-    except Structure.DoesNotExist:
+    except AttributeError:
       pass
     self.located_at = timezone.now()
     self.built_at = None
@@ -54,7 +53,7 @@ class Foundation( models.Model ):
   def setDestroyed( self ):
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
-    except Structure.DoesNotExist:
+    except AttributeError:
       pass
     self.built_at = None
     self.located_at = None
@@ -92,7 +91,7 @@ class Foundation( models.Model ):
               '_foundation_state': self.state,
               '_foundation_class_list': self.class_list,
               '_foundation_locator': self.locator,
-              '_foundation_interface_list': [ i.config for i in self.interfaces.all() ]
+              '_foundation_interface_list': [ i.name for i in self.interfaces.all() ]
             }
 
   @property
@@ -121,6 +120,24 @@ class Foundation( models.Model ):
   @property
   def can_auto_locate( self ):  # child models can decide if it can auto submit job for building, ie: vm (and like foundations) are only canBuild if their structure is auto_build
     return False
+
+  @property
+  def can_delete( self ):
+    try:
+      return self.structure.state != 'build'
+    except AttributeError:
+      pass
+
+    return True
+
+  @property
+  def attached_structure( self ):
+    try:
+      return self.structure
+    except AttributeError:
+      pass
+
+    return None
 
   @property
   def state( self ):
@@ -192,23 +209,6 @@ class Foundation( models.Model ):
     return 'Foundation #{0}({1}) of "{2}" in "{3}"'.format( self.pk, self.locator, self.blueprint.pk, self.site.pk )
 
 
-@cinp.model( )
-class FoundationNetworkInterface( models.Model ):
-  foundation = models.ForeignKey( Foundation )
-  interface = models.ForeignKey( RealNetworkInterface )
-  physical_location = models.CharField( max_length=100 )
-  updated = models.DateTimeField( editable=False, auto_now=True )
-  created = models.DateTimeField( editable=False, auto_now_add=True )
-
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, verb, id_list, action=None ):
-    return True
-
-  def __str__( self ):
-    return 'FoundationNetworkInterface for "{0}" to "{1}" named "{2}"'.format( self.foundation, self.interface, self.physical_location )
-
-
 def getUUID():
   return str( uuid.uuid4() )
 
@@ -245,14 +245,19 @@ class Structure( Networked ):
              }
 
     result[ 'hostname' ] = self.hostname
-    result[ 'network' ] = {}
+    result[ 'interface_list' ] = {}
     for address in self.networked_ptr.address_set.all():
       tmp = {
-              'ip_address': address.ip_address,
+              'address': address.ip_address,
               'netmask': address.netmask,
               'prefix': address.prefix,
               'network': address.network,
-              'gateway': address.gateway
+              'gateway': address.gateway,
+              'primary': address.is_primary,
+              'sub_interface': None,
+              'tagged': False,
+              'auto': True,
+              'mtu': 1500
             }
 
       if tmp[ 'gateway' ] is None:
@@ -268,6 +273,10 @@ class Structure( Networked ):
       return 'built'
 
     return 'planned'
+
+  @property
+  def can_delete( self ):
+    return self.state != 'build'
 
   @property
   def description( self ):
@@ -372,7 +381,9 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Foundation' }, paramater_type_list=[ { 'type': 'String' } ] )
   def createFoundation( self, hostname ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     self = self.subclass
-    return self.newFoundation( hostname )  # also need to create the network interfaces
+
+    foundation = self.newFoundation( hostname )  # also need to create the network interfaces
+    return foundation
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
@@ -491,7 +502,7 @@ class Dependancy( models.Model ):
   LINK_CHOICES = ( 'soft', 'hard' )  # a hardlink if the structure is set back pulls the foundation back with it, soft does not
   structure = models.ForeignKey( Structure, on_delete=models.CASCADE, blank=True, null=True )  # depending on this
   dependancy = models.ForeignKey( 'self', on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # or this
-  foundation = models.OneToOneField( Foundation, on_delete=models.CASCADE, blank=True, null=True )  # this is what id depending
+  foundation = models.OneToOneField( Foundation, on_delete=models.CASCADE, blank=True, null=True )  # this is what is depending
   script_structure = models.ForeignKey( Structure, on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # if this is specified, the script runs on this
   link = models.CharField( max_length=4, choices=[ ( i, i ) for i in LINK_CHOICES ] )
   create_script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job must complete before built_at is set
@@ -520,6 +531,10 @@ class Dependancy( models.Model ):
       return 'built'
 
     return 'planned'
+
+  @property
+  def can_delete( self ):
+    return self.state != 'build'
 
   @property
   def site( self ):
