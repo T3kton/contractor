@@ -95,9 +95,9 @@ def handler( request ):
     target = address.networked.subclass
     try:
       if isinstance( target, Structure ):
-        interface = target.foundation.interfaces.get( name=address.interface_name )
+        interface = target.foundation.networkinterface_set.get( name=address.interface_name )
       else:
-        interface = target.interfaces.get( name=address.interface_name )
+        interface = target.networkinterface_set.get( name=address.interface_name )
 
     except NetworkInterface.DoesNotExist:
       return Response( 404, data='Interface Not Found', content_type='text' )

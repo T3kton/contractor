@@ -30,6 +30,7 @@ case "$1" in
         fi
 
         mkdir -p /etc/bind/contractor/zones
+        mkdir -p /var/lib/contractor
 
         /etc/init.d/cron reload
 
@@ -37,6 +38,8 @@ case "$1" in
         a2enmod	wsgi
 
         /etc/init.d/apache2 restart
+
+
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

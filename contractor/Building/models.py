@@ -10,7 +10,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, JSONField, name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
-from contractor.Utilities.models import Networked  # , RealNetworkInterface
+from contractor.Utilities.models import Networked
 from contractor.lib.config import getConfig
 
 # this is where the plan meats the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
@@ -72,12 +72,12 @@ class Foundation( models.Model ):
   @staticmethod
   def getTscriptValues( write_mode=False ):  # locator is handled seperatly
     return {  # none of these base items are writeable, ignore the write_mode for now
-              'locator': ( lambda foundation: foundation.locator, None ),
-              'type': ( lambda foundation: foundation.subclass.type, None ),
+              'locator': ( lambda foundation: foundation.locator, None ),  # redundant?
+              'type': ( lambda foundation: foundation.subclass.type, None ),  # redudnant?
               'site': ( lambda foundation: foundation.site.pk, None ),
               'blueprint': ( lambda foundation: foundation.blueprint.pk, None ),
               # 'ip_map': ( lambda foundation: foundation.ip_map, None ),
-              'interface_list': ( lambda foundation: [ i for i in foundation.interfaces.all() ], None )
+              'interface_list': ( lambda foundation: [ i for i in foundation.networkinterface_set.all() ], None )  # redudntant?
             }
 
   @staticmethod
@@ -91,7 +91,7 @@ class Foundation( models.Model ):
               '_foundation_state': self.state,
               '_foundation_class_list': self.class_list,
               '_foundation_locator': self.locator,
-              '_foundation_interface_list': [ i.name for i in self.interfaces.all() ]
+              '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all() ]
             }
 
   @property
@@ -245,25 +245,6 @@ class Structure( Networked ):
              }
 
     result[ 'hostname' ] = self.hostname
-    result[ 'interface_list' ] = {}
-    for address in self.networked_ptr.address_set.all():
-      tmp = {
-              'address': address.ip_address,
-              'netmask': address.netmask,
-              'prefix': address.prefix,
-              'network': address.network,
-              'gateway': address.gateway,
-              'primary': address.is_primary,
-              'sub_interface': None,
-              'tagged': False,
-              'auto': True,
-              'mtu': 1500
-            }
-
-      if tmp[ 'gateway' ] is None:
-        del tmp[ 'gateway' ]
-
-      result[ 'network' ][ address.interface_name ] = tmp
 
     return result
 
