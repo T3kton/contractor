@@ -32,14 +32,12 @@ case "$1" in
         mkdir -p /etc/bind/contractor/zones
         mkdir -p /var/lib/contractor
 
-        /etc/init.d/cron reload
+        systemctl reload cron
 
         a2ensite contractor.conf
         a2enmod	wsgi
 
-        /etc/init.d/apache2 restart
-
-
+        systemctl restart apache2
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

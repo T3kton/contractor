@@ -20,35 +20,42 @@ def _updateConfig( config_value_map, class_list, config ):
 
     value = config_value_map[ name ]
 
-    if name[0] == '-':
+    if name[0] in '-<>':
+      op = name[0]
       name = name[ 1: ]
       try:
         old_value = config[ name ]
       except KeyError:
-        config[ name ] = value
+        if op != '-':
+          config[ name ] = value
         continue
 
-      config[ name ] = old_value - value
+      if isinstance( old_value, dict ):
+        if op == '-':
+          pass  # TODO
+        else:
+          config[ name ].update( value )
 
-    elif name[0] == '<':
-      name = name[ 1: ]
-      try:
-        old_value = config[ name ]
-      except KeyError:
-        config[ name ] = value
-        continue
+      if isinstance( old_value, list ):
+        if isinstance( value, list ):
+          if op == '-':
+            config[ name ] = old_value - value
 
-      config[ name ] = value + old_value
+          elif op == '<':
+            config[ name ] = value + old_value
 
-    elif name[0] == '>':
-      name = name[ 1: ]
-      try:
-        old_value = config[ name ]
-      except KeyError:
-        config[ name ] = value
-        continue
+          elif op == '>':
+            config[ name ] = old_value + value
 
-      config[ name ] = old_value + value
+        else:
+          if op == '-':
+            config[ name ] = old_value - [ value ]
+
+          elif op == '<':
+            config[ name ] = [ value ] + old_value
+
+          elif op == '>':
+            config[ name ] = old_value + [  value ]
 
     elif name == '~':
       name = name[ 1: ]

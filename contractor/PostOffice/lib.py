@@ -9,6 +9,11 @@ from contractor.PostOffice.models import FoundationPost, StructurePost, Foundati
 WEBHOOK_REQUEST_TIMEOUT = 60
 
 
+class HTTPErrorProcessorPassthrough( request.HTTPErrorProcessor ):
+  def http_response( self, request, response ):
+    return response
+
+
 def registerEvent( target, job ):
   if isinstance( target, Foundation ):
     post = FoundationPost( foundation=target )
@@ -27,9 +32,9 @@ def registerEvent( target, job ):
 def _sendPost( data, box ):
   print( 'Sending "{0}" to "{1}"'.format( data, box.url ) )
   if box.proxy is not None:
-    opener = request.build_opener( request.ProxyHandler( { 'http': box.proxy, 'https': box.proxy } ) )
+    opener = request.build_opener( HTTPErrorProcessorPassthrough, request.ProxyHandler( { 'http': box.proxy, 'https': box.proxy } ) )
   else:
-    opener = request.build_opener( request.ProxyHandler( {} ) )
+    opener = request.build_opener( HTTPErrorProcessorPassthrough, request.ProxyHandler( {} ) )
 
   headers = { 'User-Agent': 'Contractor WebHook', 'Content-Type': 'application/json;charset=utf-8' }
 
@@ -48,10 +53,11 @@ def _sendPost( data, box ):
   try:
     resp = opener.open( req, timeout=WEBHOOK_REQUEST_TIMEOUT )  # Do we care about the return value, ie: allow a re-queue of a one shot or something?
   except Exception as e:
-    print( e )
-    raise e
+    print( 'Error with webhook: ({0})"{1}"'.format( e.__class__.__name__, e ) )
+    return False
 
   print( 'got "{0}"'.format( resp.code ) )
+  return resp.code in ( '200', )
 
 
 def _sendFoundationPost( post, box ):
@@ -59,7 +65,7 @@ def _sendFoundationPost( post, box ):
   data[ 'foundation' ] = post.foundation.pk
   data[ 'script' ] = post.name
   data[ 'at' ] = post.created.isoformat()
-  _sendPost( data, box )
+  return _sendPost( data, box )
 
 
 def _sendStructurePost( post, box ):
@@ -67,30 +73,42 @@ def _sendStructurePost( post, box ):
   data[ 'structure' ] = post.structure.pk
   data[ 'script' ] = post.name
   data[ 'at' ] = post.created.isoformat()
-  _sendPost( data, box )
+  return _sendPost( data, box )
 
 
 def processPost():
   # first clcean up the expired
   for box in FoundationBox.objects.filter( expires__lt=timezone.now(), expires__isnull=False ):
-    box.delete()  # send a expiration notification? ormabey a 4, 2, 1 hour warning so they can renew
+    box.delete()  # send a expiration notification? or mabey a 4, 2, 1 hour warning so they can renew
 
   for box in StructureBox.objects.filter( expires__lt=timezone.now(), expires__isnull=False ):
     box.delete()
 
   # now look over the Posts and see if there is anything that needs to be delievered
   for post in FoundationPost.objects.all():
+    done = True
     for box in FoundationBox.objects.filter( foundation=post.foundation ):
-      _sendFoundationPost( post, box )
+      if not _sendFoundationPost( post, box ):
+        print( 'Error posting foundation  "{0}" to "{1}"'.format( post, box ) )
+        done = False
+        continue
+
       if box.one_shot:
         box.delete()
 
-    post.delete()
+    if done:
+      post.delete()
 
   for post in StructurePost.objects.all():
+    done = True
     for box in StructureBox.objects.filter( structure=post.structure ):
-      _sendStructurePost( post, box )
+      if not _sendStructurePost( post, box ):
+        print( 'Error posting structure  "{0}" to "{1}"'.format( post, box ) )
+        done = False
+        continue
+
       if box.one_shot:
         box.delete()
 
-    post.delete()
+    if done:
+      post.delete()

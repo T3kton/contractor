@@ -150,7 +150,6 @@ class NetworkInterface( models.Model ):
                                            'prefix': address.prefix,
                                            'network': address.network,
                                            'gateway': address.address_block.gateway,
-                                           'auto': True,
                                            'primary': address.is_primary,
                                            'sub_interface': None,
                                            'tagged': False,

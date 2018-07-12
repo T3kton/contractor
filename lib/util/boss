@@ -124,11 +124,11 @@ def main():
       elif isinstance( target, Foundation ):
         if target.attached_structure is not None:
           print( 'Foundations can not have structures when deleting' )
-          os.exit( 1 )
+          sys.exit( 1 )
 
       else:
         print( 'Can not pre-delete Dependancies' )
-        os.exit( 1 )
+        sys.exit( 1 )
 
     try:
       rc = target.doDestroy()

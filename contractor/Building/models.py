@@ -1,7 +1,7 @@
 import uuid
 
 from django.utils import timezone
-from django.db import models
+from django.db import models, ProtectedError
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
@@ -21,7 +21,7 @@ FOUNDATION_SUBCLASS_LIST = []
 COMPLEX_SUBCLASS_LIST = []
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'DELETE', 'UPDATE' ] )
+@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
 class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
@@ -205,6 +205,17 @@ class Foundation( models.Model ):
     if errors:
       raise ValidationError( errors )
 
+  def delete( self ):
+    if not self.can_delete:
+      raise ProtectedError( 'Structure not Deleatable' )
+
+    subclass = self.subclass
+
+    if self == subclass:
+      super().delete()
+    else:
+      subclass.delete()
+
   def __str__( self ):
     return 'Foundation #{0}({1}) of "{2}" in "{3}"'.format( self.pk, self.locator, self.blueprint.pk, self.site.pk )
 
@@ -304,6 +315,12 @@ class Structure( Networked ):
 
     if errors:
       raise ValidationError( errors )
+
+  def delete( self ):
+    if not self.can_delete:
+      raise ProtectedError( 'Structure not Deleteable' )
+
+    super().delete()
 
   def __str__( self ):
     return 'Structure #{0}({1}) of "{2}" in "{3}"'.format( self.pk, self.hostname, self.blueprint.pk, self.site.pk )
