@@ -9,40 +9,40 @@ Overview
 Contractor is a builder of anything, and is targeted to be used as a generic API
 to create/destroy/manipluate your resources no matter where or what they are.
 This enables you to focus on what you want to make, and not have to worry about
-the details and diferences in deployment.
+the details and differences in deployment.
 
-To acomplish this Contractor breaks deployment/provisioning into two parts.  A
+To acomplish this, Contractor breaks the deployment/provisioning step into two parts.  A
 Structure, or what it is you want to deploy, and a Foundation, or what you want
 to deploy it on.  Examples of Foundations are VirtualBox VMs, Docker Containers,
 Servers with IPMI, Servers with out out-of-band controll, Switches, PDUs, AWS, GCD,
 or just about anything else.  A Structure would be a DNS server, API Endpoint,
 Load Balanacer, Web Server, Docker Host, VirtualBox Host, CoreOS Server, etc.  To
-describe a Structure, a BluePrint is used.  This BluePrint describes configuration
+describe a Structure, a BluePrint is used.  A BluePrint provides the configuration
 information needed to create the Structure.  There are also BluePrints for Foundations,
 which describe firmwares, machine level configuration (ie: IPMI configuration ), as
 well as contain information to fingerprint foundations, for example a Foundation
 BluePrint can require a certin number of CPUs and Memory, PCI devices, as well
 as storage details.  Each Structure and Foundation belong to a grouping called
 a Site.  Sites can belong to other Sites, and a Structure does not need to belong
-to the same Site as it's foundation.  The Site can also contain configuration
+to the same Site as its foundation.  The Site can also contain configuration
 information that the Structures and Foundations that belong to it inherit.
 This way a configuration such as DNS Server can be maintained at the Site level
 and automatically propagate to everything inside that Site.
 
-At it's core Contractor has a scripting language called TScript.  Each BluePrint
+At its core Contractor has a scripting language called TScript.  Each BluePrint
 has a Create and Destroy script that is executed to create and destroy that Structure
 or in the case of Foundations, provision and deprovision.  Utility scripts can also
 be created, for example, if a new firmware for a storage controller is released.
 A utility script can be created to deploy this new firmware, and a Job can be created
 to execute the script.  Jobs are run by the Foreman subsystem.  When a new Foundation
 has been detected, or a Structure's Foundation has been provisioned, Foreman will
-provide instructions to a SubContractor daemon to do indivitual tasks required
+provide instructions to a SubContractor daemon to do indivitual required tasks 
 for that Foundation to be Provisioned or Structure to be created.
 
 SubContractor is a daemon that is run in appropriate parts of the network for
 handeling tasks as requested by the Script being executed in the Job.  All tasks
-are ask for by SubContracor, over HTTP (fully proxyable) thus Contractor it's
-self does not have to have access to sensitive parts of the network, it only
+are asked for by SubContracor, over HTTP (fully proxyable) thus Contractor itsself
+does not have to have access to sensitive parts of the network, it only
 needs to be visiable to SubContractor.  Each SubContractor can be configured to
 only do certian types of work.  For example a SubContractor can be configured to
 do only IPMI tasks enabeling the IPMI network to be isolated from other networks.
