@@ -18,6 +18,10 @@ from contractor.Directory.models import Zone, Entry
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
 from contractor.plugins.Manual.models import ManualFoundation
 
+if os.getuid() != 0:
+  print( 'This must be run as root' )
+  sys.exit( 1 )
+
 print( 'Getting network config...' )
 
 line = subprocess.check_output( [ '/sbin/ip', 'route', 'get', '1.0.0.0' ], universal_newlines=True ).splitlines()[0]

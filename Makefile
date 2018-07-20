@@ -51,7 +51,7 @@ test-requires:
 	python3-pytest python3-pytest-cov python3-pytest-django python3-pytest-mock
 
 test:
-	py.test-3 -x --cov=contractor --cov-report html --cov-report term --ds=contractor.settings -vv contractor
+	py.test-3 --cov=contractor --cov-report html --cov-report term --ds=contractor.settings -vv contractor
 
 .PHONY:: test test-requires
 

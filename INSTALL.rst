@@ -113,7 +113,7 @@ edit /etc/apache2/sites-available/contractor.conf
 
   <VirtualHost *:80>
     ServerName static
-    ServerAlias static.mlxlab.local
+    ServerAlias static.<domain>
 
     DocumentRoot /var/www/static
 
