@@ -203,7 +203,7 @@ for i in range( 1, 5 ):
   addr.save()
 
   #  TODO: re-enable this ?
-  # print( '******************8')
+  # print( '******************')
   # try:
   #   print( fdn_strmgr.dependancy )
   # except Dependancy.DoesNotExist:
@@ -244,8 +244,13 @@ for i in range( 1, 5 ):
 
 if os.environ.get( 'DEMO_MODE', False ):
   print( 'enabling demo mode' )
-  for name in ( 'create-generic-manual', 'destroy-generic-manual', 'utility-generic-manual', 'utility2-generic-manual', 'create-manual-structure', 'destroy-manual-structure', 'utility-manual-structure', 'utility2-manual-structure'):
-    script = Script.objects.get( name=name )
+  for name in ( 'manual-foundation-create', 'manual-foundation-destroy', 'manual-foundation-utility', 'manual-structure-create', 'manual-structure-destroy', 'manual-structure-utility' ):
+    try:
+      script = Script.objects.get( name=name )
+    except Script.DoesNotExist:
+      print( 'Unable to find script "{0}",  skipped'.format( name ) )
+      continue
+
     script.script = 'delay( seconds=5 )'
     script.full_clean()
     script.save()

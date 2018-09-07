@@ -3,7 +3,7 @@ from django.db.models import Q
 
 from contractor.Building.models import Foundation, Structure, Dependancy
 from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin
-from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependancyJob
+from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependancyJob, JobLog
 from contractor.PostOffice.lib import registerEvent
 
 from contractor.tscript.parser import parse
@@ -120,6 +120,8 @@ def createJob( script_name, target ):
   job.full_clean()
   job.save()
 
+  JobLog.fromJob( job, True )
+
   print( '**************** Created  Job "{0}" for "{1}"'.format( script_name, target ))
 
   return job.pk
@@ -224,6 +226,8 @@ def processJobs( site, module_list, max_jobs=10 ):
 
     elif isinstance( job, FoundationJob ):
       registerEvent( job.foundation, job )
+
+    JobLog.fromJob( job, False )
 
     job.delete()
 

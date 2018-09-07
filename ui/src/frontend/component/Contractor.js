@@ -80,6 +80,11 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Foreman/DependancyJob', 'site', { 'site': site } );
   };
 
+  getJobLogList = ( site ) =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Foreman/JobLog', 'site', { 'site': site } );
+  };
+
   getTodoList = ( site, isAutoBuild, hasDependancies, foundationClass ) =>
   {
     return this.cinp.getFilteredObjects( '/api/v1/Building/Foundation', 'todo', { 'site': site, 'auto_build': isAutoBuild, 'has_dependancies': hasDependancies, 'foundation_class': foundationClass } );

@@ -322,3 +322,65 @@ class DependancyJob( BaseJob ):
 
   def __str__( self ):
     return 'DependancyJob #{0} for "{1}" in "{2}"'.format( self.pk, self.dependancy.pk, self.dependancy.site.pk )
+
+
+@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
+class JobLog( models.Model ):
+  site = models.ForeignKey( Site, on_delete=models.CASCADE )
+  job_id = models.IntegerField()
+  target_class = models.CharField( max_length=50 )
+  target_description = models.CharField( max_length=120 )
+  script_name = models.CharField( max_length=50 )
+  start_finish = models.BooleanField()  # True -> Start
+  at = models.DateTimeField( editable=False, auto_now_add=True )
+
+  @classmethod
+  def fromJob( cls, job, start_finish ):
+    job = job.realJob
+
+    log = cls()
+    log.job_id = job.pk
+    if isinstance( job, StructureJob ):
+      log.target_class = 'Structure'
+      log.site = job.structure.site
+      log.target_description = job.structure.description
+
+    elif isinstance( job, FoundationJob ):
+      log.target_class = 'Foundation'
+      log.site = job.foundation.site
+      log.target_description = job.foundation.description
+
+    elif isinstance( job, DependancyJob ):
+      log.target_class = 'Dependancy'
+      log.site = job.dependancy.site
+      log.target_description = job.dependancy.description
+
+    else:
+      raise ValueError( 'Unknown Job Type "{0}"'.format( job.__class__.__name__ ) )
+
+    log.script_name = job.script_name
+    log.start_finish = start_finish
+    log.full_clean()
+    log.save()
+
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @staticmethod
+  def filter_site( site ):
+    return JobLog.objects.filter( site=site )
+
+  @cinp.check_auth()
+  @staticmethod
+  def checkAuth( user, verb, id_list, action=None ):
+    return True
+
+  def save( self, *args, **kwargs ):
+    if self.pk is not None:
+      raise models.ProtectedError()
+
+    super( JobLog, self ).save( *args, **kwargs )
+
+  def delete( self ):
+    raise models.ProtectedError()
+
+  def __str__( self ):
+    return 'JobLog for Job #{0} for "{1}"({2}) at "{3}"'.format( self.job_id, self.target_id, self.target_class, self.at )

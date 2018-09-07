@@ -8,7 +8,7 @@ import contractor.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('Building', '0001_initial'),
+        ('Building', '0002_initial2'),
         ('Site', '0001_initial'),
     ]
 
@@ -27,32 +27,45 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
+            name='JobLog',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, verbose_name='ID', serialize=False)),
+                ('job_id', models.IntegerField()),
+                ('target_class', models.CharField(max_length=50)),
+                ('target_description', models.CharField(max_length=120)),
+                ('script_name', models.CharField(max_length=50)),
+                ('start_finish', models.BooleanField()),
+                ('at', models.DateTimeField(auto_now_add=True)),
+                ('site', models.ForeignKey(to='Site.Site')),
+            ],
+        ),
+        migrations.CreateModel(
             name='DependancyJob',
             fields=[
-                ('basejob_ptr', models.OneToOneField(parent_link=True, to='Foreman.BaseJob', auto_created=True, primary_key=True, serialize=False)),
-                ('dependancy', models.OneToOneField(to='Building.Dependancy', editable=False)),
+                ('basejob_ptr', models.OneToOneField(auto_created=True, primary_key=True, to='Foreman.BaseJob', parent_link=True, serialize=False)),
+                ('dependancy', models.OneToOneField(editable=False, to='Building.Dependancy')),
             ],
             bases=('Foreman.basejob',),
         ),
         migrations.CreateModel(
             name='FoundationJob',
             fields=[
-                ('basejob_ptr', models.OneToOneField(parent_link=True, to='Foreman.BaseJob', auto_created=True, primary_key=True, serialize=False)),
-                ('foundation', models.OneToOneField(to='Building.Foundation', editable=False)),
+                ('basejob_ptr', models.OneToOneField(auto_created=True, primary_key=True, to='Foreman.BaseJob', parent_link=True, serialize=False)),
+                ('foundation', models.OneToOneField(editable=False, to='Building.Foundation')),
             ],
             bases=('Foreman.basejob',),
         ),
         migrations.CreateModel(
             name='StructureJob',
             fields=[
-                ('basejob_ptr', models.OneToOneField(parent_link=True, to='Foreman.BaseJob', auto_created=True, primary_key=True, serialize=False)),
-                ('structure', models.OneToOneField(to='Building.Structure', editable=False)),
+                ('basejob_ptr', models.OneToOneField(auto_created=True, primary_key=True, to='Foreman.BaseJob', parent_link=True, serialize=False)),
+                ('structure', models.OneToOneField(editable=False, to='Building.Structure')),
             ],
             bases=('Foreman.basejob',),
         ),
         migrations.AddField(
             model_name='basejob',
             name='site',
-            field=models.ForeignKey(editable=False, to='Site.Site'),
+            field=models.ForeignKey(to='Site.Site', editable=False),
         ),
     ]

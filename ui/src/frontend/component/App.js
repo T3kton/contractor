@@ -10,6 +10,7 @@ import Complex from './Complex';
 import BluePrint from './BluePrint';
 import AddressBlock from './AddressBlock';
 import Job from './Job';
+import JobLog from './JobLog';
 import Todo from './Todo';
 import SiteGraph from './SiteGraph';
 import SiteSelector from './SiteSelector';
@@ -106,6 +107,7 @@ class App extends React.Component
             <Link to="/complexes"><Button icon="location_city">Complexes</Button></Link>
             <Link to="/addressblocks"><Button icon="compare_arrows">Address Blocks</Button></Link>
             <Link to="/jobs"><Button icon="dvr">Jobs</Button></Link>
+            <Link to="/joblog"><Button icon="reorder">Job Log</Button></Link>
             <Link to="/todo"><Button icon="check_box">Todo</Button></Link>
             <Link to="/graph"><Button icon="timeline">Graph</Button></Link>
           </Navigation>
@@ -140,6 +142,7 @@ class App extends React.Component
             <Route exact={true} path="/complexes" render={ () => ( <Complex site={ this.state.cur_site } listGet={ this.contractor.getComplexList } /> ) } />
             <Route exact={true} path="/addressblocks" render={ () => ( <AddressBlock site={ this.state.cur_site } listGet={ this.contractor.getAddressBlockList } /> ) } />
             <Route exact={true} path="/jobs" render={ () => ( <Job site={ this.state.cur_site } listGetF={ this.contractor.getFoundationJobList } listGetS={ this.contractor.getStructureJobList } listGetD={ this.contractor.getDependancyJobList } /> ) } />
+            <Route exact={true} path="/joblog" render={ () => ( <JobLog site={ this.state.cur_site } listGet={ this.contractor.getJobLogList } /> ) } />
             <Route exact={true} path="/todo" render={ () => ( <Todo site={ this.state.cur_site } listGet={ this.contractor.getTodoList } classListGet={ this.contractor.getFoundationClassList } /> ) } />
             <Route exact={true} path="/graph" render={ () => ( <SiteGraph site={ this.state.cur_site } siteDependancyMap={ this.contractor.getSiteDependancyMap } /> ) } />
           </div>
