@@ -1,4 +1,6 @@
+import copy
 from datetime import datetime, timezone
+from jinja2 import Template
 
 
 VALUE_SORT_ORDER = '-_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz<>~'
@@ -158,3 +160,30 @@ def getConfig( target ):  # combine depth first the config values
   config[ '__pxe_location' ] = 'http://static/pxe/'
 
   return config
+
+
+def mergeValues( values ):
+  result = copy.deepcopy( values )
+  dirty = True
+  while dirty:
+    dirty = False
+    for key, value in result.items():  # going to try and do this breath first, however we don't have a predictable order, not going to promise much
+      if not isinstance( value, str ):
+        continue
+
+      if value.count( '{{' ):
+        tpl = Template( value )
+        result[ key ] = tpl.render( **result )
+        dirty = True
+
+  return result
+
+
+def renderTemplate( template, values ):
+  values = mergeValues( values )  # merge first, this way results are more consistant with requests that are getting just the values
+
+  while template.count( '{{' ):
+    tpl = Template( template )
+    template = tpl.render( **values )
+
+  return template

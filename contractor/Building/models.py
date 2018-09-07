@@ -1,7 +1,7 @@
 import uuid
 
 from django.utils import timezone
-from django.db import models, ProtectedError
+from django.db import models
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
@@ -11,7 +11,7 @@ from contractor.fields import MapField, JSONField, name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked
-from contractor.lib.config import getConfig
+from contractor.lib.config import getConfig, mergeValues
 
 # this is where the plan meats the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
 
@@ -164,7 +164,7 @@ class Foundation( models.Model ):
 
   @cinp.action( 'Map' )
   def getConfig( self ):
-    return getConfig( self.subclass )
+    return mergeValues( getConfig( self.subclass ) )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
@@ -207,7 +207,7 @@ class Foundation( models.Model ):
 
   def delete( self ):
     if not self.can_delete:
-      raise ProtectedError( 'Structure not Deleatable' )
+      raise models.ProtectedError( 'Structure not Deleatable' )
 
     subclass = self.subclass
 
@@ -290,7 +290,7 @@ class Structure( Networked ):
 
   @cinp.action( 'Map' )
   def getConfig( self ):
-    return getConfig( self )
+    return mergeValues( getConfig( self ) )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
@@ -318,7 +318,7 @@ class Structure( Networked ):
 
   def delete( self ):
     if not self.can_delete:
-      raise ProtectedError( 'Structure not Deleteable' )
+      raise models.ProtectedError( 'Structure not Deleteable' )
 
     super().delete()
 
@@ -459,7 +459,7 @@ class ComplexStructure( models.Model ):
   #
   @cinp.action( 'Map' )
   def getConfig( self ):
-    return getConfig( self.subclass )
+    return mergeValues( getConfig( self.subclass ) )
 
   @property
   def type( self ):

@@ -1,11 +1,10 @@
 import re
 import pickle
-from jinja2 import Template
 from cinp.server_common import Response
 
 from contractor.Building.models import Foundation, Structure
 from contractor.Utilities.models import BaseAddress, NetworkInterface
-from contractor.lib.config import getConfig
+from contractor.lib.config import getConfig, renderTemplate
 
 
 def _dictConverter( value ):
@@ -45,14 +44,6 @@ def _fromPythonMap( value ):
 
     else:
       value[ key ] = _fromPythonMap_converter( value[ key ] )
-
-
-def _mergeConfig( template, values ):
-  while template.count( '{{' ):
-    tpl = Template( template )
-    template = tpl.render( **values )
-
-  return template
 
 
 def handler( request ):
@@ -119,7 +110,7 @@ def handler( request ):
     elif request_type == 'pxe_template':
       template = pxe.template
 
-    data = _mergeConfig( template, config )
+    data = renderTemplate( template, config )
     print( 'config_handler sending "{0}" to "{1}"\n    -----------    '.format( request_type, request.remote_addr ) )
     print( data )
     print( '    -----------    ')
@@ -128,6 +119,6 @@ def handler( request ):
   elif request_type == 'config':
     _fromPythonMap( config )
     template = pickle.dumps( config, 0 ).decode()  # Yeah, there is probably a better way to merge values in.
-    return Response( 200, data=pickle.loads( _mergeConfig( template, config ).encode() ) )
+    return Response( 200, data=pickle.loads( renderTemplate( template, config ).encode() ) )
 
   return Response( 400, data='Invalid request type', content_type='text' )

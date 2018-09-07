@@ -32,7 +32,10 @@ class GunicornApp( BaseApplication ):
 if __name__ == '__main__':
   logging.basicConfig()
   logger = logging.getLogger()
-  logger.setLevel( logging.DEBUG )
+  if DEBUG:
+    logger.setLevel( logging.DEBUG )
+  else:
+    logger.setLevel( logging.INFO )
   logger.info( 'Starting up...' )
 
   logger.debug( 'Creating Server...' )

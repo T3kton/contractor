@@ -32,7 +32,7 @@ case "$1" in
         mkdir -p /etc/bind/contractor/zones
         mkdir -p /var/lib/contractor
 
-        systemctl reload cron
+        systemctl restart cron
 
         a2ensite contractor.conf
         a2enmod	wsgi

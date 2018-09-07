@@ -296,21 +296,21 @@ def test_variables():
 
   node = parse( 'good2go' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'V', { 'module': None, 'name': 'good2go' } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'V', { 'module': None, 'name': 'good2go' } ), 1 )
+                          ] } )
 
   node = parse( 'good2go.go4win' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'V', { 'module': 'good2go', 'name': 'go4win' } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'V', { 'module': 'good2go', 'name': 'go4win' } ), 1 )
+                          ] } )
 
   node = parse( 'var2' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'V', { 'module': None, 'name': 'var2' } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'V', { 'module': None, 'name': 'var2' } ), 1 )
+                          ] } )
 
   node = parse( 'mod1.var2' )
   assert node == ( 'S', { '_children':
