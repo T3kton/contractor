@@ -256,6 +256,8 @@ class Structure( Networked ):
              }
 
     result[ 'hostname' ] = self.hostname
+    result[ 'fqdn' ] = self.fqdn
+    result[ 'interface_list' ] = [ iface.config for iface in self.foundation.networkinterface_set.all() ]  # mabey? mabey not?
 
     return result
 
