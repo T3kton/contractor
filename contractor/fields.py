@@ -163,6 +163,19 @@ class IpAddressField( models.BinaryField ):  # needs 128 bits of storage, the in
   validators = [ validate_ipaddress ]
   cinp_type = 'String'
 
+  def __init__( self, *args, **kwargs ):
+    editable = kwargs.get( 'editable', True )
+    super().__init__( *args, **kwargs )  # until Django 2.1, editable for BinaryFields is not able to be made editable
+    self.editable = editable
+
+  def deconstruct(self):
+    editable = self.editable
+    self.editable = False  # have to set this to non default so BinaryField's deconstruct works
+    name, path, args, kwargs = super(IpAddressField, self).deconstruct()
+    self.editable = editable
+    kwargs[ 'editable' ] = self.editable
+    return name, path, args, kwargs
+
   def from_db_value( self, value, expression, connection, context ):
     if value is None:
       return None
