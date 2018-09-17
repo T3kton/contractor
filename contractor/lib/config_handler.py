@@ -1,11 +1,10 @@
 import re
-import json
-from django.template import Template, Context
+import pickle
 from cinp.server_common import Response
 
 from contractor.Building.models import Foundation, Structure
 from contractor.Utilities.models import BaseAddress, NetworkInterface
-from contractor.lib.config import getConfig
+from contractor.lib.config import getConfig, renderTemplate
 
 
 def _dictConverter( value ):
@@ -17,6 +16,7 @@ MAP_TYPE_CONVERTER = {
                        'str': str,
                        'int': str,
                        'float': str,
+                       'bool': str,
                        'datetime': lambda a: a.isoformat(),
                        'timedelta': lambda a: a.total_seconds(),
                        'dict': _dictConverter
@@ -86,9 +86,9 @@ def handler( request ):
     target = address.networked.subclass
     try:
       if isinstance( target, Structure ):
-        interface = target.foundation.interfaces.get( name=address.interface_name )
+        interface = target.foundation.networkinterface_set.get( name=address.interface_name )
       else:
-        interface = target.interfaces.get( name=address.interface_name )
+        interface = target.networkinterface_set.get( name=address.interface_name )
 
     except NetworkInterface.DoesNotExist:
       return Response( 404, data='Interface Not Found', content_type='text' )
@@ -105,12 +105,12 @@ def handler( request ):
       return Response( 200, data='', content_type='text' )
 
     if request_type == 'boot_script':
-      template = Template( '#!ipxe\n\n' + pxe.boot_script )
+      template = '#!ipxe\n\n' + pxe.boot_script
 
     elif request_type == 'pxe_template':
-      template = Template( pxe.template )
+      template = pxe.template
 
-    data = template.render( Context( config ) )
+    data = renderTemplate( template, config )
     print( 'config_handler sending "{0}" to "{1}"\n    -----------    '.format( request_type, request.remote_addr ) )
     print( data )
     print( '    -----------    ')
@@ -118,6 +118,7 @@ def handler( request ):
 
   elif request_type == 'config':
     _fromPythonMap( config )
-    return Response( 200, data=json.dumps( config ) )
+    template = pickle.dumps( config, 0 ).decode()  # Yeah, there is probably a better way to merge values in.
+    return Response( 200, data=pickle.loads( renderTemplate( template, config ).encode() ) )
 
   return Response( 400, data='Invalid request type', content_type='text' )

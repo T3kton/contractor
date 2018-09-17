@@ -53,100 +53,136 @@ def test_addressblock():
     ab.full_clean()
 
   ab = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24 )
+  with pytest.raises( ValidationError ):
+    ab.full_clean()
+
+  ab = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24, name='test' )
   ab.full_clean()
   ab.save()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24, name='test2' )
   with pytest.raises( ValidationError ):
     ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=24 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=24, name='test3' )
   ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=-1 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=-1, name='test4' )
   with pytest.raises( ValidationError ):
     ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=33 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=33, name='test5' )
   with pytest.raises( ValidationError ):
     ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '255.0.0.0' ), prefix=1 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '255.0.0.0' ), prefix=1, name='test6' )
   ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=32 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=32, name='test7' )
   ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '2.0.0.0' ), prefix=8, gateway_offset=1 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '2.0.0.0' ), prefix=8, gateway_offset=1, name='test8' )
   ab.full_clean()
   ab.save()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=24, gateway_offset=1 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=24, gateway_offset=1, name='test9' )
   ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=32, gateway_offset=0 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=32, gateway_offset=0, name='test10' )
   with pytest.raises( ValidationError ):
     ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=32, gateway_offset=1 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=32, gateway_offset=1, name='test11' )
   with pytest.raises( ValidationError ):
     ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=32, gateway_offset=2 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=32, gateway_offset=2, name='test12' )
   with pytest.raises( ValidationError ):
     ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31, gateway_offset=0 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31, gateway_offset=0, name='test13' )
   ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31, gateway_offset=1 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31, gateway_offset=1, name='test14' )
   ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31, gateway_offset=2 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31, gateway_offset=2, name='test15' )
   with pytest.raises( ValidationError ):
     ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=30, gateway_offset=0 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=30, gateway_offset=0, name='test16' )
   with pytest.raises( ValidationError ):
     ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=30, gateway_offset=1 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=30, gateway_offset=1, name='test17' )
   ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=30, gateway_offset=2 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=30, gateway_offset=2, name='test18' )
   ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=30, gateway_offset=3 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=30, gateway_offset=3, name='test19' )
   with pytest.raises( ValidationError ):
     ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=29, gateway_offset=0 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=29, gateway_offset=0, name='test20' )
   with pytest.raises( ValidationError ):
     ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=29, gateway_offset=1 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=29, gateway_offset=1, name='test21' )
   ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=29, gateway_offset=2 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=29, gateway_offset=2, name='test22' )
   ab.full_clean()
 
-  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=29, gateway_offset=3 )
+  ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=29, gateway_offset=3, name='test23' )
   ab.full_clean()
 
-  ab = AddressBlock.objects.get( site=s1, subnet='0.0.0.0', prefix=24 )
-  assert ab.gateway_ip is None
-  assert ab.dns_servers == [ '192.168.200.1' ]
+  ab = AddressBlock.objects.get( name='test' )
+  assert ab.subnet == '0.0.0.0'
+  assert ab._max_address == '0.0.0.255'
+  assert ab.gateway is None
   assert ab.netmask == '255.255.255.0'
+  assert ab.prefix == 24
   assert ab.size == 254
   assert ab.offsetBounds == ( 1, 254 )
   assert ab.isIpV4 is True
 
-  ab = AddressBlock.objects.get( site=s1, subnet='2.0.0.0', prefix=8, gateway_offset=1 )
-  assert ab.gateway_ip == '2.0.0.1'
-  assert ab.dns_servers == [ '192.168.200.1' ]
+  ab = AddressBlock.objects.get( name='test8' )
+  assert ab.subnet == '2.0.0.0'
+  assert ab._max_address == '2.255.255.255'
+  assert ab.gateway == '2.0.0.1'
   assert ab.netmask == '255.0.0.0'
+  assert ab.prefix == 8
   assert ab.size == 16777214
   assert ab.offsetBounds == ( 1, 16777214 )
+  assert ab.isIpV4 is True
+
+  ab = AddressBlock( site=s1, subnet=StrToIp( '10.0.0.0' ), prefix=24, name='test30' )
+  ab.full_clean()
+  ab.save()
+
+  ab = AddressBlock( site=s1, subnet='11.0.0.0', prefix=24, name='test31' )
+  ab.full_clean()
+  ab.save()
+
+  ab = AddressBlock.objects.get( name='test30' )
+  assert ab.subnet == '10.0.0.0'
+  assert ab._max_address == '10.0.0.255'
+  assert ab.gateway is None
+  assert ab.netmask == '255.255.255.0'
+  assert ab.prefix == 24
+  assert ab.size == 254
+  assert ab.offsetBounds == ( 1, 254 )
+  assert ab.isIpV4 is True
+
+  ab = AddressBlock.objects.get( name='test31' )
+  assert ab.subnet == '11.0.0.0'
+  assert ab._max_address == '11.0.0.255'
+  assert ab.gateway is None
+  assert ab.netmask == '255.255.255.0'
+  assert ab.prefix == 24
+  assert ab.size == 254
+  assert ab.offsetBounds == ( 1, 254 )
   assert ab.isIpV4 is True
 
   # TODO: test ipv6
@@ -158,15 +194,15 @@ def test_baseaddress():
   s1.full_clean()
   s1.save()
 
-  ab1 = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24 )
+  ab1 = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24, name='test1' )
   ab1.full_clean()
   ab1.save()
 
-  ab2 = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31 )
+  ab2 = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31, name='test2' )
   ab2.full_clean()
   ab2.save()
 
-  ab3 = AddressBlock( site=s1, subnet=StrToIp( '2.0.0.0' ), prefix=24, gateway_offset=1 )
+  ab3 = AddressBlock( site=s1, subnet=StrToIp( '2.0.0.0' ), prefix=24, gateway_offset=1, name='test3' )
   ab3.full_clean()
   ab3.save()
 
@@ -249,11 +285,11 @@ def test_address():
   nwd.full_clean()
   nwd.save()
 
-  ab1 = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24 )
+  ab1 = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24, name='test1' )
   ab1.full_clean()
   ab1.save()
 
-  ab2 = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31 )
+  ab2 = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31, name='test2' )
   ab2.full_clean()
   ab2.save()
 
@@ -393,11 +429,11 @@ def test_reservedaddress():
   nwd.full_clean()
   nwd.save()
 
-  ab1 = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24 )
+  ab1 = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24, name='test1' )
   ab1.full_clean()
   ab1.save()
 
-  ab2 = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31 )
+  ab2 = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31, name='test2' )
   ab2.full_clean()
   ab2.save()
 
@@ -456,11 +492,11 @@ def test_dynamicaddress():
   nwd.full_clean()
   nwd.save()
 
-  ab1 = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24 )
+  ab1 = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24, name='test1' )
   ab1.full_clean()
   ab1.save()
 
-  ab2 = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31 )
+  ab2 = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=31, name='test2' )
   ab2.full_clean()
   ab2.save()
 

@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+import os
+
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
+import sys
+import json
+import hashlib
+import subprocess
+from datetime import datetime
+
+from contractor.Directory.models import Zone
+from contractor.Directory.lib import genZone, genPtrZones, genMasterFile
+
+CACHE_FILE = '/var/lib/contractor/dns.cache'
+ZONE_DIR = '/etc/bind/contractor/zones/'
+MASTER_FILE = '/etc/bind/contractor/dns.master'
+
+
+def serial():
+  return str( int( datetime.now().timestamp() / 60 ) )
+  # serial number is a unsigned 32bit number, that is monatomically increasing
+  # we are taking the curent timestamp and / 60, this will give us one minute
+  # resolution, and will last long past y2038, if is still in use past that,
+  # I will impressed (20 years)
+
+
+def updateFile( filename, txt, cache ):
+  hash = hashlib.sha256( txt.encode() ).hexdigest()
+
+  if cache.get( filename, '' ) != hash:
+    print( 'Writing "{0}"...'.format( filename ) )
+    open( os.path.join( ZONE_DIR, filename ), 'w' ).write( txt.replace( '**ZONE_SERIAL**', serial() ) )
+    cache[ filename ] = hash
+
+
+print( 'Reading cache...' )
+try:
+  cache = json.loads( open( CACHE_FILE, 'r' ).read() )
+except FileNotFoundError:
+  cache = {}
+except json.JSONDecodeError as e:
+  raise ValueError( 'Error parsing cache file: {0}'.format( e ) )
+
+ptr_list = []
+zone_file_list = []
+
+for zone in Zone.objects.all():
+  print( 'Doing "{0}"...'.format( zone.fqdn ) )
+
+  filename, txt = genZone( zone, ptr_list, zone_file_list )
+  updateFile( filename, txt, cache )
+
+print( 'Doing PTR zones...' )
+for filename, txt in genPtrZones( ptr_list, zone_file_list ):
+  updateFile( filename, txt, cache )
+
+print( 'Writing master config...' )
+open( MASTER_FILE, 'w' ).write( genMasterFile( ZONE_DIR, zone_file_list ) )
+
+print( 'Writing cache...' )
+open( CACHE_FILE, 'w' ).write( json.dumps( cache, 2 ) )
+
+print( 'Checking...' )
+try:
+  subprocess.check_call( [ '/usr/sbin/named-checkconf', '-z' ] )
+except subprocess.CalledProcessError:
+  print( 'Validity check failed...' )
+  sys.exit( 1 )
+
+try:
+  subprocess.check_call( [ '/usr/sbin/rndc', 'reload' ] )
+except subprocess.CalledProcessError:
+  print( 'WARNING: "rndc reload" failed' )
+
+print( 'Done!' )
+sys.exit( 0 )

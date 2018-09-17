@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+import os
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
+import sys
+import argparse
+import pprint
+from django.core.exceptions import ObjectDoesNotExist
+from contractor.Building.models import Foundation, Structure, Dependancy
+from contractor.Foreman.lib import createJob
+from contractor.lib.config import getConfig
+
+
+def _get_job( target ):
+  if isinstance( target, Foundation ):
+    try:
+      return target.foundationjob
+    except ( AttributeError, ObjectDoesNotExist ):
+      pass
+
+  if isinstance( target, Structure ):
+    try:
+      return target.structurejob
+    except ( AttributeError, ObjectDoesNotExist ):
+      pass
+
+  if isinstance( target, Dependancy ):
+    try:
+      return target.dependancyjob
+    except ( AttributeError, ObjectDoesNotExist ):
+      pass
+
+  return None
+
+
+def _clear_job( target ):
+  job = _get_job( target )
+  if job is None:
+    print( 'No Job to Delete' )
+
+  else:
+    job.delete()
+    print( 'Job Deleted' )
+
+
+def main():
+  parser = argparse.ArgumentParser( description='Boss/Manipulate Structures and Foundations and their jobs', epilog='Only one option from task or force state, if more than one is specified, the force state option is ignored' )
+  group = parser.add_argument_group( 'target' )
+  group.add_argument( 'id', help='foundation/structure id' )
+  type_group = group.add_mutually_exclusive_group()
+  type_group.add_argument( '-s', '--structure', help='boss arround a structure', action='store_true' )
+  type_group.add_argument( '-f', '--foundation', help='boss arround a foundation', action='store_true' )
+  type_group.add_argument( '-d', '--dependancy', help='boss arround a dependancy', action='store_true' )
+
+  group = parser.add_argument_group( 'task' )
+  task_group = group.add_mutually_exclusive_group()
+  task_group.add_argument(       '--do-create', help='submit create job', action='store_true' )
+  task_group.add_argument(       '--do-destroy', help='submit destroy job', action='store_true' )
+  task_group.add_argument(       '--do-pre-delete', help='submit destroy job and disable auto-build', action='store_true' )
+  task_group.add_argument(       '--do-delete', help='delete target', action='store_true' )
+  task_group.add_argument(       '--run-script', help='submit a script job', metavar='SCRIPT NAME' )
+  task_group.add_argument(       '--pause', help='pause active job', action='store_true' )
+  task_group.add_argument(       '--resume', help='resume a paused job', action='store_true' )
+  task_group.add_argument(       '--reset', help='reset error on active job', action='store_true' )
+  task_group.add_argument(       '--rollback', help='rollback active job', action='store_true' )
+  task_group.add_argument(       '--done', help='set active job to done', action='store_true' )
+  task_group.add_argument(       '--show-job', help='display curent job', action='store_true' )
+  task_group.add_argument(       '--show-config', help='display config', action='store_true' )
+
+  group = parser.add_argument_group( 'force state', 'WARNING!!! Use with care, it is possible to leave some foundataions/structures orphand if you are not carefull' )
+  force_group = group.add_mutually_exclusive_group()
+  force_group.add_argument(       '--planned', help='force a foundataion/structure to planned state', action='store_true' )
+  force_group.add_argument(       '--located', help='force a foundation to located state', action='store_true' )
+  force_group.add_argument(       '--built', help='force a foundataion/structure to built state', action='store_true' )
+  force_group.add_argument(       '--clear-job', help='clear any associated jobs', action='store_true' )
+
+  args = parser.parse_args()
+
+  target = None
+  if args.foundation:
+    try:
+      target = Foundation.objects.get( pk=args.id ).subclass
+    except Structure.DoesNotExist:
+      print( 'Unable to find Foundation "{0}"'.format( args.id ) )
+
+  elif args.structure:
+    try:
+      target = Structure.objects.get( pk=args.id )
+    except Structure.DoesNotExist:
+      print( 'Unable to find Structure "{0}"'.format( args.id ) )
+
+  elif args.dependancy:
+    try:
+      target = Dependancy.objects.get( pk=args.id )
+    except Structure.DoesNotExist:
+      print( 'Unable to find Dependancy "{0}"'.format( args.id ) )
+
+  else:
+    print( '-f, -s, -d must be specified' )
+    sys.exit( 1 )
+
+  if target is None:
+    print( 'No target found' )
+    sys.exit( 1 )
+
+  print( 'Working with "{0}"'.format( target ) )
+
+  if args.do_create:
+    try:
+      rc = target.doCreate()
+    except Exception as e:
+      print( 'Error creating create job: "{0}"'.format( str( e ) ) )
+      sys.exit( 1 )
+    print( 'Create Job for {0} created, job #{1}.'.format( target, rc ) )
+    sys.exit( 0 )
+
+  if args.do_destroy or args.do_pre_delete:  # TODO: can_destroy?
+    if args.do_pre_delete:
+      if isinstance( target, Structure ):
+        if target.auto_build:
+          target.auto_build = False
+          target.full_clean()
+          target.save()
+
+      elif isinstance( target, Foundation ):
+        if target.attached_structure is not None:
+          print( 'Foundations can not have structures when deleting' )
+          sys.exit( 1 )
+
+      else:
+        print( 'Can not pre-delete Dependancies' )
+        sys.exit( 1 )
+
+    try:
+      rc = target.doDestroy()
+    except Exception as e:
+      print( 'Error creating destroy job: "{0}"'.format( str( e ) ) )
+      sys.exit( 1 )
+    print( 'Destroy Job for {0} created, job #{1}.'.format( target, rc ) )
+    sys.exit( 0 )
+
+  if args.do_delete:
+    if not target.can_delete:
+      print( 'Target has dependancies/structure can not delete' )
+      sys.exit( 1 )
+
+    if target.state == 'built':
+      print( 'Target is built, can not delete' )
+      sys.exit( 1 )
+
+    target.delete()
+    print( 'Target Deleted' )
+    sys.exit( 0 )
+
+  if args.run_script:
+    try:
+      rc = createJob( args.run_script, target )
+    except Exception as e:
+      print( 'Error creating "{1}" job: "{0}"'.format( str( e ), args.run_script ) )
+      sys.exit( 1 )
+    print( '"{2}" Job for {0} created, job #{1}.'.format( target, rc, args.run_script ) )
+    sys.exit( 0 )
+
+  if args.reset:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job to Reset' )
+      sys.exit( 1 )
+
+    else:
+      try:
+        job.reset()
+      except ValueError as e:
+        print( 'Error resetting job: "{0}"'.format( str( e ) ) )
+        sys.exit( 1 )
+      sys.exit( 0 )
+
+  if args.pause:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job to Pause' )
+      sys.exit( 1 )
+
+    else:
+      try:
+        job.pause()
+      except ValueError as e:
+        print( 'Error pausing job: "{0}"'.format( str( e ) ) )
+        sys.exit( 1 )
+      sys.exit( 0 )
+
+  if args.resume:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job to Resume' )
+      sys.exit( 1 )
+
+    else:
+      try:
+        job.resume()
+      except ValueError as e:
+        print( 'Error resuming job: "{0}"'.format( str( e ) ) )
+        sys.exit( 1 )
+      sys.exit( 0 )
+
+  if args.rollback:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job to Rollback' )
+      sys.exit( 1 )
+
+    else:
+      try:
+        job.rollback()
+      except ValueError as e:
+        print( 'Error rolling back job: "{0}"'.format( str( e ) ) )
+        sys.exit( 1 )
+      sys.exit( 0 )
+
+  if args.done:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job to set to done' )
+      sys.exit( 1 )
+
+    else:
+      if job.state != 'queued':
+        print( 'Can only "done" a job if it is queued' )
+        sys.exit( 1 )
+      job.state = 'done'
+      job.full_clean()
+      job.save()
+      sys.exit( 0 )
+
+  if args.show_job:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job' )
+      sys.exit( 0 )
+
+    pp = pprint.PrettyPrinter()
+    print( """
+Job Id:        {0}
+Script Name:   {1}
+State:         {2}
+Pcnt Complete: {3}%
+Message:       {4}
+Created:       {5}
+Updated:       {6}
+Status:
+{7}""".format( job.pk, job.script_name, job.state, job.status[0][0], job.message, job.created, job.updated, pp.pformat( job.status ) ) )
+    sys.exit( 0 )
+
+  if args.show_config:
+    config = getConfig( target )
+    pp = pprint.PrettyPrinter()
+    pp.pprint( config )
+    sys.exit( 0 )
+
+  if args.planned:
+    _clear_job( target )
+    target.setDestroyed()
+    print( '{0} now set to planned.'.format( target ) )
+    sys.exit( 0 )
+
+  if args.located:
+    if not isinstance( target, Foundation ):
+      print( 'Can only set Foundations to located' )
+      sys.exit( 1 )
+
+    _clear_job( target )
+    target.setLocated()
+    print( '{0} now set to located.'.format( target ) )
+    sys.exit( 0 )
+
+  if args.built:
+    _clear_job( target )
+    target.setBuilt()
+    print( '{0} now set to built.'.format( target ) )
+    sys.exit( 0 )
+
+  if args.clear_job:
+    _clear_job( target )
+    sys.exit( 0 )
+
+  print( 'unknown boss task' )
+  sys.exit( 1 )
+
+if __name__ == '__main__':
+  main()

@@ -1,0 +1,13 @@
+Source: contractor
+Section: multiverse/python
+Priority: optional
+Maintainer: Peter Howe <pnhowe@gmail.com>
+Build-Depends: debhelper (>= 7), python3 (>= 3.4), python3-dev (>=3.4), python3-setuptools (>= 20.0), npm (>= 3.5), nodejs-legacy (>= 4.2.6~dfsg), lsb-release
+Standards-Version: 3.8.3
+X-Python3-Version: >= 3.4
+
+Package: contractor
+Architecture: all
+Depends: python3 (>= 3.4), python3-django, apache2, libapache2-mod-wsgi-py3, postgresql-client, python3-werkzeug, python3-psycopg2, python3-cinp (>= 0.9), python3-toml, python3-jinja2, ${misc:Depends}, ${python3:Depends}
+Description: Contractor
+  Contractor

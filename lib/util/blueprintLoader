@@ -1,0 +1,217 @@
+#!/usr/bin/env python3
+import os
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
+import sys
+import toml
+from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint, BluePrintScript, Script, PXE
+
+# TODO: a paramater to select which type to load
+# TODO: a paramater to update only
+# TODO: a paramater to add only
+# TODO: some way to remove
+
+
+# No this isn't the full solution, for now we are punting and putting anything
+# that is a parent first, eventually we need to deal with parents with parents
+# that need to be in the right order
+def bluePrintOrder( entity_map ):
+  parent_list = []
+  entity_list = set( entity_map.keys() )
+
+  for name in entity_map:
+    parent_list += entity_map[ name ].get( 'parents', [] )
+
+  parent_list = set( parent_list )
+
+  parent_list = parent_list.intersection( entity_list )
+
+  return list( parent_list ) + list( entity_list - parent_list )
+
+
+def loadBluePrintCommon( blueprint, target ):
+  for name in ( 'description', 'config_values' ):
+    try:
+      setattr( blueprint, name, target[ name ] )
+    except KeyError:
+      pass
+
+
+def setScripts( blueprint, target ):
+  script_map = {}
+
+  for name, script in target.get( 'scripts', {} ).items():
+    try:
+      script_map[ name ] = Script.objects.get( name=script )
+    except Script.DoesNotExist:
+      print( 'Unable to find Script "{0}"'.format( script ) )
+      sys.exit( 1 )
+
+  for name, script in script_map.items():
+    try:
+      bps = BluePrintScript.objects.get( blueprint=blueprint, name=name )
+      if bps.script != script:
+        bps.script = script
+        bps.full_clean()
+        bps.save()
+
+    except BluePrintScript.DoesNotExist:
+      bps = BluePrintScript( blueprint=blueprint, script=script, name=name )
+      bps.full_clean()
+      bps.save()
+
+  for bps in BluePrintScript.objects.filter( blueprint=blueprint ):
+    if bps.name not in script_map:
+      bps.delete()
+
+
+def loadStructureBlueprint( name, target ):
+  print( 'Structure BluePrint "{0}"...'.format( name ) )
+  try:
+    blueprint = StructureBluePrint.objects.get( name=name )
+  except StructureBluePrint.DoesNotExist:
+    blueprint = StructureBluePrint( name=name )
+
+  loadBluePrintCommon( blueprint, target )
+
+  blueprint.full_clean()
+  blueprint.save()
+
+  foundation_blueprint_list = []
+  for name in target.get( 'foundation_blueprints', [] ):
+    try:
+      foundation_blueprint_list.append( FoundationBluePrint.objects.get( name=name ) )
+    except FoundationBluePrint.DoesNotExist:
+      print( 'Unable to find Foundation BluePrint "{0}"'.format( name ) )
+
+  if blueprint.foundation_blueprint_list != foundation_blueprint_list:
+    blueprint.foundation_blueprint_list = foundation_blueprint_list
+    blueprint.full_clean()
+    blueprint.save()
+
+  parent_list = []
+  for parent in target.get( 'parents', [] ):
+    try:
+      parent_list.append( StructureBluePrint.objects.get( name=parent ) )
+    except StructureBluePrint.DoesNotExist:
+      print( 'Unable to find StructureBluePrint "{0}" as parent to "{1}"'.format( parent, name ) )
+      sys.exit( 1 )
+
+  if blueprint.parent_list != parent_list:
+    blueprint.parent_list = parent_list
+    blueprint.full_clean()
+    blueprint.save()
+
+  setScripts( blueprint, target )
+
+
+def loadFoundationBlueprint( name, target ):
+  print( 'Foundation BluePrint "{0}"...'.format( name ) )
+  try:
+    blueprint = FoundationBluePrint.objects.get( name=name )
+  except FoundationBluePrint.DoesNotExist:
+    blueprint = FoundationBluePrint( name=name )
+
+  loadBluePrintCommon( blueprint, target )
+
+  blueprint.foundation_type_list = target.get( 'foundation_types', [] )
+  blueprint.template = target.get( 'template', '' )
+  blueprint.physical_interface_names = target.get( 'physical_interface_names', [] )
+
+  blueprint.full_clean()
+  blueprint.save()
+
+  parent_list = []
+  for parent in target.get( 'parents', [] ):
+    try:
+      parent_list.append( FoundationBluePrint.objects.get( parent ) )
+    except FoundationBluePrint.DoesNotExist:
+      print( 'Unable to find FoundationBluePrint "{0}" as parent to "{1}"'.format( parent, name ) )
+      sys.exit( 1 )
+
+  if blueprint.parent_list != parent_list:
+    blueprint.parent_list = parent_list
+    blueprint.full_clean()
+    blueprint.save()
+
+  setScripts( blueprint, target )
+
+
+def loadScript( name, target ):
+  print( 'Script "{0}"...'.format( name ) )
+  try:
+    script = Script.objects.get( name=name )
+  except Script.DoesNotExist:
+    script = Script( name=name )
+
+  script.description = target.get( 'description', '' )
+  script.script = target.get( 'script', '' )
+  script.full_clean()
+  script.save()
+
+
+def loadPXE( name, target ):
+  print( 'PXE "{0}"...'.format( name ) )
+  try:
+    pxe = PXE.objects.get( name=name )
+  except PXE.DoesNotExist:
+    pxe = PXE( name=name )
+
+  pxe.boot_script = target.get( 'boot_script', '' )
+  pxe.template = target.get( 'template', '' )
+  pxe.full_clean()
+  pxe.save()
+
+
+def loadSFLinks( link_list ):
+  for structureblueprint, foundationblueprint in link_list:
+    print( 'Adding Foundation "{0}" to Structure "{1}"...'.format( foundationblueprint, structureblueprint ) )
+    try:
+      structureblueprint = StructureBluePrint.objects.get( name=structureblueprint )
+    except StructureBluePrint.DoesNotExist:
+      print( 'Unable to find StructureBluePrint "{0}", skipping...'.format( structureblueprint ) )  # we skip b/c we might be adding to structures that may exist
+      continue
+
+    try:
+      foundationblueprint = FoundationBluePrint.objects.get( name=foundationblueprint )
+    except FoundationBluePrint.DoesNotExist:
+      print( 'Unable to find FoundationBluePrint "{0}"'.format( foundationblueprint ) )  # don't skip this one(?), normally the links are in the file with the foundations
+      sys.exit( 1 )
+
+    if foundationblueprint not in structureblueprint.foundation_blueprint_list.all():
+      structureblueprint.foundation_blueprint_list.add( foundationblueprint )
+      structureblueprint.full_clean()
+      structureblueprint.save()
+
+
+try:
+  filename = sys.argv[1]
+except IndexError:
+  print( 'Usage {0} <blueprint file.toml>'.format( sys.argv[0] ) )
+  sys.exit( 1 )
+
+try:
+  item_map = toml.load( filename )
+except ( FileNotFoundError, toml.TomlDecodeError ) as e:
+  print( 'Error opening and/or parsing "{0}": {1}'.format( filename, e ) )
+  sys.exit( 1 )
+
+for name in item_map.get( 'script', {} ):
+  loadScript( name, item_map[ 'script' ][ name ] )
+
+for name in bluePrintOrder( item_map.get( 'foundation', {} ) ):
+  loadFoundationBlueprint( name, item_map[ 'foundation' ][ name ] )
+
+for name in bluePrintOrder( item_map.get( 'structure', {} ) ):
+  loadStructureBlueprint( name, item_map[ 'structure' ][ name ] )
+
+for name in item_map.get( 'pxe', {} ):
+  loadPXE( name, item_map[ 'pxe' ][ name ] )
+
+loadSFLinks( item_map.get( 'sflinks', [] ) )
+
+print( 'Done' )
+sys.exit( 0 )

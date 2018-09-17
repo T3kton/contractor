@@ -8,7 +8,7 @@ import contractor.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('Building', '0001_initial'),
+        ('Building', '0002_initial2'),
         ('Site', '0001_initial'),
     ]
 
@@ -16,37 +16,50 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='BaseJob',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('state', models.CharField(max_length=10, choices=[('queued', 'queued'), ('waiting', 'waiting'), ('done', 'done'), ('paused', 'paused'), ('error', 'error'), ('aborted', 'aborted')])),
+                ('id', models.AutoField(auto_created=True, primary_key=True, verbose_name='ID', serialize=False)),
+                ('state', models.CharField(choices=[('queued', 'queued'), ('waiting', 'waiting'), ('done', 'done'), ('paused', 'paused'), ('error', 'error'), ('aborted', 'aborted')], max_length=10)),
                 ('status', contractor.fields.JSONField(blank=True, default=[])),
-                ('message', models.CharField(blank=True, default='', max_length=1024)),
+                ('message', models.CharField(blank=True, max_length=1024, default='')),
                 ('script_runner', models.BinaryField()),
-                ('script_name', models.CharField(default=False, max_length=40, editable=False)),
+                ('script_name', models.CharField(editable=False, max_length=40, default=False)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
         ),
         migrations.CreateModel(
+            name='JobLog',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, verbose_name='ID', serialize=False)),
+                ('job_id', models.IntegerField()),
+                ('target_class', models.CharField(max_length=50)),
+                ('target_description', models.CharField(max_length=120)),
+                ('script_name', models.CharField(max_length=50)),
+                ('start_finish', models.BooleanField()),
+                ('at', models.DateTimeField(auto_now_add=True)),
+                ('site', models.ForeignKey(to='Site.Site')),
+            ],
+        ),
+        migrations.CreateModel(
             name='DependancyJob',
             fields=[
-                ('basejob_ptr', models.OneToOneField(primary_key=True, to='Foreman.BaseJob', auto_created=True, serialize=False, parent_link=True)),
-                ('dependancy', models.OneToOneField(to='Building.Dependancy', editable=False)),
+                ('basejob_ptr', models.OneToOneField(auto_created=True, primary_key=True, to='Foreman.BaseJob', parent_link=True, serialize=False)),
+                ('dependancy', models.OneToOneField(editable=False, to='Building.Dependancy')),
             ],
             bases=('Foreman.basejob',),
         ),
         migrations.CreateModel(
             name='FoundationJob',
             fields=[
-                ('basejob_ptr', models.OneToOneField(primary_key=True, to='Foreman.BaseJob', auto_created=True, serialize=False, parent_link=True)),
-                ('foundation', models.OneToOneField(to='Building.Foundation', editable=False)),
+                ('basejob_ptr', models.OneToOneField(auto_created=True, primary_key=True, to='Foreman.BaseJob', parent_link=True, serialize=False)),
+                ('foundation', models.OneToOneField(editable=False, to='Building.Foundation')),
             ],
             bases=('Foreman.basejob',),
         ),
         migrations.CreateModel(
             name='StructureJob',
             fields=[
-                ('basejob_ptr', models.OneToOneField(primary_key=True, to='Foreman.BaseJob', auto_created=True, serialize=False, parent_link=True)),
-                ('structure', models.OneToOneField(to='Building.Structure', editable=False)),
+                ('basejob_ptr', models.OneToOneField(auto_created=True, primary_key=True, to='Foreman.BaseJob', parent_link=True, serialize=False)),
+                ('structure', models.OneToOneField(editable=False, to='Building.Structure')),
             ],
             bases=('Foreman.basejob',),
         ),

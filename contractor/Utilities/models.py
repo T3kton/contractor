@@ -1,4 +1,5 @@
 import re
+import random
 from django.db import models
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
@@ -7,8 +8,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, IpAddressField, hostname_regex, name_regex
 from contractor.BluePrint.models import PXE
 from contractor.Site.models import Site
-from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRNetworkSize, CIDRNetmask
-
+from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRNetworkSize, CIDRNetmask, CIDRNetworkRange
 
 cinp = CInP( 'Utilities', '0.1' )
 
@@ -36,9 +36,52 @@ class Networked( models.Model ):
 
     return self
 
+  @property
+  def primary_interface( self ):
+    try:
+      address = self.address_set.get( is_primary=True )
+      return address.interface
+    except ObjectDoesNotExist:
+      return None
+
+  @property
+  def primary_ip( self ):
+    try:
+      return self.address_set.get( is_primary=True ).ip_address
+    except Address.DoesNotExist:
+      return None
+
+  @property
+  def provisioning_interface( self ):
+    try:
+      return self.structure.foundation.networkinterface_set.get( is_provisioning=True )
+    except ObjectDoesNotExist:
+      return None
+
+  @property
+  def provisioning_ip( self ):
+    try:
+      interface_name = self.structure.foundation.networkinterface_set.get( is_provisioning=True ).name
+    except NetworkInterface.DoesNotExist:
+      return None
+
+    try:
+      return self.address_set.get( interface_name=interface_name, is_primary=True ).ip_address
+    except Address.DoesNotExist:
+      return None
+
+  @property
+  def fqdn( self ):
+    try:
+      zone = self.site.zone
+    except ( ObjectDoesNotExist, AttributeError ):
+      return self.hostname
+
+    return '{0}.{1}'.format( self.hostname, zone.fqdn )
+
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -46,6 +89,14 @@ class Networked( models.Model ):
     errors = {}
     if not hostname_regex.match( self.hostname ):
       errors[ 'hostname' ] = 'Structure hostname "{0}" is invalid'.format( self.hostname )
+
+    try:
+      zone = self.site.zone
+    except ( ObjectDoesNotExist, AttributeError ):
+      zone = None
+
+    if zone is not None and zone.site_set.filter( networked__hostname=self.hostname ).exclude( networked__pk=self.pk ).count():
+      errors[ 'hostname' ] = 'Hostname "{0}" allready used in DNS Zone "{1}"'.format( self.hostname, zone.pk )
 
     if errors:
       raise ValidationError( errors )
@@ -57,12 +108,12 @@ class Networked( models.Model ):
     return 'Networked hostname "{0}" in "{1}"'.format( self.hostname, self.site.name )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
+@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class NetworkInterface( models.Model ):
-  updated = models.DateTimeField( editable=False, auto_now=True )
-  created = models.DateTimeField( editable=False, auto_now_add=True )
   name = models.CharField( max_length=20 )
   is_provisioning = models.BooleanField( default=False )
+  updated = models.DateTimeField( editable=False, auto_now=True )
+  created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
   def subclass( self ):
@@ -87,10 +138,30 @@ class NetworkInterface( models.Model ):
   def type( self ):
     return 'Unknown'  # This class should not be used directly
 
+  @property
+  def config( self ):
+    result = { 'name': self.name, 'mac': self.mac, 'address_list': [] }
+    structure = self.foundation.attached_structure
+    if structure is not None:
+      for address in structure.address_set.filter( interface_name=self.name ):
+        result[ 'address_list' ].append( {
+                                           'address': address.ip_address,
+                                           'netmask': address.netmask,
+                                           'prefix': address.prefix,
+                                           'network': address.network,
+                                           'gateway': address.address_block.gateway,
+                                           'primary': address.is_primary,
+                                           'sub_interface': None,
+                                           'tagged': False,
+                                           'mtu': 1500
+                                         } )
+
+    return result
+
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    if method == 'DESCRIBE':
+  def checkAuth( user, verb, id_list, action=None ):
+    if verb == 'DESCRIBE':
       return True
 
     return False
@@ -105,12 +176,14 @@ class NetworkInterface( models.Model ):
       raise ValidationError( errors )
 
   def __str__( self ):
-    return 'NetworkInterface "{0}"'.format( self.physical_name )
+    return 'NetworkInterface "{0}"'.format( self.name )
 
 
 @cinp.model( )
 class RealNetworkInterface( NetworkInterface ):
-  mac = models.CharField( max_length=18, unique=True, blank=True, null=True )
+  mac = models.CharField( max_length=18, blank=True, null=True )  # in a globally unique world we would set this to unique, but these virtual days we have to many ways to use the same mac safely, so good luck.
+  foundation = models.ForeignKey( 'Building.Foundation', related_name='networkinterface_set' )
+  physical_location = models.CharField( max_length=100 )
   pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
 
   @property
@@ -121,9 +194,16 @@ class RealNetworkInterface( NetworkInterface ):
   def type( self ):
     return 'Real'
 
+  @property
+  def config( self ):
+    result = super().config
+    result[ 'mac' ] = self.mac
+
+    return result
+
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -162,7 +242,7 @@ class AbstractNetworkInterface( NetworkInterface ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):
@@ -183,17 +263,26 @@ class AggragatedNetworkInterface( AbstractNetworkInterface ):
   def type( self ):
     return 'Aggragated'
 
+  @property
+  def config( self ):
+    result = super().config
+    result[ 'master' ] = self.master_interface.name
+    result[ 'slaves' ] = [ i.name for i in self.slaves ]
+
+    return result
+
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):
     return 'AggragatedNetworkInterface "{0}"'.format( self.name )
 
 
-@cinp.model()
+@cinp.model( property_list=( 'gateway', 'netmask', 'size', 'isIpV4' ) )
 class AddressBlock( models.Model ):
+  name = models.CharField( max_length=40, primary_key=True )
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   subnet = IpAddressField()
   prefix = models.IntegerField()
@@ -203,16 +292,11 @@ class AddressBlock( models.Model ):
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
-  def gateway_ip( self ):
+  def gateway( self ):
     if self.gateway_offset is None:
       return None
 
     return IpToStr( StrToIp( self.subnet ) + self.gateway_offset )
-
-  @property
-  def dns_servers( self ):
-    return [ '192.168.200.1' ]
-    # get config from cluster and return dns servers, if none return empty []
 
   @property
   def netmask( self ):
@@ -230,6 +314,42 @@ class AddressBlock( models.Model ):
   def isIpV4( self ):
     return IpIsV4( StrToIp( self.subnet ) )
 
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.Address' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, { 'type': 'String' }, { 'type': 'Boolean' } ] )
+  def nextAddress( self, structure, interface_name, is_primary ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
+    address = Address( networked=structure, interface_name=interface_name, is_primary=is_primary )
+    if structure.foundation.subclass.__class__.__name__ == 'DockerFoundation':
+      # address.pointer = Address.objects.get( networked=structure.foundation.docker_host.members[0], interface_name='eth0' )
+      return None  # set map_ports will do the address
+
+    else:  # TODO: either retry till all_offsets is empty, or lock the Address table(s)
+      all_offsets = set( CIDRNetworkRange( StrToIp( self.subnet ), self.prefix, False, True ) )
+      if self.gateway_offset is not None:
+        all_offsets = all_offsets - set( [ self.gateway_offset ] )
+
+      if not all_offsets:
+        raise ValueError( 'No Available Offsets' )
+
+      used_offsets = set( BaseAddress.objects.filter( address_block=self, offset__isnull=False ).values_list( 'offset', flat=True ) )
+      address.address_block = self
+      address.offset = random.choice( list( all_offsets - used_offsets ) )
+
+    address.full_clean()
+    address.save()
+
+    return address
+
+  @cinp.action( return_type='Map' )
+  def usage( self ):
+    result = {}
+    result[ 'total' ] = self.size
+    result[ 'static' ] = Address.objects.filter( address_block=self ).count()
+    result[ 'reserved' ] = ReservedAddress.objects.filter( address_block=self ).count()
+    result[ 'dynamic' ] = DynamicAddress.objects.filter( address_block=self ).count()
+    if self.gateway_offset:
+      result[ 'reserved' ] += 1
+
+    return result
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
@@ -237,7 +357,7 @@ class AddressBlock( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -292,7 +412,7 @@ class AddressBlock( models.Model ):
     return 'AddressBlock site "{0}" subnet "{1}/{2}"'.format( self.site, self.subnet, self.prefix )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type' ) )
+@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class BaseAddress( models.Model ):
   address_block = models.ForeignKey( AddressBlock, blank=True, null=True )
   offset = models.IntegerField( blank=True, null=True )
@@ -305,6 +425,34 @@ class BaseAddress( models.Model ):
       return None
 
     return IpToStr( StrToIp( self.address_block.subnet ) + self.offset )
+
+  @property
+  def network( self ):
+    if self.address_block is None:
+      return None
+
+    return self.address_block.subnet
+
+  @property
+  def netmask( self ):
+    if self.address_block is None:
+      return None
+
+    return self.address_block.netmask
+
+  @property
+  def prefix( self ):
+    if self.address_block is None:
+      return None
+
+    return self.address_block.prefix
+
+  @property
+  def gateway( self ):
+    if self.address_block is None:
+      return None
+
+    return self.address_block.gateway
 
   @property
   def subclass( self ):
@@ -333,7 +481,7 @@ class BaseAddress( models.Model ):
 
     return real.type
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilitied.models.BaseAddress' }, paramater_type_list=[ 'String' ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.BaseAddress' }, paramater_type_list=[ 'String' ] )
   @staticmethod
   def lookup( ip_address ):
     try:
@@ -351,8 +499,8 @@ class BaseAddress( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    if method == 'DESCRIBE':
+  def checkAuth( user, verb, id_list, action=None ):
+    if verb == 'DESCRIBE':
       return True
 
     return False
@@ -385,7 +533,7 @@ class BaseAddress( models.Model ):
     return 'BaseAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
 
 
-@cinp.model( property_list=( 'ip_address', 'type' ) )
+@cinp.model( property_list=( 'ip_address', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class Address( BaseAddress ):
   networked = models.ForeignKey( Networked )
   interface_name = models.CharField( max_length=20 )
@@ -402,6 +550,34 @@ class Address( BaseAddress ):
     return super().ip_address
 
   @property
+  def network( self ):
+    if self.pointer is not None:
+      return self.pointer.network
+
+    return super().network
+
+  @property
+  def netmask( self ):
+    if self.pointer is not None:
+      return self.pointer.netmask
+
+    return super().netmask
+
+  @property
+  def prefix( self ):
+    if self.pointer is not None:
+      return self.pointer.prefix
+
+    return super().prefix
+
+  @property
+  def gateway( self ):
+    if self.pointer is not None:
+      return self.pointer.gateway
+
+    return super().gateway
+
+  @property
   def structure( self ):
     try:
       return self.networked.structure
@@ -411,7 +587,7 @@ class Address( BaseAddress ):
   @property
   def interface( self ):
     try:
-      return self.networked.structure.foundation.interfaces.get( name=self.interface_name )
+      return self.networked.structure.foundation.networkinterface_set.get( name=self.interface_name )
     except ObjectDoesNotExist:
       return None
 
@@ -428,9 +604,14 @@ class Address( BaseAddress ):
   def filter_address_block( address_block ):
     return Address.objects.filter( address_block=address_block )
 
+  @cinp.list_filter( name='structure', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ] )
+  @staticmethod
+  def filter_structure( structure ):
+    return Address.objects.filter( networked=structure )
+
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -438,6 +619,15 @@ class Address( BaseAddress ):
     errors = {}
     if not name_regex.match( self.interface_name ):
       errors[ 'interface_name' ] = '"{0}" is invalid'.format( self.interface_name[ 0:50 ] )
+
+    try:
+      if self.address_block and self.networked and self.address_block.site != self.networked.site:
+        errors[ 'address_block' ] = 'Address is not in the same site as the Networked it belongs to'
+    except ObjectDoesNotExist:
+      pass  # something else should make sure address_block and networked are defined
+
+    if errors:  # if either of the above happen, don't bother with the rest
+      raise ValidationError( errors )
 
     try:
       if self.pointer is not None:
@@ -489,7 +679,7 @@ class ReservedAddress( BaseAddress ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -508,7 +698,7 @@ class ReservedAddress( BaseAddress ):
     return 'ReservedAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
 
 
-@cinp.model( property_list=( 'ip_address', 'type' ) )
+@cinp.model( property_list=( 'ip_address', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto detected
   pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
 
@@ -527,7 +717,7 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):

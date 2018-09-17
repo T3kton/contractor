@@ -6,9 +6,9 @@ from django.core.exceptions import ValidationError
 
 from contractor.lib.ip import StrToIp, IpToStr
 
-name_regex = re.compile( '^[a-zA-Z0-9][a-zA-Z0-9_\-]*$')
+name_regex = re.compile( '^[a-zA-Z0-9][a-zA-Z0-9_\-]*$' )  # if  this changes, update architect
 hostname_regex = re.compile( '^[a-z0-9][a-z0-9\-]*[a-z0-9]$' )  # '.' is not allowed, can cause trouble with the DNS generations stuff, must also be lowercase (DNS is non case sensitive)
-config_name_regex = re.compile( '^[{}\-~]?([a-zA-Z0-9]+:)?[a-zA-Z0-9][a-zA-Z0-9_\-]*$' )
+config_name_regex = re.compile( '^[<>\-~]?([a-zA-Z0-9]+:)?[a-zA-Z0-9][a-zA-Z0-9_\-]*$' )
 JSON_MAGIC = '\x02JSON\x03'
 
 
@@ -123,8 +123,10 @@ class StringListField( models.CharField ):
   def __init__( self, *args, **kwargs ):
     if 'default' not in kwargs:
       kwargs[ 'default' ] = []
-    if 'null' in kwargs:  # the field needs to be valid JSON, None is not valid
+    try:
       del kwargs[ 'null' ]
+    except KeyError:
+      pass
 
     if not isinstance( kwargs[ 'default' ], list ):
       raise ValueError( 'default value must be a list' )
@@ -135,6 +137,9 @@ class StringListField( models.CharField ):
     if value is None:
       return value
 
+    if value == '':
+      return []
+
     return value.split( '\t' )
 
   def to_python( self, value ):
@@ -144,23 +149,39 @@ class StringListField( models.CharField ):
     if isinstance( value, list ):
       return value
 
+    if value == '':
+      return []
+
     return value.split( '\t' )
 
   def get_prep_value( self, value ):
     return '\t'.join( value )
 
 
-class IpAddressField( models.IntegerField ):
+class IpAddressField( models.BinaryField ):  # needs 128 bits of storage, the integer types only goto 64
   description = 'Ip Address Field'
   validators = [ validate_ipaddress ]
   cinp_type = 'String'
+
+  def __init__( self, *args, **kwargs ):
+    editable = kwargs.get( 'editable', True )
+    super().__init__( *args, **kwargs )  # until Django 2.1, editable for BinaryFields is not able to be made editable
+    self.editable = editable
+
+  def deconstruct(self):
+    editable = self.editable
+    self.editable = False  # have to set this to non default so BinaryField's deconstruct works
+    name, path, args, kwargs = super(IpAddressField, self).deconstruct()
+    self.editable = editable
+    kwargs[ 'editable' ] = self.editable
+    return name, path, args, kwargs
 
   def from_db_value( self, value, expression, connection, context ):
     if value is None:
       return None
 
     try:
-      return IpToStr( value )
+      return IpToStr( int.from_bytes( value, 'big' ) )
     except ValueError:
       raise ValidationError( '"%(value)s" is not valid', params={ 'value': value } )
 
@@ -171,13 +192,25 @@ class IpAddressField( models.IntegerField ):
     if isinstance( value, str ):
       return value
 
-    try:
-      return IpToStr( value )
-    except ValueError:
-      raise ValidationError( '"%(value)s" is not valid', params={ 'value': value } )
+    if isinstance( value, int ):
+      try:
+        return IpToStr( value )
+      except ValueError:
+        raise ValidationError( '"%(value)s" is not valid', params={ 'value': value } )
+
+    if isinstance( value, bytes ):
+      try:
+        return IpToStr( int.from_bytes( value, 'big' ) )
+      except ValueError:
+        raise ValidationError( '"%(value)s" is not valid', params={ 'value': value } )
+
+    raise ValidationError( '"%(value)s" type is unexpected type "%(type)s"', params={ 'value': value, 'type': type } )
 
   def get_prep_value( self, value ):
-    return StrToIp( value )
+    if isinstance( value, str ):
+      value = StrToIp( value )
+
+    return value.to_bytes( 16, 'big' )
 
   def value_to_string( self, obj ):
     return self.get_prep_value( self._get_val_from_obj( obj ) )

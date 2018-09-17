@@ -1,0 +1,286 @@
+#!/usr/bin/env python3
+import os
+
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
+from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint, Script
+from contractor.Site.models import Site
+from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependancy
+from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
+from contractor_plugins.AMT.models import AMTFoundation
+from contractor_plugins.VirtualBox.models import VirtualBoxFoundation, VirtualBoxComplex
+from contractor_plugins.Manual.models import ManualFoundation, ManualComplex, ManualComplexedFoundation
+from contractor_plugins.Docker.models import DockerFoundation, DockerComplex
+
+
+fbp_amt = FoundationBluePrint.objects.get( pk='generic-amt' )
+fbp_manual = FoundationBluePrint.objects.get( pk='generic-manual' )
+fbp_vbox = FoundationBluePrint.objects.get( pk='generic-virtualbox' )
+fbp_dkr = FoundationBluePrint.objects.get( pk='generic-docker' )
+
+sbp_xenial = StructureBluePrint.objects.get( pk='generic-xenial' )
+sbp_esx = StructureBluePrint.objects.get( pk='generic-esx' )
+sbp_manual = StructureBluePrint.objects.get( pk='generic-manual-structure' )
+
+print( 'creating sites...' )
+s1 = Site( name='site1', description='Test Site 1' )
+s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'dns_servers' ] = [ '192.168.200.20' ]
+s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
+s1.full_clean()
+s1.save()
+
+print( 'creating networks...' )
+addr1_block = AddressBlock( site=s1, subnet='192.168.200.0', prefix=24, gateway_offset=1 )  # remove gateway when dhcpd bug is fixed
+addr1_block.full_clean()
+addr1_block.save()
+
+addrlo_block = AddressBlock( site=s1, subnet='127.0.0.0', prefix=8 )
+addrlo_block.full_clean()
+addrlo_block.save()
+
+# plato is at 21, laptops at 5x
+
+for i in range( 10, 19 ):
+  addr = DynamicAddress( address_block=addr1_block, offset=i )
+  addr.full_clean()
+  addr.save()
+
+AMT_devices = {
+                # 'nuc1': [ '192.168.200.201', '94:c6:91:13:9b:d5', 101, sbp_esx ],  # inuse
+                # 'nuc2': [ '192.168.200.202', '94:c6:91:10:f1:dc', 102, sbp_xenial ],
+              }
+
+Manual_devices = {
+                   # 'manual1': [ 121, sbp_manual ],
+                   # 'manual2': [ 122, sbp_manual ],
+                   # 'manual3': [ 123, sbp_manual ],
+                   # 'manual4': [ 124, sbp_manual ],
+                   # 'manual5': [ 125, sbp_manual ],
+                 }
+
+VirtualBox_devices = {
+                      'virtb1': [ 131, sbp_xenial ],
+                      'virtb2': [ 132, sbp_esx ],
+                     }
+
+Docker_devices = {
+                   # 'docker1': [ sbp_xenial ],
+                  }
+
+if True:
+ print( 'enabling demo mode' )
+ for name in ( 'create-generic-manual', 'destroy-generic-manual', 'utility-generic-manual', 'utility2-generic-manual', 'create-manual-structure', 'destroy-manual-structure', 'utility-manual-structure', 'utility2-manual-structure'):
+   script = Script.objects.get( name=name )
+   script.script = 'delay( seconds=5 )'
+   script.full_clean()
+   script.save()
+
+
+if VirtualBox_devices or Docker_devices:
+   fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator='localmachine' )
+   fdn.full_clean()
+   fdn.save()
+   fdn.setBuilt()
+
+   iface = RealNetworkInterface( name='lo', is_provisioning=True )
+   iface.full_clean()
+   iface.save()
+
+   fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='lo' )
+   fni.full_clean()
+   fni.save()
+
+   strct_host = Structure( site=s1, blueprint=sbp_xenial, hostname='localmachine', foundation=fdn )
+   strct_host.auto_build = False
+   strct_host.full_clean()
+   strct_host.save()
+   strct_host.setBuilt()
+
+   addr = Address( networked=strct_host, address_block=addrlo_block, interface_name='lo', offset=1, is_primary=True )
+   addr.full_clean()
+   addr.save()
+
+# print( 'Creating Switch...' )
+# fdn_switch = ManualFoundation( site=s1, blueprint=fbp_manual, locator='switch' )
+# fdn_switch.full_clean()
+# fdn_switch.save()
+#
+# iface = RealNetworkInterface( name='mgnt', is_provisioning=True )
+# iface.full_clean()
+# iface.save()
+#
+# fni = FoundationNetworkInterface( foundation=fdn_switch, interface=iface, physical_location='mgnt' )
+# fni.full_clean()
+# fni.save()
+#
+# for i in range( 0, 25 ):
+#   iface = RealNetworkInterface( name='fe0-{0}'.format( i ) )
+#   iface.full_clean()
+#   iface.save()
+#
+#   fni = FoundationNetworkInterface( foundation=fdn_switch, interface=iface, physical_location='fe0-{0}'.format( i ) )
+#   fni.full_clean()
+#   fni.save()
+#
+# str_switch = Structure( site=s1, blueprint=sbp_manual, hostname='switch', foundation=fdn_switch )
+# str_switch.full_clean()
+# str_switch.save()
+#
+# addr = Address( networked=str_switch, address_block=addr1_block, interface_name='mgnt', offset=2, is_primary=True )
+# addr.full_clean()
+# addr.save()
+
+
+for hostname in AMT_devices:
+  device = AMT_devices[ hostname ]
+  amt_ip = device[0]
+  amt_mac = device[1]
+  strct_ip_offset = device[2]
+  strct_blueprint = device[3]
+
+  print( 'creating AMT {0}...'.format( hostname ) )
+  #iface = RealNetworkInterface( name='amt', is_provisioning=True )
+  #iface.mac = amt_mac
+  #iface.full_clean()
+  #iface.save()
+
+  fdn = AMTFoundation( site=s1, blueprint=fbp_amt, locator=hostname )
+  fdn.amt_password = 'asdQWE1@3'
+  fdn.amt_ip_address = amt_ip
+  fdn.full_clean()
+  fdn.save()
+  #fdn.amt_interface = iface
+  fdn.full_clean()
+  fdn.save()
+
+  #addr = Address( networked=fdn_test, address_block=addr1_block, interface_name='amt', offset=250, is_primary=True )
+  #addr.full_clean()
+  #addr.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.mac = amt_mac
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=strct_blueprint, hostname=hostname, foundation=fdn )
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+  addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+for hostname in Manual_devices:
+  device = Manual_devices[ hostname ]
+  strct_ip_offset = device[0]
+  strct_blueprint = device[1]
+
+  print( 'creating Manual {0}...'.format( hostname ) )
+  fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator=hostname )
+  fdn.full_clean()
+  fdn.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=strct_blueprint, hostname=hostname, foundation=fdn )
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+  addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+if VirtualBox_devices:
+  print( 'creating virtualbox host...' )
+  cpx_vbox = VirtualBoxComplex( site=s1, name='localvbox', description='local virtualbox complex' )
+  cpx_vbox.full_clean()
+  cpx_vbox.save()
+
+  cpx_member = ComplexStructure( complex=cpx_vbox, structure=strct_host )
+  cpx_member.full_clean()
+  cpx_member.save()
+
+for hostname in VirtualBox_devices:
+  device = VirtualBox_devices[ hostname ]
+  strct_ip_offset = device[0]
+  strct_blueprint = device[1]
+
+  print( 'creating VirtualBox {0}...'.format( hostname ) )
+  fdn = VirtualBoxFoundation( site=s1, blueprint=fbp_vbox, locator=hostname )
+  fdn.virtualbox_host = cpx_vbox
+  fdn.config_values = { 'memory_size': 512 }
+  fdn.full_clean()
+  fdn.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=strct_blueprint, hostname=hostname, foundation=fdn )
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+  addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+
+if Docker_devices:
+  print( 'creating docker host...' )
+  cpx_dkr = DockerComplex( site=s1, name='localdocker', description='local docker complex' )
+  cpx_dkr.full_clean()
+  cpx_dkr.save()
+
+  cpx_member = ComplexStructure( complex=cpx_dkr, structure=strct_host )
+  cpx_member.full_clean()
+  cpx_member.save()
+
+for hostname in Docker_devices:
+  device = Docker_devices[ hostname ]
+  strct_blueprint = device[0]
+
+  print( 'creating Docker {0}...'.format( hostname ) )
+  fdn = DockerFoundation( site=s1, blueprint=fbp_dkr, locator=hostname )
+  fdn.container_host = cpx_dkr
+  fdn.config_values = {}
+  fdn.full_clean()
+  fdn.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=strct_blueprint, hostname=hostname, foundation=fdn )
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+  addr = Address( networked=strct, pointer=Address.objects.get( networked=strct_host, interface_name='lo' ), interface_name='eth0', is_primary=True )
+  addr.full_clean()
+  addr.save()

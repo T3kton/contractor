@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+import os
+
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
+from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
+from contractor.Site.models import Site
+from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure
+from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, DynamicAddress
+from contractor_plugins.AMT.models import AMTFoundation
+from contractor_plugins.Vcenter.models import VcenterFoundation, VcenterComplex
+
+fbp_manual = FoundationBluePrint.objects.get( pk='generic-amt' )
+fbp_vcenter = FoundationBluePrint.objects.get( pk='generic-vcenter' )
+sbp_xenial = StructureBluePrint.objects.get( pk='generic-xenial' )
+sbp_esx = StructureBluePrint.objects.get( pk='generic-esx' )
+
+print( 'creating sites...' )
+s1 = Site( name='site1', description='Test Site 1' )
+s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'dns_servers' ] = [ '192.168.200.53' ]
+s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
+s1.full_clean()
+s1.save()
+
+print( 'creating networks...' )
+addr1_block = AddressBlock( site=s1, subnet='192.168.200.0', prefix=24, gateway_offset=1  )
+addr1_block.full_clean()
+addr1_block.save()
+
+# plato is at 21, laptops at 5X
+
+for i in range( 10, 19 ):
+  addr = DynamicAddress( address_block=addr1_block, offset=i )
+  addr.full_clean()
+  addr.save()
+
+AMT_devices = {
+                'nuc1': [ '192.168.200.201', '94:c6:91:13:9b:d5', 101, sbp_esx ],
+                'nuc2': [ '192.168.200.202', '94:c6:91:10:f1:dc', 102, sbp_esx ],
+              }
+
+VM_devices = {
+               'test1': [ sbp_xenial, 71 ],
+               'test2': [ sbp_xenial, 72 ],
+               'test3': [ sbp_xenial, 73 ],
+               'test4': [ sbp_xenial, 74 ],
+             }
+
+for hostname in AMT_devices:
+  device = AMT_devices[ hostname ]
+  amt_ip = device[0]
+  amt_mac = device[1]
+  strct_ip_offset = device[2]
+  blueprint = device[3]
+
+  print( 'creating AMT {0}...'.format( hostname ) )
+  # iface = RealNetworkInterface( name='amt', is_provisioning=True )
+  # iface.mac = amt_mac
+  # iface.full_clean()
+  # iface.save()
+
+  fdn = AMTFoundation( site=s1, blueprint=fbp_manual, locator=hostname )
+  fdn.amt_password = 'asdQWE1@3'
+  fdn.amt_ip_address = amt_ip
+  fdn.full_clean()
+  fdn.save()
+  # fdn.amt_interface = iface
+  # fdn.full_clean()
+  # fdn.save()
+
+  # addr = Address( networked=fdn_test, address_block=addr1_block, interface_name='amt', offset=250, is_primary=True )
+  # addr.full_clean()
+  # addr.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.mac = amt_mac
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
+  strct.config_values[ 'datastore_list' ] = [ { 'name': 'ds ' + hostname, 'model': 'HGST HTS721010A9' }, { 'name': 'dsfast ' + hostname, 'model': 'Crucial_CT1050MX' } ]
+  strct.config_values[ 'vcenter_username' ] = 'root'
+  strct.config_values[ 'vcenter_password' ] = '0skin3rd'
+  strct.config_values[ 'vcenter_datacenter' ] = 'ha-datacenter'
+  strct.config_values[ 'vcenter_hostname' ] = hostname + '.'
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+  addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+  strct.config_values[ 'vcenter_host' ] = addr.ip_address
+  strct.full_clean()
+  strct.save()
+
+  cplx = VcenterComplex( name=hostname, site=s1, description='Test ESX Cluster {0}'.format( hostname ) )
+  cplx.vcenter_host = strct
+  cplx.vcenter_username = 'root'
+  cplx.vcenter_password = '0skin3rd'
+  cplx.vcenter_datacenter = 'ha-datacenter'
+  cplx.vcenter_cluster = hostname + '.'
+  cplx.full_clean()
+  cplx.save()
+
+  cpx_member = ComplexStructure( complex=cplx, structure=strct )
+  cpx_member.full_clean()
+  cpx_member.save()
+
+complex_list = list( VcenterComplex.objects.all() )
+complex_list.sort( key=lambda a: a.pk )  # make the complex_list a dependable order
+
+for hostname in VM_devices:
+  device = VM_devices[ hostname ]
+  blueprint = device[0]
+  strct_ip_offset = device[1]
+
+  print( 'Creating VM {0}...'.format( hostname ) )
+
+  tmp = complex_list.pop()
+  complex_list.insert( 0, tmp )
+  fdn = VcenterFoundation( site=s1, blueprint=fbp_vcenter, locator=hostname )
+  fdn.vcenter_host = tmp
+  fdn.full_clean()
+  fdn.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+  addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
+  addr.full_clean()
+  addr.save()

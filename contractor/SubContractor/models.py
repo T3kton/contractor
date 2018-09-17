@@ -33,7 +33,7 @@ class Dispatch():
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
 
@@ -46,16 +46,26 @@ class DHCPd():
   @staticmethod
   def getDynamicPools( site ):
     result = []
-    addr_block_list = AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False )
+    addr_block_list = AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False ).distinct()  # without the distinct we get an AddressBlock for each DynamicAddress
     for addr_block in addr_block_list:
-      item = { 'address_list': {}, 'gateway': addr_block.gateway_ip }
+      item = {
+               'address_map': {},
+               'gateway': addr_block.gateway,
+               'name': addr_block.pk,
+               'netmask': addr_block.netmask,
+               'dns_server': '192.168.200.53',
+               'domain_name': 'test.local'
+              }
+
       for addr in addr_block.baseaddress_set.filter( dynamicaddress__isnull=False ):
         addr = addr.subclass
         try:  # TODO: this needs to be retought a bit, really should be passing in the bootfile
           addr.pxe.name
-          item[ 'address_list' ][ addr.ip_address ] = 'undionly_console.kpxe'
+          item[ 'address_map' ][ addr.ip_address ] = 'undionly_console.kpxe'
         except AttributeError:
-          item[ 'address_list' ][ addr.ip_address ] = None
+          item[ 'address_map' ][ addr.ip_address ] = None
+
+      result.append( item )
 
     return result
 
@@ -74,16 +84,26 @@ class DHCPd():
         result[ iface.mac ] = {
                                 'ip_address': addr.ip_address,
                                 'netmask': addr_block.netmask,
-                                'gateway': addr_block.gateway_ip,
-                                'dns_server': addr_block.dns_servers[0],
+                                'gateway': addr_block.gateway,
                                 'host_name': addr.structure.hostname,
-                                'domain_name': 'get.from.site.config',
                                 'boot_file': 'undionly_console.kpxe'
                               }
+
+        site_config = addr_block.site.getConfig()
+
+        try:
+          result[ iface.mac ][ 'dns_server' ] = site_config[ 'dns_servers' ][0]
+        except ( KeyError, IndexError ):
+          pass
+
+        try:
+          result[ iface.mac ][ 'domain_name' ] = site_config[ 'domain_name' ]
+        except KeyError:
+          pass
 
     return result
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True

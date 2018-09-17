@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+import os
+
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
+import logging
+from contractor.PostOffice.lib import processPost
+
+if __name__ == '__main__':
+  logging.basicConfig()
+  logger = logging.getLogger()
+  logger.setLevel( logging.INFO )
+  logger.info( 'Starting up...' )
+  processPost()
+  logger.info( 'Done.' )

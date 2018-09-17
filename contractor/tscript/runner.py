@@ -1,6 +1,7 @@
 import uuid
 import traceback
 import datetime
+import copy
 from importlib import import_module
 
 from contractor.tscript.parser import types
@@ -143,6 +144,7 @@ class ExternalFunction( object ):
 
   def run( self ):
     # called after ready is checked and returns False
+    # raising Pause is allowed
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     pass
 
@@ -151,6 +153,8 @@ class ExternalFunction( object ):
     # parms is a dict of the paramaters passed in from the script
     # if the params are not wnat they should be, raise ParamaterError
     # make sure to do strict saninity checks on the in bound paramaters.
+    # do not raise Pause, any exceptions raised will cause setup to be called again, which
+    # is desired when validating paramaters
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     pass
 
@@ -173,7 +177,7 @@ class ExternalFunction( object ):
     # this should return a tuple
     # first paramater is the function inside the plugin to call, second is the value to send to the function
     # this is called initially, then again after fromSubcontractor has returnd results until ready is True
-    # example: return ( 'myfunc', { 'stuff': 'for', 'myfunc': 'to use' } ) #NOTE: the paramater part can be anything that is serilizable
+    # example: return ( 'myfunc', { 'stuff': 'for', 'myfunc': 'to use' } ) # NOTE: the paramater part can be anything that is serilizable
     # if None is returned, contractor will not be notified to do anything
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     # subcontractor threads will be waiting on this function
@@ -613,7 +617,12 @@ class Runner( object ):
 
         value = getter()
 
-      value = value[ self.state[ state_index ][1][ 'index' ] ]
+      index = self.state[ state_index ][1][ 'index' ]
+
+      try:
+        value = value[ index ]
+      except IndexError:
+        raise ParamaterError( 'index', 'Index does not exist' )
 
       self.state[ state_index ][1] = None
       try:
@@ -654,7 +663,7 @@ class Runner( object ):
         self.state = self.state[ :( state_index + 1 ) ]
 
       target = op_data[ 'target' ][1]
-      value = self.state[ state_index ][1][ 'value' ]
+      value = copy.deepcopy( self.state[ state_index ][1][ 'value' ] )
 
       if target[ 'module' ] is None:  # we don't evaluate the target, it can only be a variable
         if op_data[ 'target' ][0] == types.ARRAY_ITEM:
@@ -790,9 +799,11 @@ class Runner( object ):
 
           else:
             try:
-              value = handler( **self.state[ state_index ][1][ 'paramaters' ] )
+              paramaters = self.state[ state_index ][1][ 'paramaters' ]
             except TypeError as e:
               raise ParamaterError( '<unknown>', e, self.cur_line )
+
+            value = handler( **paramaters )
 
         if isinstance( handler, ExternalFunction ):  # else was allready run and set a value above
           handler._runner = self

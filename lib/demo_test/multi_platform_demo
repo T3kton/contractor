@@ -1,0 +1,470 @@
+#!/usr/bin/env python3
+import os
+
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
+from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
+from contractor.Site.models import Site
+from contractor.Directory.models import Zone
+from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependancy
+from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, DynamicAddress, ReservedAddress
+from contractor_plugins.Manual.models import ManualFoundation
+from contractor_plugins.AMT.models import AMTFoundation
+from contractor_plugins.Docker.models import DockerFoundation, DockerComplex, DockerPort
+from contractor_plugins.Vcenter.models import VcenterFoundation, VcenterComplex
+from contractor_plugins.VirtualBox.models import VirtualBoxFoundation, VirtualBoxComplex
+from contractor_plugins.AWS.models import AWSEC2Foundation
+from other_plugins.text_file.models import TextFileFoundation
+from other_plugins.status_indicator.models import StatusIndicatorFoundation
+
+fbp_amt = FoundationBluePrint.objects.get( pk='generic-amt' )
+fbp_manual = FoundationBluePrint.objects.get( pk='generic-manual' )
+fbp_vbox = FoundationBluePrint.objects.get( pk='generic-virtualbox' )
+fbp_vcenter = FoundationBluePrint.objects.get( pk='generic-vcenter' )
+fbp_aws = FoundationBluePrint.objects.get( pk='generic-awsec2-micro' )
+fbp_docker = FoundationBluePrint.objects.get( pk='generic-docker' )
+fbp_indicator = FoundationBluePrint.objects.get( pk='generic-status-indicator' )
+fbp_textfile = FoundationBluePrint.objects.get( pk='generic-text-file' )
+
+sbp_linux = StructureBluePrint.objects.get( pk='generic-linux' )
+sbp_xenial = StructureBluePrint.objects.get( pk='generic-xenial' )
+sbp_manual = StructureBluePrint.objects.get( pk='generic-manual-structure' )
+sbp_esx = StructureBluePrint.objects.get( pk='generic-esx' )
+sbp_indicator = StructureBluePrint.objects.get( pk='generic-status-indicator-structure' )
+sbp_textfile = StructureBluePrint.objects.get( pk='generic-text-file-structure' )
+
+sbp_docker = StructureBluePrint( name='generic-docker-host', description='Generic Docker Host' )
+sbp_docker.config_values = { '}ubuntu_packages': 'docker.io', 'postinstall_script': 'dockersetup' }
+sbp_docker.parent = sbp_xenial
+sbp_docker.full_clean()
+sbp_docker.save()
+
+sbp_demo_ssh = StructureBluePrint( name='demo-ssh', description='Demo SSH Server' )
+sbp_demo_ssh.config_values[ '}ubuntu_packages' ] = 'openssh-server'
+sbp_demo_ssh.config_values[ 'postinstall_script' ] = 'sshsetup'
+sbp_demo_ssh.config_values[ 'docker_image' ] = '192.168.200.52:5000/demossh:latest'
+sbp_demo_ssh.config_values[ 'docker_port_list' ] = [ '22/tcp' ]
+sbp_demo_ssh.parent = sbp_xenial
+sbp_demo_ssh.full_clean()
+sbp_demo_ssh.save()
+
+sbp_demo_web = StructureBluePrint( name='demo-web', description='Demo Web Server' )
+sbp_demo_web.config_values[ '}ubuntu_packages' ] = 'nginx-full'
+sbp_demo_web.config_values[ 'postinstall_script' ] = 'websetup'
+sbp_demo_web.config_values[ 'docker_image' ] = '192.168.200.52:5000/demoweb:latest'
+sbp_demo_web.config_values[ 'docker_port_list' ] = [ '80/tcp', '22/tcp' ]
+sbp_demo_web.parent = sbp_xenial
+sbp_demo_web.full_clean()
+sbp_demo_web.save()
+
+print( 'creating sites...' )
+zl = Zone()
+zl.name = 'local'
+zl.email = 'admin@test.local'
+zl.ns_list = [ 'contractor.site1.local.' ]
+zl.full_clean()
+zl.save()
+
+zs1 = Zone()
+zs1.name = 'site1'
+zs1.parent = zl
+zs1.email = 'admin@test.local'
+zs1.ns_list = [ 'contractor.site1.local.' ]
+zs1.full_clean()
+zs1.save()
+
+s1 = Site( name='site1', description='Test Site 1' )
+s1.zone = zs1
+s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'dns_servers' ] = [ '192.168.200.51' ]
+s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'http_proxy' ] = 'http://192.168.200.50:3128/'
+s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
+s1.full_clean()
+s1.save()
+
+print( 'creating networks...' )
+addr1_block = AddressBlock( site=s1, subnet='192.168.200.0', prefix=24, gateway_offset=1 )
+addr1_block.full_clean()
+addr1_block.save()
+
+# plato is at 21, laptops at 5X
+
+for i in set( range( 2, 60 ) ) - set( range( 11, 20 ) ) - set( [ 50, 51, 52 ] ):
+  addr = ReservedAddress( address_block=addr1_block, offset=i, reason='reserved for infrastructure' )
+  addr.full_clean()
+  addr.save()
+
+for i in range( 11, 20 ):
+  addr = DynamicAddress( address_block=addr1_block, offset=i )
+  addr.full_clean()
+  addr.save()
+
+suport_devices = {
+                   'packrat': 50,
+                   'contractor': 51,
+                   'subcontractor': 52,
+                 }
+
+AMT_devices = {
+                'nuc1': [ '192.168.200.201', '94:c6:91:13:9b:d5', 101, sbp_esx ],
+                'nuc2': [ '192.168.200.202', '94:c6:91:10:f1:dc', 102, sbp_esx ],
+              }
+
+virtualbox_vms = {
+                   'web-v01': [ sbp_demo_web, 121 ],
+                   'ssh-v01': [ sbp_demo_ssh, 122 ],
+                   'docker-v01': [ sbp_docker, 123 ],
+                 }
+
+esx_vms = {
+             'ssh-e01': [ sbp_demo_ssh, 131 ],
+             'web-e01': [ sbp_demo_web, 132 ],
+             'web-e02': [ sbp_demo_web, 133 ],
+             'docker-e01': [ sbp_docker, 134 ],
+             'docker-e02': [ sbp_docker, 135 ],
+             'docker-e03': [ sbp_docker, 136 ],
+             'docker-e04': [ sbp_docker, 137 ],
+           }
+
+aws_instances = {
+                  # 'ssh-a01': [ sbp_demo_ssh ],
+                  # 'web-a01': [ sbp_demo_web ],
+                  # 'docker-a01': [ sbp_docker ],
+                }
+
+docker_containers = {
+                     'web-c01': [ sbp_demo_web ],
+                     'web-c02': [ sbp_demo_web ],
+                     'ssh-c01': [ sbp_demo_ssh ],
+                     'ssh-c02': [ sbp_demo_ssh ],
+                     # 'ssh-c03': [ sbp_demo_ssh ],
+                     # 'ssh-c04': [ sbp_demo_ssh ],
+                   }
+
+
+print( 'Creating Support Machines...' )
+for hostname in suport_devices:
+  ip_offset = suport_devices[ hostname ]
+
+  fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator=hostname )
+  fdn.full_clean()
+  fdn.save()
+  fdn.setBuilt()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=sbp_manual, hostname=hostname, foundation=fdn )
+  strct.auto_build = False
+  strct.full_clean()
+  strct.save()
+  strct.setBuilt()
+
+  addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=ip_offset, is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+print( 'Creating Status Indicator...' )
+fdn = StatusIndicatorFoundation( site=s1, blueprint=fbp_indicator, locator='status' )
+fdn.full_clean()
+fdn.save()
+
+strcti = Structure( site=s1, blueprint=sbp_indicator, hostname='status', foundation=fdn )
+strcti.auto_build = True
+strcti.full_clean()
+strcti.save()
+
+print( 'Creating Baremetal Machines...' )
+for hostname in AMT_devices:
+  device = AMT_devices[ hostname ]
+  amt_ip = device[0]
+  amt_mac = device[1]
+  strct_ip_offset = device[2]
+  blueprint = device[3]
+
+  print( 'Creating AMT {0}...'.format( hostname ) )
+  # iface = RealNetworkInterface( name='amt', is_provisioning=True )
+  # iface.mac = amt_mac
+  # iface.full_clean()
+  # iface.save()
+
+  fdn = AMTFoundation( site=s1, blueprint=fbp_amt, locator=hostname )
+  fdn.amt_password = 'asdQWE1@3'
+  fdn.amt_ip_address = amt_ip
+  fdn.full_clean()
+  fdn.save()
+  # fdn.amt_interface = iface
+  fdn.full_clean()
+  fdn.save()
+
+  # addr = Address( networked=fdn, address_block=addr1_block, interface_name='amt', offset=250, is_primary=True )
+  # addr.full_clean()
+  # addr.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.mac = amt_mac
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+  addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+dep = Dependancy( structure=strct, link='soft' )
+dep.script_structure = strcti
+dep.create_script_name = 'level2'
+dep.full_clean()
+dep.save()
+
+print( 'Creating Vcenter Complexes...' )
+for strct in Structure.objects.all():
+  if strct.blueprint.name != 'generic-esx':
+    continue
+
+  strct.config_values[ 'datastore_list' ] = [ { 'name': 'ds ' + strct.hostname, 'model': 'HGST HTS721010A9' }, { 'name': 'dsfast ' + strct.hostname, 'model': 'Crucial_CT1050MX' } ]
+  strct.config_values[ 'vcenter_username' ] = 'root'
+  strct.config_values[ 'vcenter_password' ] = '0skin3rd'
+  strct.config_values[ 'vcenter_datacenter' ] = 'ha-datacenter'
+  strct.config_values[ 'vcenter_hostname' ] = strct.hostname + '.'
+  strct.config_values[ 'vcenter_host' ] = strct.provisioning_ip
+  strct.full_clean()
+  strct.save()
+
+  vcc = VcenterComplex( name=strct.hostname, site=s1, description='ESX Complex on {0}'.format( strct.hostname ) )
+  vcc.vcenter_host = strct
+  vcc.vcenter_username = 'root'
+  vcc.vcenter_password = '0skin3rd'
+  vcc.vcenter_datacenter = 'ha-datacenter'
+  vcc.vcenter_cluster = strct.hostname + '.'
+  vcc.full_clean()
+  vcc.save()
+
+  cs = ComplexStructure( complex=vcc, structure=strct )
+  cs.full_clean()
+  cs.save()
+
+print( 'Creating Vcenter Structures...' )
+hosts = list( VcenterComplex.objects.all() )
+for hostname in esx_vms:
+  vm = esx_vms[ hostname ]
+  blueprint = vm[0]
+  strct_ip_offset = vm[1]
+
+  tmp = hosts.pop()
+  hosts.insert( 0, tmp )
+
+  fdn = VcenterFoundation( site=s1, blueprint=fbp_vcenter, locator=hostname )
+  fdn.vcenter_host = tmp
+  fdn.full_clean()
+  fdn.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+  addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+dep = Dependancy( structure=strct, link='soft' )
+dep.script_structure = strcti
+dep.create_script_name = 'level3'
+dep.full_clean()
+dep.save()
+
+print( 'Creating AWS Structures...' )
+for hostname in aws_instances:
+  instance = aws_instances[ hostname ]
+
+  fdn_aws1 = AWSEC2Foundation( site=s1, blueprint=fbp_aws, locator=hostname )
+  fdn_aws1.config_values = {}
+  fdn_aws1.full_clean()
+  fdn_aws1.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn_aws1, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  str_aws1 = Structure( site=s1, blueprint=sbp_xenial, hostname=hostname, foundation=fdn_aws1 )
+  str_aws1.auto_build = False
+  str_aws1.full_clean()
+  str_aws1.save()
+
+  addr = Address( networked=str_aws1, interface_name='eth0', is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+print( 'Creating VirtualBox Structures...' )
+if virtualbox_vms:
+  print( 'creating virtualbox host...' )
+
+  fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator='localvbox' )
+  fdn.full_clean()
+  fdn.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=sbp_manual, hostname='localvbox', foundation=fdn )
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+  addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=120, is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+  cpx_vbox = VirtualBoxComplex( site=s1, name='localvbox', description='local virtualbox complex' )
+  cpx_vbox.full_clean()
+  cpx_vbox.save()
+
+  cpx_member = ComplexStructure( complex=cpx_vbox, structure=strct )
+  cpx_member.full_clean()
+  cpx_member.save()
+
+  for hostname in virtualbox_vms:
+    vm = virtualbox_vms[ hostname ]
+    blueprint = vm[0]
+    strct_ip_offset = vm[1]
+
+    fdn = VirtualBoxFoundation( site=s1, blueprint=fbp_vbox, locator=hostname )
+    fdn.virtualbox_host = cpx_vbox
+    fdn.config_values = { 'memory_size': 712 }
+    fdn.full_clean()
+    fdn.save()
+
+    iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+    iface.full_clean()
+    iface.save()
+
+    fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+    fni.full_clean()
+    fni.save()
+
+    strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
+    strct.auto_build = True
+    strct.full_clean()
+    strct.save()
+
+    addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
+    addr.full_clean()
+    addr.save()
+
+print( 'Creating Docker Complexes...' )
+for strct in Structure.objects.all():
+  if strct.blueprint.name != 'generic-docker-host':
+    continue
+
+  dc = DockerComplex( name=strct.hostname, site=s1, description='Docker Complex on {0}'.format( strct.hostname ) )
+  dc.full_clean()
+  dc.save()
+
+  cs = ComplexStructure( complex=dc, structure=strct )
+  cs.full_clean()
+  cs.save()
+
+  for i in range( 6000, 6050 ):
+    port = DockerPort( address_offset=0, port=i )
+    port.complex = dc
+    port.full_clean()
+    port.save()
+
+print( 'Creating Docker Structures...' )
+hosts = list( DockerComplex.objects.all() )
+
+for hostname in docker_containers:
+  container = docker_containers[ hostname ]
+  blueprint = container[0]
+
+  tmp = hosts.pop()
+  hosts.insert( 0, tmp )
+
+  fdn = DockerFoundation( site=s1, blueprint=fbp_docker, locator=hostname )
+  fdn.docker_host = tmp
+  fdn.full_clean()
+  fdn.save()
+
+  iface = RealNetworkInterface( name='eth0', is_provisioning=True )
+  iface.full_clean()
+  iface.save()
+
+  fni = FoundationNetworkInterface( foundation=fdn, interface=iface, physical_location='eth0' )
+  fni.full_clean()
+  fni.save()
+
+  strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
+  strct.auto_build = True
+  strct.full_clean()
+  strct.save()
+
+
+print( 'Creating Text Files...' )
+fdn = TextFileFoundation( site=s1, blueprint=fbp_textfile, locator='file-start' )
+fdn.file_name = 'build_start'
+fdn.full_clean()
+fdn.save()
+
+strctf = Structure( site=s1, blueprint=sbp_textfile, hostname='file-start', foundation=fdn )
+strctf.auto_build = True
+strctf.config_values[ 'body' ] = 'Job Starting\n'
+strctf.full_clean()
+strctf.save()
+
+fdn = TextFileFoundation( site=s1, blueprint=fbp_textfile, locator='file-done' )
+fdn.file_name = 'build_done'
+fdn.full_clean()
+fdn.save()
+
+strctf = Structure( site=s1, blueprint=sbp_textfile, hostname='file-done', foundation=fdn )
+strctf.auto_build = True
+strctf.config_values[ 'body' ] = 'Job Complete!\n'
+strctf.full_clean()
+strctf.save()
+
+dep = Dependancy( structure=strct, link='soft', foundation=fdn )
+dep.script_structure = strcti
+dep.create_script_name = 'level4'
+dep.full_clean()
+dep.save()
+
+dep = Dependancy( structure=strctf, link='soft' )
+dep.script_structure = strcti
+dep.create_script_name = 'level5'
+dep.full_clean()
+dep.save()

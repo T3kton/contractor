@@ -12,9 +12,9 @@ from contractor.lib.config import getConfig
 cinp = CInP( 'BluePrint', '0.1' )
 
 
-@cinp.model( not_allowed_method_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
+@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ] )
 class BluePrint( models.Model ):
-  name = models.CharField( max_length=40, primary_key=True )
+  name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length
   description = models.CharField( max_length=200 )
   scripts = models.ManyToManyField( 'Script', through='BluePrintScript' )
   config_values = MapField( blank=True )
@@ -25,18 +25,35 @@ class BluePrint( models.Model ):
     try:
       return self.blueprintscript_set.get( name=name ).script.script
     except BluePrintScript.DoesNotExist:
-      if self.parent is not None:
-        return self.parent.get_script( name )
-      else:
-        raise ValueError( 'BluePrint "{0}" does not have a script named "{1}"'.format( self.name, name ) )
+      for parent in self.parent_list.all():
+        tmp = parent.get_script( name )
+        if tmp is not None:
+          return tmp
 
+      return None
+
+  @property
+  def subclass( self ):
+    try:
+      return self.foundationblueprint
+    except AttributeError:
+      pass
+
+    try:
+      return self.structureblueprint
+    except AttributeError:
+      pass
+
+    return self
+
+  @cinp.action( 'Map' )
   def getConfig( self ):
-    return getConfig( self )
+    return getConfig( self.subclass )
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    if method == 'DESCRIBE':
+  def checkAuth( user, verb, id_list, action=None ):
+    if verb == 'DESCRIBE':
       return True
 
     return False
@@ -44,7 +61,7 @@ class BluePrint( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not name_regex.match( self.name ):
+    if not name_regex.match( self.name ):  # if this regex changes, make sure to update tcalc parser in archetect
       errors[ 'name' ] = 'BluePrint Script name "{0}" is invalid'.format( self.name )
 
     if errors:
@@ -61,7 +78,7 @@ class BluePrint( models.Model ):
 # will need a working pool of "eth0" type ips for the prepare
 @cinp.model( property_list=( 'subcontractor', ) )
 class FoundationBluePrint( BluePrint ):
-  parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
+  parent_list = models.ManyToManyField( 'self', blank=True, symmetrical=False )
   foundation_type_list = StringListField( max_length=200 )  # list of the foundation types this blueprint can be used for
   template = JSONField( default={}, blank=True )
   physical_interface_names = StringListField( max_length=200, blank=True )
@@ -76,7 +93,7 @@ class FoundationBluePrint( BluePrint ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -94,14 +111,14 @@ class FoundationBluePrint( BluePrint ):
 
 @cinp.model(  )
 class StructureBluePrint( BluePrint ):
-  parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
+  parent_list = models.ManyToManyField( 'self', blank=True, symmetrical=False )  # TODO: go through a "through" field and have a foundation class select which parent, this way there can be a container parent and a VM parent and simmaler
   foundation_blueprint_list = models.ManyToManyField( FoundationBluePrint )  # list of possible foundations this blueprint could be implemented on
 
   @property
   def combined_foundation_blueprint_list( self ):
     result = list( self.foundation_blueprint_list.all() )
-    if self.parent is not None:
-      result += self.parent.combined_foundation_blueprint_list
+    for parent in self.parent_list.all():
+      result += parent.combined_foundation_blueprint_list
 
     return list( set( result ) )
 
@@ -111,7 +128,7 @@ class StructureBluePrint( BluePrint ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):
@@ -120,7 +137,7 @@ class StructureBluePrint( BluePrint ):
 
 @cinp.model()
 class Script( models.Model ):
-  name = models.CharField( max_length=40, primary_key=True )
+  name = models.CharField( max_length=40, primary_key=True )  # if this changes update the Post.script_name in the PostOffice
   description = models.CharField( max_length=200 )
   script = models.TextField()
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -128,7 +145,7 @@ class Script( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -159,7 +176,7 @@ class BluePrintScript( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -188,7 +205,7 @@ class PXE( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def __str__( self ):

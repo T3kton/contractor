@@ -1,5 +1,3 @@
-import os
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '@(a3yjcc-d3uxt)q7n(tvdfhe4$%u2(dvkd9^cg26+4wmih7l7'
 
@@ -8,22 +6,33 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# get plugins
+
+import os
+from contractor import plugins
+
+plugin_list = []
+plugin_dir = os.path.dirname( plugins.__file__ )
+for item in os.scandir( plugin_dir ):
+  if not item.is_dir() or not os.path.exists( os.path.join( plugin_dir, item.name, 'models.py' ) ):
+    continue
+  plugin_list.append( 'contractor.plugins.{0}'.format( item.name ) )
+
 # Application definition
 
 INSTALLED_APPS = (
     'contractor.User',
+    'contractor.Directory',
     'contractor.Site',
     'contractor.BluePrint',
     'contractor.Utilities',
     'contractor.Building',
     'contractor.Foreman',
     'contractor.SubContractor',
-    'contractor_plugins.IPUtils',
-    'contractor_plugins.Manual',
-    'contractor_plugins.VirtualBox',
-    'contractor_plugins.AWS',
-    'contractor_plugins.Docker',
-    'django.contrib.admin',
+    'contractor.PostOffice',
+    *plugin_list,
+    'other_plugins.text_file',
+    'other_plugins.status_indicator',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -70,7 +79,6 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': '/opt/contractor/db.sqlite3',
-        # 'NAME': os.path.join( os.path.abspath( '../{0}'.format( os.path.dirname( __file__ ) ) ), 'db.sqlite3' ),
     }
 }
 
@@ -93,3 +101,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
 STATIC_URL = '/static/'
+
+BIND_ALLOW_TRANSFER = []
+BIND_SOA_EMAIL = 'hostmaster.site1.local'
+BIND_NS_LIST = [ 'eth0.contractor.site1.local' ]

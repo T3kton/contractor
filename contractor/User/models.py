@@ -7,12 +7,10 @@ from django.db import models
 
 from cinp.orm_django import DjangoCInP as CInP
 
-def getUser( auth_id, auth_token ):
-  if auth_id is None or auth_token is None:
-    return None
 
+def getUser( auth_id, auth_token ):
   try:
-    session = Session.objects.get( user=auth_id, session_id=auth_token )
+    session = Session.objects.get( user=auth_id, token=auth_token )
   except ( Session.DoesNotExist, User.DoesNotExist ):
     return None
 
@@ -25,13 +23,13 @@ def getUser( auth_id, auth_token ):
   return session.user
 
 
-#TODO: this has many security issues, spend some time and think this out better
-#TODO: should probably rename it auth as well, will also eventually need SSO abilities
+# TODO: this has many security issues, spend some time and think this out better
+# TODO: should probably rename it auth as well, will also eventually need SSO abilities
 
 cinp = CInP( 'User', '0.1' )
 
 
-@cinp.model( property_list=[ 'isActive' ], not_allowed_method_list=[ 'LIST', 'DELETE', 'CREATE', 'CALL' ], hide_field_list=[ 'password' ] )
+@cinp.model( property_list=[ 'isActive' ], not_allowed_verb_list=[ 'LIST', 'DELETE', 'CREATE' ], hide_field_list=[ 'password' ] )
 class User( models.Model ):
   username = models.CharField( max_length=40, primary_key=True )
   password = models.CharField( editable=False, max_length=64 )
@@ -59,7 +57,7 @@ class User( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     if id_list is not None and len( id_list ) >= 1 and id_list[0] != user.username:
       return False
 
@@ -69,7 +67,7 @@ class User( models.Model ):
     return 'User "{0}"'.format( self.username )
 
 
-@cinp.model( property_list=[ 'isActive' ], not_allowed_method_list=[ 'GET', 'LIST', 'DELETE', 'CREATE', 'UPDATE' ] )
+@cinp.model( property_list=[ 'isActive' ], not_allowed_verb_list=[ 'GET', 'LIST', 'DELETE', 'CREATE', 'UPDATE' ] )
 class Session( models.Model ):
   token = models.CharField( max_length=64, primary_key=True )
   user = models.ForeignKey( User )
@@ -84,7 +82,7 @@ class Session( models.Model ):
   @staticmethod
   def login( username, password ):
     try:
-      user =  User.objects.get( username=username )
+      user = User.objects.get( username=username )
     except User.DoesNotExist:
       raise ValueError( 'User Does Not Exist' )
 
@@ -92,9 +90,9 @@ class Session( models.Model ):
     if password != user.password:
       raise ValueError( 'Invalid Password' )
 
-    token = ''.join( random.choice( string.ascii_letters ) for _  in range( 30 ) )
-    session = Session( session_id=token, user=user )
-    session.last_checkin = datetime.now( timezone.utc )
+    token = ''.join( random.choice( string.ascii_letters ) for _ in range( 30 ) )
+    session = Session( token=token, user=user )
+    session.last_hearbeat = datetime.now( timezone.utc )
     session.save()
     session.hearbeat()
 
@@ -112,11 +110,11 @@ class Session( models.Model ):
 
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     if action is not None:
       return True
 
-    if method == 'DESCRIBE':
+    if verb == 'DESCRIBE':
       return True
 
     return False

@@ -3,14 +3,15 @@ import uuid
 from django.utils import timezone
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 from cinp.orm_django import DjangoCInP as CInP
 
 from contractor.fields import MapField, JSONField, name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
-from contractor.Utilities.models import Networked, RealNetworkInterface
-from contractor.lib.config import getConfig
+from contractor.Utilities.models import Networked
+from contractor.lib.config import getConfig, mergeValues
 
 # this is where the plan meats the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
 
@@ -20,64 +21,77 @@ FOUNDATION_SUBCLASS_LIST = []
 COMPLEX_SUBCLASS_LIST = []
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list' ) )
+@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
 class Foundation( models.Model ):
-  site = models.ForeignKey( Site, on_delete=models.PROTECT )           # ie where to build it
+  locator = models.CharField( max_length=100, primary_key=True )
+  site = models.ForeignKey( Site, on_delete=models.PROTECT )
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
-  locator = models.CharField( max_length=100, unique=True )
-  config_values = MapField( blank=True )
   id_map = JSONField( blank=True )  # ie a dict of asset, chassis, system, etc types
-  interfaces = models.ManyToManyField( RealNetworkInterface, through='FoundationNetworkInterface' )
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
+  @cinp.action()
   def setLocated( self ):
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
-    except Structure.DoesNotExist:
+    except AttributeError:
       pass
     self.located_at = timezone.now()
     self.built_at = None
     self.save()
 
+  @cinp.action()
   def setBuilt( self ):
     if self.located_at is None:
       self.located_at = timezone.now()
     self.built_at = timezone.now()
     self.save()
 
+  @cinp.action()
   def setDestroyed( self ):
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
-    except Structure.DoesNotExist:
+    except AttributeError:
       pass
     self.built_at = None
     self.located_at = None
     self.save()
 
+  @cinp.action( return_type='Integer' )
+  def doCreate( self ):
+    from contractor.Foreman.lib import createJob
+    return createJob( 'create', self )
+
+  @cinp.action( return_type='Integer' )
+  def doDestroy( self ):
+    from contractor.Foreman.lib import createJob
+    return createJob( 'destroy', self )
+
   @staticmethod
   def getTscriptValues( write_mode=False ):  # locator is handled seperatly
     return {  # none of these base items are writeable, ignore the write_mode for now
-              'id': ( lambda foundation: foundation.pk, None ),
-              'type': ( lambda foundation: foundation.subclass.type, None ),
+              'locator': ( lambda foundation: foundation.locator, None ),  # redundant?
+              'type': ( lambda foundation: foundation.subclass.type, None ),  # redudnant?
               'site': ( lambda foundation: foundation.site.pk, None ),
               'blueprint': ( lambda foundation: foundation.blueprint.pk, None ),
-              'id_map': ( lambda foundation: foundation.ip_map, None ),
-              'interface_list': ( lambda foundation: [ i for i in foundation.interfaces.all() ], None )
+              # 'ip_map': ( lambda foundation: foundation.ip_map, None ),
+              'interface_list': ( lambda foundation: [ i for i in foundation.networkinterface_set.all() ], None )  # redudntant?
             }
 
   @staticmethod
   def getTscriptFunctions():
     return {}
 
-  def configValues( self ):
+  def configAttributes( self ):
     return {
-              'foundation_id': self.pk,
-              'foundation_type': self.type,
-              'foundation_state': self.state,
-              'foundation_class_list': self.class_list
+              '_foundation_id': self.pk,
+              '_foundation_type': self.type,
+              '_foundation_state': self.state,
+              '_foundation_class_list': self.class_list,
+              '_foundation_locator': self.locator,
+              '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all() ]
             }
 
   @property
@@ -90,27 +104,12 @@ class Foundation( models.Model ):
 
     return self
 
-  @cinp.action( 'String' )
-  def getRealFoundationURI( self ):  # TODO: this is such a hack, figure  out a better way
-    subclass = self.subclass
-    class_name = type( subclass ).__name__
-    if class_name == 'Foundation':
-      return '/api/v1/Building/Foundation:{0}:'.format( subclass.pk )
-
-    elif class_name == 'VirtualBoxFoundation':
-      return '/api/v1/VirtualBox/VirtualBoxFoundation:{0}:'.format( subclass.pk )
-
-    elif class_name == 'ManualFoundation':
-      return '/api/v1/Manual/ManualFoundation:{0}:'.format( subclass.pk )
-
-    raise ValueError( 'Unknown Foundation class "{0}"'.format( class_name ) )
-
-  @cinp.action( 'Map' )
-  def getConfig( self ):
-    return getConfig( self.subclass )
-
   @property
   def type( self ):
+    real = self.subclass
+    if real != self:
+      return real.type
+
     return 'Unknown'
 
   @property
@@ -123,6 +122,24 @@ class Foundation( models.Model ):
     return False
 
   @property
+  def can_delete( self ):
+    try:
+      return self.structure.state != 'build'
+    except AttributeError:
+      pass
+
+    return True
+
+  @property
+  def attached_structure( self ):
+    try:
+      return self.structure
+    except AttributeError:
+      pass
+
+    return None
+
+  @property
   def state( self ):
     if self.located_at is not None and self.built_at is not None:
       return 'built'
@@ -132,44 +149,75 @@ class Foundation( models.Model ):
 
     return 'planned'
 
+  @property
+  def description( self ):
+    return self.locator
+
+  @property
+  def dependancyId( self ):
+    return 'f-{0}'.format( self.pk )
+
+  @cinp.action( { 'type': 'String', 'is_array': True } )
+  @staticmethod
+  def getFoundationTypes():
+    return FOUNDATION_SUBCLASS_LIST
+
+  @cinp.action( 'Map' )
+  def getConfig( self ):
+    return mergeValues( getConfig( self.subclass ) )
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
     return Foundation.objects.filter( site=site )
 
+  @cinp.list_filter( name='todo', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' }, 'Boolean', 'Boolean', 'String' ] )
+  @staticmethod
+  def filter_todo( site, auto_build, has_dependancies, foundation_class ):
+    args = {}
+    args[ 'site' ] = site
+    if has_dependancies:
+      args[ 'dependancy' ] = True
+
+    if foundation_class is not None:
+      if foundation_class not in FOUNDATION_SUBCLASS_LIST:
+        raise ValueError( 'Invalid foundation class' )
+
+      args[ foundation_class ] = True
+
+    return Foundation.objects.filter( **args )
+
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
+
+    if not name_regex.match( self.locator ):
+      errors[ 'locator' ] = 'Invalid'
+
     if self.type not in self.blueprint.foundation_type_list:
       errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint.description, self.type )
 
     if errors:
       raise ValidationError( errors )
 
-  def __str__( self ):
-    return 'Foundation #{0} of "{1}" in "{2}"'.format( self.pk, self.blueprint.pk, self.site.pk )
+  def delete( self ):
+    if not self.can_delete:
+      raise models.ProtectedError( 'Structure not Deleatable' )
 
+    subclass = self.subclass
 
-@cinp.model( )
-class FoundationNetworkInterface( models.Model ):
-  foundation = models.ForeignKey( Foundation )
-  interface = models.ForeignKey( RealNetworkInterface )
-  physical_location = models.CharField( max_length=100 )
-  updated = models.DateTimeField( editable=False, auto_now=True )
-  created = models.DateTimeField( editable=False, auto_now_add=True )
-
-  @cinp.check_auth()
-  @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
-    return True
+    if self == subclass:
+      super().delete()
+    else:
+      subclass.delete()
 
   def __str__( self ):
-    return 'FoundationNetworkInterface for "{0}" to "{1}" named "{2}"'.format( self.foundation, self.interface, self.name )
+    return 'Foundation #{0}({1}) of "{2}" in "{3}"'.format( self.pk, self.locator, self.blueprint.pk, self.site.pk )
 
 
 def getUUID():
@@ -183,7 +231,7 @@ class Structure( Networked ):
   config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # unique
   config_values = MapField( blank=True )
   auto_build = models.BooleanField( default=True )
-  build_priority = models.IntegerField( default=100 )
+  # build_priority = models.IntegerField( default=100 )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -199,17 +247,19 @@ class Structure( Networked ):
     for dependancy in self.dependancy_set.all():
       dependancy.setDestroyed()
 
-  def configValues( self ):
-    return {
-             'hostname': self.hostname,
-             'structure': self.pk,
-             'state': self.state,
-             'config_uuid': self.config_uuid
-           }
+  def configAttributes( self ):
+    result = {
+               '_structure_id': self.pk,
+               '_structure_state': self.state,
+               '_structure_config_uuid': self.config_uuid,
+               '_provisioning_interface_mac': self.provisioning_interface.mac,
+             }
 
-  @cinp.action( 'Map' )
-  def getConfig( self ):
-    return getConfig( self )
+    result[ 'hostname' ] = self.hostname
+    result[ 'fqdn' ] = self.fqdn
+    result[ 'interface_list' ] = [ iface.config for iface in self.foundation.networkinterface_set.all() ]  # mabey? mabey not?
+
+    return result
 
   @property
   def state( self ):
@@ -218,14 +268,45 @@ class Structure( Networked ):
 
     return 'planned'
 
+  @property
+  def can_delete( self ):
+    return self.state != 'build'
+
+  @property
+  def description( self ):
+    return self.hostname
+
+  @property
+  def dependancyId( self ):
+    return 's-{0}'.format( self.pk )
+
+  @cinp.action( return_type='Integer' )
+  def doCreate( self ):
+    from contractor.Foreman.lib import createJob
+    return createJob( 'create', self )
+
+  @cinp.action( return_type='Integer' )
+  def doDestroy( self ):
+    from contractor.Foreman.lib import createJob
+    return createJob( 'destroy', self )
+
+  @cinp.action( 'Map' )
+  def getConfig( self ):
+    return mergeValues( getConfig( self ) )
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
     return Structure.objects.filter( site=site )
 
+  @cinp.list_filter( name='complex', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Complex' } ] )
+  @staticmethod
+  def filter_complex( complex ):
+    return complex.members.all()
+
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -237,13 +318,19 @@ class Structure( Networked ):
     if errors:
       raise ValidationError( errors )
 
+  def delete( self ):
+    if not self.can_delete:
+      raise models.ProtectedError( 'Structure not Deleteable' )
+
+    super().delete()
+
   def __str__( self ):
-    return 'Structure #{0} of "{1}" in "{2}"'.format( self.pk, self.blueprint.pk, self.site.pk )
+    return 'Structure #{0}({1}) of "{2}" in "{3}"'.format( self.pk, self.hostname, self.blueprint.pk, self.site.pk )
 
 
 @cinp.model( property_list=( 'state', 'type' ) )
 class Complex( models.Model ):  # group of Structures, ie a cluster
-  name = models.CharField( max_length=40, primary_key=True )
+  name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   description = models.CharField( max_length=200 )
   members = models.ManyToManyField( Structure, through='ComplexStructure' )
@@ -252,17 +339,60 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
+  def subclass( self ):
+    for attr in COMPLEX_SUBCLASS_LIST:
+      try:
+        return getattr( self, attr )
+      except AttributeError:
+        pass
+
+    return self
+
+  @property
   def state( self ):
     state_list = [ 1 if i.state == 'built' else 0 for i in self.members.all() ]
+
+    if len( state_list ) == 0:
+      return 'planned'
 
     if ( sum( state_list ) * 100 ) / len( state_list ) >= self.built_percentage:
       return 'built'
 
     return 'planned'
 
+  @property
+  def type( self ):
+    real = self.subclass
+    if real != self:
+      return real.type
+
+    return 'Unknown'
+
+  @property
+  def dependancyId( self ):
+    return 'c-{0}'.format( self.pk )
+
+  def configAttributes( self ):
+    return {}
+
+  def newFoundation( self, hostname ):
+    raise ValueError( 'Root Complex dose not support Foundations' )
+
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Foundation' }, paramater_type_list=[ { 'type': 'String' } ] )
+  def createFoundation( self, hostname ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
+    self = self.subclass
+
+    foundation = self.newFoundation( hostname )  # also need to create the network interfaces
+    return foundation
+
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @staticmethod
+  def filter_site( site ):
+    return Complex.objects.filter( site=site )
+
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
@@ -297,11 +427,11 @@ class ComplexStructure( models.Model ):
   def getTscriptFunctions():
     return {}
 
-  def configValues( self ):
+  def configAttributes( self ):
     return {
-              'complex_id': self.pk,
-              'complex_type': self.type,
-              'complex_state': self.state,
+              '_complex_id': self.pk,
+              '_complex_type': self.type,
+              '_complex_state': self.state,
             }
 
   @property
@@ -329,21 +459,30 @@ class ComplexStructure( models.Model ):
   #
   #   raise ValueError( 'Unknown Foundation class "{0}"'.format( class_name ) )
   #
-  # @cinp.action( 'Map' )
-  # def getConfig( self ):
-  #   return getConfig( self.subclass )
+  @cinp.action( 'Map' )
+  def getConfig( self ):
+    return mergeValues( getConfig( self.subclass ) )
 
   @property
   def type( self ):
+    real = self.subclass
+    if real != self:
+      return real.type
+
     return 'Unknown'
 
   @property
   def state( self ):
     return 'Built'
 
+  @cinp.list_filter( name='complex', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Complex' } ] )
+  @staticmethod
+  def filter_complex( complex ):
+    return ComplexStructure.objects.filter( complex=complex )
+
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   # TODO: need to make sure a Structure is in only one complex
@@ -360,11 +499,14 @@ class ComplexStructure( models.Model ):
 
 @cinp.model( property_list=( 'state', ) )
 class Dependancy( models.Model ):
-  LINK_OPTIONS = ( ( 'soft', 'soft' ), ( 'hard', 'hard' ) )  # a hardlink if the structure is set back pulls the foundation back with it, soft does not
-  foundation = models.ForeignKey( Foundation, on_delete=models.CASCADE )
-  structure = models.ForeignKey( Structure, on_delete=models.CASCADE )
-  link = models.CharField( max_length=4, choices=LINK_OPTIONS )
-  script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job must complete before built_at is set
+  LINK_CHOICES = ( 'soft', 'hard' )  # a hardlink if the structure is set back pulls the foundation back with it, soft does not
+  structure = models.ForeignKey( Structure, on_delete=models.CASCADE, blank=True, null=True )  # depending on this
+  dependancy = models.ForeignKey( 'self', on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # or this
+  foundation = models.OneToOneField( Foundation, on_delete=models.CASCADE, blank=True, null=True )  # this is what is depending
+  script_structure = models.ForeignKey( Structure, on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # if this is specified, the script runs on this
+  link = models.CharField( max_length=4, choices=[ ( i, i ) for i in LINK_CHOICES ] )
+  create_script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job must complete before built_at is set
+  destroy_script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job is run before destroying
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -376,8 +518,12 @@ class Dependancy( models.Model ):
   def setDestroyed( self ):
     self.built_at = None
     self.save()
+    for dependancy in Dependancy.objects.filter( dependancy=self ):
+      dependancy.setDestroyed()
+
     if self.link == 'hard':
-      self.foundation.setDestroyed()
+      if self.foundation is not None:
+        self.foundation.setDestroyed()  # TODO: Destroyed or Identified?
 
   @property
   def state( self ):
@@ -386,22 +532,96 @@ class Dependancy( models.Model ):
 
     return 'planned'
 
+  @property
+  def can_delete( self ):
+    return self.state != 'build'
+
+  @property
+  def site( self ):
+    if self.foundation is not None:
+      return self.foundation.site
+    elif self.script_structure is not None:
+      return self.script_structure.site
+    elif self.dependancy is not None:
+      return self.dependancy.site
+    else:
+      return self.structure.site
+
+  @property
+  def blueprint( self ):
+    if self.script_structure is not None:
+      return self.script_structure.blueprint
+    else:
+      return self.structure.blueprint
+
+  @property
+  def description( self ):
+    left = None
+    if self.structure is not None:
+      left = self.structure.hostname
+    else:
+      left = self.dependancy.description
+
+    right = ''
+    if self.foundation is not None:
+      right = self.foundation.locator
+
+    return '{0}-{1}'.format( left, right )
+
+  @property
+  def dependancyId( self ):
+    return 'd-{0}'.format( self.pk )
+
+  @cinp.list_filter( name='foundation', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Foundation' } ] )
+  @staticmethod
+  def filter_foundation( foundation ):
+    return Dependancy.objects.filter( foundation=foundation )
+
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @staticmethod
+  def filter_site( site ):
+    return Dependancy.objects.filter( Q( foundation__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__isnull=True, dependancy__structure__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__isnull=True, structure__site=site )
+                                      )
+
   @cinp.check_auth()
   @staticmethod
-  def checkAuth( user, method, id_list, action=None ):
+  def checkAuth( user, verb, id_list, action=None ):
     return True
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not name_regex.match( self.name ):
-      errors[ 'name' ] = '"{0}" is invalid'.format( self.name[ 0:50 ] )
+
+    if self.dependancy is None and self.structure is None:
+      errors[ 'structure' ] = 'Either structure or dependancy is required'
+
+    if self.structure is None and self.script_structure is None:
+      if self.create_script_name is not None:
+        errors[ 'create_script_name' ] = 'structure or script_sctructure are required for scripts'
+
+      if self.destroy_script_name is not None:
+        errors[ 'destroy_script_name' ] = 'structure or script_sctructure are required for scripts'
+
+    if self.create_script_name is not None and not name_regex.match( self.create_script_name ):
+      errors[ 'create_script_name' ] = '"{0}" is invalid'.format( self.create_script_name )
+
+    if self.destroy_script_name is not None and not name_regex.match( self.destroy_script_name ):
+      errors[ 'destroy_script_name' ] = '"{0}" is invalid'.format( self.destroy_script_name )
+
+    if self.destroy_script_name is not None and self.destroy_script_name == self.create_script_name:
+      errors[ 'destroy_script_name' ] = 'destroy and create script must be different'
 
     if errors:
       raise ValidationError( errors )
 
-  class Meta:
-    unique_together = ( ( 'structure', 'foundation' ), )
-
   def __str__( self ):
-    return 'Complex "{0}"({1})'.format( self.description, self.name )
+    structure = None
+    if self.structure is not None:
+      structure = self.structure
+    else:
+      structure = self.dependancy.structure
+
+    return 'Dependancy of "{0}" on "{1}"'.format( self.foundation, structure )

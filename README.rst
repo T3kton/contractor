@@ -77,12 +77,12 @@ on database setup.  The settings.py file is preconfigured to use  sqlite and sto
 the database in parent directory of the settings.py file.  After the database
 connection is setup, create the the database::
 
-  cd /usr/local/contractor/util
+  cd /usr/lib/contractor/util
   ./manage.py migrate
 
 to start the API server::
 
-  cd /usr/loca/contractor/api_server
+  cd /usr/lib/contractor/api_server
   ./api_server.py
 
 
@@ -100,15 +100,16 @@ Building
 --------
 
 Contains Foundation a generic base class for all Foundations provided by plugins.
-Structure the class for Structures that go on Foundations.   FoundationNetworkInterface
-which  describes the physicall network interfaces on a Foundation.  Complex, a
-grouping of Foundations (ie: a cluster)
+Structure the class for Structures that go on Foundations.  Complex, a
+grouping of Foundations (ie: a cluster).  Dependancy, allows Foundations to
+depend on Structures and/or jobs to be complete on a structure.
 
 Foreman
 -------
 
-Contains BaseJob a generic base class for FoundationJob and StructureJob, which
-are jobs that are inflight for Foundations and Structures.
+Contains BaseJob a generic base class for FoundationJob, StructureJob and DependancyJob,
+which are jobs that are inflight for Foundations, Structures, and Dependancies
+respectivly.
 
 Site
 ----

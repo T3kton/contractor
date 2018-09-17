@@ -1,8 +1,10 @@
 import pickle
+from django.db.models import Q
 
 from contractor.Building.models import Foundation, Structure, Dependancy
 from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin
-from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependancyJob
+from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependancyJob, JobLog
+from contractor.PostOffice.lib import registerEvent
 
 from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner, Pause, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, ScriptError
@@ -10,40 +12,12 @@ from contractor.tscript.runner import Runner, Pause, ExecutionError, Unrecoverab
 
 RUNNER_MODULE_LIST = []
 
+# TODO: make sure a dependancy can't create a job for a structure with a job, or a structure that is not built
+
 
 def createJob( script_name, target ):
-  obj_list = []
-  if isinstance( target, Structure ):
-    job = StructureJob()
-    job.structure = target
-    obj_list.append( ROFoundationPlugin( target.foundation ) )
-    obj_list.append( StructurePlugin( target ) )
-    obj_list.append( ConfigPlugin( target ) )
-
-  elif isinstance( target, Foundation ):
-    try:
-      StructureJob.objects.get( structure=target.structure )
-      raise ValueError( 'Structure associated with this Foundation has a job' )
-    except StructureJob.DoesNotExist:
-      pass
-
-    job = FoundationJob()
-    job.foundation = target
-    obj_list.append( FoundationPlugin( target ) )
-    obj_list.append( ConfigPlugin( target ) )
-
-  elif isinstance( target, Dependancy ):
-    if target.structure.state != 'built':
-      raise ValueError( 'Can not start Dependancy job until Structure is built')
-
-    job = DependancyJob()
-    job.dependancy = target
-    obj_list.append( ROFoundationPlugin( target.foundation ) )
-    obj_list.append( ROStructurePlugin( target.structure ) )
-    obj_list.append( ConfigPlugin( target.structure ) )
-
-  else:
-    raise ValueError( 'target must be a Structure, Foundation, or Dependancy' )
+  if isinstance( target, Dependancy ) and script_name not in ( 'create', 'destroy' ):
+    raise ValueError( 'Dependancy Job can only have a create or destroy script_name' )
 
   if script_name == 'create':
     if target.state == 'built':
@@ -53,17 +27,84 @@ def createJob( script_name, target ):
       if target.state != 'located':
         raise ValueError( 'can not do create job until Foundation is located' )
 
+    elif isinstance( target, Dependancy ):
+      script_name = target.create_script_name
+      if script_name is None:
+        target.setBuilt()
+        return None
+
   elif script_name == 'destroy':
     if target.state != 'built':
       raise ValueError( 'can only destroy built targets' )
 
+    if isinstance( target, Dependancy ):
+      script_name = target.destroy_script_name
+      if script_name is None:
+        target.setDestroyed()
+        return None
+
   else:
     if isinstance( target, Foundation ) and target.state != 'located':
-      raise ValueError( 'can only run utility jobs on located Foundations' )
+      raise ValueError( 'Can Only run Scripts Job on Located Foundations' )
+
+  obj_list = []
+  if isinstance( target, Structure ):
+    job = StructureJob()
+    job.structure = target
+    obj_list.append( ROFoundationPlugin( target.foundation ) )
+    obj_list.append( StructurePlugin( target ) )
+    obj_list.append( ConfigPlugin( target ) )
+
+  elif isinstance( target, Foundation ):
+    structure = target.attached_structure
+    if structure is not None:
+      try:
+        StructureJob.objects.get( structure=structure )
+        raise ValueError( 'Structure associated with this Foundation has a job' )
+      except StructureJob.DoesNotExist:
+        pass
+
+    job = FoundationJob()
+    job.foundation = target
+    obj_list.append( FoundationPlugin( target ) )
+    obj_list.append( ConfigPlugin( target ) )
+
+  elif isinstance( target, Dependancy ):
+    if target.dependancy is not None:
+      if target.dependancy.state != 'built':
+        raise ValueError( 'Can not start Dependancy job until Dependancy is built')
+    else:
+      if target.structure.state != 'built':
+        raise ValueError( 'Can not start Dependancy job until Structure is built')
+
+    job = DependancyJob()
+    job.dependancy = target
+    structure = None
+    if target.script_structure:
+      structure = target.script_structure
+    else:
+      structure = target.structure
+    # TODO: need a plugin to bring in the target foundation
+    obj_list.append( ROFoundationPlugin( structure.foundation ) )
+    obj_list.append( ROStructurePlugin( structure ) )
+    obj_list.append( ConfigPlugin( structure ) )
+
+  else:
+    raise ValueError( 'target must be a Structure, Foundation, or Dependancy' )
 
   job.site = target.site
+  blueprint = target.blueprint
 
-  runner = Runner( parse( target.blueprint.get_script( script_name ) ) )
+  script = blueprint.get_script( script_name )
+  if script is None:
+    if script_name == 'create':
+      target.setBuilt()
+    elif script_name == 'destroy':
+      target.setDestroyed()
+
+    return None
+
+  runner = Runner( parse( script ) )
   for module in RUNNER_MODULE_LIST:
     runner.registerModule( module )
 
@@ -76,14 +117,17 @@ def createJob( script_name, target ):
   job.state = 'queued'
   job.script_name = script_name
   job.script_runner = pickle.dumps( runner )
+  job.full_clean()
   job.save()
+
+  JobLog.fromJob( job, True )
 
   print( '**************** Created  Job "{0}" for "{1}"'.format( script_name, target ))
 
   return job.pk
 
 
-# auto job creation checklist
+# auto job creation checklist  TODO: add the dependancy info in this checklist
 # 1 - Any Foundation that can be auto located, if locating is possible, it can be
 #         done without foundation dependancies
 #         (located_at is null, built_at is also null)
@@ -106,7 +150,25 @@ def processJobs( site, module_list, max_jobs=10 ):
   if max_jobs > 100:
     max_jobs = 100
 
-  # see if there are any planned foundatons that can be auto located
+  # see if there are any planned dependancies who's structures are done
+  for dependancy in Dependancy.objects.filter( built_at__isnull=True ).filter(
+                                      Q( structure__built_at__isnull=False ) |
+                                      Q( dependancy__built_at__isnull=False )
+                                    ).filter(
+                                      Q( foundation__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__isnull=True, dependancy__structure__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__isnull=True, structure__site=site )
+                                    ):
+    try:
+      DependancyJob.objects.get( dependancy=dependancy )
+      continue  # allready has a job, skip it
+    except DependancyJob.DoesNotExist:
+      pass
+
+    createJob( 'create', target=dependancy )  # createJob will map 'create' to the create_script_name
+
+  # see if there are any planned foundatons that can be auto located - TODO: Can something with a non built dependancy auto-locate, I think for now yes.
   for foundation in Foundation.objects.filter( site=site, located_at__isnull=True, built_at__isnull=True ):
     foundation = foundation.subclass
     if not foundation.can_auto_locate:
@@ -126,16 +188,8 @@ def processJobs( site, module_list, max_jobs=10 ):
     createJob( 'create', target=foundation )
 
   # see if there are any located foundations that need to be prepared, with completed dependancies
-  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True, dependancy__is_built__isnull=False ):
-    # NOTE: the filter get's us one with at least one dependancie done, let's check the others
-    is_ready = True
-    for dependancy in foundation.dependy_set.all():
-      if dependancy.state != 'built':
-        is_ready = False  # TODO: check to see if thedepency has a job that can be started <-------------
-        break
-
-    if not is_ready:  # there was a unbuilt dependancy
-      continue
+  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True, dependancy__built_at__isnull=False ):
+    # TODO: check to see if the depency has a job that can be started <-------------
 
     foundation = foundation.subclass
     try:
@@ -167,6 +221,14 @@ def processJobs( site, module_list, max_jobs=10 ):
     print( '_________________________ job "{0}" done!'.format( job ) )
     job = job.realJob
     job.done()
+    if isinstance( job, StructureJob ):
+      registerEvent( job.structure, job )
+
+    elif isinstance( job, FoundationJob ):
+      registerEvent( job.foundation, job )
+
+    JobLog.fromJob( job, False )
+
     job.delete()
 
   # iterate over the curent jobs
@@ -179,11 +241,13 @@ def processJobs( site, module_list, max_jobs=10 ):
 
     if runner.aborted:
       job.state = 'aborted'
+      job.full_clean()
       job.save()
       continue
 
     if runner.done:
       job.state = 'done'
+      job.full_clean()
       job.save()
       continue
 
@@ -215,6 +279,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     job.status = runner.status
     print( '____________ job "{0}"   state: "{1}"   progress: "{2}"    message: "{3}"'.format( job, job.state, job.progress, job.message ) )
     job.script_runner = pickle.dumps( runner )
+    job.full_clean()
     job.save()
 
     if len( results ) >= max_jobs:
@@ -241,6 +306,7 @@ def jobResults( job_id, cookie, data ):
   job.status = runner.status
   print( '----------------- job "{0}"   state: "{1}"   progress: "{2}"    message: "{3}"'.format( job, job.state, job.progress, job.message ) )
   job.script_runner = pickle.dumps( runner )
+  job.full_clean()
   job.save()
 
   return result
@@ -259,4 +325,5 @@ def jobError( job_id, cookie, msg ):
 
   job.message = msg[ 0:1024 ]
   job.state = 'error'
+  job.full_clean
   job.save()
