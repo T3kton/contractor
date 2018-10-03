@@ -12,6 +12,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from contractor.Building.models import Foundation, Structure, Dependancy
 from contractor.Foreman.lib import createJob
 from contractor.lib.config import getConfig
+from contractor.PostOffice.lib import registerEvent
 
 
 def _get_job( target ):
@@ -50,7 +51,7 @@ def main():
   parser = argparse.ArgumentParser( description='Boss/Manipulate Structures and Foundations and their jobs', epilog='Only one option from task or force state, if more than one is specified, the force state option is ignored' )
   group = parser.add_argument_group( 'target' )
   group.add_argument( 'id', help='foundation/structure id' )
-  type_group = group.add_mutually_exclusive_group()
+  type_group = group.add_mutually_exclusive_group( required=True )
   type_group.add_argument( '-s', '--structure', help='boss arround a structure', action='store_true' )
   type_group.add_argument( '-f', '--foundation', help='boss arround a foundation', action='store_true' )
   type_group.add_argument( '-d', '--dependancy', help='boss arround a dependancy', action='store_true' )
@@ -72,10 +73,11 @@ def main():
 
   group = parser.add_argument_group( 'force state', 'WARNING!!! Use with care, it is possible to leave some foundataions/structures orphand if you are not carefull' )
   force_group = group.add_mutually_exclusive_group()
-  force_group.add_argument(       '--planned', help='force a foundataion/structure to planned state', action='store_true' )
+  force_group.add_argument(       '--planned', help='force a foundataion/structure to planned(or destroyed) state', action='store_true' )
   force_group.add_argument(       '--located', help='force a foundation to located state', action='store_true' )
   force_group.add_argument(       '--built', help='force a foundataion/structure to built state', action='store_true' )
   force_group.add_argument(       '--clear-job', help='clear any associated jobs', action='store_true' )
+  group.add_argument(             '--notify-webhook', help='Notify webhook of the change in state, use with --planned and --built', action='store_true' )
 
   args = parser.parse_args()
 
@@ -263,6 +265,7 @@ Status:
   if args.planned:
     _clear_job( target )
     target.setDestroyed()
+    registerEvent( target, name='destroy' )
     print( '{0} now set to planned.'.format( target ) )
     sys.exit( 0 )
 
@@ -279,6 +282,7 @@ Status:
   if args.built:
     _clear_job( target )
     target.setBuilt()
+    registerEvent( target, name='create' )
     print( '{0} now set to built.'.format( target ) )
     sys.exit( 0 )
 

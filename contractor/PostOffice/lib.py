@@ -14,7 +14,7 @@ class HTTPErrorProcessorPassthrough( request.HTTPErrorProcessor ):
     return response
 
 
-def registerEvent( target, job ):
+def registerEvent( target, job=None, name=None ):
   if isinstance( target, Foundation ):
     post = FoundationPost( foundation=target )
 
@@ -24,7 +24,16 @@ def registerEvent( target, job ):
   else:
     raise ValueError( 'Target must be a Foundation(or subclass) or Structure' )
 
-  post.name = job.script_name
+  if job is not None:
+    post.name = job.script_name
+  elif name is not None:
+    if name not in ( 'create', 'destroy' ):
+      raise ValueError( 'name must be "create" or "create"' )
+
+    post.name = name
+  else:
+    raise ValueError( 'job or name must be defined' )
+
   post.full_clean()
   post.save()
 

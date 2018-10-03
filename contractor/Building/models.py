@@ -162,7 +162,7 @@ class Foundation( models.Model ):
   def getFoundationTypes():
     return FOUNDATION_SUBCLASS_LIST
 
-  @cinp.action( 'Map' )
+  @cinp.action( return_type='Map' )
   def getConfig( self ):
     return mergeValues( getConfig( self.subclass ) )
 
@@ -290,8 +290,16 @@ class Structure( Networked ):
     from contractor.Foreman.lib import createJob
     return createJob( 'destroy', self )
 
-  @cinp.action( 'Map' )
+  @cinp.action( return_type='Map' )
   def getConfig( self ):
+    return mergeValues( getConfig( self ) )
+
+  @cinp.action( return_type='Map', paramater_type_list=[ 'Map' ] )
+  def updateConfig( self, config_value_map ):  # TODO: this is a bad Idea, need to figure out a better way to do this, at least restrict it to accounts that can create/updatre structures
+    self.config_values.update( config_value_map )
+    self.full_clean()
+    self.save()
+
     return mergeValues( getConfig( self ) )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
@@ -444,7 +452,7 @@ class ComplexStructure( models.Model ):
 
     return self
 
-  # @cinp.action( 'String' )
+  # @cinp.action( return_type='String' )
   # def getRealFoundationURI( self ):  # TODO: this is such a hack, figure  out a better way
   #   subclass = self.subclass
   #   class_name = type( subclass ).__name__
@@ -459,7 +467,7 @@ class ComplexStructure( models.Model ):
   #
   #   raise ValueError( 'Unknown Foundation class "{0}"'.format( class_name ) )
   #
-  @cinp.action( 'Map' )
+  @cinp.action( return_type='Map' )
   def getConfig( self ):
     return mergeValues( getConfig( self.subclass ) )
 

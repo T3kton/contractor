@@ -222,10 +222,10 @@ def processJobs( site, module_list, max_jobs=10 ):
     job = job.realJob
     job.done()
     if isinstance( job, StructureJob ):
-      registerEvent( job.structure, job )
+      registerEvent( job.structure, job=job )
 
     elif isinstance( job, FoundationJob ):
-      registerEvent( job.foundation, job )
+      registerEvent( job.foundation, job=job )
 
     JobLog.fromJob( job, False )
 

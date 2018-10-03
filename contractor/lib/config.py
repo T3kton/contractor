@@ -139,9 +139,9 @@ def getConfig( target ):  # combine depth first the config values
   elif target.__class__.__name__ in ( 'BluePrint', 'StructureBluePrint', 'FoundationBluePrint' ):
     lastModified = max( lastModified, _bluePrintConfig( target, class_list, config ) )
 
-  elif target.__class__.__name__ == 'Structure':
-    lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
+  elif target.__class__.__name__ == 'Structure':  # TODO: use specified stuff ( site, structure ) should mostly come after system stuff (blueprint, foundation), foundation/structure attributes should be last
     lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
+    lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
     lastModified = max( lastModified, _foundationConfig( target.foundation, class_list, config ) )
     lastModified = max( lastModified, _structureConfig( target, class_list, config ) )
 

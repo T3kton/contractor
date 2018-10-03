@@ -455,6 +455,10 @@ class BaseAddress( models.Model ):
     return self.address_block.gateway
 
   @property
+  def interface( self ):
+      return None
+
+  @property
   def subclass( self ):
     try:
       return self.address
