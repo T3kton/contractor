@@ -199,8 +199,8 @@ class Foundation( models.Model ):
     if not name_regex.match( self.locator ):
       errors[ 'locator' ] = 'Invalid'
 
-    if self.type not in self.blueprint.foundation_type_list:
-      errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint.description, self.type )
+    if self.blueprint_id is not None and self.type not in self.blueprint.foundation_type_list:
+        errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint.description, self.type )
 
     if errors:
       raise ValidationError( errors )

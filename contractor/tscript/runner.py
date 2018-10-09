@@ -791,7 +791,13 @@ class Runner( object ):
 
           if isinstance( handler, ExternalFunction ):
             handler._runner = self
-            handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
+            try:
+              handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
+            except ( ParamaterError, ) as e:
+              raise e
+            except Exception as e:
+              raise UnrecoverableError( 'Handler "{0}" in module "{1}" error during setup "{2}" on line "{3}"'.format( handler.__class__.__name__, module, e, self.cur_line ) )
+
             self.contractor_cookie = str( uuid.uuid4() )
             self.state[ state_index ][1][ 'handler' ] = handler
             self.state[ state_index ][1][ 'module' ] = module

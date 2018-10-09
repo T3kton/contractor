@@ -6,7 +6,7 @@ from contractor.Building.models import Foundation, Structure
 
 
 def _loadBluePrints():
-  adsf
+  pass
 
 
 @pytest.mark.django_db
