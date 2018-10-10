@@ -145,9 +145,6 @@ def _bluePrintConfig( blueprint, class_list, config ):
 
 
 def _foundationConfig( foundation, class_list, config ):
-  if getattr( foundation, 'complex', None ):
-    config.update( foundation.complex.configAttributes() )
-
   config.update( foundation.configAttributes() )
   return foundation.updated
 
@@ -184,9 +181,9 @@ def getConfig( target, shallow=False ):  # combine depth first the config values
     lastModified = max( lastModified, _structureConfig( target, class_list, config ) )
 
   elif 'Foundation' in [ i.__name__ for i in target.__class__.__mro__ ]:
+    lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
     if not shallow:
       lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
-    lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
     lastModified = max( lastModified, _foundationConfig( target, class_list, config ) )
 
   else:

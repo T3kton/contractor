@@ -65,8 +65,7 @@ For Site and BluePrint, the values of the parents are overlied by the children.
 Sources of Configuraion Values
 ------------------------------
 
-Foundation does not it's self have values, however attributes of the foundation,
-
+In general the order is blueprint, attributes, config values, and global attributes
 
 For a Site
   Parents in order from parent to child
@@ -74,23 +73,21 @@ For a Site
 
 For a Foundation
   Foundation's BluePrint (with it's parents applied)
+  Foundation's attribute values (including values from a complex, if Foundation belongs to a complex)
   Site (with it's parents applied)
-  Complex attribute values (if Foundation belongs to a complex)
-  Foundation's attribute values
   Global attribute values
 
 For a Structure
   Structures's BluePrint (with it's parents applied)
+  Foundation's attribute values NOTE: the Foundation's BluePrint values are NOT used, these are only for
+                                      the physicall provisioning of the Foundation, ie: BIOS settings, the
+                                      Structure can specify values for the Foundation by which FoundationBluePrints
+                                      the Structure BluePrint supports
+                               NOTE2: also includes the complex values, if the foundation belongs
+                                      to a complex
   Site (with it's parents applied)
-  Foundation's attribute values  NOTE: the  Foundation's BluePrint values are NOT
-                                       used, these are only for the physicall
-                                       provisioning of the Foundation, ie: BIOS
-                                       settings, the Structure can specify values
-                                       for the Foundation by which
-                                       FoundationBluePrints the Structure
-                                       BluePrint supports
-  Structure's config_values
   Structure's attribute values
+  Structure's config_values
   Global attribute values
 
 

@@ -1,6 +1,9 @@
 import pytest
+from datetime import datetime, timedelta, timezone
 
 from contractor.Site.models import Site
+from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
+from contractor.Building.models import Foundation, Complex, Structure
 from contractor.lib.config import _updateConfig, mergeValues, getConfig, renderTemplate
 
 
@@ -253,9 +256,10 @@ def test_render():
   assert renderTemplate( 'This {{i}} {{j}} test', config ) == 'This is only  test'
 
 
-def _strip_dates( value ):
-  del value[ '__last_modified' ]
-  del value[ '__timestamp' ]
+def _strip_base( value ):
+  for i in ( '__contractor_host', '__pxe_location', '__pxe_template_location', '__last_modified', '__timestamp' ):
+    del value[ i ]
+
   return value
 
 
@@ -266,10 +270,22 @@ def test_site():
   s1.full_clean()
   s1.save()
 
-  assert _strip_dates( getConfig( s1 ) ) == {
-                                               '__contractor_host': 'http://contractor/',
-                                               '__pxe_location': 'http://static/pxe/',
-                                               '__pxe_template_location': 'http://contractor/config/pxe_template/',
+  now = datetime.now( timezone.utc )
+  tmp = getConfig( s1 )
+  assert now - tmp[ '__last_modified' ] < timedelta( seconds=5 )
+  assert now - tmp[ '__timestamp' ] < timedelta( seconds=5 )
+
+  del tmp[ '__last_modified' ]
+  del tmp[ '__timestamp' ]
+
+  assert tmp == {
+                  '__contractor_host': 'http://contractor/',
+                  '__pxe_location': 'http://static/pxe/',
+                  '__pxe_template_location': 'http://contractor/config/pxe_template/',
+                  'site': 'site1'
+                }
+
+  assert _strip_base( getConfig( s1 ) ) == {
                                                'site': 'site1'
                                             }
 
@@ -278,10 +294,7 @@ def test_site():
   s2.full_clean()
   s2.save()
 
-  assert _strip_dates( getConfig( s2 ) ) == {
-                                               '__contractor_host': 'http://contractor/',
-                                               '__pxe_location': 'http://static/pxe/',
-                                               '__pxe_template_location': 'http://contractor/config/pxe_template/',
+  assert _strip_base( getConfig( s2 ) ) == {
                                                'site': 'site2',
                                                'myval': 'this is a test',
                                                'stuff': 'this is only a test'
@@ -291,10 +304,7 @@ def test_site():
   s1.full_clean()
   s1.save()
 
-  assert _strip_dates( getConfig( s2 ) ) == {
-                                               '__contractor_host': 'http://contractor/',
-                                               '__pxe_location': 'http://static/pxe/',
-                                               '__pxe_template_location': 'http://contractor/config/pxe_template/',
+  assert _strip_base( getConfig( s2 ) ) == {
                                                'site': 'site2',
                                                'myval': 'this is a test',
                                                'stuff': 'this is only a test',
@@ -306,12 +316,178 @@ def test_site():
   s2.full_clean()
   s2.save()
 
-  assert _strip_dates( getConfig( s2 ) ) == {
-                                               '__contractor_host': 'http://contractor/',
-                                               '__pxe_location': 'http://static/pxe/',
-                                               '__pxe_template_location': 'http://contractor/config/pxe_template/',
+  assert _strip_base( getConfig( s2 ) ) == {
                                                'site': 'site2',
                                                'myval': 'this is a test',
                                                'stuff': 'this is only a test',
                                                'under': 'going or over here'
                                             }
+
+
+@pytest.mark.django_db
+def test_blueprint():
+  fb1 = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
+  fb1.foundation_type_list = [ 'Unknown' ]
+  fb1.full_clean()
+  fb1.save()
+
+  now = datetime.now( timezone.utc )
+  tmp = getConfig( fb1 )
+  assert now - tmp[ '__last_modified' ] < timedelta( seconds=5 )
+  assert now - tmp[ '__timestamp' ] < timedelta( seconds=5 )
+
+  del tmp[ '__last_modified' ]
+  del tmp[ '__timestamp' ]
+
+  assert tmp == {
+                  '__contractor_host': 'http://contractor/',
+                  '__pxe_location': 'http://static/pxe/',
+                  '__pxe_template_location': 'http://contractor/config/pxe_template/',
+                  'blueprint': 'fdnb1'
+                }
+
+  assert _strip_base( getConfig( fb1 ) ) == {
+                                              'blueprint': 'fdnb1'
+                                            }
+
+  fb2 = FoundationBluePrint( name='fdnb2', description='Foundation BluePrint 2' )
+  fb2.foundation_type_list = [ 'Unknown' ]
+  fb2.config_values = { 'the': 'Nice value' }
+  fb2.full_clean()
+  fb2.save()
+  fb2.parent_list.add( fb1 )
+
+  assert _strip_base( getConfig( fb2 ) ) == {
+                                              'blueprint': 'fdnb2',
+                                              'the': 'Nice value'
+                                            }
+
+  fb1.config_values = { 'from': 'inside the house' }
+  fb1.full_clean()
+  fb1.save()
+
+  assert _strip_base( getConfig( fb2 ) ) == {
+                                              'blueprint': 'fdnb2',
+                                              'the': 'Nice value',
+                                              'from': 'inside the house'
+                                            }
+
+  sb1 = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
+  sb1.full_clean()
+  sb1.save()
+
+  now = datetime.now( timezone.utc )
+  tmp = getConfig( sb1 )
+  assert now - tmp[ '__last_modified' ] < timedelta( seconds=5 )
+  assert now - tmp[ '__timestamp' ] < timedelta( seconds=5 )
+
+  del tmp[ '__last_modified' ]
+  del tmp[ '__timestamp' ]
+
+  assert tmp == {
+                  '__contractor_host': 'http://contractor/',
+                  '__pxe_location': 'http://static/pxe/',
+                  '__pxe_template_location': 'http://contractor/config/pxe_template/',
+                  'blueprint': 'strb1'
+                }
+
+  assert _strip_base( getConfig( sb1 ) ) == {
+                                              'blueprint': 'strb1'
+                                            }
+
+  sb2 = StructureBluePrint( name='strb2', description='Structure BluePrint 2' )
+  sb2.full_clean()
+  sb2.save()
+  sb2.parent_list.add( sb1 )
+
+  assert _strip_base( getConfig( sb2 ) ) == {
+                                              'blueprint': 'strb2'
+                                            }
+
+  sb2.foundation_blueprint_list.add( fb2 )
+
+  assert _strip_base( getConfig( sb2 ) ) == {
+                                              'blueprint': 'strb2'
+                                            }
+
+
+@pytest.mark.django_db
+def test_foundation():
+  s1 = Site( name='site1', description='test site 1' )
+  s1.config_values = {}
+  s1.full_clean()
+  s1.save()
+
+  fb1 = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
+  fb1.foundation_type_list = [ 'Unknown' ]
+  fb1.full_clean()
+  fb1.save()
+
+  f1 = Foundation( site=s1, locator='fdn1', blueprint=fb1 )
+  f1.full_clean()
+  f1.save()
+
+  now = datetime.now( timezone.utc )
+  tmp = getConfig( f1 )
+  assert now - tmp[ '__last_modified' ] < timedelta( seconds=5 )
+  assert now - tmp[ '__timestamp' ] < timedelta( seconds=5 )
+
+  del tmp[ '__last_modified' ]
+  del tmp[ '__timestamp' ]
+
+  assert tmp == {
+                  '__contractor_host': 'http://contractor/',
+                  '__pxe_location': 'http://static/pxe/',
+                  '__pxe_template_location': 'http://contractor/config/pxe_template/',
+                  '_foundation_class_list': [],
+                  '_foundation_id': 'fdn1',
+                  '_foundation_interface_list': [],
+                  '_foundation_locator': 'fdn1',
+                  '_foundation_state': 'planned',
+                  '_foundation_type': 'Unknown',
+                  'blueprint': 'fdnb1',
+                  'site': 'site1'
+                }
+
+  assert _strip_base( getConfig( f1 ) ) == {
+                                            '_foundation_class_list': [],
+                                            '_foundation_id': 'fdn1',
+                                            '_foundation_interface_list': [],
+                                            '_foundation_locator': 'fdn1',
+                                            '_foundation_state': 'planned',
+                                            '_foundation_type': 'Unknown',
+                                            'blueprint': 'fdnb1',
+                                            'site': 'site1'
+                                           }
+
+  fb1.config_values[ 'lucky' ] = 'blueprint'
+  fb1.full_clean()
+  fb1.save()
+
+  assert _strip_base( getConfig( f1 ) ) == {
+                                            '_foundation_class_list': [],
+                                            '_foundation_id': 'fdn1',
+                                            '_foundation_interface_list': [],
+                                            '_foundation_locator': 'fdn1',
+                                            '_foundation_state': 'planned',
+                                            '_foundation_type': 'Unknown',
+                                            'blueprint': 'fdnb1',
+                                            'site': 'site1',
+                                            'lucky': 'blueprint'
+                                           }
+
+  s1.config_values[ 'lucky' ] = 'site'
+  s1.full_clean()
+  s1.save()
+
+  assert _strip_base( getConfig( f1 ) ) == {
+                                            '_foundation_class_list': [],
+                                            '_foundation_id': 'fdn1',
+                                            '_foundation_interface_list': [],
+                                            '_foundation_locator': 'fdn1',
+                                            '_foundation_state': 'planned',
+                                            '_foundation_type': 'Unknown',
+                                            'blueprint': 'fdnb1',
+                                            'site': 'site1',
+                                            'lucky': 'site'
+                                           }
