@@ -1,9 +1,10 @@
 import pytest
 from datetime import datetime, timedelta, timezone
+from django.core.exceptions import ValidationError
 
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
-from contractor.Building.models import Foundation, Complex, Structure
+from contractor.Building.models import Foundation, Structure
 from contractor.lib.config import _updateConfig, mergeValues, getConfig, renderTemplate
 
 
@@ -168,6 +169,7 @@ def test_dict():
   _updateConfig( { '<bob': { 'b': 'bbb' } }, [], config )
   assert config == { 'bob': { 'b': 'bbb' } }
 
+
 def test_class():
   config = {}
   _updateConfig( {}, [], config )
@@ -187,6 +189,7 @@ def test_class():
 
   _updateConfig( { '<bob:joe': '1' }, [ 'joe' ], config )
   assert config == { 'bob': '1adsf', 'jane': 'qwert' }
+
 
 def test_mergeValues():
   values = { 'a': 'c' }
@@ -257,10 +260,99 @@ def test_render():
 
 
 def _strip_base( value ):
-  for i in ( '__contractor_host', '__pxe_location', '__pxe_template_location', '__last_modified', '__timestamp' ):
-    del value[ i ]
+  for i in ( '__contractor_host', '__pxe_location', '__pxe_template_location', '__last_modified', '__timestamp', '_structure_config_uuid' ):
+    try:
+      del value[ i ]
+    except KeyError:
+      pass
 
   return value
+
+
+@pytest.mark.django_db
+def test_valid_names():
+  s1 = Site( name='site1', description='test site 1' )
+  s1.full_clean()
+  s1.save()
+
+  s1.config_values[ 'valid' ] = 'value'
+  s1.full_clean()
+
+  s1.config_values[ '_nope' ] = 'more value'
+  with pytest.raises( ValidationError ):
+    s1.full_clean()
+
+  s1 = Site.objects.get( name='site1' )
+  s1.full_clean()
+
+  s1.config_values[ '__bad' ] = 'bad bad bad'
+  with pytest.raises( ValidationError ):
+    s1.full_clean()
+
+  fb1 = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
+  fb1.foundation_type_list = [ 'Unknown' ]
+  fb1.full_clean()
+  fb1.save()
+
+  fb1.config_values[ 'valid' ] = 'value'
+  fb1.full_clean()
+
+  fb1.config_values[ '_nope' ] = 'more value'
+  with pytest.raises( ValidationError ):
+    fb1.full_clean()
+
+  fb1 = FoundationBluePrint.objects.get( pk='fdnb1' )
+  fb1.full_clean()
+
+  fb1.config_values[ '__bad' ] = 'bad bad bad'
+  with pytest.raises( ValidationError ):
+    fb1.full_clean()
+
+  sb1 = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
+  sb1.full_clean()
+  sb1.save()
+  sb1.foundation_blueprint_list.add( fb1 )
+
+  sb1.config_values[ 'valid' ] = 'value'
+  sb1.full_clean()
+
+  sb1.config_values[ '_nope' ] = 'more value'
+  with pytest.raises( ValidationError ):
+    sb1.full_clean()
+
+  sb1 = StructureBluePrint.objects.get( name='strb1' )
+  sb1.full_clean()
+
+  sb1.config_values[ '__bad' ] = 'bad bad bad'
+  with pytest.raises( ValidationError ):
+    sb1.full_clean()
+
+  f1 = Foundation( site=s1, locator='fdn1', blueprint=fb1 )
+  f1.full_clean()
+  f1.save()
+
+  str1 = Structure( foundation=f1, site=s1, hostname='struct1', blueprint=sb1 )
+  str1.full_clean()
+  str1.save()
+
+  str1.config_values[ 'valid' ] = 'value'
+  str1.full_clean()
+
+  str1.config_values[ '_nope' ] = 'more value'
+  with pytest.raises( ValidationError ):
+    str1.full_clean()
+
+  str1 = Structure.objects.get( hostname='struct1' )
+  str1.full_clean()
+
+  str1.config_values[ '__bad' ] = 'bad bad bad'
+  with pytest.raises( ValidationError ):
+    str1.full_clean()
+
+
+def test_getconfig():
+  with pytest.raises( ValueError ):
+    getConfig( object() )
 
 
 @pytest.mark.django_db
@@ -491,3 +583,139 @@ def test_foundation():
                                             'site': 'site1',
                                             'lucky': 'site'
                                            }
+
+
+@pytest.mark.django_db
+def test_structure():
+  s1 = Site( name='site1', description='test site 1' )
+  s1.full_clean()
+  s1.save()
+
+  fb1 = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
+  fb1.foundation_type_list = [ 'Unknown' ]
+  fb1.full_clean()
+  fb1.save()
+
+  f1 = Foundation( site=s1, locator='fdn1', blueprint=fb1 )
+  f1.full_clean()
+  f1.save()
+
+  sb1 = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
+  sb1.full_clean()
+  sb1.save()
+  sb1.foundation_blueprint_list.add( fb1 )
+
+  str1 = Structure( foundation=f1, site=s1, hostname='struct1', blueprint=sb1 )
+  str1.full_clean()
+  str1.save()
+
+  now = datetime.now( timezone.utc )
+  tmp = getConfig( str1 )
+  assert now - tmp[ '__last_modified' ] < timedelta( seconds=5 )
+  assert now - tmp[ '__timestamp' ] < timedelta( seconds=5 )
+
+  del tmp[ '__last_modified' ]
+  del tmp[ '__timestamp' ]
+  del tmp[ '_structure_config_uuid' ]
+
+  assert tmp == {
+                  '__contractor_host': 'http://contractor/',
+                  '__pxe_location': 'http://static/pxe/',
+                  '__pxe_template_location': 'http://contractor/config/pxe_template/',
+                  '_foundation_class_list': [],
+                  '_foundation_id': 'fdn1',
+                  '_foundation_interface_list': [],
+                  '_foundation_locator': 'fdn1',
+                  '_foundation_state': 'planned',
+                  '_foundation_type': 'Unknown',
+                  '_provisioning_interface_mac': None,
+                  '_structure_id': 1,
+                  '_structure_state': 'planned',
+                  'fqdn': 'struct1',
+                  'hostname': 'struct1',
+                  'interface_list': [],
+                  'blueprint': 'strb1',
+                  'site': 'site1'
+                }
+
+  assert _strip_base( getConfig( str1 ) ) == {
+                                              '_foundation_class_list': [],
+                                              '_foundation_id': 'fdn1',
+                                              '_foundation_interface_list': [],
+                                              '_foundation_locator': 'fdn1',
+                                              '_foundation_state': 'planned',
+                                              '_foundation_type': 'Unknown',
+                                              '_provisioning_interface_mac': None,
+                                              '_structure_id': 1,
+                                              '_structure_state': 'planned',
+                                              'fqdn': 'struct1',
+                                              'hostname': 'struct1',
+                                              'interface_list': [],
+                                              'blueprint': 'strb1',
+                                              'site': 'site1'
+                                             }
+
+  fb1.config_values[ 'bob' ] = 'foundation blueprint'
+  fb1.full_clean()
+  fb1.save()
+
+  assert _strip_base( getConfig( str1 ) ) == {
+                                              '_foundation_class_list': [],
+                                              '_foundation_id': 'fdn1',
+                                              '_foundation_interface_list': [],
+                                              '_foundation_locator': 'fdn1',
+                                              '_foundation_state': 'planned',
+                                              '_foundation_type': 'Unknown',
+                                              '_provisioning_interface_mac': None,
+                                              '_structure_id': 1,
+                                              '_structure_state': 'planned',
+                                              'fqdn': 'struct1',
+                                              'hostname': 'struct1',
+                                              'interface_list': [],
+                                              'blueprint': 'strb1',
+                                              'site': 'site1'
+                                             }
+
+  sb1.config_values[ 'bob' ] = 'structure blueprint'
+  sb1.full_clean()
+  sb1.save()
+
+  assert _strip_base( getConfig( str1 ) ) == {
+                                             '_foundation_class_list': [],
+                                             '_foundation_id': 'fdn1',
+                                             '_foundation_interface_list': [],
+                                             '_foundation_locator': 'fdn1',
+                                             '_foundation_state': 'planned',
+                                             '_foundation_type': 'Unknown',
+                                             '_provisioning_interface_mac': None,
+                                             '_structure_id': 1,
+                                             '_structure_state': 'planned',
+                                             'fqdn': 'struct1',
+                                             'hostname': 'struct1',
+                                             'interface_list': [],
+                                             'blueprint': 'strb1',
+                                             'site': 'site1',
+                                             'bob': 'structure blueprint'
+                                            }
+
+  str1.config_values[ 'bob' ] = 'structure'
+  str1.full_clean()
+  str1.save()
+
+  assert _strip_base( getConfig( str1 ) ) == {
+                                             '_foundation_class_list': [],
+                                             '_foundation_id': 'fdn1',
+                                             '_foundation_interface_list': [],
+                                             '_foundation_locator': 'fdn1',
+                                             '_foundation_state': 'planned',
+                                             '_foundation_type': 'Unknown',
+                                             '_provisioning_interface_mac': None,
+                                             '_structure_id': 1,
+                                             '_structure_state': 'planned',
+                                             'fqdn': 'struct1',
+                                             'hostname': 'struct1',
+                                             'interface_list': [],
+                                             'blueprint': 'strb1',
+                                             'site': 'site1',
+                                             'bob': 'structure'
+                                            }

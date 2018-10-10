@@ -74,6 +74,9 @@ class Networked( models.Model ):
   def fqdn( self ):
     try:
       zone = self.site.zone
+      if zone is None:
+        return self.hostname
+
     except ( ObjectDoesNotExist, AttributeError ):
       return self.hostname
 

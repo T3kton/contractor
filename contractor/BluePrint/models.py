@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import MapField, JSONField, StringListField, name_regex
+from contractor.fields import MapField, JSONField, StringListField, name_regex, config_name_regex
 from contractor.tscript import parser
 from contractor.lib.config import getConfig
 
@@ -63,6 +63,11 @@ class BluePrint( models.Model ):
     errors = {}
     if not name_regex.match( self.name ):  # if this regex changes, make sure to update tcalc parser in archetect
       errors[ 'name' ] = 'BluePrint Script name "{0}" is invalid'.format( self.name )
+
+    for name in self.config_values:
+      if not config_name_regex.match( name ):
+        errors[ 'config_values' ] = 'config item name "{0}" is invalid'.format( name )
+        break
 
     if errors:
       raise ValidationError( errors )

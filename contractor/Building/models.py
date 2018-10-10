@@ -7,7 +7,7 @@ from django.db.models import Q
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import MapField, JSONField, name_regex
+from contractor.fields import MapField, JSONField, name_regex, config_name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked
@@ -248,11 +248,12 @@ class Structure( Networked ):
       dependancy.setDestroyed()
 
   def configAttributes( self ):
+    provisioning_interface = self.provisioning_interface
     result = {
                '_structure_id': self.pk,
                '_structure_state': self.state,
                '_structure_config_uuid': self.config_uuid,
-               '_provisioning_interface_mac': self.provisioning_interface.mac,
+               '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None
              }
 
     result[ 'hostname' ] = self.hostname
@@ -320,8 +321,14 @@ class Structure( Networked ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
+
+    if self.foundation_id is not None and self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
       errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint.description, self.foundation.blueprint.description )
+
+    for name in self.config_values:
+      if not config_name_regex.match( name ):
+        errors[ 'config_values' ] = 'config item name "{0}" is invalid'.format( name )
+        break
 
     if errors:
       raise ValidationError( errors )

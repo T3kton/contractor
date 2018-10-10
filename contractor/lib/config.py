@@ -156,7 +156,7 @@ def _structureConfig( structure, class_list, config ):
   return structure.updated
 
 
-def getConfig( target, shallow=False ):  # combine depth first the config values
+def getConfig( target ):  # combine depth first the config values
   config = {}
   lastModified = datetime( 1, 1, 1, tzinfo=timezone.utc )
 
@@ -175,15 +175,13 @@ def getConfig( target, shallow=False ):  # combine depth first the config values
 
   elif target.__class__.__name__ == 'Structure':
     lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
-    if not shallow:
-      lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
-      lastModified = max( lastModified, _foundationConfig( target.foundation, class_list, config ) )
+    lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
+    lastModified = max( lastModified, _foundationConfig( target.foundation, class_list, config ) )
     lastModified = max( lastModified, _structureConfig( target, class_list, config ) )
 
   elif 'Foundation' in [ i.__name__ for i in target.__class__.__mro__ ]:
     lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
-    if not shallow:
-      lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
+    lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
     lastModified = max( lastModified, _foundationConfig( target, class_list, config ) )
 
   else:
@@ -194,6 +192,21 @@ def getConfig( target, shallow=False ):  # combine depth first the config values
   config[ '__contractor_host' ] = 'http://contractor/'
   config[ '__pxe_template_location' ] = 'http://contractor/config/pxe_template/'
   config[ '__pxe_location' ] = 'http://static/pxe/'
+
+  return config
+
+
+def getStructureOnlyConfig( structure ):  # is this needed? orgigonally just for plugins to get config that is non-recursive
+  if structure.__class__.__name__ != 'Structure':
+    raise ValueError( 'structure must be of type Structure' )
+
+  config = {}
+  lastModified = datetime( 1, 1, 1, tzinfo=timezone.utc )
+
+  class_list = structure.foundation.class_list
+
+  lastModified = max( lastModified, _bluePrintConfig( structure.blueprint, class_list, config ) )
+  lastModified = max( lastModified, _structureConfig( structure, class_list, config ) )
 
   return config
 
