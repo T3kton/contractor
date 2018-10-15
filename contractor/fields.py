@@ -36,10 +36,10 @@ class MapField( models.TextField ):
 
   def __init__( self, *args, **kwargs ):
     if 'default' not in kwargs:
-      kwargs[ 'default' ] = lambda: dict()
+      kwargs[ 'default' ] = dict
 
     else:
-      if not isinstance( kwargs[ 'default' ], dict ):
+      if not callable( kwargs[ 'default' ] ) and not isinstance( kwargs[ 'default' ], dict ):
         raise ValueError( 'default value must be a dict' )
 
     super().__init__( *args, **kwargs )
@@ -123,10 +123,10 @@ class StringListField( models.CharField ):
 
   def __init__( self, *args, **kwargs ):
     if 'default' not in kwargs:
-      kwargs[ 'default' ] = kwargs[ 'default' ] = lambda: list()
+      kwargs[ 'default' ] = kwargs[ 'default' ] = list
 
     else:
-      if not isinstance( kwargs[ 'default' ], list ):
+      if not callable( kwargs[ 'default' ] ) and not isinstance( kwargs[ 'default' ], list ):
         raise ValueError( 'default value must be a list' )
 
     try:
