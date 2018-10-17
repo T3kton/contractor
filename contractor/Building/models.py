@@ -131,7 +131,7 @@ class Foundation( models.Model ):
     return True
 
   @property
-  def attached_structure( self ):
+  def attached_structure( self ):  # TODO: look arround and see if this is used where it should be, or we can remove this
     try:
       return self.structure
     except AttributeError:

@@ -183,6 +183,10 @@ def getConfig( target ):  # combine depth first the config values
     lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
     lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
     lastModified = max( lastModified, _foundationConfig( target, class_list, config ) )
+    try:
+      config[ '_structure_id' ] = target.structure.pk
+    except AttributeError:
+      pass
 
   else:
     raise ValueError( 'Don\'t know how to get config for "{0}"'.format( target ) )

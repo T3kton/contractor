@@ -271,8 +271,52 @@ def test_arrays():
   node = parse( '[ 1, 2, "asdf", myval, callme() ]' )
   assert node == ( 'S', { '_children':
                    [
-                       ( 'L', ( 'Y', [ ( 'C', 1 ), ( 'C', 2 ), ( 'C', "asdf" ), ( 'V', { 'module': None, 'name': 'myval' } ), ( 'F', { 'module': None, 'name': 'callme', 'paramaters': {} } ) ] ), 1 )
+                       ( 'L', ( 'Y', [ ( 'C', 1 ), ( 'C', 2 ), ( 'C', 'asdf' ), ( 'V', { 'module': None, 'name': 'myval' } ), ( 'F', { 'module': None, 'name': 'callme', 'paramaters': {} } ) ] ), 1 )
                    ] } )
+
+
+def test_maps():
+  node = parse( '{}' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'M', {} ), 1 )
+                   ] } )
+
+  node = parse( '{ }' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'M', {} ), 1 )
+                   ] } )
+
+  node = parse( '{asdf=10}' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'M', { 'asdf': ( 'C', 10 ) } ), 1 )
+                   ] } )
+
+  node = parse( '{ asdf = 10 }'  )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'M', { 'asdf': ( 'C', 10 ) } ), 1 )
+                   ] } )
+
+  node = parse( '{ asdf = "10" }'  )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'M', { 'asdf': ( 'C', '10') } ), 1 )
+                   ] } )
+
+  node = parse( '{ asdf = "10", qwerty = 10 }'  )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'M', { 'asdf': ( 'C', '10' ), 'qwerty': ( 'C', 10 ) } ), 1 )
+                   ] } )
+
+  with pytest.raises( ParserError ):
+    parse( '{ asdf: "10" }'  )
+
+  with pytest.raises( ParserError ):
+    parse( '{ "10" }'  )
 
 
 def test_variables():

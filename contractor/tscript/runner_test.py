@@ -5,8 +5,8 @@ import time
 from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, Timeout, Pause
 
+# TODO: test the assignment deepcopy, ie: a = {}, b = a  make sure changes to b are not reflected in a
 
-#TODO: test the assignment deepcopy, ie: a = {},b = a, make sure changes to b are not reflected in a
 
 class testExternalObject( object ):
   TSCRIPT_NAME = 'test_obj'
@@ -188,13 +188,61 @@ def test_array():
   assert runner.done
   assert runner.variable_map == { 'myvar': [ 1, 2, 3, 4, 'end' ] }
 
-  runner = Runner( parse( 'myvar[ "hi" ] = "stuff"' ) )
-  runner.variable_map = { 'myvar': { 'abc': 123 } }
-  assert runner.variable_map == { 'myvar': { 'abc': 123 } }
+
+def test_map():
+  runner = Runner( parse( 'myvar = {}' ) )
+  assert runner.variable_map == {}
   runner.run()
   assert runner.done
-  assert runner.variable_map == { 'myvar': { 'abc': 123, 'hi': 'stuff' } }
-  # TODO: more  tests on 'maps', also allow tscript to be able to create one instead of just reading it
+  assert runner.variable_map == { 'myvar': {} }
+
+  runner = Runner( parse( 'myvar = {aa=1,bb=2,cc=3}' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': { 'aa': 1, 'bb': 2, 'cc': 3 } }
+
+  runner = Runner( parse( 'myvar = { aa=1, bb=(1+1), cc="asdf" }' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': { 'aa': 1, 'bb': 2, 'cc': "asdf" } }
+
+  runner = Runner( parse( 'myvar = {aa=1,bb=2,cc=3}\nasdf = myvar["cc"]' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': { 'aa': 1, 'bb': 2, 'cc': 3 }, 'asdf': 3 }
+
+  runner = Runner( parse( 'myvar = {aa=1,bb=2,cc=3}\nbob="bb"\nasdf = myvar[bob]' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': { 'aa': 1, 'bb': 2, 'cc': 3 }, 'asdf': 2, 'bob': 'bb' }
+
+  runner = Runner( parse( 'myvar = {aa=1,bb=2,cc=3}\nthelen = len( array=myvar )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': { 'aa': 1, 'bb': 2, 'cc': 3 }, 'thelen': 3 }
+
+  runner = Runner( parse( 'myvar = {aa=1,bb=2,cc=3,dd=4,ee=5,ff=6}\nmyvar["cc"] = "hello"' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': { 'aa': 1, 'bb': 2, 'cc': 'hello', 'dd': 4, 'ee': 5, 'ff': 6 } }
+
+  runner = Runner( parse( 'myvar = {aa=1,bb=2,cc=3,dd=4,ee=5,ff=6}\nbob = "ee"\nmyvar[ bob ] = "by"' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': { 'aa': 1, 'bb': 2, 'cc': 3, 'dd': 4, 'ee': 'by', 'ff': 6 }, 'bob': 'ee' }
+
+  runner = Runner( parse( 'myvar = {}\nmyvar[ "hi" ] = "stuff"' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': { 'hi': 'stuff' } }
 
 
 def test_module_values():  # TODO: add pickling testing

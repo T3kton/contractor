@@ -401,7 +401,7 @@ class Runner( object ):
         item_list.append( ( 0, 1, 'Function', tmp ) )
 
       elif step_type == types.ASSIGNMENT:
-        if operation[1][ 'target' ][0] == types.ARRAY_ITEM and ( step_data is None or 'index' not in step_data ):
+        if operation[1][ 'target' ][0] == types.ARRAY_MAP_ITEM and ( step_data is None or 'index' not in step_data ):
           operation = operation[1][ 'target' ][1][ 'index' ]
         elif step_data is None or 'value' not in step_data:
           operation = operation[1][ 'value' ]
@@ -576,7 +576,25 @@ class Runner( object ):
       self.state[ state_index ].append( self.state[ state_index ][1] )
       self.state[ state_index ][1] = None
 
-    elif op_type == types.ARRAY_ITEM:  # reterieve array index value
+    elif op_type == types.MAP:  # return map
+      try:
+        self.state[ state_index ][1]
+      except IndexError:
+        self.state[ state_index ].append( {} )
+
+      for key in op_data:
+        try:
+          self.state[ state_index + 1 ][2]
+        except IndexError:
+          self._evaluate( op_data[ key ], state_index + 1 )
+
+        self.state[ state_index ][1][ key ] = self.state[ state_index + 1 ][2]
+        self.state = self.state[ :( state_index + 1 ) ]
+
+      self.state[ state_index ].append( self.state[ state_index ][1] )
+      self.state[ state_index ][1] = None
+
+    elif op_type == types.ARRAY_MAP_ITEM:  # reterieve array index value
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -631,7 +649,7 @@ class Runner( object ):
         self.state[ state_index ].append( value )
 
     elif op_type == types.ASSIGNMENT:  # get the value from 'value', and assign it to the variable defined in 'target'
-      if op_data[ 'target' ][0] not in ( types.VARIABLE, types.ARRAY_ITEM ) or ( op_data[ 'target' ][0] == types.ARRAY_ITEM and op_data[ 'target' ][1][ 'module' ] is not None ):
+      if op_data[ 'target' ][0] not in ( types.VARIABLE, types.ARRAY_MAP_ITEM ) or ( op_data[ 'target' ][0] == types.ARRAY_MAP_ITEM and op_data[ 'target' ][1][ 'module' ] is not None ):
         raise ParamaterError( 'target', 'Can only assign to variables', self.cur_line )
 
       try:
@@ -639,7 +657,7 @@ class Runner( object ):
       except IndexError:
         self.state[ state_index ].append( {} )
 
-      if op_data[ 'target' ][0] == types.ARRAY_ITEM:
+      if op_data[ 'target' ][0] == types.ARRAY_MAP_ITEM:
         try:
           self.state[ state_index ][1][ 'index' ]
         except KeyError:
@@ -666,7 +684,7 @@ class Runner( object ):
       value = copy.deepcopy( self.state[ state_index ][1][ 'value' ] )
 
       if target[ 'module' ] is None:  # we don't evaluate the target, it can only be a variable
-        if op_data[ 'target' ][0] == types.ARRAY_ITEM:
+        if op_data[ 'target' ][0] == types.ARRAY_MAP_ITEM:
           self.variable_map[ target[ 'name' ] ][ self.state[ state_index ][1][ 'index' ] ] = value
         else:
          self.variable_map[ target[ 'name' ] ] = value
@@ -887,7 +905,7 @@ class Runner( object ):
       raise ScriptError( 'Unimplemented "{0}"'.format( op_type ), self.cur_line )
 
     # if the op_type we just ran does not  return a value, make sure it is cleaned up
-    if op_type not in ( types.CONSTANT, types.VARIABLE, types.ARRAY, types.ARRAY_ITEM, types.INFIX, types.FUNCTION ):  # all the things that "return" a value
+    if op_type not in ( types.CONSTANT, types.VARIABLE, types.ARRAY, types.MAP, types.ARRAY_MAP_ITEM, types.INFIX, types.FUNCTION ):  # all the things that "return" a value
       self.state = self.state[ :state_index ]  # remove this an evertying after from the state
     else:
       self.state = self.state[ :state_index + 1 ]  # remove everything after this one, save this one's return value on the stack
