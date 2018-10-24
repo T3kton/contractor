@@ -22,6 +22,7 @@ clean: clean-ui
 	./setup.py clean
 	$(RM) -fr build
 	$(RM) -f dpkg
+	$(RM) -fr htmlcov
 	dh_clean
 
 .PHONY:: all install clean full-clean

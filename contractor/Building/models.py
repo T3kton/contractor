@@ -253,12 +253,15 @@ class Structure( Networked ):
                '_structure_id': self.pk,
                '_structure_state': self.state,
                '_structure_config_uuid': self.config_uuid,
+               '_provisioning_interface': provisioning_interface.name,
                '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None
              }
 
-    result[ 'hostname' ] = self.hostname
-    result[ 'fqdn' ] = self.fqdn
-    result[ 'interface_list' ] = [ iface.config for iface in self.foundation.networkinterface_set.all() ]  # mabey? mabey not?
+    result[ '_hostname' ] = self.hostname
+    result[ '_fqdn' ] = self.fqdn
+    result[ '_interface_map' ] = {}
+    for iface in self.foundation.networkinterface_set.all():  # mabey? mabey not?
+      result[ '_interface_map' ][ iface.name ] = iface.config
 
     return result
 

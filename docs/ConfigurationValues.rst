@@ -15,6 +15,14 @@ if the first charater is: (also processed in this order)
 if [a-zA-Z0-9]+: is present, the value key/value is only applied if the pre ':'
 matches the classes indicated by the foundation.  This is the **_foundation_class_list**
 
+Global and Config Attributes
+----------------------------
+
+To help indicate Attributes and to keep them from getting overwritten by config values
+( config values are not allowed to start with `_` ), Global attributes begin with `__`
+and other attributes begine with `_`.  Attributes also do not follow the value combining
+rules, as they are set internally.  They are also not affected by config classes.
+
 
 Value Merging
 -------------
@@ -69,6 +77,7 @@ In general the order is blueprint, attributes, config values, and global attribu
 
 For a Site
   Parents in order from parent to child
+  Target Site config values
   Global attribute values
 
 For a Foundation

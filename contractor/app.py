@@ -1,4 +1,4 @@
-from cinp.server_werkzeug import WerkzeugServer
+from cinp.server_werkzeug import WerkzeugServer, NoCINP
 
 from contractor.User.models import getUser
 from contractor.lib.config_handler import handler as config_handler
@@ -29,7 +29,10 @@ def get_app( debug ):
   app.registerNamespace( '/', 'contractor.PostOffice' )
 
   for plugin in plugin_list:
-    app.registerNamespace( '/', plugin )
+    try:
+      app.registerNamespace( '/', plugin )
+    except NoCINP:
+      pass
 
   app.registerPathHandler( '/config/', config_handler )
 

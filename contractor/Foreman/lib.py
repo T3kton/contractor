@@ -27,6 +27,10 @@ def createJob( script_name, target ):
       if target.state != 'located':
         raise ValueError( 'can not do create job until Foundation is located' )
 
+    elif isinstance( target, Structure ):
+      if target.foundation.state != 'built':
+        raise ValueError( 'can not do create job until Foundation supporting Structure is built' )
+
     elif isinstance( target, Dependancy ):
       script_name = target.create_script_name
       if script_name is None:

@@ -2,6 +2,7 @@ import copy
 from datetime import datetime, timezone
 from jinja2 import Template
 
+from django.conf import settings
 
 VALUE_SORT_ORDER = '-_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz<>~'
 
@@ -121,7 +122,7 @@ def _siteConfigInternal( site, class_list, config ):
 def _siteConfig( site, class_list, config ):
   lastModified = _siteConfigInternal( site, class_list, config )
 
-  config[ 'site' ] = site.pk
+  config[ '_site' ] = site.pk
 
   return lastModified
 
@@ -139,13 +140,17 @@ def _bluePrintConfigInternal( blueprint, class_list, config ):
 def _bluePrintConfig( blueprint, class_list, config ):
   lastModified = _bluePrintConfigInternal( blueprint, class_list, config )
 
-  config[ 'blueprint' ] = blueprint.pk
+  config[ '_blueprint' ] = blueprint.pk
 
   return lastModified
 
 
 def _foundationConfig( foundation, class_list, config ):
   config.update( foundation.configAttributes() )
+  if foundation.complex:
+    config.update( foundation.complex.configAttributes() )
+    return max( foundation.updated, foundation.complex.updated )
+
   return foundation.updated
 
 
@@ -156,7 +161,7 @@ def _structureConfig( structure, class_list, config ):
   return structure.updated
 
 
-def getConfig( target ):  # combine depth first the config values
+def getConfig( target ):
   config = {}
   lastModified = datetime( 1, 1, 1, tzinfo=timezone.utc )
 
@@ -191,11 +196,12 @@ def getConfig( target ):  # combine depth first the config values
   else:
     raise ValueError( 'Don\'t know how to get config for "{0}"'.format( target ) )
 
+  # Global Attributes
   config[ '__last_modified' ] = lastModified
   config[ '__timestamp' ] = datetime.now( timezone.utc )
-  config[ '__contractor_host' ] = 'http://contractor/'
-  config[ '__pxe_template_location' ] = 'http://contractor/config/pxe_template/'
-  config[ '__pxe_location' ] = 'http://static/pxe/'
+  config[ '__contractor_host' ] = settings.CONTRACTOR_HOST
+  config[ '__pxe_template_location' ] = '{0}config/pxe_template/'.format( settings.CONTRACTOR_HOST )
+  config[ '__pxe_location' ] = settings.PXE_IMAGE_LOCATION
 
   return config
 
