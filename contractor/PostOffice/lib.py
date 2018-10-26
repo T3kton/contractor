@@ -4,7 +4,7 @@ from urllib import request
 from django.utils import timezone
 
 from contractor.Building.models import Foundation, Structure
-from contractor.PostOffice.models import FoundationPost, StructurePost, FoundationBox, StructureBox
+from contractor.PostOffice.models import FoundationPost, StructurePost, FoundationBox, StructureBox, PostOfficeException
 
 WEBHOOK_REQUEST_TIMEOUT = 60
 
@@ -22,17 +22,17 @@ def registerEvent( target, job=None, name=None ):
     post = StructurePost( structure=target )
 
   else:
-    raise ValueError( 'Target must be a Foundation(or subclass) or Structure' )
+    raise PostOfficeException( 'INVALID_TARGET', 'Target must be a Foundation(or subclass) or Structure' )
 
   if job is not None:
     post.name = job.script_name
   elif name is not None:
     if name not in ( 'create', 'destroy' ):
-      raise ValueError( 'name must be "create" or "create"' )
+      raise PostOfficeException( 'INVALID_JOB_NAME', 'name must be "create" or "create"' )
 
     post.name = name
   else:
-    raise ValueError( 'job or name must be defined' )
+    raise PostOfficeException( 'MISSING_JOB_NAME', 'job or name must be defined' )
 
   post.full_clean()
   post.save()
@@ -57,7 +57,7 @@ def _sendPost( data, box ):
     req.get_method = lambda: 'CALL'
 
   else:
-    raise ValueError( 'Unknown box type "{0}"'.format( box.type ) )
+    raise PostOfficeException( 'INVALID_BOX_TYPE', 'Unknown box type "{0}"'.format( box.type ) )
 
   try:
     resp = opener.open( req, timeout=WEBHOOK_REQUEST_TIMEOUT )  # Do we care about the return value, ie: allow a re-queue of a one shot or something?
@@ -66,7 +66,7 @@ def _sendPost( data, box ):
     return False
 
   print( 'got "{0}"'.format( resp.code ) )
-  return resp.code in ( '200', )
+  return resp.code >= 200 and resp.code < 300
 
 
 def _sendFoundationPost( post, box ):

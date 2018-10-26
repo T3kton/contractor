@@ -8,6 +8,20 @@ from django.db import models
 from cinp.orm_django import DjangoCInP as CInP
 
 
+class UserException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'UserException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'UserException ({0}): {1}'.format( self.code, self.message )
+
+
 def getUser( auth_id, auth_token ):
   try:
     session = Session.objects.get( user=auth_id, token=auth_token )
@@ -84,11 +98,11 @@ class Session( models.Model ):
     try:
       user = User.objects.get( username=username )
     except User.DoesNotExist:
-      raise ValueError( 'User Does Not Exist' )
+      raise UserException( 'INVALID_LOGIN', 'User Does Not Exist' )
 
     password = hashlib.sha256( password.encode( 'utf-8' ) ).hexdigest()
     if password != user.password:
-      raise ValueError( 'Invalid Password' )
+      raise UserException( 'INVALID_LOGIN', 'Invalid Password' )
 
     token = ''.join( random.choice( string.ascii_letters ) for _ in range( 30 ) )
     session = Session( token=token, user=user )

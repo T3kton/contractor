@@ -12,6 +12,20 @@ from contractor.lib.config import getConfig
 cinp = CInP( 'BluePrint', '0.1' )
 
 
+class BluePrintException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'BluePrintException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'BluePrintException ({0}): {1}'.format( self.code, self.message )
+
+
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ] )
 class BluePrint( models.Model ):
   name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length

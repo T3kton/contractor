@@ -13,11 +13,25 @@ from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRN
 cinp = CInP( 'Utilities', '0.1' )
 
 
+class UtilitiesException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'UtilitiesException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'UtilitiesException ({0}): {1}'.format( self.code, self.message )
+
+
 def ipAddress2Native( ip_address ):
   try:
     address_block = AddressBlock.objects.get( subnet__lte=ip_address, _max_address__gte=ip_address )
   except AddressBlock.DoesNotExist:
-    raise ValueError( 'ip_address "{0}" does not exist in any existing Address Blocks'.format( ip_address ) )
+    raise UtilitiesException( 'ADDRESS_NOT_FOUND', 'ip_address "{0}" does not exist in any existing Address Blocks'.format( ip_address ) )
 
   return address_block, StrToIp( ip_address ) - StrToIp( address_block.subnet )
 
@@ -330,7 +344,7 @@ class AddressBlock( models.Model ):
         all_offsets = all_offsets - set( [ self.gateway_offset ] )
 
       if not all_offsets:
-        raise ValueError( 'No Available Offsets' )
+        raise UtilitiesException( 'NO_OFFSETS', 'No Available Offsets' )
 
       used_offsets = set( BaseAddress.objects.filter( address_block=self, offset__isnull=False ).values_list( 'offset', flat=True ) )
       address.address_block = self

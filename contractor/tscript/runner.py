@@ -546,7 +546,7 @@ class Runner( object ):
         try:
           getter = module[ op_data[ 'name' ] ][0]  # index 0 is the getter
         except KeyError:
-          raise NotDefinedError( op_data[ 'name' ], self.cur_line )
+          raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
         if getter is None:
           raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
@@ -628,7 +628,7 @@ class Runner( object ):
         try:
           getter = module[ op_data[ 'name' ] ][0]  # index 0 is the getter
         except KeyError:
-          raise NotDefinedError( op_data[ 'name' ], self.cur_line )
+          raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
         if getter is None:
           raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
@@ -698,7 +698,7 @@ class Runner( object ):
         try:
           setter = module[ target[ 'name' ] ][1]  # index 1 is the setter
         except KeyError:
-          raise NotDefinedError( target[ 'name' ], self.cur_line )
+          raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
         if setter is None:
           raise ParamaterError( 'target', '"{0}" of "{1}" is not settable'.format( target[ 'module' ], target[ 'name' ] ), self.cur_line )
@@ -797,7 +797,7 @@ class Runner( object ):
             try:
               handler = module[ op_data[ 'name' ] ]()
             except KeyError:
-              raise NotDefinedError( op_data[ 'name' ], self.cur_line )
+              raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
             except TypeError as e:  # hm.... this is bad
               raise UnrecoverableError( 'Handler init function failed "{0}" on line {1}, possibly trying to call the function directly?'.format( op_data[ 'name' ], self.cur_line ) )
 

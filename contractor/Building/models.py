@@ -21,6 +21,20 @@ FOUNDATION_SUBCLASS_LIST = []
 COMPLEX_SUBCLASS_LIST = []
 
 
+class BuildingException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'BuildingException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'BuildingException ({0}): {1}'.format( self.code, self.message )
+
+
 @cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
 class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )
@@ -34,6 +48,11 @@ class Foundation( models.Model ):
 
   @cinp.action()
   def setLocated( self ):
+    """
+    Sets the Foundation to 'located' state.  This will not create a destroy job.
+
+    NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
+    """
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
@@ -44,6 +63,9 @@ class Foundation( models.Model ):
 
   @cinp.action()
   def setBuilt( self ):
+    """
+    Set the Foundation to 'built' state.  This will not create a create job.
+    """
     if self.located_at is None:
       self.located_at = timezone.now()
     self.built_at = timezone.now()
@@ -51,6 +73,11 @@ class Foundation( models.Model ):
 
   @cinp.action()
   def setDestroyed( self ):
+    """
+    Sets the Foundation to 'destroyed' state.  This will not create a destroy job.
+
+    NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
+    """
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
@@ -61,11 +88,17 @@ class Foundation( models.Model ):
 
   @cinp.action( return_type='Integer' )
   def doCreate( self ):
+    """
+    This will submit a job to run the create script.
+    """
     from contractor.Foreman.lib import createJob
     return createJob( 'create', self )
 
   @cinp.action( return_type='Integer' )
   def doDestroy( self ):
+    """
+    This will submit a job to run the destroy script.
+    """
     from contractor.Foreman.lib import createJob
     return createJob( 'destroy', self )
 
@@ -164,6 +197,9 @@ class Foundation( models.Model ):
 
   @cinp.action( return_type='Map' )
   def getConfig( self ):
+    """
+    returns the computed config for this foundation
+    """
     return mergeValues( getConfig( self.subclass ) )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )

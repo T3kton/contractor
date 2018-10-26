@@ -11,6 +11,20 @@ entry_name_regex = re.compile( '^[a-z][a-z0-9]+$')  # NOTE: do not allow '.', it
 absolute_name_regex = re.compile( '^([a-z][a-z0-9]+\.)+[a-z][a-z0-9]+\.$' )
 
 
+class DirectoryException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'DirectoryException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'DirectoryException ({0}): {1}'.format( self.code, self.message )
+
+
 @cinp.model( property_list=( 'fqdn' ) )
 class Zone( models.Model ):
   name = models.CharField( max_length=100 )

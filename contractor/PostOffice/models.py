@@ -12,6 +12,20 @@ MAX_BOX_LIFE = 96  # in hours
 cinp = CInP( 'PostOffice', '0.1' )
 
 
+class PostOfficeException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'PostOfficeException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'PostOfficeException ({0}): {1}'.format( self.code, self.message )
+
+
 class Post( models.Model ):
   name = models.CharField( max_length=40 )
   updated = models.DateTimeField( editable=False, auto_now=True )
