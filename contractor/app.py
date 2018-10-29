@@ -17,7 +17,7 @@ for item in os.scandir( plugin_dir ):
 
 
 def get_app( debug ):
-  app = WerkzeugServer( root_path='/api/v1/', root_version='0.9', debug=debug, get_user=getUser, cors_allow_list=[ '*' ] )
+  app = WerkzeugServer( root_path='/api/v1/', root_version='0.9', debug=debug, get_user=getUser, cors_allow_list=[ '*' ], debug_dump_location='/tmp' )
 
   app.registerNamespace( '/', 'contractor.User' )
   app.registerNamespace( '/', 'contractor.BluePrint' )
