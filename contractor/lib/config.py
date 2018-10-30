@@ -147,9 +147,10 @@ def _bluePrintConfig( blueprint, class_list, config ):
 
 def _foundationConfig( foundation, class_list, config ):
   config.update( foundation.configAttributes() )
-  if foundation.complex:
-    config.update( foundation.complex.configAttributes() )
-    return max( foundation.updated, foundation.complex.updated )
+  complex = getattr( foundation, 'complex', None )
+  if foundation.complex is not None:
+    config.update( complex.configAttributes() )
+    return max( foundation.updated, complex.updated )
 
   return foundation.updated
 
@@ -168,7 +169,7 @@ def getConfig( target ):
   if hasattr( target, 'class_list' ):
     class_list = target.class_list
   elif hasattr( target, 'foundation' ):
-    class_list = target.foundation.class_list
+    class_list = target.foundation.subclass.class_list
   else:
     class_list = []
 
@@ -181,7 +182,7 @@ def getConfig( target ):
   elif target.__class__.__name__ == 'Structure':
     lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
     lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
-    lastModified = max( lastModified, _foundationConfig( target.foundation, class_list, config ) )
+    lastModified = max( lastModified, _foundationConfig( target.foundation.subclass, class_list, config ) )
     lastModified = max( lastModified, _structureConfig( target, class_list, config ) )
 
   elif 'Foundation' in [ i.__name__ for i in target.__class__.__mro__ ]:
@@ -202,21 +203,6 @@ def getConfig( target ):
   config[ '__contractor_host' ] = settings.CONTRACTOR_HOST
   config[ '__pxe_template_location' ] = '{0}config/pxe_template/'.format( settings.CONTRACTOR_HOST )
   config[ '__pxe_location' ] = settings.PXE_IMAGE_LOCATION
-
-  return config
-
-
-def getStructureOnlyConfig( structure ):  # is this needed? orgigonally just for plugins to get config that is non-recursive
-  if structure.__class__.__name__ != 'Structure':
-    raise ValueError( 'structure must be of type Structure' )
-
-  config = {}
-  lastModified = datetime( 1, 1, 1, tzinfo=timezone.utc )
-
-  class_list = structure.foundation.class_list
-
-  lastModified = max( lastModified, _bluePrintConfig( structure.blueprint, class_list, config ) )
-  lastModified = max( lastModified, _structureConfig( structure, class_list, config ) )
 
   return config
 

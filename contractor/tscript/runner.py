@@ -3,6 +3,7 @@ import traceback
 import datetime
 import copy
 from importlib import import_module
+from djano.confg import settings
 
 from contractor.tscript.parser import types
 
@@ -293,6 +294,30 @@ infix_logical_operator_map = {
                              }
 
 
+def _debugDump( message, exception, ast, state ):
+  import os
+  from datetime import datetime
+
+  if settings.DEBUG_DUMP_LOCATION is None:
+    return
+
+  try:
+    fp = open( os.path.join( settings.DEBUG_DUMP_LOCATION, datetime.utcnow().isoformat() ), 'w' )
+    fp.write( '** Message **\n' )
+    fp.write( message )
+    fp.write( '\n\n** AST **\n' )
+    fp.write( ast )
+    fp.write( '\n\n** State **\n' )
+    fp.write( state )
+    fp.write( '\n\n** Stack **\n' )
+    traceback.print_exception( None, exception, exception.__traceback__, file=fp )
+    fp.close()
+
+  except Exception as e:
+    import sys
+    sys.stderr.write( 'Error "{0}" when writing the debug dump'.format( e ) )
+
+
 class Runner( object ):
   def __init__( self, ast ):
     super().__init__()
@@ -508,7 +533,7 @@ class Runner( object ):
     # in mind that this has to be "re-entrant" ( for lack of a better word )
     # anytime you call _evaluate, execution may be aborted to take care of
     # a blocking function, so you have to check if your state has been setup
-    # and sometimes it has to be set up  in stages and checked as if you
+    # and sometimes it has to be set up in stages and checked as if you
     # have or haven't been through it before.
     if op_type == types.LINE:
       self.cur_line = operation[2]
@@ -811,9 +836,12 @@ class Runner( object ):
             handler._runner = self
             try:
               handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
+
             except ( ParamaterError, ) as e:
               raise e
+
             except Exception as e:
+              _debugDump( 'Handler "{0}" in module "{1}" error during setup on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )
               raise UnrecoverableError( 'Handler "{0}" in module "{1}" error during setup "{2}" on line "{3}"'.format( handler.__class__.__name__, module, e, self.cur_line ) )
 
             self.contractor_cookie = str( uuid.uuid4() )
