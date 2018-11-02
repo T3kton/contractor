@@ -3,7 +3,7 @@ import traceback
 import datetime
 import copy
 from importlib import import_module
-from djano.confg import settings
+from django.conf import settings
 
 from contractor.tscript.parser import types
 
@@ -664,8 +664,8 @@ class Runner( object ):
 
       try:
         value = value[ index ]
-      except IndexError:
-        raise ParamaterError( 'index', 'Index does not exist' )
+      except ( IndexError, KeyError ):
+        raise ParamaterError( 'index', 'Index/Key does not exist' )
 
       self.state[ state_index ][1] = None
       try:
