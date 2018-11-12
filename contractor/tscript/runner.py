@@ -2,6 +2,7 @@ import uuid
 import traceback
 import datetime
 import copy
+import logging
 from importlib import import_module
 from django.conf import settings
 
@@ -304,18 +305,23 @@ def _debugDump( message, exception, ast, state ):
   try:
     fp = open( os.path.join( settings.DEBUG_DUMP_LOCATION, datetime.utcnow().isoformat() ), 'w' )
     fp.write( '** Message **\n' )
-    fp.write( message )
+    fp.write( str( message ) )
     fp.write( '\n\n** AST **\n' )
-    fp.write( ast )
+    fp.write( str( ast ) )
     fp.write( '\n\n** State **\n' )
-    fp.write( state )
+    fp.write( str( state ) )
     fp.write( '\n\n** Stack **\n' )
-    traceback.print_exception( None, exception, exception.__traceback__, file=fp )
+    for line in traceback.TracebackException( type( exception ), exception, exception.__traceback__, lookup_lines=True, capture_locals=True ).format( chain=False ):
+       fp.write( line )
     fp.close()
 
   except Exception as e:
-    import sys
-    sys.stderr.write( 'Error "{0}" when writing the debug dump'.format( e ) )
+    try:
+      fp.close()
+    except Exception:
+      pass
+
+    print( 'Error "{0}" when writing the debug dump'.format( e ) )
 
 
 class Runner( object ):
@@ -356,7 +362,7 @@ class Runner( object ):
 
   @property
   def status( self ):  # list of ( % complete, status message )
-    print( ")){0}((".format( self.state ) )
+    logging.debug( 'runner: status state: {0}'.format( self.state ) )
     if self.done or self.aborted:
       return [ ( 100.0, 'Scope', None ) ]
     if len( self.state ) == 0:
@@ -370,8 +376,6 @@ class Runner( object ):
         step_data = step[1]
       except IndexError:
         step_data = None
-
-      print( '****** {0}  {1}'.format( operation, step_data ) )
 
       if step_type == types.SCOPE:
         tmp = {}
@@ -451,7 +455,7 @@ class Runner( object ):
       else:
         raise Exception( 'Confused step type "{0}"'.format( step_type ) )
 
-    print( '~~~~~~ {0}'.format( item_list ) )
+    logging.debug( 'runner: status item_list {0}'.format( item_list ) )
 
     result = []
     last_perc_complete = 0
@@ -472,7 +476,7 @@ class Runner( object ):
     self.state = [ [ types.SCOPE, pos ] ]
 
   def run( self, ttl=1000 ):
-    print( '*******  RUN START  *******' )
+    logging.debug( 'runner: run start' )
     if self.aborted:
       return 'aborted'
 
@@ -505,16 +509,15 @@ class Runner( object ):
 
       except Exception as e:
         self.state = 'ABORTED'  # TODO: watch some kind of DEBUG flag to enable/disable the stack trace
-        print( '^^^ TSCRIPT EXCEPTION ^^^' )  # TODO: remove this and parse through the execution stack to find the important part, not the exceptions parts that are a part of the runner
-        print( 'Unahndled Exception ({0}): "{1}"\ntrace:\n{2}'.format( type( e ).__name__, str( e ), traceback.format_exc() ) )
-        print( '^^^^^^^^^^^^' )
+        logging.exception( 'runner: Unahndled Exception' )
         raise UnrecoverableError( 'Unahndled Exception ({0}): "{1}"\ntrace:\n{2}'.format( type( e ).__name__, str( e ), traceback.format_exc() ) )
 
-    print( '*******  RUN FINISH  *******' )
+    logging.debug( 'runner: run finish' )
 
   def _evaluate( self, operation, state_index ):
-    print( '~~~{1}~~~{0}~~~'.format( operation, '.' * state_index ) )
-    print( '---{1}---{0}---'.format( self.state, '.' * state_index ) )
+    logging.debug( 'runner: _evaluate level: "{0}" operation: '.format( state_index, operation ) )
+    logging.debug( 'runner: _evaluate level: "{0}" start state: '.format( state_index, self.state ) )
+
     op_type = operation[0]
     op_data = operation[1]
     try:
@@ -842,7 +845,7 @@ class Runner( object ):
 
             except Exception as e:
               _debugDump( 'Handler "{0}" in module "{1}" error during setup on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )
-              raise UnrecoverableError( 'Handler "{0}" in module "{1}" error during setup "{2}" on line "{3}"'.format( handler.__class__.__name__, module, e, self.cur_line ) )
+              raise UnrecoverableError( 'Handler "{0}" in module "{1}" error during setup on line "{2}": "{3}"({4})'.format( handler.__class__.__name__, module, self.cur_line, str( e ), e.__class__.__name__) )
 
             self.contractor_cookie = str( uuid.uuid4() )
             self.state[ state_index ][1][ 'handler' ] = handler
@@ -938,7 +941,7 @@ class Runner( object ):
     else:
       self.state = self.state[ :state_index + 1 ]  # remove everything after this one, save this one's return value on the stack
 
-    print( '==={1}==={0}==='.format( self.state, ' ' * state_index ) )
+    logging.debug( 'runner: _evaluate level: "{0}" final state: '.format( state_index, self.state ) )
     if self.state == []:
       self.state = 'DONE'
       self.cur_line = None
