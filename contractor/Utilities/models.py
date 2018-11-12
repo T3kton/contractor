@@ -157,10 +157,17 @@ class NetworkInterface( models.Model ):
 
   @property
   def config( self ):
-    result = { 'name': self.name, 'mac': self.mac, 'address_list': [] }
+    result = { 'name': self.name, 'address_list': [] }
     structure = self.foundation.attached_structure
     if structure is not None:
       for address in structure.address_set.filter( interface_name=self.name ):
+        if address.vlan == 0:
+          vlan = None
+          tagged = False
+        else:
+          vlan = address.vlan
+          tagged = True
+
         result[ 'address_list' ].append( {
                                            'address': address.ip_address,
                                            'netmask': address.netmask,
@@ -169,9 +176,23 @@ class NetworkInterface( models.Model ):
                                            'gateway': address.address_block.gateway,
                                            'primary': address.is_primary,
                                            'sub_interface': None,
-                                           'tagged': False,
+                                           'vlan': vlan,
+                                           'tagged': tagged,
                                            'mtu': 1500
                                          } )
+
+    return result
+
+  @property
+  def addressblock_name_map( self ):
+    result = {}
+    structure = self.foundation.attached_structure
+    if structure is not None:
+      for address in structure.address_set.filter( interface_name=self.name ):
+        if address.vlan == 0:
+          result[ None ] = address.address_block.name
+        else:
+          result[ address.vlan ] = address.address_block.name
 
     return result
 
@@ -215,6 +236,7 @@ class RealNetworkInterface( NetworkInterface ):
   def config( self ):
     result = super().config
     result[ 'mac' ] = self.mac
+    result[ 'physical_location' ] = self.physical_location
 
     return result
 
