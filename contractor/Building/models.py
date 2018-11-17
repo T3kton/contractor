@@ -7,7 +7,7 @@ from django.db.models import Q
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import MapField, JSONField, name_regex
+from contractor.fields import MapField, JSONField, name_regex, config_name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked
@@ -19,6 +19,20 @@ cinp = CInP( 'Building', '0.1' )
 
 FOUNDATION_SUBCLASS_LIST = []
 COMPLEX_SUBCLASS_LIST = []
+
+
+class BuildingException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'BuildingException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'BuildingException ({0}): {1}'.format( self.code, self.message )
 
 
 @cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
@@ -34,6 +48,11 @@ class Foundation( models.Model ):
 
   @cinp.action()
   def setLocated( self ):
+    """
+    Sets the Foundation to 'located' state.  This will not create a destroy job.
+
+    NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
+    """
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
@@ -44,6 +63,9 @@ class Foundation( models.Model ):
 
   @cinp.action()
   def setBuilt( self ):
+    """
+    Set the Foundation to 'built' state.  This will not create a create job.
+    """
     if self.located_at is None:
       self.located_at = timezone.now()
     self.built_at = timezone.now()
@@ -51,6 +73,11 @@ class Foundation( models.Model ):
 
   @cinp.action()
   def setDestroyed( self ):
+    """
+    Sets the Foundation to 'destroyed' state.  This will not create a destroy job.
+
+    NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
+    """
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
@@ -61,11 +88,17 @@ class Foundation( models.Model ):
 
   @cinp.action( return_type='Integer' )
   def doCreate( self ):
+    """
+    This will submit a job to run the create script.
+    """
     from contractor.Foreman.lib import createJob
     return createJob( 'create', self )
 
   @cinp.action( return_type='Integer' )
   def doDestroy( self ):
+    """
+    This will submit a job to run the destroy script.
+    """
     from contractor.Foreman.lib import createJob
     return createJob( 'destroy', self )
 
@@ -77,7 +110,7 @@ class Foundation( models.Model ):
               'site': ( lambda foundation: foundation.site.pk, None ),
               'blueprint': ( lambda foundation: foundation.blueprint.pk, None ),
               # 'ip_map': ( lambda foundation: foundation.ip_map, None ),
-              'interface_list': ( lambda foundation: [ i for i in foundation.networkinterface_set.all() ], None )  # redudntant?
+              'interface_list': ( lambda foundation: [ i for i in foundation.networkinterface_set.all().order_by( 'physical_location' ) ], None )  # redudntant?
             }
 
   @staticmethod
@@ -91,7 +124,7 @@ class Foundation( models.Model ):
               '_foundation_state': self.state,
               '_foundation_class_list': self.class_list,
               '_foundation_locator': self.locator,
-              '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all() ]
+              '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
             }
 
   @property
@@ -131,7 +164,7 @@ class Foundation( models.Model ):
     return True
 
   @property
-  def attached_structure( self ):
+  def attached_structure( self ):  # TODO: look arround and see if this is used where it should be, or we can remove this
     try:
       return self.structure
     except AttributeError:
@@ -162,8 +195,11 @@ class Foundation( models.Model ):
   def getFoundationTypes():
     return FOUNDATION_SUBCLASS_LIST
 
-  @cinp.action( 'Map' )
+  @cinp.action( return_type='Map' )
   def getConfig( self ):
+    """
+    returns the computed config for this foundation
+    """
     return mergeValues( getConfig( self.subclass ) )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
@@ -199,8 +235,8 @@ class Foundation( models.Model ):
     if not name_regex.match( self.locator ):
       errors[ 'locator' ] = 'Invalid'
 
-    if self.type not in self.blueprint.foundation_type_list:
-      errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint.description, self.type )
+    if self.blueprint_id is not None and self.type not in self.blueprint.foundation_type_list:
+        errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint.description, self.type )
 
     if errors:
       raise ValidationError( errors )
@@ -248,16 +284,20 @@ class Structure( Networked ):
       dependancy.setDestroyed()
 
   def configAttributes( self ):
+    provisioning_interface = self.provisioning_interface
     result = {
                '_structure_id': self.pk,
                '_structure_state': self.state,
                '_structure_config_uuid': self.config_uuid,
-               '_provisioning_interface_mac': self.provisioning_interface.mac,
+               '_provisioning_interface': provisioning_interface.name,
+               '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None
              }
 
-    result[ 'hostname' ] = self.hostname
-    result[ 'fqdn' ] = self.fqdn
-    result[ 'interface_list' ] = [ iface.config for iface in self.foundation.networkinterface_set.all() ]  # mabey? mabey not?
+    result[ '_hostname' ] = self.hostname
+    result[ '_fqdn' ] = self.fqdn
+    result[ '_interface_map' ] = {}
+    for iface in self.foundation.networkinterface_set.all():  # mabey? mabey not?
+      result[ '_interface_map' ][ iface.name ] = iface.config
 
     return result
 
@@ -290,8 +330,16 @@ class Structure( Networked ):
     from contractor.Foreman.lib import createJob
     return createJob( 'destroy', self )
 
-  @cinp.action( 'Map' )
+  @cinp.action( return_type='Map' )
   def getConfig( self ):
+    return mergeValues( getConfig( self ) )
+
+  @cinp.action( return_type='Map', paramater_type_list=[ 'Map' ] )
+  def updateConfig( self, config_value_map ):  # TODO: this is a bad Idea, need to figure out a better way to do this, at least restrict it to accounts that can create/updatre structures
+    self.config_values.update( config_value_map )
+    self.full_clean()
+    self.save()
+
     return mergeValues( getConfig( self ) )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
@@ -312,8 +360,14 @@ class Structure( Networked ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
+
+    if self.foundation_id is not None and self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
       errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint.description, self.foundation.blueprint.description )
+
+    for name in self.config_values:
+      if not config_name_regex.match( name ):
+        errors[ 'config_values' ] = 'config item name "{0}" is invalid'.format( name )
+        break
 
     if errors:
       raise ValidationError( errors )
@@ -444,7 +498,7 @@ class ComplexStructure( models.Model ):
 
     return self
 
-  # @cinp.action( 'String' )
+  # @cinp.action( return_type='String' )
   # def getRealFoundationURI( self ):  # TODO: this is such a hack, figure  out a better way
   #   subclass = self.subclass
   #   class_name = type( subclass ).__name__
@@ -459,7 +513,7 @@ class ComplexStructure( models.Model ):
   #
   #   raise ValueError( 'Unknown Foundation class "{0}"'.format( class_name ) )
   #
-  @cinp.action( 'Map' )
+  @cinp.action( return_type='Map' )
   def getConfig( self ):
     return mergeValues( getConfig( self.subclass ) )
 

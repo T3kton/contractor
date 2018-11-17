@@ -6,8 +6,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-# get plugins
+# set to None to disable
+DEBUG_DUMP_LOCATION = '/tmp'
 
+# get plugins
 import os
 from contractor import plugins
 
@@ -16,10 +18,10 @@ plugin_dir = os.path.dirname( plugins.__file__ )
 for item in os.scandir( plugin_dir ):
   if not item.is_dir() or not os.path.exists( os.path.join( plugin_dir, item.name, 'models.py' ) ):
     continue
+
   plugin_list.append( 'contractor.plugins.{0}'.format( item.name ) )
 
 # Application definition
-
 INSTALLED_APPS = (
     'contractor.User',
     'contractor.Directory',

@@ -47,7 +47,7 @@ def setScripts( blueprint, target ):
     try:
       script_map[ name ] = Script.objects.get( name=script )
     except Script.DoesNotExist:
-      print( 'Unable to find Script "{0}"'.format( script ) )
+      print( 'Unable to find Script "{0}", stopping.'.format( script ) )
       sys.exit( 1 )
 
   for name, script in script_map.items():
@@ -97,7 +97,7 @@ def loadStructureBlueprint( name, target ):
     try:
       parent_list.append( StructureBluePrint.objects.get( name=parent ) )
     except StructureBluePrint.DoesNotExist:
-      print( 'Unable to find StructureBluePrint "{0}" as parent to "{1}"'.format( parent, name ) )
+      print( 'Unable to find Structure BluePrint "{0}" as parent to "{1}", stopping.'.format( parent, name ) )
       sys.exit( 1 )
 
   if blueprint.parent_list != parent_list:
@@ -129,7 +129,7 @@ def loadFoundationBlueprint( name, target ):
     try:
       parent_list.append( FoundationBluePrint.objects.get( parent ) )
     except FoundationBluePrint.DoesNotExist:
-      print( 'Unable to find FoundationBluePrint "{0}" as parent to "{1}"'.format( parent, name ) )
+      print( 'Unable to find Foundation BluePrint "{0}" as parent to "{1}", stopping.'.format( parent, name ) )
       sys.exit( 1 )
 
   if blueprint.parent_list != parent_list:
@@ -172,14 +172,14 @@ def loadSFLinks( link_list ):
     try:
       structureblueprint = StructureBluePrint.objects.get( name=structureblueprint )
     except StructureBluePrint.DoesNotExist:
-      print( 'Unable to find StructureBluePrint "{0}", skipping...'.format( structureblueprint ) )  # we skip b/c we might be adding to structures that may exist
+      print( 'Unable to find Structure BluePrint "{0}", skipping...'.format( structureblueprint ) )  # we skip b/c we might be adding to structures that may not exist
       continue
 
     try:
       foundationblueprint = FoundationBluePrint.objects.get( name=foundationblueprint )
     except FoundationBluePrint.DoesNotExist:
-      print( 'Unable to find FoundationBluePrint "{0}"'.format( foundationblueprint ) )  # don't skip this one(?), normally the links are in the file with the foundations
-      sys.exit( 1 )
+      print( 'Unable to find Foundation BluePrint "{0}", skipping...'.format( foundationblueprint ) )  # we skip b/c we might be adding to foundations that may not exist
+      continue
 
     if foundationblueprint not in structureblueprint.foundation_blueprint_list.all():
       structureblueprint.foundation_blueprint_list.add( foundationblueprint )

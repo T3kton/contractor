@@ -1,49 +1,9 @@
 import re
-import pickle
-from cinp.server_common import Response
+from cinp.server_common import Response, _fromPythonMap
 
 from contractor.Building.models import Foundation, Structure
 from contractor.Utilities.models import BaseAddress, NetworkInterface
-from contractor.lib.config import getConfig, renderTemplate
-
-
-def _dictConverter( value ):
-  _fromPythonMap( value )
-  return value
-
-MAP_TYPE_CONVERTER = {
-                       'NoneType': lambda a: None,
-                       'str': str,
-                       'int': str,
-                       'float': str,
-                       'bool': str,
-                       'datetime': lambda a: a.isoformat(),
-                       'timedelta': lambda a: a.total_seconds(),
-                       'dict': _dictConverter
-                     }
-
-
-def _fromPythonMap_converter( value ):
-  try:
-    return MAP_TYPE_CONVERTER[ type( value ).__name__ ]( value )
-  except KeyError:
-    raise ValueError( 'no converter for type "{0}" in map converter'.format( type( value ).__name__ ) )
-
-
-def _fromPythonMap( value ):
-  for key in value.keys():
-    if isinstance( value[ key ], tuple ):  # convert tuple to list before iterating
-      value[ key ] = list( value[ key ] )
-
-    if isinstance( value[ key ], dict ):
-      _fromPythonMap( value[ key ] )
-
-    elif isinstance( value[ key ], list ):
-      for index in range( 0, len( value[ key ] ) ):
-        value[ key ][ index ] = _fromPythonMap_converter( value[ key ][ index ] )
-
-    else:
-      value[ key ] = _fromPythonMap_converter( value[ key ] )
+from contractor.lib.config import getConfig, mergeValues, renderTemplate
 
 
 def handler( request ):
@@ -74,7 +34,6 @@ def handler( request ):
     interface = target.provisioning_interface
 
   else:
-    print( 'Getting config goodies for "{0}"'.format( request.remote_addr ) )
     address = BaseAddress.lookup( request.remote_addr )
     if address is None:
       return Response( 404, data='Address Not Found', content_type='text' )
@@ -111,14 +70,10 @@ def handler( request ):
       template = pxe.template
 
     data = renderTemplate( template, config )
-    print( 'config_handler sending "{0}" to "{1}"\n    -----------    '.format( request_type, request.remote_addr ) )
-    print( data )
-    print( '    -----------    ')
     return Response( 200, data=data, content_type='text' )
 
   elif request_type == 'config':
-    _fromPythonMap( config )
-    template = pickle.dumps( config, 0 ).decode()  # Yeah, there is probably a better way to merge values in.
-    return Response( 200, data=pickle.loads( renderTemplate( template, config ).encode() ) )
+    _fromPythonMap( config )  # this does not go out CInP's converter, we need to make the python dict JSON encodable our selves
+    return Response( 200, data=mergeValues( config ) )
 
   return Response( 400, data='Invalid request type', content_type='text' )

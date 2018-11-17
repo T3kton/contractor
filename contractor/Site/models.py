@@ -13,6 +13,20 @@ from contractor.Directory.models import Zone
 cinp = CInP( 'Site', '0.1' )
 
 
+class SiteException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'SiteException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'SiteException ({0}): {1}'.format( self.code, self.message )
+
+
 @cinp.model()
 class Site( models.Model ):
   name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length

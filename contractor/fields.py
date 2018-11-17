@@ -36,10 +36,11 @@ class MapField( models.TextField ):
 
   def __init__( self, *args, **kwargs ):
     if 'default' not in kwargs:
-      kwargs[ 'default' ] = {}
+      kwargs[ 'default' ] = dict
 
-    if not isinstance( kwargs[ 'default' ], dict ):
-      raise ValueError( 'default value must be a dict' )
+    else:
+      if not callable( kwargs[ 'default' ] ) and not isinstance( kwargs[ 'default' ], dict ):
+        raise ValueError( 'default value must be a dict' )
 
     super().__init__( *args, **kwargs )
 
@@ -122,14 +123,16 @@ class StringListField( models.CharField ):
 
   def __init__( self, *args, **kwargs ):
     if 'default' not in kwargs:
-      kwargs[ 'default' ] = []
+      kwargs[ 'default' ] = kwargs[ 'default' ] = list
+
+    else:
+      if not callable( kwargs[ 'default' ] ) and not isinstance( kwargs[ 'default' ], list ):
+        raise ValueError( 'default value must be a list' )
+
     try:
       del kwargs[ 'null' ]
     except KeyError:
       pass
-
-    if not isinstance( kwargs[ 'default' ], list ):
-      raise ValueError( 'default value must be a list' )
 
     super().__init__( *args, **kwargs )
 

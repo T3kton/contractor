@@ -2,7 +2,9 @@ import uuid
 import traceback
 import datetime
 import copy
+import logging
 from importlib import import_module
+from django.conf import settings
 
 from contractor.tscript.parser import types
 
@@ -293,6 +295,35 @@ infix_logical_operator_map = {
                              }
 
 
+def _debugDump( message, exception, ast, state ):
+  import os
+  from datetime import datetime
+
+  if settings.DEBUG_DUMP_LOCATION is None:
+    return
+
+  try:
+    fp = open( os.path.join( settings.DEBUG_DUMP_LOCATION, datetime.utcnow().isoformat() ), 'w' )
+    fp.write( '** Message **\n' )
+    fp.write( str( message ) )
+    fp.write( '\n\n** AST **\n' )
+    fp.write( str( ast ) )
+    fp.write( '\n\n** State **\n' )
+    fp.write( str( state ) )
+    fp.write( '\n\n** Stack **\n' )
+    for line in traceback.TracebackException( type( exception ), exception, exception.__traceback__, lookup_lines=True, capture_locals=True ).format( chain=False ):
+       fp.write( line )
+    fp.close()
+
+  except Exception as e:
+    try:
+      fp.close()
+    except Exception:
+      pass
+
+    print( 'Error "{0}" when writing the debug dump'.format( e ) )
+
+
 class Runner( object ):
   def __init__( self, ast ):
     super().__init__()
@@ -331,7 +362,7 @@ class Runner( object ):
 
   @property
   def status( self ):  # list of ( % complete, status message )
-    print( ")){0}((".format( self.state ) )
+    logging.debug( 'runner: status state: {0}'.format( self.state ) )
     if self.done or self.aborted:
       return [ ( 100.0, 'Scope', None ) ]
     if len( self.state ) == 0:
@@ -345,8 +376,6 @@ class Runner( object ):
         step_data = step[1]
       except IndexError:
         step_data = None
-
-      print( '****** {0}  {1}'.format( operation, step_data ) )
 
       if step_type == types.SCOPE:
         tmp = {}
@@ -401,7 +430,7 @@ class Runner( object ):
         item_list.append( ( 0, 1, 'Function', tmp ) )
 
       elif step_type == types.ASSIGNMENT:
-        if operation[1][ 'target' ][0] == types.ARRAY_ITEM and ( step_data is None or 'index' not in step_data ):
+        if operation[1][ 'target' ][0] == types.ARRAY_MAP_ITEM and ( step_data is None or 'index' not in step_data ):
           operation = operation[1][ 'target' ][1][ 'index' ]
         elif step_data is None or 'value' not in step_data:
           operation = operation[1][ 'value' ]
@@ -426,7 +455,7 @@ class Runner( object ):
       else:
         raise Exception( 'Confused step type "{0}"'.format( step_type ) )
 
-    print( '~~~~~~ {0}'.format( item_list ) )
+    logging.debug( 'runner: status item_list {0}'.format( item_list ) )
 
     result = []
     last_perc_complete = 0
@@ -447,7 +476,7 @@ class Runner( object ):
     self.state = [ [ types.SCOPE, pos ] ]
 
   def run( self, ttl=1000 ):
-    print( '*******  RUN START  *******' )
+    logging.debug( 'runner: run start' )
     if self.aborted:
       return 'aborted'
 
@@ -480,16 +509,15 @@ class Runner( object ):
 
       except Exception as e:
         self.state = 'ABORTED'  # TODO: watch some kind of DEBUG flag to enable/disable the stack trace
-        print( '^^^ TSCRIPT EXCEPTION ^^^' )  # TODO: remove this and parse through the execution stack to find the important part, not the exceptions parts that are a part of the runner
-        print( 'Unahndled Exception ({0}): "{1}"\ntrace:\n{2}'.format( type( e ).__name__, str( e ), traceback.format_exc() ) )
-        print( '^^^^^^^^^^^^' )
+        logging.exception( 'runner: Unahndled Exception' )
         raise UnrecoverableError( 'Unahndled Exception ({0}): "{1}"\ntrace:\n{2}'.format( type( e ).__name__, str( e ), traceback.format_exc() ) )
 
-    print( '*******  RUN FINISH  *******' )
+    logging.debug( 'runner: run finish' )
 
   def _evaluate( self, operation, state_index ):
-    print( '~~~{1}~~~{0}~~~'.format( operation, '.' * state_index ) )
-    print( '---{1}---{0}---'.format( self.state, '.' * state_index ) )
+    logging.debug( 'runner: _evaluate level: "{0}" operation: '.format( state_index, operation ) )
+    logging.debug( 'runner: _evaluate level: "{0}" start state: '.format( state_index, self.state ) )
+
     op_type = operation[0]
     op_data = operation[1]
     try:
@@ -508,7 +536,7 @@ class Runner( object ):
     # in mind that this has to be "re-entrant" ( for lack of a better word )
     # anytime you call _evaluate, execution may be aborted to take care of
     # a blocking function, so you have to check if your state has been setup
-    # and sometimes it has to be set up  in stages and checked as if you
+    # and sometimes it has to be set up in stages and checked as if you
     # have or haven't been through it before.
     if op_type == types.LINE:
       self.cur_line = operation[2]
@@ -546,12 +574,16 @@ class Runner( object ):
         try:
           getter = module[ op_data[ 'name' ] ][0]  # index 0 is the getter
         except KeyError:
-          raise NotDefinedError( op_data[ 'name' ], self.cur_line )
+          raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
         if getter is None:
           raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
-        value = getter()
+        try:
+          value = getter()
+        except Exception as e:
+          _debugDump( 'getter "{0}" in module "{1}" error during setup on line "{2}"'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line ), e, self.ast, self.state )
+          raise UnrecoverableError( 'getter "{0}" in module "{1}" error during setup on line "{2}": "{3}"({4})'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line, str( e ), e.__class__.__name__) )
 
       try:
         self.state[ state_index ][2] = value
@@ -576,7 +608,25 @@ class Runner( object ):
       self.state[ state_index ].append( self.state[ state_index ][1] )
       self.state[ state_index ][1] = None
 
-    elif op_type == types.ARRAY_ITEM:  # reterieve array index value
+    elif op_type == types.MAP:  # return map
+      try:
+        self.state[ state_index ][1]
+      except IndexError:
+        self.state[ state_index ].append( {} )
+
+      for key in op_data:
+        try:
+          self.state[ state_index + 1 ][2]
+        except IndexError:
+          self._evaluate( op_data[ key ], state_index + 1 )
+
+        self.state[ state_index ][1][ key ] = self.state[ state_index + 1 ][2]
+        self.state = self.state[ :( state_index + 1 ) ]
+
+      self.state[ state_index ].append( self.state[ state_index ][1] )
+      self.state[ state_index ][1] = None
+
+    elif op_type == types.ARRAY_MAP_ITEM:  # reterieve array index value
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -610,19 +660,23 @@ class Runner( object ):
         try:
           getter = module[ op_data[ 'name' ] ][0]  # index 0 is the getter
         except KeyError:
-          raise NotDefinedError( op_data[ 'name' ], self.cur_line )
+          raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
         if getter is None:
           raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
-        value = getter()
+        try:
+          value = getter()
+        except Exception as e:
+          _debugDump( 'getter "{0}" in module "{1}" error during setup on line "{2}"'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line ), e, self.ast, self.state )
+          raise UnrecoverableError( 'getter "{0}" in module "{1}" error during setup on line "{2}": "{3}"({4})'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line, str( e ), e.__class__.__name__) )
 
       index = self.state[ state_index ][1][ 'index' ]
 
       try:
         value = value[ index ]
-      except IndexError:
-        raise ParamaterError( 'index', 'Index does not exist' )
+      except ( IndexError, KeyError ):
+        raise ParamaterError( 'index', 'Index/Key does not exist' )
 
       self.state[ state_index ][1] = None
       try:
@@ -631,7 +685,7 @@ class Runner( object ):
         self.state[ state_index ].append( value )
 
     elif op_type == types.ASSIGNMENT:  # get the value from 'value', and assign it to the variable defined in 'target'
-      if op_data[ 'target' ][0] not in ( types.VARIABLE, types.ARRAY_ITEM ) or ( op_data[ 'target' ][0] == types.ARRAY_ITEM and op_data[ 'target' ][1][ 'module' ] is not None ):
+      if op_data[ 'target' ][0] not in ( types.VARIABLE, types.ARRAY_MAP_ITEM ) or ( op_data[ 'target' ][0] == types.ARRAY_MAP_ITEM and op_data[ 'target' ][1][ 'module' ] is not None ):
         raise ParamaterError( 'target', 'Can only assign to variables', self.cur_line )
 
       try:
@@ -639,7 +693,7 @@ class Runner( object ):
       except IndexError:
         self.state[ state_index ].append( {} )
 
-      if op_data[ 'target' ][0] == types.ARRAY_ITEM:
+      if op_data[ 'target' ][0] == types.ARRAY_MAP_ITEM:
         try:
           self.state[ state_index ][1][ 'index' ]
         except KeyError:
@@ -666,7 +720,7 @@ class Runner( object ):
       value = copy.deepcopy( self.state[ state_index ][1][ 'value' ] )
 
       if target[ 'module' ] is None:  # we don't evaluate the target, it can only be a variable
-        if op_data[ 'target' ][0] == types.ARRAY_ITEM:
+        if op_data[ 'target' ][0] == types.ARRAY_MAP_ITEM:
           self.variable_map[ target[ 'name' ] ][ self.state[ state_index ][1][ 'index' ] ] = value
         else:
          self.variable_map[ target[ 'name' ] ] = value
@@ -680,12 +734,16 @@ class Runner( object ):
         try:
           setter = module[ target[ 'name' ] ][1]  # index 1 is the setter
         except KeyError:
-          raise NotDefinedError( target[ 'name' ], self.cur_line )
+          raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
         if setter is None:
           raise ParamaterError( 'target', '"{0}" of "{1}" is not settable'.format( target[ 'module' ], target[ 'name' ] ), self.cur_line )
 
-        setter( value )
+        try:
+          setter( value )
+        except Exception as e:
+          _debugDump( 'setter "{0}" in module "{1}" error on line "{2}"'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line ), e, self.ast, self.state )
+          raise UnrecoverableError( 'setter "{0}" in module "{1}" error on line "{2}": "{3}"({4})'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line, str( e ), e.__class__.__name__) )
 
     elif op_type == types.INFIX:  # infix type operators
       try:
@@ -779,7 +837,7 @@ class Runner( object ):
             try:
               handler = module[ op_data[ 'name' ] ]()
             except KeyError:
-              raise NotDefinedError( op_data[ 'name' ], self.cur_line )
+              raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
             except TypeError as e:  # hm.... this is bad
               raise UnrecoverableError( 'Handler init function failed "{0}" on line {1}, possibly trying to call the function directly?'.format( op_data[ 'name' ], self.cur_line ) )
 
@@ -791,7 +849,16 @@ class Runner( object ):
 
           if isinstance( handler, ExternalFunction ):
             handler._runner = self
-            handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
+            try:
+              handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
+
+            except ( ParamaterError, ) as e:
+              raise e
+
+            except Exception as e:
+              _debugDump( 'Handler "{0}" in module "{1}" error on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )
+              raise UnrecoverableError( 'Handler "{0}" in module "{1}" error on line "{2}": "{3}"({4})'.format( handler.__class__.__name__, module, self.cur_line, str( e ), e.__class__.__name__) )
+
             self.contractor_cookie = str( uuid.uuid4() )
             self.state[ state_index ][1][ 'handler' ] = handler
             self.state[ state_index ][1][ 'module' ] = module
@@ -807,14 +874,19 @@ class Runner( object ):
 
         if isinstance( handler, ExternalFunction ):  # else was allready run and set a value above
           handler._runner = self
-          ready = handler.ready
-          if ready is not True:
-            handler.run()
-            if ready is False:
-              ready = ''
-            raise Interrupt( ready )
+          try:
+            ready = handler.ready
+            if ready is not True:
+              handler.run()
+              if ready is False:
+                ready = ''
+              raise Interrupt( ready )
 
-          value = handler.value
+            value = handler.value
+
+          except Exception as e:
+            _debugDump( 'Handler "{0}" in module "{1}" error during ready/run/value on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )
+            raise UnrecoverableError( 'Handler "{0}" in module "{1}" error during ready/run/value on line "{2}": "{3}"({4})'.format( handler.__class__.__name__, module, self.cur_line, str( e ), e.__class__.__name__) )
 
         self.state[ state_index ][1] = None
         if isinstance( value, Exception ):
@@ -881,12 +953,12 @@ class Runner( object ):
       raise ScriptError( 'Unimplemented "{0}"'.format( op_type ), self.cur_line )
 
     # if the op_type we just ran does not  return a value, make sure it is cleaned up
-    if op_type not in ( types.CONSTANT, types.VARIABLE, types.ARRAY, types.ARRAY_ITEM, types.INFIX, types.FUNCTION ):  # all the things that "return" a value
+    if op_type not in ( types.CONSTANT, types.VARIABLE, types.ARRAY, types.MAP, types.ARRAY_MAP_ITEM, types.INFIX, types.FUNCTION ):  # all the things that "return" a value
       self.state = self.state[ :state_index ]  # remove this an evertying after from the state
     else:
       self.state = self.state[ :state_index + 1 ]  # remove everything after this one, save this one's return value on the stack
 
-    print( '==={1}==={0}==='.format( self.state, ' ' * state_index ) )
+    logging.debug( 'runner: _evaluate level: "{0}" final state: '.format( state_index, self.state ) )
     if self.state == []:
       self.state = 'DONE'
       self.cur_line = None
@@ -910,7 +982,12 @@ class Runner( object ):
 
     handler = operation[1][ 'handler' ]
     handler._runner = self
-    ( function_name, paramaters ) = handler.toSubcontractor()
+    try:
+      ( function_name, paramaters ) = handler.toSubcontractor()
+    except Exception as e:
+      _debugDump( 'Handler "{0}" in module "{1}" error during toSubcontractor on line "{2}"'.format( handler.__class__.__name__, operation[1][ 'module' ], self.cur_line ), e, self.ast, self.state )
+      return None  # TODO: log something?
+
     if paramaters is None:
       return None
 
@@ -935,7 +1012,12 @@ class Runner( object ):
 
     handler = operation[1][ 'handler' ]
     handler._runner = self
-    handler.fromSubcontractor( data )
+    try:
+      handler.fromSubcontractor( data )
+    except Exception as e:
+      _debugDump( 'Handler "{0}" in module "{1}" error during fromSubcontractor on line "{2}"'.format( handler.__class__.__name__, operation[1][ 'module' ], self.cur_line ), e, self.ast, self.state )
+      return 'Error'  # TODO: log something?
+
     operation[1][ 'dispatched' ] = False
 
     return 'Accepted'
@@ -965,8 +1047,13 @@ class Runner( object ):
     handler = operation[1][ 'handler' ]
     try:
       handler.rollback()
+
     except NoRollback:
       return 'Rollback not possible'
+
+    except Exception as e:
+      _debugDump( 'Handler "{0}" in module "{1}" error starting rollback on line "{2}"'.format( handler.__class__.__name__, operation[1][ 'module' ], self.cur_line ), e, self.ast, self.state )
+      return 'Exception while trying to rollback'  # TODO: log?
 
     self.contractor_cookie = str( uuid.uuid4() )  # revoke any outstanding tasks, TODO: do we also rotate cookie on reset?  if not, should we rotate keys even if rollback is  not possible
     operation[1][ 'dispatched' ] = False

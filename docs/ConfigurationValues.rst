@@ -15,6 +15,54 @@ if the first charater is: (also processed in this order)
 if [a-zA-Z0-9]+: is present, the value key/value is only applied if the pre ':'
 matches the classes indicated by the foundation.  This is the **_foundation_class_list**
 
+Global and Config Attributes
+----------------------------
+
+To help indicate Attributes and to keep them from getting overwritten by config values
+( config values are not allowed to start with `_` ), Global attributes begin with `__`
+and other attributes begine with `_`.  Attributes also do not follow the value combining
+rules, as they are set internally.  They are also not affected by config classes.
+
+
+Value Merging
+-------------
+
+Configvalues are merged using Jinja2. They are merged togeather as a final step
+before outputting and before merging with a PXE or Boot template.
+
+For documentation on Jina2 see http://jinja.pocoo.org/
+
+For example::
+
+  root_zone: 'myservice.com'
+  dns_search: [ 'site1.{{ root_zone }}', '{{ root_zone }}' ]
+  dns_zone: 'site1.{{ root_zone }}'
+
+Becomes::
+
+  root_zone: 'myservice.com'
+  dns_search: [ 'site1.myservice.com', 'myservice.com' ]
+  dns_zone: 'site1.myservice.com'
+
+Jinja filters can be used::
+
+  dns_search: [ 'site1.{{ root_zone|default(\'local\') }}', '{{ root_zone|default(\'local\') }}' ]
+  dns_zone: 'site1.{{ root_zone|default(\'local\') }}'
+
+Becomes::
+
+  dns_search: [ 'site1.local', 'local' ]
+  dns_zone: 'site1.local'
+
+NOTE:  There is not sorting nor predictable order, becarefull when embeding/refrencing,
+you may get random results.  A second (or more) evaluation round can be forced by escaping
+the '{{' ie::
+
+  { 'a': 'c', 'b': 'a', 'd': '{{ "{{" }}{{b}}}}' }
+
+the result will be::
+
+  { 'a': 'c', 'b': 'a', 'd': 'c' }
 
 Value Overlay Rules
 -------------------
@@ -25,32 +73,30 @@ For Site and BluePrint, the values of the parents are overlied by the children.
 Sources of Configuraion Values
 ------------------------------
 
-Foundation does not it's self have values, however attributes of the foundation,
-
+In general the order is blueprint, attributes, config values, and global attributes
 
 For a Site
- Parents in order from parent to child
- Global attribute values
+  Parents in order from parent to child
+  Target Site config values
+  Global attribute values
 
 For a Foundation
-  Site (with it's parents applied)
-  Complex attribute values if Foundation belongs to a complex
   Foundation's BluePrint (with it's parents applied)
-  Foundation's attribute values
+  Foundation's attribute values (including values from a complex, if Foundation belongs to a complex)
+  Site (with it's parents applied)
   Global attribute values
 
 For a Structure
-  Site (with it's parents applied)
   Structures's BluePrint (with it's parents applied)
-  Foundation's attribute values  NOTE: the  Foundation's BluePrint values are NOT
-                                       used, these are only for the physicall
-                                       provisioning of the Foundation, ie: BIOS
-                                       settings, the Structure can specify values
-                                       for the Foundation by which
-                                       FoundationBluePrints the Structure
-                                       BluePrint supports
-  Structure's config_values
+  Foundation's attribute values NOTE: the Foundation's BluePrint values are NOT used, these are only for
+                                      the physicall provisioning of the Foundation, ie: BIOS settings, the
+                                      Structure can specify values for the Foundation by which FoundationBluePrints
+                                      the Structure BluePrint supports
+                               NOTE2: also includes the complex values, if the foundation belongs
+                                      to a complex
+  Site (with it's parents applied)
   Structure's attribute values
+  Structure's config_values
   Global attribute values
 
 

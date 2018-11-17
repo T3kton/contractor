@@ -14,6 +14,20 @@ from contractor.Building.models import Foundation, Structure, Dependancy
 cinp = CInP( 'Foreman', '0.1' )
 
 
+class ForemanException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'ForemanException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'ForemanException ({0}): {1}'.format( self.code, self.message )
+
+
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
 class BaseJob( models.Model ):
   JOB_STATE_CHOICES = ( 'queued', 'waiting', 'done', 'paused', 'error', 'aborted' )
@@ -45,25 +59,46 @@ class BaseJob( models.Model ):
 
     return self
 
+  @cinp.action()
   def pause( self ):
+    """
+    Pause a job that is in 'queued' state state.
+
+    Errors:
+      NOT_PAUSEABLE - Job is not in state 'queued'.
+    """
     if self.state != 'queued':
-      raise ValueError( 'Can only pause a job if it is queued' )
+      raise ForemanException( 'NOT_PAUSEABLE', 'Can only pause a job if it is queued' )
 
     self.state = 'paused'
     self.full_clean()
     self.save()
 
+  @cinp.action()
   def resume( self ):
+    """
+    Resume a job that is in 'paused' state state.
+
+    Errors:
+      NOT_PAUSED - Job is not in state 'paused'.
+    """
     if self.state != 'paused':
-      raise ValueError( 'Can only resume a job if it is paused' )
+      raise ForemanException( 'NOT_PAUSED', 'Can only resume a job if it is paused' )
 
     self.state = 'queued'
     self.full_clean()
     self.save()
 
+  @cinp.action()
   def reset( self ):
+    """
+    Resets a job that is in 'error' state, this allows the job to try the failed step again.
+
+    Errors:
+      NOT_ERRORED - Job is not in state 'error'.
+    """
     if self.state != 'error':
-      raise ValueError( 'Can only reset a job if it is in error' )
+      raise ForemanException( 'NOT_ERRORED', 'Can only reset a job if it is in error' )
 
     runner = pickle.loads( self.script_runner )
     runner.clearDispatched()
@@ -74,9 +109,16 @@ class BaseJob( models.Model ):
     self.full_clean()
     self.save()
 
+  @cinp.action()
   def rollback( self ):
+    """
+    Starts the rollback for jobs that are in state 'error'.
+
+    Errors:
+      NOT_ERRORED - Job is not in state 'error'.
+    """
     if self.state != 'error':
-      raise ValueError( 'Can only rollback a job if it is in error' )
+      raise ForemanException( 'NOT_ERRORED', 'Can only rollback a job if it is in error' )
 
     runner = pickle.loads( self.script_runner )
     msg = runner.rollback()
@@ -99,10 +141,16 @@ class BaseJob( models.Model ):
   @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def jobStats( site ):
+    """
+    Returns the job status
+    """
     return { 'running': BaseJob.objects.filter( site=site ).count(), 'error': BaseJob.objects.filter( site=site, state__in=( 'error', 'aborted', 'paused' ) ).count() }
 
   @cinp.action( return_type={ 'type': 'Map' } )
   def jobRunnerVariables( self ):
+    """
+    Returns variables internal to the job script
+    """
     result = {}
     runner = pickle.loads( self.script_runner )
 
@@ -116,6 +164,9 @@ class BaseJob( models.Model ):
 
   @cinp.action( return_type={ 'type': 'Map' } )
   def jobRunnerState( self ):
+    """
+    Returns the state of the job script
+    """
     result = {}
     runner = pickle.loads( self.script_runner )
 
@@ -183,26 +234,44 @@ class FoundationJob( BaseJob ):
 
   @cinp.action()
   def pause( self ):
+    """
+    See BaseJob.pause
+    """
     super().pause()
 
   @cinp.action()
   def resume( self ):
+    """
+    See BaseJob.resume
+    """
     super().resume()
 
   @cinp.action()
   def reset( self ):
+    """
+    See BaseJob.reset
+    """
     super().reset()
 
   @cinp.action()
   def rollback( self ):
+    """
+    See BaseJob.rollback
+    """
     super().rollback()
 
   @cinp.action( return_type={ 'type': 'Map' } )
   def jobRunnerVariables( self ):
+    """
+    See BaseJob.jobRunnerVariables
+    """
     return super().jobRunnerVariables()
 
   @cinp.action( return_type={ 'type': 'Map' } )
   def jobRunnerState( self ):
+    """
+    See BaseJob.jobRunnerState
+    """
     return super().jobRunnerState()
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
@@ -236,26 +305,44 @@ class StructureJob( BaseJob ):
 
   @cinp.action()
   def pause( self ):
+    """
+    See BaseJob.pause
+    """
     super().pause()
 
   @cinp.action()
   def resume( self ):
+    """
+    See BaseJob.resume
+    """
     super().resume()
 
   @cinp.action()
   def reset( self ):
+    """
+    See BaseJob.reset
+    """
     super().reset()
 
   @cinp.action()
   def rollback( self ):
+    """
+    See BaseJob.rollback
+    """
     super().rollback()
 
   @cinp.action( return_type={ 'type': 'Map' } )
   def jobRunnerVariables( self ):
+    """
+    See BaseJob.jobRunnerVariables
+    """
     return super().jobRunnerVariables()
 
   @cinp.action( return_type={ 'type': 'Map' } )
   def jobRunnerState( self ):
+    """
+    See BaseJob.jobRunnerState
+    """
     return super().jobRunnerState()
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
@@ -288,26 +375,44 @@ class DependancyJob( BaseJob ):
 
   @cinp.action()
   def pause( self ):
+    """
+    See BaseJob.pause
+    """
     super().pause()
 
   @cinp.action()
   def resume( self ):
+    """
+    See BaseJob.resume
+    """
     super().resume()
 
   @cinp.action()
   def reset( self ):
+    """
+    See BaseJob.reset
+    """
     super().reset()
 
   @cinp.action()
   def rollback( self ):
+    """
+    See BaseJob.rollback
+    """
     super().rollback()
 
   @cinp.action( return_type={ 'type': 'Map' } )
   def jobRunnerVariables( self ):
+    """
+    See BaseJob.jobRunnerVariables
+    """
     return super().jobRunnerVariables()
 
   @cinp.action( return_type={ 'type': 'Map' } )
   def jobRunnerState( self ):
+    """
+    See BaseJob.jobRunnerState
+    """
     return super().jobRunnerState()
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )

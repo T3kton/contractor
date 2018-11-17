@@ -13,11 +13,25 @@ from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRN
 cinp = CInP( 'Utilities', '0.1' )
 
 
+class UtilitiesException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'UtilitiesException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'UtilitiesException ({0}): {1}'.format( self.code, self.message )
+
+
 def ipAddress2Native( ip_address ):
   try:
     address_block = AddressBlock.objects.get( subnet__lte=ip_address, _max_address__gte=ip_address )
   except AddressBlock.DoesNotExist:
-    raise ValueError( 'ip_address "{0}" does not exist in any existing Address Blocks'.format( ip_address ) )
+    raise UtilitiesException( 'ADDRESS_NOT_FOUND', 'ip_address "{0}" does not exist in any existing Address Blocks'.format( ip_address ) )
 
   return address_block, StrToIp( ip_address ) - StrToIp( address_block.subnet )
 
@@ -74,6 +88,9 @@ class Networked( models.Model ):
   def fqdn( self ):
     try:
       zone = self.site.zone
+      if zone is None:
+        return self.hostname
+
     except ( ObjectDoesNotExist, AttributeError ):
       return self.hostname
 
@@ -140,10 +157,17 @@ class NetworkInterface( models.Model ):
 
   @property
   def config( self ):
-    result = { 'name': self.name, 'mac': self.mac, 'address_list': [] }
+    result = { 'name': self.name, 'address_list': [] }
     structure = self.foundation.attached_structure
     if structure is not None:
       for address in structure.address_set.filter( interface_name=self.name ):
+        if address.vlan == 0:
+          vlan = None
+          tagged = False
+        else:
+          vlan = address.vlan
+          tagged = True
+
         result[ 'address_list' ].append( {
                                            'address': address.ip_address,
                                            'netmask': address.netmask,
@@ -152,9 +176,23 @@ class NetworkInterface( models.Model ):
                                            'gateway': address.address_block.gateway,
                                            'primary': address.is_primary,
                                            'sub_interface': None,
-                                           'tagged': False,
+                                           'vlan': vlan,
+                                           'tagged': tagged,
                                            'mtu': 1500
                                          } )
+
+    return result
+
+  @property
+  def addressblock_name_map( self ):
+    result = {}
+    structure = self.foundation.attached_structure
+    if structure is not None:
+      for address in structure.address_set.filter( interface_name=self.name ):
+        if address.vlan == 0:
+          result[ None ] = address.address_block.name
+        else:
+          result[ address.vlan ] = address.address_block.name
 
     return result
 
@@ -198,6 +236,7 @@ class RealNetworkInterface( NetworkInterface ):
   def config( self ):
     result = super().config
     result[ 'mac' ] = self.mac
+    result[ 'physical_location' ] = self.physical_location
 
     return result
 
@@ -327,7 +366,7 @@ class AddressBlock( models.Model ):
         all_offsets = all_offsets - set( [ self.gateway_offset ] )
 
       if not all_offsets:
-        raise ValueError( 'No Available Offsets' )
+        raise UtilitiesException( 'NO_OFFSETS', 'No Available Offsets' )
 
       used_offsets = set( BaseAddress.objects.filter( address_block=self, offset__isnull=False ).values_list( 'offset', flat=True ) )
       address.address_block = self
@@ -453,6 +492,10 @@ class BaseAddress( models.Model ):
       return None
 
     return self.address_block.gateway
+
+  @property
+  def interface( self ):
+      return None
 
   @property
   def subclass( self ):

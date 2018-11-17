@@ -3,13 +3,27 @@ from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import MapField, JSONField, StringListField, name_regex
+from contractor.fields import MapField, JSONField, StringListField, name_regex, config_name_regex
 from contractor.tscript import parser
 from contractor.lib.config import getConfig
 
 # these are the templates, describe how soomething is made and the template of the thing it's made on
 
 cinp = CInP( 'BluePrint', '0.1' )
+
+
+class BluePrintException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'BluePrintException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'BluePrintException ({0}): {1}'.format( self.code, self.message )
 
 
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ] )
@@ -63,6 +77,11 @@ class BluePrint( models.Model ):
     errors = {}
     if not name_regex.match( self.name ):  # if this regex changes, make sure to update tcalc parser in archetect
       errors[ 'name' ] = 'BluePrint Script name "{0}" is invalid'.format( self.name )
+
+    for name in self.config_values:
+      if not config_name_regex.match( name ):
+        errors[ 'config_values' ] = 'config item name "{0}" is invalid'.format( name )
+        break
 
     if errors:
       raise ValidationError( errors )

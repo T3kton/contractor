@@ -3,7 +3,7 @@ from django.db.models import Q
 
 from contractor.Building.models import Foundation, Structure, Dependancy
 from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin
-from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependancyJob, JobLog
+from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependancyJob, JobLog, ForemanException
 from contractor.PostOffice.lib import registerEvent
 
 from contractor.tscript.parser import parse
@@ -17,15 +17,19 @@ RUNNER_MODULE_LIST = []
 
 def createJob( script_name, target ):
   if isinstance( target, Dependancy ) and script_name not in ( 'create', 'destroy' ):
-    raise ValueError( 'Dependancy Job can only have a create or destroy script_name' )
+    raise ForemanException( 'INVALID_SCRIPT', 'Dependancy Job can only have a create or destroy script_name' )
 
   if script_name == 'create':
     if target.state == 'built':
-      raise ValueError( 'target allready built' )
+      raise ForemanException( 'ALLREADY_BUILT', 'target allready built' )
 
     if isinstance( target, Foundation ):
       if target.state != 'located':
-        raise ValueError( 'can not do create job until Foundation is located' )
+        raise ForemanException( 'NOT_LOCATED', 'can not do create job until Foundation is located' )
+
+    elif isinstance( target, Structure ):
+      if target.foundation.state != 'built':
+        raise ForemanException( 'FOUNDATION_NOT_BUILT', 'can not do create job until Foundation supporting Structure is built' )
 
     elif isinstance( target, Dependancy ):
       script_name = target.create_script_name
@@ -35,7 +39,7 @@ def createJob( script_name, target ):
 
   elif script_name == 'destroy':
     if target.state != 'built':
-      raise ValueError( 'can only destroy built targets' )
+      raise ForemanException( 'NOT_BUILT', 'can only destroy built targets' )
 
     if isinstance( target, Dependancy ):
       script_name = target.destroy_script_name
@@ -45,7 +49,7 @@ def createJob( script_name, target ):
 
   else:
     if isinstance( target, Foundation ) and target.state != 'located':
-      raise ValueError( 'Can Only run Scripts Job on Located Foundations' )
+      raise ForemanException( 'NOT_LOCATED', 'Can Only run Scripts Job on Located Foundations' )
 
   obj_list = []
   if isinstance( target, Structure ):
@@ -60,7 +64,7 @@ def createJob( script_name, target ):
     if structure is not None:
       try:
         StructureJob.objects.get( structure=structure )
-        raise ValueError( 'Structure associated with this Foundation has a job' )
+        raise ForemanException( 'JOB_EXISTS', 'Structure associated with this Foundation has a job' )
       except StructureJob.DoesNotExist:
         pass
 
@@ -72,10 +76,10 @@ def createJob( script_name, target ):
   elif isinstance( target, Dependancy ):
     if target.dependancy is not None:
       if target.dependancy.state != 'built':
-        raise ValueError( 'Can not start Dependancy job until Dependancy is built')
+        raise ForemanException( 'DEPENDANT_NOT_BUILT', 'Can not start Dependancy job until Dependancy is built')
     else:
       if target.structure.state != 'built':
-        raise ValueError( 'Can not start Dependancy job until Structure is built')
+        raise ForemanException( 'STRUCTURE_NO_BUILT', 'Can not start Dependancy job until Structure is built')
 
     job = DependancyJob()
     job.dependancy = target
@@ -90,7 +94,7 @@ def createJob( script_name, target ):
     obj_list.append( ConfigPlugin( structure ) )
 
   else:
-    raise ValueError( 'target must be a Structure, Foundation, or Dependancy' )
+    raise ForemanException( 'INVALID_TARGET', 'target must be a Structure, Foundation, or Dependancy' )
 
   job.site = target.site
   blueprint = target.blueprint
@@ -189,7 +193,7 @@ def processJobs( site, module_list, max_jobs=10 ):
 
   # see if there are any located foundations that need to be prepared, with completed dependancies
   for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True, dependancy__built_at__isnull=False ):
-    # TODO: check to see if the depency has a job that can be started <-------------
+    # TODO: check to see if the depency has a job that can be started
 
     foundation = foundation.subclass
     try:
@@ -222,10 +226,10 @@ def processJobs( site, module_list, max_jobs=10 ):
     job = job.realJob
     job.done()
     if isinstance( job, StructureJob ):
-      registerEvent( job.structure, job )
+      registerEvent( job.structure, job=job )
 
     elif isinstance( job, FoundationJob ):
-      registerEvent( job.foundation, job )
+      registerEvent( job.foundation, job=job )
 
     JobLog.fromJob( job, False )
 
@@ -295,13 +299,13 @@ def jobResults( job_id, cookie, data ):
   try:
     job = BaseJob.objects.get( pk=job_id )
   except BaseJob.DoesNotExist:
-    raise ValueError( 'Error saving job results: "Job Not Found"' )
+    raise ForemanException( 'JOB_NOT_FOUND', 'Error saving job results: "Job Not Found"' )
 
   job = job.realJob
   runner = pickle.loads( job.script_runner )
   result = runner.fromSubcontractor( cookie, data )
   if result != 'Accepted':  # it wasn't valid/taken, no point in saving anything
-    raise ValueError( 'Error saving job results: "{0}"'.format( result ) )
+    raise ForemanException( 'INVALID_RESULT', 'Error saving job results: "{0}"'.format( result ) )
 
   job.status = runner.status
   print( '----------------- job "{0}"   state: "{1}"   progress: "{2}"    message: "{3}"'.format( job, job.state, job.progress, job.message ) )
@@ -316,12 +320,12 @@ def jobError( job_id, cookie, msg ):
   try:
     job = BaseJob.objects.get( pk=job_id )
   except BaseJob.DoesNotExist:
-    raise ValueError( 'Error setting job to error: "Job Not Found"' )
+    raise ForemanException( 'JOB_NOT_FOUND', 'Error setting job to error: "Job Not Found"' )
 
   job = job.realJob
   runner = pickle.loads( job.script_runner )
   if cookie != runner.contractor_cookie:  # we do our own out of bad cookie check b/c this type of error dosen't need to be propagated to the script runner
-    raise ValueError( 'Error setting job to error: "Bad Cookie"' )
+    raise ForemanException( 'BAD_COOKIE', 'Error setting job to error: "Bad Cookie"' )
 
   job.message = msg[ 0:1024 ]
   job.state = 'error'

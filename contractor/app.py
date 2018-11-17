@@ -1,4 +1,6 @@
-from cinp.server_werkzeug import WerkzeugServer
+from django.conf import settings
+
+from cinp.server_werkzeug import WerkzeugServer, NoCINP
 
 from contractor.User.models import getUser
 from contractor.lib.config_handler import handler as config_handler
@@ -17,7 +19,7 @@ for item in os.scandir( plugin_dir ):
 
 
 def get_app( debug ):
-  app = WerkzeugServer( root_path='/api/v1/', root_version='0.9', debug=debug, get_user=getUser, cors_allow_list=[ '*' ] )
+  app = WerkzeugServer( root_path='/api/v1/', root_version='0.9', debug=debug, get_user=getUser, cors_allow_list=[ '*' ], debug_dump_location=settings.DEBUG_DUMP_LOCATION )
 
   app.registerNamespace( '/', 'contractor.User' )
   app.registerNamespace( '/', 'contractor.BluePrint' )
@@ -29,7 +31,10 @@ def get_app( debug ):
   app.registerNamespace( '/', 'contractor.PostOffice' )
 
   for plugin in plugin_list:
-    app.registerNamespace( '/', plugin )
+    try:
+      app.registerNamespace( '/', plugin )
+    except NoCINP:
+      pass
 
   app.registerPathHandler( '/config/', config_handler )
 

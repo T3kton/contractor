@@ -7,8 +7,8 @@ tscript_grammar = """
 script              = lines
 lines               = line*
 line                = ( expression / ws_s ) comment? nl_p
-expression          = ws_s ( jump_point / goto / function / ifelse / whiledo / block / assignment / infix / boolean / not_ / none / other / array_item / array / variable / time / number_float / number_int / text ) ws_s
-value_expression    = ws_s ( function / assignment / infix / boolean / not_ / none / array_item / array / variable / time / number_float / number_int / text ) ws_s
+expression          = ws_s ( jump_point / goto / function / ifelse / whiledo / block / assignment / infix / boolean / not_ / none / other / array_map_item / array / map / variable / time / number_float / number_int / text ) ws_s
+value_expression    = ws_s ( function / assignment / infix / boolean / not_ / none / array_map_item / array / map / variable / time / number_float / number_int / text ) ws_s
 constant_expression = ws_s ( boolean / none / time / number_float / number_int / text ) ws_s
 comment             = "#" ~"[^\\r\\n]*"
 jump_point          = ":" label
@@ -32,16 +32,17 @@ boolean             = ~"[Tt]rue" / ~"[Ff]alse"
 none                = ~"[Nn]one"
 
 array               = "[" ( ( value_expression "," )* value_expression )? ws_s "]"
+map                 = "{" paramater_map "}"
 
 reserved            = ( "begin" / "end" / "while" / "do" / "goto" / other ) !~"[a-zA-Z0-9_]"
 variable            = !reserved ( label "." )? label !"("
 
 function            = !reserved ( label "." )? label "(" paramater_map ")"
-array_item          = variable "[" value_expression "]"
+array_map_item      = variable "[" value_expression "]"
 
 infix               = "(" value_expression ( "^" / "*" / "/" / "%" / "+" / "-" / "&" / "|" / "and"/ "or" / "==" / "!=" / "<=" / ">=" / ">" / "<" ) value_expression ")"
 
-assignment          = ( array_item / variable ) ws_s "=" value_expression
+assignment          = ( array_map_item / variable ) ws_s "=" value_expression
 
 label               = ~"[a-zA-Z][a-zA-Z0-9_]+"
 ws_o                = ~"[ \t]"
@@ -64,8 +65,9 @@ class types():
   WHILE = 'W'
   IFELSE = 'I'
   VARIABLE = 'V'
-  ARRAY_ITEM = 'R'
+  ARRAY_MAP_ITEM = 'R'
   ARRAY = 'Y'
+  MAP = 'M'
   FUNCTION = 'F'
   ASSIGNMENT = 'A'
   OTHER = 'O'
@@ -256,6 +258,11 @@ class Parser( object ):
 
     return ( types.ARRAY, values )
 
+  def map( self, node ):
+    values = self._eval( node.children[1] )
+
+    return ( types.MAP, values )
+
   def variable( self, node ):
     if len( node.children[1].children ) > 0:
       module = node.children[1].children[0].children[0].text
@@ -264,13 +271,13 @@ class Parser( object ):
 
     return ( types.VARIABLE, { 'module': module, 'name': node.children[2].text } )
 
-  def array_item( self, node ):
+  def array_map_item( self, node ):
     variable = self._eval( node.children[0] )
     if variable[0] != types.VARIABLE:
       raise Exception( 'Can only index variables' )
 
     index = self._eval( node.children[2] )
-    return ( types.ARRAY_ITEM, { 'module': variable[1][ 'module' ], 'name': variable[1][ 'name' ], 'index': index } )
+    return ( types.ARRAY_MAP_ITEM, { 'module': variable[1][ 'module' ], 'name': variable[1][ 'name' ], 'index': index } )
 
   def infix( self, node ):
     return ( types.INFIX, { 'operator': node.children[2].text, 'left': self._eval( node.children[1] ), 'right': self._eval( node.children[3] ) } )
