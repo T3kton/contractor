@@ -579,7 +579,11 @@ class Runner( object ):
         if getter is None:
           raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
-        value = getter()
+        try:
+          value = getter()
+        except Exception as e:
+          _debugDump( 'getter "{0}" in module "{1}" error during setup on line "{2}"'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line ), e, self.ast, self.state )
+          raise UnrecoverableError( 'getter "{0}" in module "{1}" error during setup on line "{2}": "{3}"({4})'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line, str( e ), e.__class__.__name__) )
 
       try:
         self.state[ state_index ][2] = value
@@ -661,7 +665,11 @@ class Runner( object ):
         if getter is None:
           raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
-        value = getter()
+        try:
+          value = getter()
+        except Exception as e:
+          _debugDump( 'getter "{0}" in module "{1}" error during setup on line "{2}"'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line ), e, self.ast, self.state )
+          raise UnrecoverableError( 'getter "{0}" in module "{1}" error during setup on line "{2}": "{3}"({4})'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line, str( e ), e.__class__.__name__) )
 
       index = self.state[ state_index ][1][ 'index' ]
 
@@ -731,7 +739,11 @@ class Runner( object ):
         if setter is None:
           raise ParamaterError( 'target', '"{0}" of "{1}" is not settable'.format( target[ 'module' ], target[ 'name' ] ), self.cur_line )
 
-        setter( value )
+        try:
+          setter( value )
+        except Exception as e:
+          _debugDump( 'setter "{0}" in module "{1}" error on line "{2}"'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line ), e, self.ast, self.state )
+          raise UnrecoverableError( 'setter "{0}" in module "{1}" error on line "{2}": "{3}"({4})'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line, str( e ), e.__class__.__name__) )
 
     elif op_type == types.INFIX:  # infix type operators
       try:
@@ -844,8 +856,8 @@ class Runner( object ):
               raise e
 
             except Exception as e:
-              _debugDump( 'Handler "{0}" in module "{1}" error during setup on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )
-              raise UnrecoverableError( 'Handler "{0}" in module "{1}" error during setup on line "{2}": "{3}"({4})'.format( handler.__class__.__name__, module, self.cur_line, str( e ), e.__class__.__name__) )
+              _debugDump( 'Handler "{0}" in module "{1}" error on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )
+              raise UnrecoverableError( 'Handler "{0}" in module "{1}" error on line "{2}": "{3}"({4})'.format( handler.__class__.__name__, module, self.cur_line, str( e ), e.__class__.__name__) )
 
             self.contractor_cookie = str( uuid.uuid4() )
             self.state[ state_index ][1][ 'handler' ] = handler
@@ -862,14 +874,19 @@ class Runner( object ):
 
         if isinstance( handler, ExternalFunction ):  # else was allready run and set a value above
           handler._runner = self
-          ready = handler.ready
-          if ready is not True:
-            handler.run()
-            if ready is False:
-              ready = ''
-            raise Interrupt( ready )
+          try:
+            ready = handler.ready
+            if ready is not True:
+              handler.run()
+              if ready is False:
+                ready = ''
+              raise Interrupt( ready )
 
-          value = handler.value
+            value = handler.value
+
+          except Exception as e:
+            _debugDump( 'Handler "{0}" in module "{1}" error during ready/run/value on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )
+            raise UnrecoverableError( 'Handler "{0}" in module "{1}" error during ready/run/value on line "{2}": "{3}"({4})'.format( handler.__class__.__name__, module, self.cur_line, str( e ), e.__class__.__name__) )
 
         self.state[ state_index ][1] = None
         if isinstance( value, Exception ):
@@ -965,7 +982,12 @@ class Runner( object ):
 
     handler = operation[1][ 'handler' ]
     handler._runner = self
-    ( function_name, paramaters ) = handler.toSubcontractor()
+    try:
+      ( function_name, paramaters ) = handler.toSubcontractor()
+    except Exception as e:
+      _debugDump( 'Handler "{0}" in module "{1}" error during toSubcontractor on line "{2}"'.format( handler.__class__.__name__, operation[1][ 'module' ], self.cur_line ), e, self.ast, self.state )
+      return None  # TODO: log something?
+
     if paramaters is None:
       return None
 
@@ -990,7 +1012,12 @@ class Runner( object ):
 
     handler = operation[1][ 'handler' ]
     handler._runner = self
-    handler.fromSubcontractor( data )
+    try:
+      handler.fromSubcontractor( data )
+    except Exception as e:
+      _debugDump( 'Handler "{0}" in module "{1}" error during fromSubcontractor on line "{2}"'.format( handler.__class__.__name__, operation[1][ 'module' ], self.cur_line ), e, self.ast, self.state )
+      return 'Error'  # TODO: log something?
+
     operation[1][ 'dispatched' ] = False
 
     return 'Accepted'
@@ -1020,8 +1047,13 @@ class Runner( object ):
     handler = operation[1][ 'handler' ]
     try:
       handler.rollback()
+
     except NoRollback:
       return 'Rollback not possible'
+
+    except Exception as e:
+      _debugDump( 'Handler "{0}" in module "{1}" error starting rollback on line "{2}"'.format( handler.__class__.__name__, operation[1][ 'module' ], self.cur_line ), e, self.ast, self.state )
+      return 'Exception while trying to rollback'  # TODO: log?
 
     self.contractor_cookie = str( uuid.uuid4() )  # revoke any outstanding tasks, TODO: do we also rotate cookie on reset?  if not, should we rotate keys even if rollback is  not possible
     operation[1][ 'dispatched' ] = False

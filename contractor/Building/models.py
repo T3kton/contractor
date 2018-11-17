@@ -110,7 +110,7 @@ class Foundation( models.Model ):
               'site': ( lambda foundation: foundation.site.pk, None ),
               'blueprint': ( lambda foundation: foundation.blueprint.pk, None ),
               # 'ip_map': ( lambda foundation: foundation.ip_map, None ),
-              'interface_list': ( lambda foundation: [ i for i in foundation.networkinterface_set.all() ], None )  # redudntant?
+              'interface_list': ( lambda foundation: [ i for i in foundation.networkinterface_set.all().order_by( 'physical_location' ) ], None )  # redudntant?
             }
 
   @staticmethod
@@ -124,7 +124,7 @@ class Foundation( models.Model ):
               '_foundation_state': self.state,
               '_foundation_class_list': self.class_list,
               '_foundation_locator': self.locator,
-              '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all() ]
+              '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
             }
 
   @property
