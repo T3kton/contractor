@@ -6,6 +6,13 @@ Building
 
 Building requires running on a Ubuntu Xenial machine.
 
+install the required build tools, the PPA has a few required packages for building
+and installing::
+
+  add-apt-repository ppa:pnhowe/t3kton
+  apt update
+  apt install git respkg build-essential dpkg-dev debhelper python3-dev python3-setuptools nodejs npm nodejs-legacy liblzma-dev
+
 Create an empty directory, and cd into it
 
 first clone the contractor and related projects::
@@ -16,20 +23,12 @@ first clone the contractor and related projects::
   git clone https://github.com/T3kton/subcontractor_plugins.git
   git clone https://github.com/T3kton/resources.git
 
-install the required build tools, the PPA has a few required packages for building
-and installing::
-
-  add-apt-repository ppa:pnhowe/t3kton
-  apt update
-  apt install respkg build-essential dpkg-dev debhelper python3-dev python3-setuptools nodejs npm nodejs-legacy liblzma-dev
-
 now to build Contractor, first we need to get the node requirements for the UI, and fix a bug with react-toolbox::
 
   cd contractor
-  cd ui && npm install
-  sed s/"export Ripple from './tooltip';"/export { default as Ripple } from './ripple';/ -i ui/node_modules/react-toolbox/components/index.js
-  sed s/"export Tooltip from './tooltip';"/export { default as Tooltip } from './tooltip';/ -i ui/node_modules/react-toolbox/components/index.js
-  make
+  cd ui && npm install && cd ..
+  sed s/"export Ripple from '.\/ripple';"/"export { default as Ripple } from '.\/ripple';"/ -i ui/node_modules/react-toolbox/components/index.js
+  sed s/"export Tooltip from '.\/tooltip';"/"export { default as Tooltip } from '.\/tooltip';"/ -i ui/node_modules/react-toolbox/components/index.js
   make dpkg
   make respkg
   mv *.respkg ..
@@ -49,8 +48,8 @@ and build the resources, the make in the resources can take a while, you may wan
   mv *.respkg ..
   cd ..
 
-Setting Up
-----------
+Installing and Setup
+--------------------
 
 create an ubuntu xenial VM, name it "contractor", set the fqdn to "contractor.site1.local"
 Ideally it should be in a /24 network.  Ip addresses offsets from 2 to 20 will be
@@ -66,7 +65,7 @@ sqlite is also supported, and the prefered way for developmnet.  You can edit th
 /etc/contractor/master.conf to enable the sqlite option if desired.  Keep in mind
 that sqlite option requires making the database writeable by www-data.www-data.
 
-copy the .deb and .respkg files from the build server to the new contractor vm.
+copy the .deb and .respkg files from the build server to the target contractor vm.
 
 setup repos and install some required tools::
 
@@ -74,17 +73,17 @@ setup repos and install some required tools::
   apt update
   apt install bind9 postgresql-9.5
 
+NOTE: setupWizzard is going to re-write some bind config files, so don't edit them.  Until after, if needed.
+
 Install Packages::
 
-  dpkg -i contractor_0*.deb subcontractor_0*.deb contractor-plugins_0*.deb subcontractor-plugins_0*.deb
+  dpkg -i contractor_0*.deb contractor-plugins_0*.deb
   apt install -f
 
 Create the postgres db::
 
   su postgres -c "echo \"CREATE ROLE contractor WITH PASSWORD 'contractor' NOSUPERUSER NOCREATEDB NOCREATEROLE LOGIN;\" | psql"
   su postgres -c "createdb -O contractor contractor"
-
-NOTE: setupWizzard is going to re-write some bind config files, so don't edit them.  Until after, if needed.
 
 the ubuntu toml package is to old::
 
@@ -98,22 +97,23 @@ Now to create the db::
 Install base os config::
 
   respkg -i contractor-os-base_0.0.respkg
+  respkg -i contractor-ubuntu-base_0.0.respkg
 
 Now to enable plugins::
 
-  respkg contractor-plugins-manual
+  respkg -i contractor-plugins-manual_0.0.respkg
 
 if you are using vcenter::
 
-  respkg contractor-plugins-vcenter
+  respkg -i contractor-plugins-vcenter_0.0.respkg
 
 if you are using virtualbox::
 
-  respkg contractor-plugins-virtualbox
+  respkg -i contractor-plugins-virtualbox_0.0.respkg
 
 do manual plugin again so it can cross link to the other plugins::
 
-  respkg contractor-plugins-manual
+  respkg -i contractor-plugins-manual_0.0.respkg
 
 Now to setup some base info, and configure bind::
 
@@ -134,12 +134,16 @@ Now to disable the extra apache site::
   a2dissite 000-default
   service apache2 reload
 
+you might want to tweek /etc/apache2/sites-available/contractor.conf
+
 yon now take a look at the contractor ui at http://<contractor ip>
 
 now we will install subcontractor::
 
-  apt install subcontractor subcontractor-plugins tftpd-hpa
-  respkg contractor-ipxe
+  dpkg -i subcontractor_0*.deb subcontractor-plugins_0*.deb
+  apt install -f
+  apt install tftpd-hpa
+  respkg -i contractor-ipxe_0.0.respkg
 
 now edit /etc/subcontractor.conf
 enable the modules you want to use, remove the ';' and set the 0 to a 1.
@@ -163,9 +167,12 @@ optional, edit /etc/default/tftpd-hpa and add '-v ' to TFTP_OPTIONS.  This will
 cause tfptd to log transfers to syslog.  This can be helpfull in troubleshooting
 boot problems. Make sure to run `service tftpd-hpa restart` to reload.
 
-edit /etc/apache2/sites-available/contractor.conf
+to service static resources (such as the OS installers) you will need to setup
+a static web server.  First create the directory::
 
-/etc/apache2/sites-available/static.conf::
+  mkdir -p /var/www/static
+
+now create /etc/apache2/sites-available/static.conf with the following::
 
   <VirtualHost *:80>
     ServerName static
@@ -177,3 +184,8 @@ edit /etc/apache2/sites-available/contractor.conf
     ErrorLog ${APACHE_LOG_DIR}/static_error.log
     CustomLog ${APACHE_LOG_DIR}/static_access.log static_log
   </VirtualHost>
+
+now enable the site::
+
+  a2ensite static
+  service apache2 reload
