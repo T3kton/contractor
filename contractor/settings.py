@@ -6,6 +6,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# PXE host settings
+
+CONTRACTOR_HOST = 'http://contractor/'
+PXE_IMAGE_LOCATION = 'http://static/pxe/'
+
 # set to None to disable
 DEBUG_DUMP_LOCATION = '/tmp'
 

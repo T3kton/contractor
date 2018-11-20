@@ -155,6 +155,10 @@ class Foundation( models.Model ):
     return False
 
   @property
+  def complex( self ):
+    return None
+
+  @property
   def can_delete( self ):
     try:
       return self.structure.state != 'build'
@@ -289,7 +293,7 @@ class Structure( Networked ):
                '_structure_id': self.pk,
                '_structure_state': self.state,
                '_structure_config_uuid': self.config_uuid,
-               '_provisioning_interface': provisioning_interface.name,
+               '_provisioning_interface': provisioning_interface.name if provisioning_interface is not None else None,
                '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None
              }
 

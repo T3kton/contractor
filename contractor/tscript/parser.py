@@ -15,7 +15,7 @@ jump_point          = ":" label
 goto                = "goto " label
 paramater_map       = ( ( ws_s label ws_s "=" value_expression "," )* ws_s label ws_s "=" value_expression )? ws_s
 const_paramater_map = ( ( ws_s label ws_s "=" constant_expression "," )* ws_s label ws_s "=" constant_expression )? ws_s
-block               = "begin(" const_paramater_map ")" lines "end"
+block               = "begin(" const_paramater_map ")" lines ws_s "end"
 
 whiledo             = "while" value_expression ws_s "do" ws_s nl_s expression
 other               = ( "continue" / "break" / "pass" )

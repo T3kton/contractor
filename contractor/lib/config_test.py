@@ -374,11 +374,11 @@ def test_site():
                   '__contractor_host': 'http://contractor/',
                   '__pxe_location': 'http://static/pxe/',
                   '__pxe_template_location': 'http://contractor/config/pxe_template/',
-                  'site': 'site1'
+                  '_site': 'site1'
                 }
 
   assert _strip_base( getConfig( s1 ) ) == {
-                                               'site': 'site1'
+                                               '_site': 'site1'
                                             }
 
   s2 = Site( name='site2', description='test site 2', parent=s1 )
@@ -387,7 +387,7 @@ def test_site():
   s2.save()
 
   assert _strip_base( getConfig( s2 ) ) == {
-                                               'site': 'site2',
+                                               '_site': 'site2',
                                                'myval': 'this is a test',
                                                'stuff': 'this is only a test'
                                             }
@@ -397,7 +397,7 @@ def test_site():
   s1.save()
 
   assert _strip_base( getConfig( s2 ) ) == {
-                                               'site': 'site2',
+                                               '_site': 'site2',
                                                'myval': 'this is a test',
                                                'stuff': 'this is only a test',
                                                'under': 'or over'
@@ -409,7 +409,7 @@ def test_site():
   s2.save()
 
   assert _strip_base( getConfig( s2 ) ) == {
-                                               'site': 'site2',
+                                               '_site': 'site2',
                                                'myval': 'this is a test',
                                                'stuff': 'this is only a test',
                                                'under': 'going or over here'
@@ -435,11 +435,11 @@ def test_blueprint():
                   '__contractor_host': 'http://contractor/',
                   '__pxe_location': 'http://static/pxe/',
                   '__pxe_template_location': 'http://contractor/config/pxe_template/',
-                  'blueprint': 'fdnb1'
+                  '_blueprint': 'fdnb1'
                 }
 
   assert _strip_base( getConfig( fb1 ) ) == {
-                                              'blueprint': 'fdnb1'
+                                              '_blueprint': 'fdnb1'
                                             }
 
   fb2 = FoundationBluePrint( name='fdnb2', description='Foundation BluePrint 2' )
@@ -450,7 +450,7 @@ def test_blueprint():
   fb2.parent_list.add( fb1 )
 
   assert _strip_base( getConfig( fb2 ) ) == {
-                                              'blueprint': 'fdnb2',
+                                              '_blueprint': 'fdnb2',
                                               'the': 'Nice value'
                                             }
 
@@ -459,7 +459,7 @@ def test_blueprint():
   fb1.save()
 
   assert _strip_base( getConfig( fb2 ) ) == {
-                                              'blueprint': 'fdnb2',
+                                              '_blueprint': 'fdnb2',
                                               'the': 'Nice value',
                                               'from': 'inside the house'
                                             }
@@ -480,11 +480,11 @@ def test_blueprint():
                   '__contractor_host': 'http://contractor/',
                   '__pxe_location': 'http://static/pxe/',
                   '__pxe_template_location': 'http://contractor/config/pxe_template/',
-                  'blueprint': 'strb1'
+                  '_blueprint': 'strb1'
                 }
 
   assert _strip_base( getConfig( sb1 ) ) == {
-                                              'blueprint': 'strb1'
+                                              '_blueprint': 'strb1'
                                             }
 
   sb2 = StructureBluePrint( name='strb2', description='Structure BluePrint 2' )
@@ -493,13 +493,13 @@ def test_blueprint():
   sb2.parent_list.add( sb1 )
 
   assert _strip_base( getConfig( sb2 ) ) == {
-                                              'blueprint': 'strb2'
+                                              '_blueprint': 'strb2'
                                             }
 
   sb2.foundation_blueprint_list.add( fb2 )
 
   assert _strip_base( getConfig( sb2 ) ) == {
-                                              'blueprint': 'strb2'
+                                              '_blueprint': 'strb2'
                                             }
 
 
@@ -537,8 +537,8 @@ def test_foundation():
                   '_foundation_locator': 'fdn1',
                   '_foundation_state': 'planned',
                   '_foundation_type': 'Unknown',
-                  'blueprint': 'fdnb1',
-                  'site': 'site1'
+                  '_blueprint': 'fdnb1',
+                  '_site': 'site1'
                 }
 
   assert _strip_base( getConfig( f1 ) ) == {
@@ -548,8 +548,8 @@ def test_foundation():
                                             '_foundation_locator': 'fdn1',
                                             '_foundation_state': 'planned',
                                             '_foundation_type': 'Unknown',
-                                            'blueprint': 'fdnb1',
-                                            'site': 'site1'
+                                            '_blueprint': 'fdnb1',
+                                            '_site': 'site1'
                                            }
 
   fb1.config_values[ 'lucky' ] = 'blueprint'
@@ -563,8 +563,8 @@ def test_foundation():
                                             '_foundation_locator': 'fdn1',
                                             '_foundation_state': 'planned',
                                             '_foundation_type': 'Unknown',
-                                            'blueprint': 'fdnb1',
-                                            'site': 'site1',
+                                            '_blueprint': 'fdnb1',
+                                            '_site': 'site1',
                                             'lucky': 'blueprint'
                                            }
 
@@ -579,8 +579,8 @@ def test_foundation():
                                             '_foundation_locator': 'fdn1',
                                             '_foundation_state': 'planned',
                                             '_foundation_type': 'Unknown',
-                                            'blueprint': 'fdnb1',
-                                            'site': 'site1',
+                                            '_blueprint': 'fdnb1',
+                                            '_site': 'site1',
                                             'lucky': 'site'
                                            }
 
@@ -628,14 +628,15 @@ def test_structure():
                   '_foundation_locator': 'fdn1',
                   '_foundation_state': 'planned',
                   '_foundation_type': 'Unknown',
+                  '_provisioning_interface': None,
                   '_provisioning_interface_mac': None,
                   '_structure_id': 1,
                   '_structure_state': 'planned',
-                  'fqdn': 'struct1',
-                  'hostname': 'struct1',
-                  'interface_list': [],
-                  'blueprint': 'strb1',
-                  'site': 'site1'
+                  '_fqdn': 'struct1',
+                  '_hostname': 'struct1',
+                  '_interface_map': {},
+                  '_blueprint': 'strb1',
+                  '_site': 'site1'
                 }
 
   assert _strip_base( getConfig( str1 ) ) == {
@@ -645,14 +646,15 @@ def test_structure():
                                               '_foundation_locator': 'fdn1',
                                               '_foundation_state': 'planned',
                                               '_foundation_type': 'Unknown',
+                                              '_provisioning_interface': None,
                                               '_provisioning_interface_mac': None,
                                               '_structure_id': 1,
                                               '_structure_state': 'planned',
-                                              'fqdn': 'struct1',
-                                              'hostname': 'struct1',
-                                              'interface_list': [],
-                                              'blueprint': 'strb1',
-                                              'site': 'site1'
+                                              '_fqdn': 'struct1',
+                                              '_hostname': 'struct1',
+                                              '_interface_map': {},
+                                              '_blueprint': 'strb1',
+                                              '_site': 'site1'
                                              }
 
   fb1.config_values[ 'bob' ] = 'foundation blueprint'
@@ -666,14 +668,15 @@ def test_structure():
                                               '_foundation_locator': 'fdn1',
                                               '_foundation_state': 'planned',
                                               '_foundation_type': 'Unknown',
+                                              '_provisioning_interface': None,
                                               '_provisioning_interface_mac': None,
                                               '_structure_id': 1,
                                               '_structure_state': 'planned',
-                                              'fqdn': 'struct1',
-                                              'hostname': 'struct1',
-                                              'interface_list': [],
-                                              'blueprint': 'strb1',
-                                              'site': 'site1'
+                                              '_fqdn': 'struct1',
+                                              '_hostname': 'struct1',
+                                              '_interface_map': {},
+                                              '_blueprint': 'strb1',
+                                              '_site': 'site1'
                                              }
 
   sb1.config_values[ 'bob' ] = 'structure blueprint'
@@ -687,14 +690,15 @@ def test_structure():
                                              '_foundation_locator': 'fdn1',
                                              '_foundation_state': 'planned',
                                              '_foundation_type': 'Unknown',
+                                             '_provisioning_interface': None,
                                              '_provisioning_interface_mac': None,
                                              '_structure_id': 1,
                                              '_structure_state': 'planned',
-                                             'fqdn': 'struct1',
-                                             'hostname': 'struct1',
-                                             'interface_list': [],
-                                             'blueprint': 'strb1',
-                                             'site': 'site1',
+                                             '_fqdn': 'struct1',
+                                             '_hostname': 'struct1',
+                                             '_interface_map': {},
+                                             '_blueprint': 'strb1',
+                                             '_site': 'site1',
                                              'bob': 'structure blueprint'
                                             }
 
@@ -709,13 +713,14 @@ def test_structure():
                                              '_foundation_locator': 'fdn1',
                                              '_foundation_state': 'planned',
                                              '_foundation_type': 'Unknown',
+                                             '_provisioning_interface': None,
                                              '_provisioning_interface_mac': None,
                                              '_structure_id': 1,
                                              '_structure_state': 'planned',
-                                             'fqdn': 'struct1',
-                                             'hostname': 'struct1',
-                                             'interface_list': [],
-                                             'blueprint': 'strb1',
-                                             'site': 'site1',
+                                             '_fqdn': 'struct1',
+                                             '_hostname': 'struct1',
+                                             '_interface_map': {},
+                                             '_blueprint': 'strb1',
+                                             '_site': 'site1',
                                              'bob': 'structure'
                                             }

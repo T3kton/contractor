@@ -734,7 +734,7 @@ class Runner( object ):
         try:
           setter = module[ target[ 'name' ] ][1]  # index 1 is the setter
         except KeyError:
-          raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
+          raise NotDefinedError( '{0}" of "{1}'.format( target[ 'module' ], target[ 'name' ] ), self.cur_line )
 
         if setter is None:
           raise ParamaterError( 'target', '"{0}" of "{1}" is not settable'.format( target[ 'module' ], target[ 'name' ] ), self.cur_line )
@@ -742,8 +742,8 @@ class Runner( object ):
         try:
           setter( value )
         except Exception as e:
-          _debugDump( 'setter "{0}" in module "{1}" error on line "{2}"'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line ), e, self.ast, self.state )
-          raise UnrecoverableError( 'setter "{0}" in module "{1}" error on line "{2}": "{3}"({4})'.format( op_data[ 'name' ], op_data[ 'module' ], self.cur_line, str( e ), e.__class__.__name__) )
+          _debugDump( 'setter "{0}" in module "{1}" error on line "{2}"'.format( target[ 'name' ], target[ 'module' ], self.cur_line ), e, self.ast, self.state )
+          raise UnrecoverableError( 'setter "{0}" in module "{1}" error on line "{2}": "{3}"({4})'.format( target[ 'name' ], target[ 'module' ], self.cur_line, str( e ), e.__class__.__name__) )
 
     elif op_type == types.INFIX:  # infix type operators
       try:
@@ -852,7 +852,7 @@ class Runner( object ):
             try:
               handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
 
-            except ( ParamaterError, ) as e:
+            except ( ParamaterError, Pause, ExecutionError, UnrecoverableError, Interrupt ) as e:
               raise e
 
             except Exception as e:
@@ -883,6 +883,9 @@ class Runner( object ):
               raise Interrupt( ready )
 
             value = handler.value
+
+          except( Pause, ExecutionError, UnrecoverableError, Interrupt ) as e:
+            raise e
 
           except Exception as e:
             _debugDump( 'Handler "{0}" in module "{1}" error during ready/run/value on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )

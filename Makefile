@@ -32,7 +32,7 @@ ui_files := $(foreach file,$(wildcard ui/src/www/*),ui/build/$(notdir $(file)))
 build-ui: ui/build/bundle.js $(ui_files)
 
 ui/build/bundle.js: $(wildcard ui/src/frontend/component/*) ui/src/frontend/index.js
-	# cd ui ; npm install
+	# cd ui && npm install
 	cd ui && npm run build
 
 ui/build/%:
@@ -75,7 +75,7 @@ dpkg-distros:
 	echo xenial
 
 dpkg-requires:
-	echo dpkg-dev debhelper cdbs python3-dev python3-setuptools
+	echo dpkg-dev debhelper python3-dev python3-setuptools nodejs npm nodejs-legacy
 
 dpkg:
 	dpkg-buildpackage -b -us -uc
