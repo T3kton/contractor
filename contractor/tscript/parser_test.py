@@ -27,10 +27,22 @@ def test_begin():
   node = parse( '10' )
   assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 1 ) ] } )
 
+  node = parse( ' 10' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 1 ) ] } )
+
+  node = parse( '10\n' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 1 ) ] } )
+
+  node = parse( '   10\n' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 1 ) ] } )
+
   node = parse( '10\n42' )
   assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 1 ), ( 'L', ( 'C', 42 ), 2 ) ] } )
 
   node = parse( '10\n  42  \n21' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 1 ), ( 'L', ( 'C', 42 ), 2 ), ( 'L', ( 'C', 21 ), 3 ) ] } )
+
+  node = parse( '   10\n  42  \n21  ' )
   assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 1 ), ( 'L', ( 'C', 42 ), 2 ), ( 'L', ( 'C', 21 ), 3 ) ] } )
 
   node = parse( 'begin()end' )
@@ -73,6 +85,18 @@ def test_begin():
                    ] } )
 
   node = parse( 'begin()\n10\nbegin()\n42\nend\nend' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ), ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 42 ), 4 ) ] } ), 3 ) ] } ), 1 )
+                   ] } )
+
+  node = parse( 'begin()\n  10\nend' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ) ] } ), 1 )
+                   ] } )
+
+  node = parse( 'begin()\n  10\n  begin()\n    42\n  end\nend' )
   assert node == ( 'S', { '_children':
                    [
                        ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ), ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 42 ), 4 ) ] } ), 3 ) ] } ), 1 )

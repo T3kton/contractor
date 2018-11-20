@@ -149,8 +149,12 @@ def loadScript( name, target ):
 
   script.description = target.get( 'description', '' )
   script.script = target.get( 'script', '' )
-  script.full_clean()
-  script.save()
+  try:
+    script.full_clean()
+    script.save()
+  except Exception as e:
+    print( 'Exception "{0}" while loading script "{1}"'.format( e, script.name ) )
+    sys.exit( 1 )
 
 
 def loadPXE( name, target ):
@@ -162,8 +166,12 @@ def loadPXE( name, target ):
 
   pxe.boot_script = target.get( 'boot_script', '' )
   pxe.template = target.get( 'template', '' )
-  pxe.full_clean()
-  pxe.save()
+  try:
+    pxe.full_clean()
+    pxe.save()
+  except Exception as e:
+    print( 'Exception "{0}" while loading PXE "{1}"'.format( e, pxe.name ) )
+    sys.exit( 1 )
 
 
 def loadSFLinks( link_list ):

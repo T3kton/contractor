@@ -11,6 +11,9 @@ ALLOWED_HOSTS = []
 CONTRACTOR_HOST = 'http://contractor/'
 PXE_IMAGE_LOCATION = 'http://static/pxe/'
 
+# set to None to disable
+DEBUG_DUMP_LOCATION = '/tmp'
+
 # get plugins
 
 import os
