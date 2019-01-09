@@ -98,17 +98,16 @@ addr1_block.full_clean()
 addr1_block.save()
 
 print( 'reserving address offsets from 2 - 20...')
-for i in range( 2, 20 ):
+for i in range( 2, 21 ):
   addr = ReservedAddress( address_block=addr1_block, offset=i, reason='network reserved' )
   addr.full_clean()
   addr.save()
 
 print( 'using offsets 21 - 29 for dynamic pool...' )
-for i in range( 21, 29 ):
+for i in range( 21, 30 ):
   addr = DynamicAddress( address_block=addr1_block, offset=i )
   addr.full_clean()
   addr.save()
-
 
 print( 'contractor entry...' )
 fdn_dev = ManualFoundation( site=s1, blueprint=fbp_manual, locator='contractor' )

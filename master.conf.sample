@@ -15,7 +15,6 @@ PXE_IMAGE_LOCATION = 'http://static/pxe/'
 DEBUG_DUMP_LOCATION = '/tmp'
 
 # get plugins
-
 import os
 from contractor import plugins
 
@@ -24,10 +23,10 @@ plugin_dir = os.path.dirname( plugins.__file__ )
 for item in os.scandir( plugin_dir ):
   if not item.is_dir() or not os.path.exists( os.path.join( plugin_dir, item.name, 'models.py' ) ):
     continue
+
   plugin_list.append( 'contractor.plugins.{0}'.format( item.name ) )
 
 # Application definition
-
 INSTALLED_APPS = (
     'contractor.User',
     'contractor.Directory',
@@ -39,22 +38,9 @@ INSTALLED_APPS = (
     'contractor.SubContractor',
     'contractor.PostOffice',
     *plugin_list,
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
 )
 
 MIDDLEWARE_CLASSES = (
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
 )
 
 ROOT_URLCONF = 'contractor.urls'
@@ -110,11 +96,6 @@ USE_L10N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.8/howto/static-files/
-
-STATIC_URL = '/static/'
 
 # Bind Zone file Settings
 # NOTE: email should have a '.' in place of the '@', in most cases

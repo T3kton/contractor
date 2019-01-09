@@ -169,13 +169,14 @@ class NetworkInterface( models.Model ):
           tagged = True
 
         result[ 'address_list' ].append( {
-                                           'address': address.ip_address,
+                                           'address': address.ip_address,  # set to 'dhcp' for dhcp
                                            'netmask': address.netmask,
                                            'prefix': address.prefix,
                                            'network': address.network,
                                            'gateway': address.address_block.gateway,
                                            'primary': address.is_primary,
                                            'sub_interface': None,
+                                           'auto': True,
                                            'vlan': vlan,
                                            'tagged': tagged,
                                            'mtu': 1500
