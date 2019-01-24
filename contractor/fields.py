@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 
 from contractor.lib.ip import StrToIp, IpToStr
 
-name_regex = re.compile( '^[a-zA-Z0-9][a-zA-Z0-9_\-]*$' )  # if  this changes, update architect
+name_regex = re.compile( '^[a-zA-Z0-9][a-zA-Z0-9_\-]*$' )  # if this changes, update architect, and config_handler uri regex
 hostname_regex = re.compile( '^[a-z0-9][a-z0-9\-]*[a-z0-9]$' )  # '.' is not allowed, can cause trouble with the DNS generations stuff, must also be lowercase (DNS is non case sensitive)
 config_name_regex = re.compile( '^[<>\-~]?([a-zA-Z0-9]+:)?[a-zA-Z0-9][a-zA-Z0-9_\-]*$' )
 JSON_MAGIC = '\x02JSON\x03'

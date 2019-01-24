@@ -4,7 +4,7 @@ import string
 from datetime import datetime, timedelta, timezone
 
 from django.db import models
-from django.contrib.auth import AnonymousUser
+from django.contrib.auth.models import AnonymousUser
 
 from cinp.orm_django import DjangoCInP as CInP
 

@@ -13,12 +13,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Entry',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', primary_key=True, serialize=False, auto_created=True)),
+                ('id', models.AutoField(primary_key=True, serialize=False, auto_created=True, verbose_name='ID')),
                 ('type', models.CharField(max_length=20, choices=[('MX', 'MX'), ('SRV', 'SRV'), ('CNAME', 'CNAME'), ('TXT', 'TXT')])),
                 ('name', models.CharField(max_length=255)),
-                ('priority', models.IntegerField(blank=True, null=True)),
-                ('weight', models.IntegerField(blank=True, null=True)),
-                ('port', models.IntegerField(blank=True, null=True)),
+                ('priority', models.IntegerField(null=True, blank=True)),
+                ('weight', models.IntegerField(null=True, blank=True)),
+                ('port', models.IntegerField(null=True, blank=True)),
                 ('target', models.CharField(max_length=255)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Zone',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', primary_key=True, serialize=False, auto_created=True)),
+                ('id', models.AutoField(primary_key=True, serialize=False, auto_created=True, verbose_name='ID')),
                 ('name', models.CharField(max_length=100)),
                 ('ttl', models.IntegerField(default=3600)),
                 ('refresh', models.IntegerField(default=86400)),
@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
                 ('minimum', models.IntegerField(default=172800)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('parent', models.ForeignKey(null=True, to='Directory.Zone', blank=True)),
+                ('parent', models.ForeignKey(null=True, blank=True, to='Directory.Zone')),
             ],
         ),
         migrations.AddField(

@@ -37,7 +37,7 @@ class BuildingException( ValueError ):
 
 @cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
 class Foundation( models.Model ):
-  locator = models.CharField( max_length=100, primary_key=True )
+  locator = models.CharField( max_length=100, primary_key=True )  # if this changes make sure to update architect - instance - foundation_id
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
   id_map = JSONField( blank=True )  # ie a dict of asset, chassis, system, etc types
