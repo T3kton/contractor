@@ -106,12 +106,12 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(blank=True, null=True, to='Utilities.AddressBlock'),
         ),
         migrations.CreateModel(
-            name='AggragatedNetworkInterface',
+            name='AggregatedNetworkInterface',
             fields=[
                 ('abstractnetworkinterface_ptr', models.OneToOneField(auto_created=True, primary_key=True, parent_link=True, to='Utilities.AbstractNetworkInterface', serialize=False)),
                 ('paramaters', contractor.fields.MapField(default={})),
                 ('master_interface', models.ForeignKey(related_name='+', to='Utilities.NetworkInterface')),
-                ('slaves', models.ManyToManyField(to='Utilities.NetworkInterface', related_name='_aggragatednetworkinterface_slaves_+')),
+                ('slaves', models.ManyToManyField(to='Utilities.NetworkInterface', related_name='_aggregatednetworkinterface_slaves_+')),
             ],
             bases=('Utilities.abstractnetworkinterface',),
         ),

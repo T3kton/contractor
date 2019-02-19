@@ -83,9 +83,9 @@ class Job extends React.Component
       {
         uri = '/api/v1/Foreman/StructureJob:' + props.id + ':';
       }
-      if( props.jobType == 'dependancy' )
+      if( props.jobType == 'dependency' )
       {
-        uri = '/api/v1/Foreman/DependancyJob:' + props.id + ':';
+        uri = '/api/v1/Foreman/DependencyJob:' + props.id + ':';
       }
       if( uri === null )
       {
@@ -106,9 +106,9 @@ class Job extends React.Component
           {
             data.structure = CInP.extractIds( data.structure )[0];
           }
-          if ( data.dependancy !== undefined )
+          if ( data.dependency !== undefined )
           {
-            data.dependancy = CInP.extractIds( data.dependancy )[0];
+            data.dependency = CInP.extractIds( data.dependency )[0];
           }
 
           var canPause = false;
@@ -186,7 +186,7 @@ class Job extends React.Component
             id = CInP.extractIds( id )[0];
             job_list.push( { id: id,
                              script: job.script_name,
-                             dependancy: job.dependancy,
+                             dependency: job.dependency,
                              message: job.message,
                              progress: job.progress,
                              state: job.state,
@@ -291,12 +291,12 @@ class Job extends React.Component
             </TableRow>
           ) ) }
         </Table>
-        <h3>Dependancy Jobs</h3>
+        <h3>Dependency Jobs</h3>
         <Table selectable={ false } multiSelectable={ false }>
           <TableHead>
             <TableCell numeric>Id</TableCell>
             <TableCell>Script</TableCell>
-            <TableCell>Dependancy</TableCell>
+            <TableCell>Dependency</TableCell>
             <TableCell>Message</TableCell>
             <TableCell>Progress</TableCell>
             <TableCell>State</TableCell>
@@ -307,7 +307,7 @@ class Job extends React.Component
             <TableRow>
               <TableCell numeric><Link to={ '/job/d/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.script }</TableCell>
-              <TableCell>{ item.dependancy }</TableCell>
+              <TableCell>{ item.dependency }</TableCell>
               <TableCell>{ item.message }</TableCell>
               <TableCell>{ item.progress }</TableCell>
               <TableCell>{ item.state }</TableCell>

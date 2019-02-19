@@ -10,7 +10,7 @@ class Foundation extends React.Component
   state = {
       foundation_list: [],
       foundation: null,
-      foundationDependancy_list: []
+      foundationDependency_list: []
   };
 
   componentDidMount()
@@ -39,17 +39,17 @@ class Foundation extends React.Component
       props.detailGetDependancies( props.id )
         .then( ( result ) =>
         {
-          var dependancy_list = [];
+          var dependency_list = [];
           for ( var id in result.data )
           {
-            var dependancy = result.data[ id ];
-            dependancy_list.push( { id: CInP.extractIds( id )[0],
-                                    foundation: CInP.extractIds( dependancy.foundation )[0],
-                                    structure: CInP.extractIds( dependancy.structure )[0],
-                                    state: dependancy.state,
+            var dependency = result.data[ id ];
+            dependency_list.push( { id: CInP.extractIds( id )[0],
+                                    foundation: CInP.extractIds( dependency.foundation )[0],
+                                    structure: CInP.extractIds( dependency.structure )[0],
+                                    state: dependency.state,
                                   } );
           }
-          this.setState( { foundationDependancy_list: dependancy_list } );
+          this.setState( { foundationDependency_list: dependency_list } );
         } );
     }
     else
@@ -109,8 +109,8 @@ class Foundation extends React.Component
               </table>
               <h3>Depends on</h3>
               <ul>
-              { this.state.foundationDependancy_list.map( ( item ) => (
-                <li key={ item.id }><Link to={ '/dependancy/' + item.id }>{ item.id }</Link> - Foundation: { item.foundation }  Structure: {  item.structure } Status: { item.state }</li>
+              { this.state.foundationDependency_list.map( ( item ) => (
+                <li key={ item.id }><Link to={ '/dependency/' + item.id }>{ item.id }</Link> - Foundation: { item.foundation }  Structure: {  item.structure } Status: { item.state }</li>
               ) ) }
               </ul>
             </div>

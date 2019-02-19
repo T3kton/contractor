@@ -7,7 +7,7 @@ from cinp.orm_django import DjangoCInP as CInP
 
 from contractor.fields import JSONField
 from contractor.Site.models import Site
-from contractor.Building.models import Foundation, Structure, Dependancy
+from contractor.Building.models import Foundation, Structure, Dependency
 
 # stuff for getting handeling tasks, everything here should be ephemerial, only things that are in progress/flight
 
@@ -53,7 +53,7 @@ class BaseJob( models.Model ):
       pass
 
     try:
-      return self.dependancyjob
+      return self.dependencyjob
     except ObjectDoesNotExist:
       pass
 
@@ -183,11 +183,11 @@ class BaseJob( models.Model ):
       pass
 
     try:
-      dependancy = self.dependancyjob.dependancy
-      if dependancy.script_structure is not None:
-        blueprint = dependancy.script_structure.blueprint
+      dependency = self.dependencyjob.dependency
+      if dependency.script_structure is not None:
+        blueprint = dependency.script_structure.blueprint
       else:
-        blueprint = dependancy.structure.blueprint
+        blueprint = dependency.structure.blueprint
     except ObjectDoesNotExist:
       pass
 
@@ -360,18 +360,18 @@ class StructureJob( BaseJob ):
 
 
 @cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
-class DependancyJob( BaseJob ):
-  dependancy = models.OneToOneField( Dependancy, editable=False, on_delete=models.CASCADE )
+class DependencyJob( BaseJob ):
+  dependency = models.OneToOneField( Dependency, editable=False, on_delete=models.CASCADE )
 
   def done( self ):
-    if self.script_name == self.dependancy.destroy_script_name:
-      self.dependancy.setDestroyed()
+    if self.script_name == self.dependency.destroy_script_name:
+      self.dependency.setDestroyed()
 
-    elif self.script_name == self.dependancy.create_script_name:
-      self.dependancy.setBuilt()
+    elif self.script_name == self.dependency.create_script_name:
+      self.dependency.setBuilt()
 
     else:
-      raise ValueError( 'Sciprt Name "{0}" does not match the create nor destroy script names' )  # Dependancy jobs can only create/destory, no named/utility jobs
+      raise ValueError( 'Sciprt Name "{0}" does not match the create nor destroy script names' )  # dependency jobs can only create/destory, no named/utility jobs
 
   @cinp.action()
   def pause( self ):
@@ -418,7 +418,7 @@ class DependancyJob( BaseJob ):
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
-    return DependancyJob.objects.filter( dependancy__foundation__site=site )
+    return DependencyJob.objects.filter( dependency__foundation__site=site )
 
   @cinp.check_auth()
   @staticmethod
@@ -426,7 +426,7 @@ class DependancyJob( BaseJob ):
     return True
 
   def __str__( self ):
-    return 'DependancyJob #{0} for "{1}" in "{2}"'.format( self.pk, self.dependancy.pk, self.dependancy.site.pk )
+    return 'DependencyJob #{0} for "{1}" in "{2}"'.format( self.pk, self.dependency.pk, self.dependency.site.pk )
 
 
 @cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
@@ -455,10 +455,10 @@ class JobLog( models.Model ):
       log.site = job.foundation.site
       log.target_description = job.foundation.description
 
-    elif isinstance( job, DependancyJob ):
-      log.target_class = 'Dependancy'
-      log.site = job.dependancy.site
-      log.target_description = job.dependancy.description
+    elif isinstance( job, DependencyJob ):
+      log.target_class = 'Dependency'
+      log.site = job.dependency.site
+      log.target_description = job.dependency.description
 
     else:
       raise ValueError( 'Unknown Job Type "{0}"'.format( job.__class__.__name__ ) )

@@ -1,9 +1,9 @@
 import pickle
 from django.db.models import Q
 
-from contractor.Building.models import Foundation, Structure, Dependancy
+from contractor.Building.models import Foundation, Structure, Dependency
 from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin
-from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependancyJob, JobLog, ForemanException
+from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependencyJob, JobLog, ForemanException
 from contractor.PostOffice.lib import registerEvent
 
 from contractor.tscript.parser import parse
@@ -12,12 +12,12 @@ from contractor.tscript.runner import Runner, Pause, ExecutionError, Unrecoverab
 
 RUNNER_MODULE_LIST = []
 
-# TODO: make sure a dependancy can't create a job for a structure with a job, or a structure that is not built
+# TODO: make sure a dependency can't create a job for a structure with a job, or a structure that is not built
 
 
 def createJob( script_name, target ):
-  if isinstance( target, Dependancy ) and script_name not in ( 'create', 'destroy' ):
-    raise ForemanException( 'INVALID_SCRIPT', 'Dependancy Job can only have a create or destroy script_name' )
+  if isinstance( target, Dependency ) and script_name not in ( 'create', 'destroy' ):
+    raise ForemanException( 'INVALID_SCRIPT', 'Dependency Job can only have a create or destroy script_name' )
 
   if script_name == 'create':
     if target.state == 'built':
@@ -31,7 +31,7 @@ def createJob( script_name, target ):
       if target.foundation.state != 'built':
         raise ForemanException( 'FOUNDATION_NOT_BUILT', 'can not do create job until Foundation supporting Structure is built' )
 
-    elif isinstance( target, Dependancy ):
+    elif isinstance( target, Dependency ):
       script_name = target.create_script_name
       if script_name is None:
         target.setBuilt()
@@ -41,7 +41,7 @@ def createJob( script_name, target ):
     if target.state != 'built':
       raise ForemanException( 'NOT_BUILT', 'can only destroy built targets' )
 
-    if isinstance( target, Dependancy ):
+    if isinstance( target, Dependency ):
       script_name = target.destroy_script_name
       if script_name is None:
         target.setDestroyed()
@@ -73,16 +73,16 @@ def createJob( script_name, target ):
     obj_list.append( FoundationPlugin( target ) )
     obj_list.append( ConfigPlugin( target ) )
 
-  elif isinstance( target, Dependancy ):
-    if target.dependancy is not None:
-      if target.dependancy.state != 'built':
-        raise ForemanException( 'DEPENDANT_NOT_BUILT', 'Can not start Dependancy job until Dependancy is built')
+  elif isinstance( target, Dependency ):
+    if target.dependency is not None:
+      if target.dependency.state != 'built':
+        raise ForemanException( 'DEPENDANT_NOT_BUILT', 'Can not start Dependency job until Dependency is built')
     else:
       if target.structure.state != 'built':
-        raise ForemanException( 'STRUCTURE_NO_BUILT', 'Can not start Dependancy job until Structure is built')
+        raise ForemanException( 'STRUCTURE_NO_BUILT', 'Can not start Dependency job until Structure is built')
 
-    job = DependancyJob()
-    job.dependancy = target
+    job = DependencyJob()
+    job.dependency = target
     structure = None
     if target.script_structure:
       structure = target.script_structure
@@ -94,7 +94,7 @@ def createJob( script_name, target ):
     obj_list.append( ConfigPlugin( structure ) )
 
   else:
-    raise ForemanException( 'INVALID_TARGET', 'target must be a Structure, Foundation, or Dependancy' )
+    raise ForemanException( 'INVALID_TARGET', 'target must be a Structure, Foundation, or Dependency' )
 
   job.site = target.site
   blueprint = target.blueprint
@@ -131,7 +131,7 @@ def createJob( script_name, target ):
   return job.pk
 
 
-# auto job creation checklist  TODO: add the dependancy info in this checklist
+# auto job creation checklist  TODO: add the dependency info in this checklist
 # 1 - Any Foundation that can be auto located, if locating is possible, it can be
 #         done without foundation dependancies
 #         (located_at is null, built_at is also null)
@@ -147,7 +147,7 @@ def createJob( script_name, target ):
 #   ---> Create Structure Build Job
 #
 # NOTE:  Foundations that rely on a Complex should check the complex's build state
-#        when evaluating auto_locate, ie: use auto_locate as a "dependancy" check on
+#        when evaluating auto_locate, ie: use auto_locate as a "dependency" check on
 #        the complex.
 
 def processJobs( site, module_list, max_jobs=10 ):
@@ -155,24 +155,24 @@ def processJobs( site, module_list, max_jobs=10 ):
     max_jobs = 100
 
   # see if there are any planned dependancies who's structures are done
-  for dependancy in Dependancy.objects.filter( built_at__isnull=True ).filter(
+  for dependency in Dependency.objects.filter( built_at__isnull=True ).filter(
                                       Q( structure__built_at__isnull=False ) |
-                                      Q( dependancy__built_at__isnull=False )
+                                      Q( dependency__built_at__isnull=False )
                                     ).filter(
                                       Q( foundation__site=site ) |
                                       Q( foundation__isnull=True, script_structure__site=site ) |
-                                      Q( foundation__isnull=True, script_structure__isnull=True, dependancy__structure__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__isnull=True, dependency__structure__site=site ) |
                                       Q( foundation__isnull=True, script_structure__isnull=True, structure__site=site )
                                     ):
     try:
-      DependancyJob.objects.get( dependancy=dependancy )
+      DependencyJob.objects.get( dependency=dependency )
       continue  # allready has a job, skip it
-    except DependancyJob.DoesNotExist:
+    except DependencyJob.DoesNotExist:
       pass
 
-    createJob( 'create', target=dependancy )  # createJob will map 'create' to the create_script_name
+    createJob( 'create', target=dependency )  # createJob will map 'create' to the create_script_name
 
-  # see if there are any planned foundatons that can be auto located - TODO: Can something with a non built dependancy auto-locate, I think for now yes.
+  # see if there are any planned foundatons that can be auto located - TODO: Can something with a non built dependency auto-locate, I think for now yes.
   for foundation in Foundation.objects.filter( site=site, located_at__isnull=True, built_at__isnull=True ):
     foundation = foundation.subclass
     if not foundation.can_auto_locate:
@@ -181,7 +181,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     foundation.setLocated()
 
   # see if there are any located foundations that need to be prepared, with out dependancies
-  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True, dependancy__isnull=True ):
+  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True, dependency__isnull=True ):
     foundation = foundation.subclass
     try:
       FoundationJob.objects.get( foundation=foundation )
@@ -192,7 +192,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     createJob( 'create', target=foundation )
 
   # see if there are any located foundations that need to be prepared, with completed dependancies
-  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True, dependancy__built_at__isnull=False ):
+  for foundation in Foundation.objects.filter( site=site, located_at__isnull=False, built_at__isnull=True, dependency__built_at__isnull=False ):
     # TODO: check to see if the depency has a job that can be started
 
     foundation = foundation.subclass

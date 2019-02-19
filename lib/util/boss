@@ -9,7 +9,7 @@ import sys
 import argparse
 import pprint
 from django.core.exceptions import ObjectDoesNotExist
-from contractor.Building.models import Foundation, Structure, Dependancy
+from contractor.Building.models import Foundation, Structure, Dependency
 from contractor.Foreman.lib import createJob
 from contractor.lib.config import getConfig
 from contractor.PostOffice.lib import registerEvent
@@ -28,9 +28,9 @@ def _get_job( target ):
     except ( AttributeError, ObjectDoesNotExist ):
       pass
 
-  if isinstance( target, Dependancy ):
+  if isinstance( target, Dependency ):
     try:
-      return target.dependancyjob
+      return target.dependencyjob
     except ( AttributeError, ObjectDoesNotExist ):
       pass
 
@@ -54,7 +54,7 @@ def main():
   type_group = group.add_mutually_exclusive_group( required=True )
   type_group.add_argument( '-s', '--structure', help='boss arround a structure', action='store_true' )
   type_group.add_argument( '-f', '--foundation', help='boss arround a foundation', action='store_true' )
-  type_group.add_argument( '-d', '--dependancy', help='boss arround a dependancy', action='store_true' )
+  type_group.add_argument( '-d', '--dependency', help='boss arround a dependency', action='store_true' )
 
   group = parser.add_argument_group( 'task' )
   task_group = group.add_mutually_exclusive_group()
@@ -94,11 +94,11 @@ def main():
     except Structure.DoesNotExist:
       print( 'Unable to find Structure "{0}"'.format( args.id ) )
 
-  elif args.dependancy:
+  elif args.dependency:
     try:
-      target = Dependancy.objects.get( pk=args.id )
+      target = Dependency.objects.get( pk=args.id )
     except Structure.DoesNotExist:
-      print( 'Unable to find Dependancy "{0}"'.format( args.id ) )
+      print( 'Unable to find Dependency "{0}"'.format( args.id ) )
 
   else:
     print( '-f, -s, -d must be specified' )

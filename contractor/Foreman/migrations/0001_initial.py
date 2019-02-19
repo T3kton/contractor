@@ -40,10 +40,10 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name='DependancyJob',
+            name='DependencyJob',
             fields=[
                 ('basejob_ptr', models.OneToOneField(auto_created=True, primary_key=True, to='Foreman.BaseJob', parent_link=True, serialize=False)),
-                ('dependancy', models.OneToOneField(editable=False, to='Building.Dependancy')),
+                ('dependency', models.OneToOneField(editable=False, to='Building.Dependency')),
             ],
             bases=('Foreman.basejob',),
         ),

@@ -9,7 +9,7 @@ django.setup()
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Site.models import Site
 from contractor.Directory.models import Zone
-from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependancy
+from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependency
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, DynamicAddress, ReservedAddress
 from contractor_plugins.Manual.models import ManualFoundation
 from contractor_plugins.AMT.models import AMTFoundation
@@ -228,7 +228,7 @@ for hostname in AMT_devices:
   addr.full_clean()
   addr.save()
 
-dep = Dependancy( structure=strct, link='soft' )
+dep = Dependency( structure=strct, link='soft' )
 dep.script_structure = strcti
 dep.create_script_name = 'level2'
 dep.full_clean()
@@ -293,7 +293,7 @@ for hostname in esx_vms:
   addr.full_clean()
   addr.save()
 
-dep = Dependancy( structure=strct, link='soft' )
+dep = Dependency( structure=strct, link='soft' )
 dep.script_structure = strcti
 dep.create_script_name = 'level3'
 dep.full_clean()
@@ -457,13 +457,13 @@ strctf.config_values[ 'body' ] = 'Job Complete!\n'
 strctf.full_clean()
 strctf.save()
 
-dep = Dependancy( structure=strct, link='soft', foundation=fdn )
+dep = Dependency( structure=strct, link='soft', foundation=fdn )
 dep.script_structure = strcti
 dep.create_script_name = 'level4'
 dep.full_clean()
 dep.save()
 
-dep = Dependancy( structure=strctf, link='soft' )
+dep = Dependency( structure=strctf, link='soft' )
 dep.script_structure = strcti
 dep.create_script_name = 'level5'
 dep.full_clean()

@@ -12,7 +12,7 @@ django.setup()
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint, Script
 from contractor.Site.models import Site
 from contractor.Directory.models import Zone
-from contractor.Building.models import Structure, ComplexStructure, Dependancy
+from contractor.Building.models import Structure, ComplexStructure, Dependency
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
 from contractor.plugins.Manual.models import ManualFoundation, ManualComplex, ManualComplexedFoundation
 
@@ -137,7 +137,7 @@ for i in range( 1, 11 ):
   iface.full_clean()
   iface.save()
 
-  dep = Dependancy( foundation=fdn, structure=str_switch, link='soft' )
+  dep = Dependency( foundation=fdn, structure=str_switch, link='soft' )
   dep.full_clean()
   dep.save()
 
@@ -164,7 +164,7 @@ iface.physical_location = 'eth0'
 iface.full_clean()
 iface.save()
 
-dep = Dependancy( foundation=fdn_strmgr, structure=str_switch, link='soft' )
+dep = Dependency( foundation=fdn_strmgr, structure=str_switch, link='soft' )
 dep.full_clean()
 dep.save()
 
@@ -189,7 +189,7 @@ for i in range( 1, 5 ):
   iface.full_clean()
   iface.save()
 
-  dep = Dependancy( foundation=fdn, structure=str_switch, link='soft' )
+  dep = Dependency( foundation=fdn, structure=str_switch, link='soft' )
   dep.full_clean()
   dep.save()
 
@@ -205,15 +205,15 @@ for i in range( 1, 5 ):
   #  TODO: re-enable this ?
   # print( '******************')
   # try:
-  #   print( fdn_strmgr.dependancy )
-  # except Dependancy.DoesNotExist:
+  #   print( fdn_strmgr.dependency )
+  # except dependency.DoesNotExist:
   #   print( 'nope' )
   #
-  # print( strct.dependancy_set.all() )
+  # print( strct.dependency_set.all() )
   #
-  # print( Dependancy.objects.filter( foundation=fdn_strmgr ) )
+  # print( Dependency.objects.filter( foundation=fdn_strmgr ) )
   #
-  # dep = Dependancy( foundation=fdn_strmgr, structure=strct, link='soft' )
+  # dep = Dependency( foundation=fdn_strmgr, structure=strct, link='soft' )
   # dep.full_clean()
   # dep.save()
 
@@ -229,7 +229,7 @@ for i in range( 1, 5 ):
   iface.full_clean()
   iface.save()
 
-  dep = Dependancy( foundation=fdn, structure=strct_strmgr, create_script_name='utility', destroy_script_name='utility2', link='hard' )
+  dep = Dependency( foundation=fdn, structure=strct_strmgr, create_script_name='utility', destroy_script_name='utility2', link='hard' )
   dep.full_clean()
   dep.save()
 

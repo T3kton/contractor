@@ -35,9 +35,9 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Building/Foundation', 'site', { 'site': site } );
   };
 
-  getDependancyList = ( site ) =>
+  getDependencyList = ( site ) =>
   {
-    return this.cinp.getFilteredObjects( '/api/v1/Building/Dependancy', 'site', { 'site': site } );
+    return this.cinp.getFilteredObjects( '/api/v1/Building/Dependency', 'site', { 'site': site } );
   };
 
   getStructureList = ( site ) =>
@@ -75,9 +75,9 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Foreman/StructureJob', 'site', { 'site': site } );
   };
 
-  getDependancyJobList = ( site ) =>
+  getDependencyJobList = ( site ) =>
   {
-    return this.cinp.getFilteredObjects( '/api/v1/Foreman/DependancyJob', 'site', { 'site': site } );
+    return this.cinp.getFilteredObjects( '/api/v1/Foreman/DependencyJob', 'site', { 'site': site } );
   };
 
   getJobLogList = ( site ) =>
@@ -95,9 +95,9 @@ class Contractor
     return this.cinp.call( '/api/v1/Building/Foundation(getFoundationTypes)' )
   };
 
-  getSiteDependancyMap = ( site ) =>
+  getSiteDependencyMap = ( site ) =>
   {
-    return this.cinp.call( site + '(getDependancyMap)' );
+    return this.cinp.call( site + '(getDependencyMap)' );
   };
 
   getJobStats = ( site ) =>
@@ -117,12 +117,12 @@ class Contractor
 
   getFoundationDependandyList = ( id ) =>
   {
-    return this.cinp.getFilteredObjects( '/api/v1/Building/Dependancy', 'foundation', { 'foundation': '/api/v1/Building/Foundation:' + id + ':' } );
+    return this.cinp.getFilteredObjects( '/api/v1/Building/Dependency', 'foundation', { 'foundation': '/api/v1/Building/Foundation:' + id + ':' } );
   };
 
-  getDependancy = ( id ) =>
+  getDependency = ( id ) =>
   {
-    return this.cinp.get( '/api/v1/Building/Dependancy:' + id + ':' );
+    return this.cinp.get( '/api/v1/Building/Dependency:' + id + ':' );
   };
 
   getStructure = ( id ) =>
@@ -140,9 +140,9 @@ class Contractor
     return this.cinp.get( '/api/v1/Building/Complex:' + id + ':' );
   };
 
-  getDependancy = ( id ) =>
+  getDependency = ( id ) =>
   {
-    return this.cinp.get( '/api/v1/Building/Dependancy:' + id + ':' );
+    return this.cinp.get( '/api/v1/Building/Dependency:' + id + ':' );
   };
 
   getFoundationBluePrint = ( id ) =>

@@ -290,7 +290,7 @@ class AbstractNetworkInterface( NetworkInterface ):
 
 
 @cinp.model( )
-class AggragatedNetworkInterface( AbstractNetworkInterface ):
+class AggregatedNetworkInterface( AbstractNetworkInterface ):
   master_interface = models.ForeignKey( NetworkInterface, related_name='+' )
   slaves = models.ManyToManyField( NetworkInterface, related_name='+' )
   paramaters = MapField()
@@ -317,7 +317,7 @@ class AggragatedNetworkInterface( AbstractNetworkInterface ):
     return True
 
   def __str__( self ):
-    return 'AggragatedNetworkInterface "{0}"'.format( self.name )
+    return 'AggregatedNetworkInterface "{0}"'.format( self.name )
 
 
 @cinp.model( property_list=( 'gateway', 'netmask', 'size', 'isIpV4' ) )

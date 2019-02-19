@@ -12,11 +12,6 @@ config_name_regex = re.compile( '^[<>\-~]?([a-zA-Z0-9]+:)?[a-zA-Z0-9][a-zA-Z0-9_
 JSON_MAGIC = '\x02JSON\x03'
 
 
-def validate_mapfield( value ):
-  if not isinstance( value, dict ):
-    raise ValidationError( 'Value must be a python dict, got %(type)s', params={ 'type': type( value ).__name__ } )
-
-
 def validate_list( value ):
   if not isinstance( value, list ):
     raise ValidationError( 'Value must be a python list, got %(type)s', params={ 'type': type( value ).__name__ } )
@@ -31,89 +26,75 @@ def validate_ipaddress( value ):
 
 class MapField( models.TextField ):
   description = 'JSON Encoded Map'
-  validators = [ validate_mapfield ]
   cinp_type = 'Map'
+  empty_values = [ None, {} ]
 
   def __init__( self, *args, **kwargs ):
-    if 'default' not in kwargs:
-      kwargs[ 'default' ] = dict
+    if 'default' in kwargs:
+      default = kwargs[ 'default' ]
+      if kwargs.get( 'null', False ) and default is None:
+        pass
+
+      elif not callable( default ) and not isinstance( default, dict ):
+        raise ValueError( 'default value must be a dict or callable.' )
 
     else:
-      if not callable( kwargs[ 'default' ] ) and not isinstance( kwargs[ 'default' ], dict ):
-        raise ValueError( 'default value must be a dict' )
+      kwargs[ 'default' ] = lambda: dict()
 
     super().__init__( *args, **kwargs )
 
   def from_db_value( self, value, expression, connection, context ):
-    if value is None or value == '':
+    if value is None:
       return None
 
     try:
       value = json.loads( value )
     except ValueError:
-      raise ValidationError( '"%(value)s" is not valid JSON', params={ 'value': value[ 0:100 ] } )
+      raise ValidationError( '"%(value)s" is not valid JSON.', params={ 'value': value[ 0:100 ] }, code='invalid' )
 
     if value is not None and not isinstance( value, dict ):
-      raise ValidationError( 'DB Stored JSON does not encode a dict' )
+      raise ValidationError( 'DB Stored JSON does not encode a dict.', code='invalid' )
 
     return value
 
   def to_python( self, value ):
-    if value is None:
+    if value is None and self.null:
       return None
 
     if isinstance( value, dict ):
       return value
 
-    try:
-      value = json.loads( value )
-    except ValueError:
-      raise ValidationError( '"%(value)s" is not valid JSON', params={ 'value': value[ 0:100 ] } )
-
-    if value is not None and not isinstance( value, dict ):
-      raise ValidationError( 'Value in JSON does not encode a dict' )
-
-    return value
+    raise ValidationError( 'must be a dict.', code='invalid'  )
 
   def get_prep_value( self, value ):
+    if value is None:
+      return None
+
     if not isinstance( value, dict ):
-      raise ValidationError( 'value is not a dict' )
+      raise ValidationError( 'value is not a dict.', code='invalid'  )
 
     return json.dumps( value )
 
 
 class JSONField( models.TextField ):
   description = 'JSON Encoded'
+  empty_values = [ None ]
 
   def from_db_value( self, value, expression, connection, context ):
-    if value is None or value == '':
-      return None
-
-    try:
-      value = json.loads( value[ len( JSON_MAGIC ): ] )
-    except ValueError:
-      raise ValidationError( '"%(value)s" is not valid JSON', params={ 'value': value[ 0:100 ] } )
-
-    return value
-
-  def to_python( self, value ):
     if value is None:
       return None
 
-    if not isinstance( value, str ) or not value.startswith( JSON_MAGIC ):
-      return value
-
     try:
       value = json.loads( value[ len( JSON_MAGIC ): ] )
     except ValueError:
       raise ValidationError( '"%(value)s" is not valid JSON', params={ 'value': value[ 0:100 ] } )
-
-    if value is not None and not isinstance( value, dict ):
-      raise ValidationError( 'Value in JSON does not encode a dict' )
 
     return value
 
   def get_prep_value( self, value ):
+    if value is None:
+      return None
+
     return JSON_MAGIC + json.dumps( value )
 
 
@@ -174,7 +155,7 @@ class IpAddressField( models.BinaryField ):  # needs 128 bits of storage, the in
   def deconstruct(self):
     editable = self.editable
     self.editable = False  # have to set this to non default so BinaryField's deconstruct works
-    name, path, args, kwargs = super(IpAddressField, self).deconstruct()
+    name, path, args, kwargs = super( IpAddressField, self ).deconstruct()
     self.editable = editable
     kwargs[ 'editable' ] = self.editable
     return name, path, args, kwargs
