@@ -40,7 +40,7 @@ class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )  # if this changes make sure to update architect - instance - foundation_id
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
-  id_map = JSONField( blank=True )  # ie a dict of asset, chassis, system, etc types
+  id_map = JSONField( blank=True, null=True )  # ie a dict of asset, chassis, system, etc types
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -269,7 +269,7 @@ class Structure( Networked ):
   blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT )  # ie what to bild
   foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT )      # ie what to build it on
   config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # unique
-  config_values = MapField( blank=True )
+  config_values = MapField( blank=True, null=True )
   auto_build = models.BooleanField( default=True )
   # build_priority = models.IntegerField( default=100 )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )

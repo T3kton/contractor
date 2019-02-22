@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='aggregatednetworkinterface',
             name='paramaters',
-            field=contractor.fields.MapField(default=dict),
+            field=contractor.fields.MapField(default=contractor.fields.defaultdict),
         ),
     ]

@@ -31,7 +31,7 @@ class BluePrint( models.Model ):
   name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length
   description = models.CharField( max_length=200 )
   scripts = models.ManyToManyField( 'Script', through='BluePrintScript' )
-  config_values = MapField( blank=True )
+  config_values = MapField( blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -78,10 +78,11 @@ class BluePrint( models.Model ):
     if not name_regex.match( self.name ):  # if this regex changes, make sure to update tcalc parser in archetect
       errors[ 'name' ] = 'BluePrint Script name "{0}" is invalid'.format( self.name )
 
-    for name in self.config_values:
-      if not config_name_regex.match( name ):
-        errors[ 'config_values' ] = 'config item name "{0}" is invalid'.format( name )
-        break
+    if self.config_values is not None:
+      for name in self.config_values:
+        if not config_name_regex.match( name ):
+          errors[ 'config_values' ] = 'config item name "{0}" is invalid'.format( name )
+          break
 
     if errors:
       raise ValidationError( errors )

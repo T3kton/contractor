@@ -24,6 +24,10 @@ def validate_ipaddress( value ):
     raise ValidationError( 'Invalid Ip Address "%(value)s"', params={ 'value': value[ 0:100 ] } )
 
 
+def defaultdict():
+  return dict()
+
+
 class MapField( models.TextField ):
   description = 'JSON Encoded Map'
   cinp_type = 'Map'
@@ -39,7 +43,7 @@ class MapField( models.TextField ):
         raise ValueError( 'default value must be a dict or callable.' )
 
     else:
-      kwargs[ 'default' ] = lambda: dict()
+      kwargs[ 'default' ] = defaultdict
 
     super().__init__( *args, **kwargs )
 

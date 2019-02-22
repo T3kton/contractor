@@ -15,6 +15,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='structure',
             name='config_values',
-            field=contractor.fields.MapField(default=dict, blank=True),
+            field=contractor.fields.MapField(blank=True, default=contractor.fields.defaultdict, null=True),
+        ),
+        migrations.AlterField(
+            model_name='foundation',
+            name='id_map',
+            field=contractor.fields.JSONField(null=True, blank=True),
         ),
     ]
