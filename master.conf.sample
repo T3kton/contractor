@@ -28,7 +28,7 @@ for item in os.scandir( plugin_dir ):
 
 # Application definition
 INSTALLED_APPS = (
-    'contractor.User',
+    'contractor.Auth',
     'contractor.Directory',
     'contractor.Site',
     'contractor.BluePrint',
