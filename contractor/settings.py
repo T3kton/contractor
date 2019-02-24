@@ -81,6 +81,9 @@ USE_L10N = True
 USE_TZ = True
 
 
+# Bind Zone file Settings
+# NOTE: email should have a '.' in place of the '@', in most cases
+# it dose not have to be a real email address
 BIND_ALLOW_TRANSFER = []
 BIND_SOA_EMAIL = 'hostmaster.site1.local'
 BIND_NS_LIST = [ 'eth0.contractor.site1.local' ]
