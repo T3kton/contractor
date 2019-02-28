@@ -8,6 +8,7 @@ django.setup()
 import sys
 import argparse
 import pprint
+
 from django.core.exceptions import ObjectDoesNotExist
 from contractor.Building.models import Foundation, Structure, Dependency
 from contractor.Foreman.lib import createJob

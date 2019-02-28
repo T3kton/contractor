@@ -38,8 +38,6 @@ INSTALLED_APPS = (
     'contractor.SubContractor',
     'contractor.PostOffice',
     *plugin_list,
-    'other_plugins.text_file',
-    'other_plugins.status_indicator',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions'
