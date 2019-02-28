@@ -169,13 +169,14 @@ class NetworkInterface( models.Model ):
           tagged = True
 
         result[ 'address_list' ].append( {
-                                           'address': address.ip_address,
+                                           'address': address.ip_address,  # set to 'dhcp' for dhcp
                                            'netmask': address.netmask,
                                            'prefix': address.prefix,
                                            'network': address.network,
                                            'gateway': address.address_block.gateway,
                                            'primary': address.is_primary,
                                            'sub_interface': None,
+                                           'auto': True,
                                            'vlan': vlan,
                                            'tagged': tagged,
                                            'mtu': 1500
@@ -289,7 +290,7 @@ class AbstractNetworkInterface( NetworkInterface ):
 
 
 @cinp.model( )
-class AggragatedNetworkInterface( AbstractNetworkInterface ):
+class AggregatedNetworkInterface( AbstractNetworkInterface ):
   master_interface = models.ForeignKey( NetworkInterface, related_name='+' )
   slaves = models.ManyToManyField( NetworkInterface, related_name='+' )
   paramaters = MapField()
@@ -316,7 +317,7 @@ class AggragatedNetworkInterface( AbstractNetworkInterface ):
     return True
 
   def __str__( self ):
-    return 'AggragatedNetworkInterface "{0}"'.format( self.name )
+    return 'AggregatedNetworkInterface "{0}"'.format( self.name )
 
 
 @cinp.model( property_list=( 'gateway', 'netmask', 'size', 'isIpV4' ) )

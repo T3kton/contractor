@@ -203,8 +203,12 @@ except IndexError:
 
 try:
   item_map = toml.load( filename )
-except ( FileNotFoundError, toml.TomlDecodeError ) as e:
-  print( 'Error opening and/or parsing "{0}": {1}'.format( filename, e ) )
+except FileNotFoundError:
+  print( 'Error opening "{0}"'.format( filename ) )
+  sys.exit( 1 )
+
+except toml.TomlDecodeError as e:
+  print( 'Error parsing "{0}": {1}'.format( filename, e ) )
   sys.exit( 1 )
 
 for name in item_map.get( 'script', {} ):

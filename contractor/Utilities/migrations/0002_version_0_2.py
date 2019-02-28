@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AlterField(
-            model_name='aggragatednetworkinterface',
+            model_name='aggregatednetworkinterface',
             name='paramaters',
-            field=contractor.fields.MapField(default=dict),
+            field=contractor.fields.MapField(default=contractor.fields.defaultdict),
         ),
     ]

@@ -27,7 +27,7 @@ class DirectoryException( ValueError ):
 
 @cinp.model( property_list=( 'fqdn' ) )
 class Zone( models.Model ):
-  name = models.CharField( max_length=100 )
+  name = models.CharField( max_length=100, primary_key=True )
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
   ttl = models.IntegerField( default=3600 )
   refresh = models.IntegerField( default=86400 )

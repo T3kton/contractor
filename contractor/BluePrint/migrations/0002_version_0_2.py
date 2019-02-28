@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='blueprint',
             name='config_values',
-            field=contractor.fields.MapField(default=dict, blank=True),
+            field=contractor.fields.MapField(blank=True, default=contractor.fields.defaultdict, null=True),
         ),
         migrations.AlterField(
             model_name='foundationblueprint',

@@ -23,7 +23,7 @@ clean: clean-ui
 	$(RM) -fr build
 	$(RM) -f dpkg
 	$(RM) -fr htmlcov
-	dh_clean
+	dh_clean || true
 
 .PHONY:: all install clean full-clean
 
@@ -52,24 +52,9 @@ test-requires:
 	python3-pytest python3-pytest-cov python3-pytest-django python3-pytest-mock
 
 test:
-	py.test-3 --cov=contractor --cov-report html --cov-report term --ds=contractor.settings -vv contractor
+	py.test-3 -x --cov=contractor --cov-report html --cov-report term --ds=contractor.settings -vv contractor
 
 .PHONY:: test test-requires
-
-respkg-distros:
-	echo xenial
-
-respkg-requires:
-	echo respkg
-
-respkg:
-	cd resources && respkg -b ../contractor-os-base_0.0.respkg -n contractor-os-base -e 0.0 -c "Contractor - OS Base" -t load_os_base.sh -d os_base
-	touch respkg
-
-respkg-file:
-	echo $(shell ls *.respkg)
-
-.PHONY:: respkg-distros respkg-requires respkg respkg-file
 
 dpkg-distros:
 	echo xenial

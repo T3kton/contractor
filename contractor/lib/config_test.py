@@ -275,17 +275,17 @@ def test_valid_names():
   s1.full_clean()
   s1.save()
 
-  s1.config_values[ 'valid' ] = 'value'
+  s1.config_values[ 'valid' ] = 'value 1'
   s1.full_clean()
 
-  s1.config_values[ '_nope' ] = 'more value'
+  s1.config_values[ '_nope' ] = 'more value 1'
   with pytest.raises( ValidationError ):
     s1.full_clean()
 
   s1 = Site.objects.get( name='site1' )
   s1.full_clean()
 
-  s1.config_values[ '__bad' ] = 'bad bad bad'
+  s1.config_values[ '__bad' ] = 'bad bad bad 1'
   with pytest.raises( ValidationError ):
     s1.full_clean()
 
@@ -294,36 +294,39 @@ def test_valid_names():
   fb1.full_clean()
   fb1.save()
 
-  fb1.config_values[ 'valid' ] = 'value'
+  fb1.config_values[ 'valid' ] = 'value 2'
   fb1.full_clean()
 
-  fb1.config_values[ '_nope' ] = 'more value'
+  fb1.config_values[ '_nope' ] = 'more value 2'
   with pytest.raises( ValidationError ):
     fb1.full_clean()
 
   fb1 = FoundationBluePrint.objects.get( pk='fdnb1' )
   fb1.full_clean()
 
-  fb1.config_values[ '__bad' ] = 'bad bad bad'
+  fb1.config_values[ '__bad' ] = 'bad bad bad 2'
   with pytest.raises( ValidationError ):
     fb1.full_clean()
+
+  fb1 = FoundationBluePrint.objects.get( pk='fdnb1' )
+  fb1.full_clean()
 
   sb1 = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
   sb1.full_clean()
   sb1.save()
   sb1.foundation_blueprint_list.add( fb1 )
 
-  sb1.config_values[ 'valid' ] = 'value'
+  sb1.config_values[ 'valid' ] = 'value 3'
   sb1.full_clean()
 
-  sb1.config_values[ '_nope' ] = 'more value'
+  sb1.config_values[ '_nope' ] = 'more value 3'
   with pytest.raises( ValidationError ):
     sb1.full_clean()
 
   sb1 = StructureBluePrint.objects.get( name='strb1' )
   sb1.full_clean()
 
-  sb1.config_values[ '__bad' ] = 'bad bad bad'
+  sb1.config_values[ '__bad' ] = 'bad bad bad 3'
   with pytest.raises( ValidationError ):
     sb1.full_clean()
 
@@ -335,17 +338,17 @@ def test_valid_names():
   str1.full_clean()
   str1.save()
 
-  str1.config_values[ 'valid' ] = 'value'
+  str1.config_values[ 'valid' ] = 'value 4'
   str1.full_clean()
 
-  str1.config_values[ '_nope' ] = 'more value'
+  str1.config_values[ '_nope' ] = 'more value 4'
   with pytest.raises( ValidationError ):
     str1.full_clean()
 
   str1 = Structure.objects.get( hostname='struct1' )
   str1.full_clean()
 
-  str1.config_values[ '__bad' ] = 'bad bad bad'
+  str1.config_values[ '__bad' ] = 'bad bad bad 4'
   with pytest.raises( ValidationError ):
     str1.full_clean()
 

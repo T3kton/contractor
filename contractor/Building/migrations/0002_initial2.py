@@ -43,22 +43,22 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='Site.Site'),
         ),
         migrations.AddField(
-            model_name='dependancy',
-            name='dependancy',
-            field=models.ForeignKey(to='Building.Dependancy', blank=True, null=True, related_name='+'),
+            model_name='dependency',
+            name='dependency',
+            field=models.ForeignKey(to='Building.Dependency', blank=True, null=True, related_name='+'),
         ),
         migrations.AddField(
-            model_name='dependancy',
+            model_name='dependency',
             name='foundation',
             field=models.OneToOneField(to='Building.Foundation', blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='dependancy',
+            model_name='dependency',
             name='script_structure',
             field=models.ForeignKey(to='Building.Structure', blank=True, null=True, related_name='+'),
         ),
         migrations.AddField(
-            model_name='dependancy',
+            model_name='dependency',
             name='structure',
             field=models.ForeignKey(to='Building.Structure', blank=True, null=True),
         ),

@@ -65,7 +65,7 @@ class Todo extends React.Component
           foundation_list.push( { id: id,
                                   locator: foundation.locator,
                                   autoBuild: foundation.can_auto_locate,
-                                  dependancyCount: ' ',
+                                  dependencyCount: ' ',
                                   complex: ' ',
                                   created: foundation.created,
                                   updated: foundation.updated
@@ -102,7 +102,7 @@ class Todo extends React.Component
               <TableCell numeric><Link to={ '/foundation/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.locator }</TableCell>
               <TableCell>{ item.autoBuild }</TableCell>
-              <TableCell>{ item.dependancyCount }</TableCell>
+              <TableCell>{ item.dependencyCount }</TableCell>
               <TableCell>{ item.complex }</TableCell>
               <TableCell>{ item.created }</TableCell>
               <TableCell>{ item.updated }</TableCell>

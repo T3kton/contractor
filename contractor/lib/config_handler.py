@@ -5,33 +5,42 @@ from contractor.Building.models import Foundation, Structure
 from contractor.Utilities.models import BaseAddress, NetworkInterface
 from contractor.lib.config import getConfig, mergeValues, renderTemplate
 
+url_regex = re.compile( '^/config/([a-z_]+)/((c/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12})|(s/[0-9]+)|(f/[a-zA-Z0-9][a-zA-Z0-9_\-]*))?$' )
+
 
 def handler( request ):
-  if not re.match( '^/config/[a-z_]+/([sf][0-9]+)?$', request.uri ):
+  match = url_regex.match( request.uri.lower() )
+  if not match:
     return Response( 400, data='Invalid config uri', content_type='text' )
 
-  ( _, _, request_type, target_id ) = request.uri.split( '/' )
+  ( request_type, _, config_uuid, structure_id, foundation_locator ) = match.groups()
 
   target = None
   interface = None
 
-  if len( target_id ) > 0:
-    if target_id[0] == 's':
-      try:
-        target = Structure.objects.get( pk=int( target_id[ 1: ] ) )
-      except Structure.DoesNotExist:
-        return Response( 404, data='Structure Not Found', content_type='text' )
-
-    elif target_id[0] == 'f':
-      try:
-        target = Foundation.objects.get( pk=int( target_id[ 1: ] ) )
-      except Foundation.DoesNotExist:
-        return Response( 404, data='Foundation Not Found', content_type='text' )
-
-    else:
-      return Response( 500, data='Target Confusion', content_type='text' )
+  if config_uuid is not None:
+    try:
+      target = Structure.objects.get( config_uuid=config_uuid[ 2: ] )
+    except Structure.DoesNotExist:
+      return Response( 404, data='Config UUID Not Found', content_type='text' )
 
     interface = target.provisioning_interface
+
+  elif structure_id is not None:
+    try:
+      target = Structure.objects.get( pk=int( structure_id[ 2: ] ) )
+    except Structure.DoesNotExist:
+      return Response( 404, data='Structure Not Found', content_type='text' )
+
+    interface = target.provisioning_interface
+
+  elif foundation_locator is not None:
+    try:
+      target = Foundation.objects.get( pk=foundation_locator[ 2: ] )
+    except Foundation.DoesNotExist:
+      return Response( 404, data='Foundation Not Found', content_type='text' )
+
+    interface = target.structure.provisioning_interface
 
   else:
     address = BaseAddress.lookup( request.remote_addr )

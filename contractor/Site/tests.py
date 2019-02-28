@@ -18,6 +18,11 @@ def test_site():
   s.full_clean()
   s.save()
 
+  s = Site( name='test', description='test site' )
+  s.config_values = None
+  with pytest.raises( ValidationError ):
+    s.full_clean()
+
   s = Site( name=' test' )
   with pytest.raises( ValidationError ):
     s.full_clean()

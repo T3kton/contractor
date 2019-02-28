@@ -37,10 +37,10 @@ class BuildingException( ValueError ):
 
 @cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
 class Foundation( models.Model ):
-  locator = models.CharField( max_length=100, primary_key=True )
+  locator = models.CharField( max_length=100, primary_key=True )  # if this changes make sure to update architect - instance - foundation_id
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
-  id_map = JSONField( blank=True )  # ie a dict of asset, chassis, system, etc types
+  id_map = JSONField( blank=True, null=True )  # ie a dict of asset, chassis, system, etc types
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -191,7 +191,7 @@ class Foundation( models.Model ):
     return self.locator
 
   @property
-  def dependancyId( self ):
+  def dependencyId( self ):
     return 'f-{0}'.format( self.pk )
 
   @cinp.action( { 'type': 'String', 'is_array': True } )
@@ -217,7 +217,7 @@ class Foundation( models.Model ):
     args = {}
     args[ 'site' ] = site
     if has_dependancies:
-      args[ 'dependancy' ] = True
+      args[ 'dependency' ] = True
 
     if foundation_class is not None:
       if foundation_class not in FOUNDATION_SUBCLASS_LIST:
@@ -269,7 +269,7 @@ class Structure( Networked ):
   blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT )  # ie what to bild
   foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT )      # ie what to build it on
   config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # unique
-  config_values = MapField( blank=True )
+  config_values = MapField( blank=True, null=True )
   auto_build = models.BooleanField( default=True )
   # build_priority = models.IntegerField( default=100 )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
@@ -284,8 +284,8 @@ class Structure( Networked ):
     self.built_at = None
     self.config_uuid = str( uuid.uuid4() )  # new on destroyed, that way we can leave anything that might still be kicking arround in the dust
     self.save()
-    for dependancy in self.dependancy_set.all():
-      dependancy.setDestroyed()
+    for dependency in self.dependency_set.all():
+      dependency.setDestroyed()
 
   def configAttributes( self ):
     provisioning_interface = self.provisioning_interface
@@ -321,7 +321,7 @@ class Structure( Networked ):
     return self.hostname
 
   @property
-  def dependancyId( self ):
+  def dependencyId( self ):
     return 's-{0}'.format( self.pk )
 
   @cinp.action( return_type='Integer' )
@@ -368,10 +368,11 @@ class Structure( Networked ):
     if self.foundation_id is not None and self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
       errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint.description, self.foundation.blueprint.description )
 
-    for name in self.config_values:
-      if not config_name_regex.match( name ):
-        errors[ 'config_values' ] = 'config item name "{0}" is invalid'.format( name )
-        break
+    if self.config_values is not None:
+      for name in self.config_values:
+        if not config_name_regex.match( name ):
+          errors[ 'config_values' ] = 'config item name "{0}" is invalid'.format( name )
+          break
 
     if errors:
       raise ValidationError( errors )
@@ -427,7 +428,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
     return 'Unknown'
 
   @property
-  def dependancyId( self ):
+  def dependencyId( self ):
     return 'c-{0}'.format( self.pk )
 
   def configAttributes( self ):
@@ -556,10 +557,10 @@ class ComplexStructure( models.Model ):
 
 
 @cinp.model( property_list=( 'state', ) )
-class Dependancy( models.Model ):
+class Dependency( models.Model ):
   LINK_CHOICES = ( 'soft', 'hard' )  # a hardlink if the structure is set back pulls the foundation back with it, soft does not
   structure = models.ForeignKey( Structure, on_delete=models.CASCADE, blank=True, null=True )  # depending on this
-  dependancy = models.ForeignKey( 'self', on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # or this
+  dependency = models.ForeignKey( 'self', on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # or this
   foundation = models.OneToOneField( Foundation, on_delete=models.CASCADE, blank=True, null=True )  # this is what is depending
   script_structure = models.ForeignKey( Structure, on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # if this is specified, the script runs on this
   link = models.CharField( max_length=4, choices=[ ( i, i ) for i in LINK_CHOICES ] )
@@ -576,8 +577,8 @@ class Dependancy( models.Model ):
   def setDestroyed( self ):
     self.built_at = None
     self.save()
-    for dependancy in Dependancy.objects.filter( dependancy=self ):
-      dependancy.setDestroyed()
+    for dependency in Dependency.objects.filter( dependency=self ):
+      dependency.setDestroyed()
 
     if self.link == 'hard':
       if self.foundation is not None:
@@ -600,8 +601,8 @@ class Dependancy( models.Model ):
       return self.foundation.site
     elif self.script_structure is not None:
       return self.script_structure.site
-    elif self.dependancy is not None:
-      return self.dependancy.site
+    elif self.dependency is not None:
+      return self.dependency.site
     else:
       return self.structure.site
 
@@ -618,7 +619,7 @@ class Dependancy( models.Model ):
     if self.structure is not None:
       left = self.structure.hostname
     else:
-      left = self.dependancy.description
+      left = self.dependency.description
 
     right = ''
     if self.foundation is not None:
@@ -627,20 +628,20 @@ class Dependancy( models.Model ):
     return '{0}-{1}'.format( left, right )
 
   @property
-  def dependancyId( self ):
+  def dependencyId( self ):
     return 'd-{0}'.format( self.pk )
 
   @cinp.list_filter( name='foundation', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Foundation' } ] )
   @staticmethod
   def filter_foundation( foundation ):
-    return Dependancy.objects.filter( foundation=foundation )
+    return Dependency.objects.filter( foundation=foundation )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
-    return Dependancy.objects.filter( Q( foundation__site=site ) |
+    return Dependency.objects.filter( Q( foundation__site=site ) |
                                       Q( foundation__isnull=True, script_structure__site=site ) |
-                                      Q( foundation__isnull=True, script_structure__isnull=True, dependancy__structure__site=site ) |
+                                      Q( foundation__isnull=True, script_structure__isnull=True, dependency__structure__site=site ) |
                                       Q( foundation__isnull=True, script_structure__isnull=True, structure__site=site )
                                       )
 
@@ -653,8 +654,8 @@ class Dependancy( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
 
-    if self.dependancy is None and self.structure is None:
-      errors[ 'structure' ] = 'Either structure or dependancy is required'
+    if self.dependency is None and self.structure is None:
+      errors[ 'structure' ] = 'Either structure or dependency is required'
 
     if self.structure is None and self.script_structure is None:
       if self.create_script_name is not None:
@@ -680,6 +681,6 @@ class Dependancy( models.Model ):
     if self.structure is not None:
       structure = self.structure
     else:
-      structure = self.dependancy.structure
+      structure = self.dependency.structure
 
-    return 'Dependancy of "{0}" on "{1}"'.format( self.foundation, structure )
+    return 'Dependency of "{0}" on "{1}"'.format( self.foundation, structure )

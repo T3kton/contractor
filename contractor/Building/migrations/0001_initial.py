@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name='Dependancy',
+            name='Dependency',
             fields=[
                 ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('link', models.CharField(choices=[('soft', 'soft'), ('hard', 'hard')], max_length=4)),

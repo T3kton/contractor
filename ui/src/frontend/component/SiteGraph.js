@@ -54,7 +54,7 @@ class SiteGraph extends React.Component
           size: 50
         }
       },
-      Dependancy: {
+      Dependency: {
         physics: false,
         shape: 'icon',
         icon: {
@@ -81,7 +81,7 @@ class SiteGraph extends React.Component
 
   update( props )
   {
-    props.siteDependancyMap( props.site )
+    props.siteDependencyMap( props.site )
       .then( ( result ) =>
       {
         var graph = { nodes: [], edges: [] };
@@ -105,9 +105,9 @@ class SiteGraph extends React.Component
             }
           }
           graph.nodes.push( { id: id, label: node.description, icon: { color: stateColorMap[ node.state ] }, group: node.type, shadow: shadow } );
-          for ( var i in node.dependancy_list )
+          for ( var i in node.dependency_list )
           {
-            graph.edges.push( { from: node.dependancy_list[ i ], to: id } );
+            graph.edges.push( { from: node.dependency_list[ i ], to: id } );
           }
         }
 

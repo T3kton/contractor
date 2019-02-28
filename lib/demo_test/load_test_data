@@ -8,7 +8,7 @@ django.setup()
 
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Site.models import Site
-from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependancy
+from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependency
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
 from contractor_plugins.VirtualBox.models import VirtualBoxFoundation, VirtualBoxComplex
 from contractor_plugins.AWS.models import AWSEC2Foundation
@@ -289,6 +289,6 @@ addr = Address( networked=str_dkr3, pointer=Address.objects.get( networked=str_v
 addr.full_clean()
 addr.save()
 
-dep = Dependancy( foundation=fdn_dkr3, structure=str_dkr2, link='soft' )
+dep = Dependency( foundation=fdn_dkr3, structure=str_dkr2, link='soft' )
 dep.full_clean()
 dep.save()

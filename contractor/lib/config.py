@@ -12,6 +12,9 @@ def value_key( item ):
 
 
 def _updateConfig( config_value_map, class_list, config ):
+  if config_value_map is None:
+    return
+
   for name in sorted( config_value_map.keys(), key=value_key ):
     value = config_value_map[ name ]
 

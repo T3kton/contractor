@@ -7,6 +7,7 @@ import django
 django.setup()
 
 import sys
+import argparse
 import subprocess
 
 from contractor import settings
@@ -17,6 +18,12 @@ from contractor.Site.models import Site
 from contractor.Directory.models import Zone, Entry
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
 from contractor.plugins.Manual.models import ManualFoundation
+
+parser = argparse.ArgumentParser( description='Contractor SetupWizzard, must be run as root' )
+parser.add_argument( '--no-ip-reservation', help='do not reserve static and dynamic ips', action='store_true' )
+parser.add_argument( '--dns-server', help='set the dns server setting for site1, otherwise it will be set to the detected ip', metavar='IP ADDRESS' )
+
+args = parser.parse_args()
 
 if os.getuid() != 0:
   print( 'This must be run as root' )
@@ -86,7 +93,11 @@ zs1.save()
 s1 = Site( name='site1', description='Site 1' )
 s1.zone = zs1
 s1.config_values[ 'domain_name' ] = 'site1.local'
-s1.config_values[ 'dns_servers' ] = [ contractor_ip_address ]
+if args[ 'dns_server' ] is not None:
+  s1.config_values[ 'dns_servers' ] = [ args[ 'dns_server' ] ]
+else:
+  s1.config_values[ 'dns_servers' ] = [ contractor_ip_address ]
+
 s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
 s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
 s1.full_clean()
@@ -97,18 +108,18 @@ addr1_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=1, pr
 addr1_block.full_clean()
 addr1_block.save()
 
-print( 'reserving address offsets from 2 - 20...')
-for i in range( 2, 20 ):
-  addr = ReservedAddress( address_block=addr1_block, offset=i, reason='network reserved' )
-  addr.full_clean()
-  addr.save()
+if not args[ 'no_ip_reservation' ]:
+  print( 'reserving address offsets from 2 - 20...')
+  for i in range( 2, 21 ):
+    addr = ReservedAddress( address_block=addr1_block, offset=i, reason='network reserved' )
+    addr.full_clean()
+    addr.save()
 
-print( 'using offsets 21 - 29 for dynamic pool...' )
-for i in range( 21, 29 ):
-  addr = DynamicAddress( address_block=addr1_block, offset=i )
-  addr.full_clean()
-  addr.save()
-
+  print( 'using offsets 21 - 29 for dynamic pool...' )
+  for i in range( 21, 30 ):
+    addr = DynamicAddress( address_block=addr1_block, offset=i )
+    addr.full_clean()
+    addr.save()
 
 print( 'contractor entry...' )
 fdn_dev = ManualFoundation( site=s1, blueprint=fbp_manual, locator='contractor' )

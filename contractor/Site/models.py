@@ -33,7 +33,7 @@ class Site( models.Model ):
   zone = models.ForeignKey( Zone, null=True, blank=True )
   description = models.CharField( max_length=200 )
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
-  config_values = MapField( blank=True )
+  config_values = MapField( blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -42,60 +42,60 @@ class Site( models.Model ):
     return getConfig( self )
 
   @cinp.action( 'Map' )
-  def getDependancyMap( self ):
-    from contractor.Building.models import Dependancy
+  def getDependencyMap( self ):
+    from contractor.Building.models import Dependency
     result = {}
     external_list = []
     structure_job_list = [ i.structurejob.structure.pk for i in self.basejob_set.filter( structurejob__isnull=False ) ]
     foundation_job_list = [ i.foundationjob.foundation.pk for i in self.basejob_set.filter( foundationjob__isnull=False ) ]
-    dependancy_job_list = [ i.dependancyjob.dependancy.pk for i in self.basejob_set.filter( dependancyjob__isnull=False ) ]
+    dependency_job_list = [ i.dependencyjob.dependency.pk for i in self.basejob_set.filter( dependencyjob__isnull=False ) ]
 
     for structure in self.networked_set.filter( structure__isnull=False ).order_by( 'pk' ):
       structure = structure.structure
-      dependancy_list = [ structure.foundation.dependancyId ]
+      dependency_list = [ structure.foundation.dependencyId ]
       if structure.foundation.site != self:
         external_list.append( structure.foundation )
 
-      result[ structure.dependancyId ] = { 'description': structure.description, 'type': 'Structure', 'state': structure.state, 'dependancy_list': dependancy_list, 'has_job': ( structure.pk in structure_job_list ), 'external': False }
+      result[ structure.dependencyId ] = { 'description': structure.description, 'type': 'Structure', 'state': structure.state, 'dependency_list': dependency_list, 'has_job': ( structure.pk in structure_job_list ), 'external': False }
 
     for foundation in self.foundation_set.all().order_by( 'pk' ):
       foundation = foundation.subclass
-      # dependancy_list = list( set( [ i.dependancyId for i in foundation.dependancy_set.all() ] ) )
-      dependancy_list = []
+      # dependency_list = list( set( [ i.dependencyId for i in foundation.dependency_set.all() ] ) )
+      dependency_list = []
       try:
-        dependancy_list.append( foundation.dependancy.dependancyId )
-      except Dependancy.DoesNotExist:
+        dependency_list.append( foundation.dependency.dependencyId )
+      except Dependency.DoesNotExist:
         pass
       try:
-        dependancy_list += [ foundation.complex.dependancyId ]
+        dependency_list += [ foundation.complex.dependencyId ]
         if foundation.complex.site != self:
           external_list += [ foundation.complex  ]
       except AttributeError:
         pass
 
-      result[ foundation.dependancyId ] = { 'description': foundation.description, 'type': 'Foundation', 'state': foundation.state, 'dependancy_list': dependancy_list, 'has_job': ( foundation.pk in foundation_job_list ), 'external': False }
+      result[ foundation.dependencyId ] = { 'description': foundation.description, 'type': 'Foundation', 'state': foundation.state, 'dependency_list': dependency_list, 'has_job': ( foundation.pk in foundation_job_list ), 'external': False }
 
-    for dependancy in Dependancy.objects.filter( Q( foundation__site=self ) |
+    for dependency in Dependency.objects.filter( Q( foundation__site=self ) |
                                                  Q( foundation__isnull=True, script_structure__site=self ) |
-                                                 Q( foundation__isnull=True, script_structure__isnull=True, dependancy__structure__site=self ) |
+                                                 Q( foundation__isnull=True, script_structure__isnull=True, dependency__structure__site=self ) |
                                                  Q( foundation__isnull=True, script_structure__isnull=True, structure__site=self )
                                                  ).order_by( 'pk' ):
 
-      if dependancy.dependancy is not None:
-        dependancy_list = [ dependancy.dependancy.dependancyId ]
+      if dependency.dependency is not None:
+        dependency_list = [ dependency.dependency.dependencyId ]
       else:
-        dependancy_list = [ dependancy.structure.dependancyId ]
-      if dependancy.site != self:
-        external_list += [ dependancy.structure ]
+        dependency_list = [ dependency.structure.dependencyId ]
+      if dependency.site != self:
+        external_list += [ dependency.structure ]
 
-      result[ dependancy.dependancyId ] = { 'description': dependancy.description, 'type': 'Dependancy', 'state': dependancy.state, 'dependancy_list': dependancy_list, 'has_job': ( dependancy.pk in dependancy_job_list ), 'external': False }
+      result[ dependency.dependencyId ] = { 'description': dependency.description, 'type': 'Dependency', 'state': dependency.state, 'dependency_list': dependency_list, 'has_job': ( dependency.pk in dependency_job_list ), 'external': False }
 
     for complex in self.complex_set.all().order_by( 'pk' ):
       complex = complex.subclass
-      dependancy_list = [ i.structure.dependancyId for i in complex.complexstructure_set.all() ]
+      dependency_list = [ i.structure.dependencyId for i in complex.complexstructure_set.all() ]
       external_list += [ i.structure if i.structure.site != self else None for i in complex.complexstructure_set.all() ]
 
-      result[ complex.dependancyId ] = { 'description': complex.description, 'type': 'Complex', 'state': complex.state, 'dependancy_list': dependancy_list, 'external': False }
+      result[ complex.dependencyId ] = { 'description': complex.description, 'type': 'Complex', 'state': complex.state, 'dependency_list': dependency_list, 'external': False }
 
     external_list = list( set( external_list ) )
 
@@ -103,7 +103,7 @@ class Site( models.Model ):
       if external is None:
         continue
 
-      result[ external.dependancyId ] = { 'description': external.description, 'type': external.type, 'state': external.state, 'dependancy_list': [], 'external': True }
+      result[ external.dependencyId ] = { 'description': external.description, 'type': external.type, 'state': external.state, 'dependency_list': [], 'external': True }
 
     return result
 
@@ -116,17 +116,18 @@ class Site( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
 
-    if not name_regex.match( self.name ):
+    if self.name and not name_regex.match( self.name ):
       errors[ 'name' ] = 'Invalid'
 
-    for name in self.config_values:
-      if not config_name_regex.match( name ):
-        errors[ 'config_values' ] = 'config item name "{0}" is invalid'.format( name )
-        break
+    if self.config_values is not None:
+      for name in self.config_values:
+        if not config_name_regex.match( name ):
+          errors[ 'config_values' ] = 'config item name "{0}" is invalid'.format( name )
+          break
 
-      if name in ( 'domain_search', 'dns_servers', 'log_servers' ):
-        if not isinstance( self.config_values[ name ], list ):
-          errors[ 'config_values' ] = 'config item "{0}" must be a list'.format( name )
+        if name in ( 'domain_search', 'dns_servers', 'log_servers' ):
+          if not isinstance( self.config_values[ name ], list ):
+            errors[ 'config_values' ] = 'config item "{0}" must be a list'.format( name )
           break
 
     if errors:
