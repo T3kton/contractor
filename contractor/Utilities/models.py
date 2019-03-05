@@ -253,6 +253,8 @@ class RealNetworkInterface( NetworkInterface ):
       self.mac = None
 
     else:
+      self.mac = self.mac.lower()
+
       if re.match( '([0-9a-f]{4}.){2}[0-9a-f]{4}', self.mac ):
         self.mac = self.mac.replace( '.', '' )
 
