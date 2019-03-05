@@ -70,10 +70,15 @@ network_subnet = IpToStr( CIDRSubnet( StrToIp( contractor_ip_address ), network_
 
 contractor_ip_offset = StrToIp( contractor_ip_address ) - StrToIp( network_subnet )
 
+print( '  --- Detected Network Configuration ---')
 print( 'Network/Prefix: "{0}/{1}"'.format( network_subnet, network_prefix ) )
 print( ' Contractor Ip: "{0}", offset "{1}"'.format( contractor_ip_address, contractor_ip_offset ) )
 print( '       Gateway: "{0}"'.format( contractor_gateway ) )
 print( '           DNS: "{0}"'.format( contractor_dns ) )
+print()
+
+if args.dns_server is not None:
+  print( 'Setting DNS to: {0}'.format( args.dns_server ) )
 
 fbp_manual = FoundationBluePrint.objects.get( pk='manual-foundation-base' )
 sbp_xenial = StructureBluePrint.objects.get( pk='ubuntu-xenial-base' )
@@ -93,8 +98,8 @@ zs1.save()
 s1 = Site( name='site1', description='Site 1' )
 s1.zone = zs1
 s1.config_values[ 'domain_name' ] = 'site1.local'
-if args[ 'dns_server' ] is not None:
-  s1.config_values[ 'dns_servers' ] = [ args[ 'dns_server' ] ]
+if args.dns_server is not None:
+  s1.config_values[ 'dns_servers' ] = [ args.dns_server ]
 else:
   s1.config_values[ 'dns_servers' ] = [ contractor_ip_address ]
 
@@ -108,7 +113,7 @@ addr1_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=1, pr
 addr1_block.full_clean()
 addr1_block.save()
 
-if not args[ 'no_ip_reservation' ]:
+if not args.no_ip_reservation:
   print( 'reserving address offsets from 2 - 20...')
   for i in range( 2, 21 ):
     addr = ReservedAddress( address_block=addr1_block, offset=i, reason='network reserved' )

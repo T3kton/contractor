@@ -205,6 +205,9 @@ class BaseJob( models.Model ):
     if verb == 'DESCRIBE':
       return True
 
+    if verb == 'CALL':
+      return True
+
     return False
 
   def clean( self, *args, **kwargs ):  # also need to make sure a Structure is in only one complex
