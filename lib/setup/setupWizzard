@@ -22,6 +22,7 @@ from contractor.plugins.Manual.models import ManualFoundation
 parser = argparse.ArgumentParser( description='Contractor SetupWizzard, must be run as root' )
 parser.add_argument( '--no-ip-reservation', help='do not reserve static and dynamic ips', action='store_true' )
 parser.add_argument( '--dns-server', help='set the dns server setting for site1, otherwise it will be set to the detected ip', metavar='IP ADDRESS' )
+parser.add_argument( '--proxy-server', help='set the http proxy (mirror_proxy) setting for site1', metavar='HOST' )
 
 args = parser.parse_args()
 
@@ -80,9 +81,13 @@ print()
 if args.dns_server is not None:
   print( 'Setting DNS to: {0}'.format( args.dns_server ) )
 
+if args.proxy_server is not None:
+  print( 'Setting Proxy Server to: {0}'.format( args.proxy_server ) )
+
 fbp_manual = FoundationBluePrint.objects.get( pk='manual-foundation-base' )
 sbp_xenial = StructureBluePrint.objects.get( pk='ubuntu-xenial-base' )
 
+print()
 print( 'creating site...' )
 zl = Zone()
 zl.name = 'local'
@@ -105,6 +110,10 @@ else:
 
 s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
 s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
+
+if args.proxy_server is not None:
+  s1.config_values[ 'mirror_proxy' ] = args.proxy_server
+
 s1.full_clean()
 s1.save()
 
