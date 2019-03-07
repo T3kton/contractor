@@ -131,6 +131,26 @@ class BaseJob( models.Model ):
     self.full_clean()
     self.save()
 
+  @cinp.action()
+  def clear_dispatched( self ):
+    """
+    Resets a job that is in 'queued' state, and subcontractor lost the job.  Make
+    sure to verify that subcontractor has lost the job results before calling this.
+
+    Errors:
+      NOT_ERRORED - Job is not in state 'queued'.
+    """
+    if self.state != 'queued':
+      raise ForemanException( 'NOT_ERRORED', 'Can only clear the dispatched flag a job if it is in queued state' )
+
+    runner = pickle.loads( self.script_runner )
+    runner.clearDispatched()
+    self.status = runner.status
+    self.script_runner = pickle.dumps( runner )
+
+    self.full_clean()
+    self.save()
+
   @property
   def progress( self ):
     try:

@@ -598,6 +598,11 @@ def test_while():
                    ( 'L', ( 'W', { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) } ), 1 )
                  ] } )
 
+  node = parse( 'while true do \n  \n 10' )
+  assert node == ( 'S', { '_children':
+                [
+                  ( 'L', ( 'W', { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) } ), 1 )
+                ] } )
 
   node = parse( 'while myval do 10' )
   assert node == ( 'S', { '_children':
@@ -770,6 +775,46 @@ def test_ifelse():
                              ] ), 1 )
                      ] } )
 
+  node = parse( 'if True then\n42\nelse\n56' )
+  assert node == ( 'S', { '_children':
+                    [
+                       ( 'L', ( 'I', [
+                                { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
+                                { 'condition': None, 'expression': ( 'C', 56 ) }
+                              ] ), 1 )
+                    ] } )
+
+
+  node = parse( 'if True then  \n  42  \n  \n  \n  else  \n  56' )
+  assert node == ( 'S', { '_children':
+                    [
+                       ( 'L', ( 'I', [
+                                { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
+                                { 'condition': None, 'expression': ( 'C', 56 ) }
+                              ] ), 1 )
+                    ] } )
+
+
+  node = parse( 'if True then\n42\nelif False then\n32\nelse\n56' )
+  assert node == ( 'S', { '_children':
+                    [
+                       ( 'L', ( 'I', [
+                                { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
+                                { 'condition': ( 'C', False ), 'expression': ( 'C', 32 ) },
+                                { 'condition': None, 'expression': ( 'C', 56 ) }
+                              ] ), 1 )
+                    ] } )
+
+
+  node = parse( 'if True then  \n  42  \n  \n  \n  elif False then\n  32  \n  \n  \n  else  \n  56' )
+  assert node == ( 'S', { '_children':
+                    [
+                       ( 'L', ( 'I', [
+                                { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
+                                { 'condition': ( 'C', False ), 'expression': ( 'C', 32 ) },
+                                { 'condition': None, 'expression': ( 'C', 56 ) }
+                              ] ), 1 )
+                    ] } )
 
 def test_not():
   node = parse( 'False' )
