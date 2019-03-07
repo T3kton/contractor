@@ -69,6 +69,7 @@ def main():
   task_group.add_argument(       '--reset', help='reset error on active job', action='store_true' )
   task_group.add_argument(       '--rollback', help='rollback active job', action='store_true' )
   task_group.add_argument(       '--done', help='set active job to done', action='store_true' )
+  task_group.add_argument(       '--clear-dispatched', help='clear the dispatched flag, ie: unstuck a job that subcontractor dropped', action='store_true' )
   task_group.add_argument(       '--show-job', help='display curent job', action='store_true' )
   task_group.add_argument(       '--show-config', help='display config', action='store_true' )
 
@@ -237,6 +238,20 @@ def main():
       job.full_clean()
       job.save()
       sys.exit( 0 )
+
+  if args.clear_dispatched:
+    job = _get_job( target )
+    if job is None:
+      print( 'No Job' )
+      sys.exit( 0 )
+
+    if job.state != 'queued':
+      print( 'Can only "clear_dispatched" a job if it is queued' )
+      sys.exit( 1 )
+
+    job.clear_dispatched()
+    print( 'Dispatched flag cleared' )
+    sys.exit( 0 )
 
   if args.show_job:
     job = _get_job( target )

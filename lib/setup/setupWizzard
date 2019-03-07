@@ -85,7 +85,7 @@ if args.proxy_server is not None:
   print( 'Setting Proxy Server to: {0}'.format( args.proxy_server ) )
 
 fbp_manual = FoundationBluePrint.objects.get( pk='manual-foundation-base' )
-sbp_xenial = StructureBluePrint.objects.get( pk='ubuntu-xenial-base' )
+sbp_xenial = StructureBluePrint.objects.get( pk='manual-structure-base' )
 
 print()
 print( 'creating site...' )

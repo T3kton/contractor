@@ -17,10 +17,10 @@ paramater_map       = ( ( ws_s label ws_s "=" value_expression "," )* ws_s label
 const_paramater_map = ( ( ws_s label ws_s "=" constant_expression "," )* ws_s label ws_s "=" constant_expression )? ws_s
 block               = "begin(" const_paramater_map ")" lines ws_s "end"
 
-whiledo             = "while" value_expression ws_s "do" ws_s nl_s expression
+whiledo             = "while" value_expression ws_s "do" em_p expression
 other               = ( "continue" / "break" / "pass" )
 
-ifelse              = "if" value_expression ws_s "then" ws_s nl_s expression ( nl_s ws_s "elif" ws_s value_expression ws_s "then" ws_s nl_s expression )* ( nl_s ws_s "else" ws_s nl_s expression )?
+ifelse              = "if" value_expression ws_s "then" em_p expression ( em_s "elif" ws_s value_expression ws_s "then" em_p expression )* ( em_s "else" em_p expression )?
 
 not_                = ~"[Nn]ot" value_expression
 
@@ -45,13 +45,15 @@ infix               = "(" value_expression ( "^" / "*" / "/" / "%" / "+" / "-" /
 assignment          = ( array_map_item / variable ) ws_s "=" value_expression
 
 label               = ~"[a-zA-Z][a-zA-Z0-9_]+"
-ws_o                = ~"[ \t]"
-ws_s                = ~"[ \t]*"
-ws_p                = ~"[ \t]+"
-nl_o                = ~"[\\r\\n]"
-nl_s                = ~"[\\r\\n]*"
-nl_p                = ~"[\\r\\n]+"
-
+ws_o                = ~"[ \\x09]"
+ws_s                = ~"[ \\x09]*"
+ws_p                = ~"[ \\x09]+"
+nl_o                = ~"[\\x0d\\x0a]"
+nl_s                = ~"[\\x0d\\x0a]*"
+nl_p                = ~"[\\x0d\\x0a]+"
+em_o                = ~"[\\x0d\\x0a \\x09]"
+em_s                = ~"[\\x0d\\x0a \\x09]*"
+em_p                = ~"[\\x0d\\x0a \\x09]+"
 """
 
 
@@ -133,7 +135,7 @@ class Parser( object ):
     return ( types.SCOPE, { '_children': self._eval( ast ) } )
 
   def _eval( self, node ):
-    if node.expr_name[ 0:3 ] in ( 'ws_', 'nl_' ):  # ignore wite space
+    if node.expr_name[ 0:3 ] in ( 'ws_', 'nl_', 'em_' ):  # ignore wite space
       raise IsEmpty()
 
     try:
@@ -289,18 +291,17 @@ class Parser( object ):
     return ( types.OTHER, node.children[0].text )
 
   def whiledo( self, node ):
-    return ( types.WHILE, { 'condition': self._eval( node.children[1] ), 'expression': self._eval( node.children[6] ) } )
+    return ( types.WHILE, { 'condition': self._eval( node.children[1] ), 'expression': self._eval( node.children[5] ) } )
 
   def ifelse( self, node ):
     branches = []
+    branches.append( { 'condition': self._eval( node.children[1] ), 'expression': self._eval( node.children[5] ) } )
 
-    branches.append( { 'condition': self._eval( node.children[1] ), 'expression': self._eval( node.children[6] ) } )
+    for item in node.children[6].children:
+      branches.append( { 'condition': self._eval( item.children[3] ), 'expression': self._eval( item.children[7] ) } )
 
-    for item in node.children[7].children:
-      branches.append( { 'condition': self._eval( item.children[4] ), 'expression': self._eval( item.children[9] ) } )
-
-    if len( node.children[8].children ) > 0:
-      branches.append( { 'condition': None, 'expression': self._eval( node.children[8].children[0].children[5] ) } )
+    if len( node.children[7].children ) > 0:
+      branches.append( { 'condition': None, 'expression': self._eval( node.children[7].children[0].children[3] ) } )
 
     return ( types.IFELSE, branches )
 

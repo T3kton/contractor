@@ -126,8 +126,6 @@ def createJob( script_name, target ):
 
   JobLog.fromJob( job, True )
 
-  print( '**************** Created  Job "{0}" for "{1}"'.format( script_name, target ))
-
   return job.pk
 
 
@@ -222,7 +220,6 @@ def processJobs( site, module_list, max_jobs=10 ):
 
   # clean up completed jobs
   for job in BaseJob.objects.filter( site=site, state='done' ):
-    print( '_________________________ job "{0}" done!'.format( job ) )
     job = job.realJob
     job.done()
     if isinstance( job, StructureJob ):
@@ -239,8 +236,6 @@ def processJobs( site, module_list, max_jobs=10 ):
   results = []
   for job in BaseJob.objects.filter( site=site, state='queued' ).order_by( 'updated' ):
     job = job.realJob
-    print( '~~~~~~~~~~~~~~~~~~ "{0}"'.format( job ))
-
     runner = pickle.loads( job.script_runner )
 
     if runner.aborted:
@@ -281,7 +276,6 @@ def processJobs( site, module_list, max_jobs=10 ):
         results.append( task )
 
     job.status = runner.status
-    print( '____________ job "{0}"   state: "{1}"   progress: "{2}"    message: "{3}"'.format( job, job.state, job.progress, job.message ) )
     job.script_runner = pickle.dumps( runner )
     job.full_clean()
     job.save()
@@ -308,7 +302,6 @@ def jobResults( job_id, cookie, data ):
     raise ForemanException( 'INVALID_RESULT', 'Error saving job results: "{0}"'.format( result ) )
 
   job.status = runner.status
-  print( '----------------- job "{0}"   state: "{1}"   progress: "{2}"    message: "{3}"'.format( job, job.state, job.progress, job.message ) )
   job.script_runner = pickle.dumps( runner )
   job.full_clean()
   job.save()
