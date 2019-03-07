@@ -1,3 +1,9 @@
+contractor (0.3-1) xenial; urgency=medium
+
+  * Fixes, Tweeks, Improvements
+
+ -- Peter Howe <pnhowe@gmail.com>  Wed, 06 Mar 2019 21:50:06 -0700
+
 contractor (0.2-1) xenial; urgency=medium
 
   * Fixes, Tweeks, Minor Improvements

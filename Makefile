@@ -1,4 +1,4 @@
-all: build-ui
+all: #build-ui
 	./setup.py build
 
 install: install-ui
@@ -18,7 +18,7 @@ install: install-ui
 
 	./setup.py install --root $(DESTDIR) --install-purelib=/usr/lib/python3/dist-packages/ --prefix=/usr --no-compile -O0
 
-clean: clean-ui
+clean: #clean-ui
 	./setup.py clean
 	$(RM) -fr build
 	$(RM) -f dpkg
