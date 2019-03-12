@@ -11,7 +11,7 @@ ALLOWED_HOSTS = []
 CONTRACTOR_HOST = 'http://contractor/'
 PXE_IMAGE_LOCATION = 'http://static/pxe/'
 
-# set to None to disable
+# set to None to disable, or '*CONSOLE*' to output to stdout
 DEBUG_DUMP_LOCATION = '/tmp'
 
 # get plugins
@@ -58,10 +58,6 @@ WSGI_APPLICATION = 'contractor.wsgi.application'
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 
 DATABASES = {
-  #  'default': {
-  #      'ENGINE': 'django.db.backends.sqlite3',
-  #      'NAME': '/var/lib/contractor/db.sqlite3',
-  #  }
     'default': {
       'ENGINE': 'django.db.backends.postgresql_psycopg2',
       'NAME': 'contractor',

@@ -133,7 +133,7 @@ def test_handler():
                             '_structure_config_uuid': '8b6663f9-efa8-467c-b973-ac79e66e3c78'
                           } )
 
-  resp = handler( Request( '/config/config/s/1', None ) )
+  resp = handler( Request( '/config/config/s/5', None ) )
   assert resp.http_code == 200
   _test_dict( resp.data, {
                             '_blueprint': 'str_test',

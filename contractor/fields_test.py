@@ -199,48 +199,46 @@ def test_mapfield_save_load_empty_blank( mocker ):
     assert cursor.fetchall() == [ ( 1, '{"a": [1, 2, 3]}' ) ]
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = "1"'.format( testModel._meta.db_table ) )
+    cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = ''1'''.format( testModel._meta.db_table ) )
   assert testModel.objects.get().f is None
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '{}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '{}' ] )
   assert testModel.objects.get().f == {}
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '{"a": [1, 2, 3]}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '{"a": [1, 2, 3]}' ] )
   assert testModel.objects.get().f == { 'a': [ 1, 2, 3 ] }
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ 'bob' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ 'bob' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '0' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '0' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '42' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '42' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '[]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '[]' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '[ 1, 2 ]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '[ 1, 2 ]' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
-
-
 
 
 @pytest.mark.django_db
@@ -285,43 +283,43 @@ def test_mapfield_save_load_empty_blank_nonnull( mocker ):
   with pytest.raises( IntegrityError ):
     with transaction.atomic():
       with connection.cursor() as cursor:
-        cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = "1"'.format( testModel._meta.db_table ) )
+        cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = ''1'''.format( testModel._meta.db_table ) )
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '{}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '{}' ] )
   assert testModel.objects.get().f == {}
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '{"a": [1, 2, 3]}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '{"a": [1, 2, 3]}' ] )
   assert testModel.objects.get().f == { 'a': [ 1, 2, 3 ] }
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ 'bob' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ 'bob' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '0' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '0' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '42' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '42' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '[]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '[]' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '[ 1, 2 ]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '[ 1, 2 ]' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
@@ -352,43 +350,43 @@ def test_mapfield_save_default( mocker ):
   with pytest.raises( IntegrityError ):
     with transaction.atomic():
       with connection.cursor() as cursor:
-        cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = "1"'.format( testModel._meta.db_table ) )
+        cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = ''1'''.format( testModel._meta.db_table ) )
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '{}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '{}' ] )
   assert testModel.objects.get().f == {}
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '{"a": [1, 2, 3]}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '{"a": [1, 2, 3]}' ] )
   assert testModel.objects.get().f == { 'a': [ 1, 2, 3 ] }
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ 'bob' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ 'bob' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '0' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '0' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '42' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '42' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '[]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '[]' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '[ 1, 2 ]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '[ 1, 2 ]' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
@@ -435,43 +433,43 @@ def test_mapfield_save_default_blank( mocker ):
   with pytest.raises( IntegrityError ):
     with transaction.atomic():
       with connection.cursor() as cursor:
-        cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = "1"'.format( testModel._meta.db_table ) )
+        cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = ''1'''.format( testModel._meta.db_table ) )
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '{}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '{}' ] )
   assert testModel.objects.get().f == {}
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '{"a": [1, 2, 3]}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '{"a": [1, 2, 3]}' ] )
   assert testModel.objects.get().f == { 'a': [ 1, 2, 3 ] }
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ 'bob' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ 'bob' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '0' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '0' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '42' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '42' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '[]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '[]' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '[ 1, 2 ]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '[ 1, 2 ]' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
@@ -583,58 +581,58 @@ def test_jsonfield_blank_null():
     assert cursor.fetchall() == [ ( 1, '\x02JSON\x03{"a": 123}' ) ]
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = "1"'.format( testModel._meta.db_table ) )
+    cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = ''1'''.format( testModel._meta.db_table ) )
   assert testModel.objects.get().f is None
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ 'qwerty' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ 'qwerty' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ 123 ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ 123 ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03""' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03""' ] )
   assert testModel.objects.get().f == ''
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03"qwerty"' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03"qwerty"' ] )
   assert testModel.objects.get().f == 'qwerty'
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x030' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x030' ] )
   assert testModel.objects.get().f == 0
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03223311' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03223311' ] )
   assert testModel.objects.get().f == 223311
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03[]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03[]' ] )
   assert testModel.objects.get().f == []
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03["asdf"]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03["asdf"]' ] )
   assert testModel.objects.get().f == [ "asdf" ]
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03{}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03{}' ] )
   assert testModel.objects.get().f == {}
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03"{}"' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03"{}"' ] )
   assert testModel.objects.get().f == '{}'
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03{"a": 23}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03{"a": 23}' ] )
   assert testModel.objects.get().f == { 'a': 23 }
 
 
@@ -732,55 +730,55 @@ def test_jsonfield():
   with pytest.raises( IntegrityError ):
     with transaction.atomic():
       with connection.cursor() as cursor:
-        cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = "1"'.format( testModel._meta.db_table ) )
+        cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = ''1'''.format( testModel._meta.db_table ) )
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ 'qwerty' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ 'qwerty' ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ 123 ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ 123 ] )
   with pytest.raises( ValidationError ):
     testModel.objects.get()
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03""' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03""' ] )
   assert testModel.objects.get().f == ''
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03"qwerty"' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03"qwerty"' ] )
   assert testModel.objects.get().f == 'qwerty'
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x030' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x030' ] )
   assert testModel.objects.get().f == 0
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03223311' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03223311' ] )
   assert testModel.objects.get().f == 223311
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03[]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03[]' ] )
   assert testModel.objects.get().f == []
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03["asdf"]' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03["asdf"]' ] )
   assert testModel.objects.get().f == [ "asdf" ]
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03{}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03{}' ] )
   assert testModel.objects.get().f == {}
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03"{}"' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03"{}"' ] )
   assert testModel.objects.get().f == '{}'
 
   with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = "1"'.format( testModel._meta.db_table ), [ '\x02JSON\x03{"a": 23}' ] )
+    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03{"a": 23}' ] )
   assert testModel.objects.get().f == { 'a': 23 }

@@ -1,4 +1,6 @@
-all: #build-ui
+VERSION := $(shell head -n 1 debian/changelog | awk '{match( $$0, /\(.+?\)/); print substr( $$0, RSTART+1, RLENGTH-2 ) }' | cut -d- -f1 )
+
+all: build-ui
 	./setup.py build
 
 install: install-ui
@@ -18,21 +20,25 @@ install: install-ui
 
 	./setup.py install --root $(DESTDIR) --install-purelib=/usr/lib/python3/dist-packages/ --prefix=/usr --no-compile -O0
 
-clean: #clean-ui
+version:
+	echo $(VERSION)
+
+clean: clean-ui
 	./setup.py clean
 	$(RM) -fr build
 	$(RM) -f dpkg
 	$(RM) -fr htmlcov
 	dh_clean || true
 
-.PHONY:: all install clean full-clean
+dist-clean: clean
+
+.PHONY:: all install version clean dist-clean
 
 ui_files := $(foreach file,$(wildcard ui/src/www/*),ui/build/$(notdir $(file)))
 
 build-ui: ui/build/bundle.js $(ui_files)
 
 ui/build/bundle.js: $(wildcard ui/src/frontend/component/*) ui/src/frontend/index.js
-	# cd ui && npm install
 	cd ui && npm run build
 
 ui/build/%:
@@ -48,19 +54,25 @@ clean-ui:
 
 .PHONY:: build-ui install-ui clean-ui
 
+test-distros:
+	echo ubuntu-xenial
+
 test-requires:
-	python3-pytest python3-pytest-cov python3-pytest-django python3-pytest-mock
+	python3-pytest python3-pytest-cov python3-pytest-django python3-pytest-mock python3-pytest-timeout
 
 test:
 	py.test-3 -x --cov=contractor --cov-report html --cov-report term --ds=contractor.settings -vv contractor
 
-.PHONY:: test test-requires
+.PHONY:: test-distros test-requires test
 
 dpkg-distros:
-	echo xenial
+	echo ubuntu-xenial
 
 dpkg-requires:
 	echo dpkg-dev debhelper python3-dev python3-setuptools nodejs npm nodejs-legacy
+
+dpkg-setup:
+	cd ui && npm install
 
 dpkg:
 	dpkg-buildpackage -b -us -uc
