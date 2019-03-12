@@ -212,9 +212,9 @@ def test_mergeValues():
   assert { 'a': 'c', 'd': 'c' } == mergeValues( values )
   assert { 'a': 'c', 'd': '{{a}}' } == values
 
-  # values = { 'a': 1, 'd': '{{a}}', 'e': '"{{a}}"' }
-  # assert { 'a': 'c', 'd': 1, 'e': '1' } == mergeValues( values )
-  # assert { 'a': 'c', 'd': '{{a}}', 'e': '"{{a}}"' } == values
+  values = { 'a': 1, 'd': '{{a}}', 'e': '"{{a}}"' }
+  assert { 'a': 1, 'd': '1', 'e': '"1"' } == mergeValues( values )
+  assert { 'a': 1, 'd': '{{a}}', 'e': '"{{a}}"' } == values
 
   values = { 'a': 'c', 'd': '{{ a }}' }
   assert { 'a': 'c', 'd': 'c' } == mergeValues( values )
@@ -633,7 +633,7 @@ def test_structure():
                   '_foundation_type': 'Unknown',
                   '_provisioning_interface': None,
                   '_provisioning_interface_mac': None,
-                  '_structure_id': 1,
+                  '_structure_id': 7,
                   '_structure_state': 'planned',
                   '_fqdn': 'struct1',
                   '_hostname': 'struct1',
@@ -651,7 +651,7 @@ def test_structure():
                                               '_foundation_type': 'Unknown',
                                               '_provisioning_interface': None,
                                               '_provisioning_interface_mac': None,
-                                              '_structure_id': 1,
+                                              '_structure_id': 7,
                                               '_structure_state': 'planned',
                                               '_fqdn': 'struct1',
                                               '_hostname': 'struct1',
@@ -673,7 +673,7 @@ def test_structure():
                                               '_foundation_type': 'Unknown',
                                               '_provisioning_interface': None,
                                               '_provisioning_interface_mac': None,
-                                              '_structure_id': 1,
+                                              '_structure_id': 7,
                                               '_structure_state': 'planned',
                                               '_fqdn': 'struct1',
                                               '_hostname': 'struct1',
@@ -695,7 +695,7 @@ def test_structure():
                                              '_foundation_type': 'Unknown',
                                              '_provisioning_interface': None,
                                              '_provisioning_interface_mac': None,
-                                             '_structure_id': 1,
+                                             '_structure_id': 7,
                                              '_structure_state': 'planned',
                                              '_fqdn': 'struct1',
                                              '_hostname': 'struct1',
@@ -718,7 +718,7 @@ def test_structure():
                                              '_foundation_type': 'Unknown',
                                              '_provisioning_interface': None,
                                              '_provisioning_interface_mac': None,
-                                             '_structure_id': 1,
+                                             '_structure_id': 7,
                                              '_structure_state': 'planned',
                                              '_fqdn': 'struct1',
                                              '_hostname': 'struct1',

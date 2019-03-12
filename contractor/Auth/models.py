@@ -2,6 +2,7 @@ from importlib import import_module
 
 from django.conf import settings
 from django.contrib import auth
+from django.db import transaction
 from django.contrib.auth.models import AnonymousUser
 from cinp.orm_django import DjangoCInP as CInP
 from cinp.server_common import InvalidRequest
@@ -13,7 +14,9 @@ def getUser( auth_id, auth_token ):
   if auth_id is None or auth_token is None:
     return AnonymousUser()
 
+  transaction.set_autocommit( False )
   request = Request( session_engine.SessionStore( auth_token ) )
+  transaction.commit()
 
   if request.user.username != auth_id:
     return None

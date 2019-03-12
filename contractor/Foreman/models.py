@@ -215,7 +215,7 @@ class BaseJob( models.Model ):
       result[ 'script' ] = blueprint.get_script( self.script_name )
 
     result[ 'cur_line' ] = runner.cur_line
-    result[ 'state' ] = str( runner.state )
+    result[ 'state' ] = runner.state
 
     return result
 

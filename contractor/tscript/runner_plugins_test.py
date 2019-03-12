@@ -66,7 +66,7 @@ class remote( ExternalFunction ):
     return ( self.state, self.counter )
 
   def __setstate__( self, state ):
-    self.end_at = state[0]
+    self.state = state[0]
     self.counter = state[1]
 
 

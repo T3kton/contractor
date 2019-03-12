@@ -219,7 +219,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     createJob( 'create', target=structure )
 
   # clean up completed jobs
-  for job in BaseJob.objects.filter( site=site, state='done' ):
+  for job in BaseJob.objects.select_for_update().filter( site=site, state='done' ):
     job = job.realJob
     job.done()
     if isinstance( job, StructureJob ):
@@ -234,7 +234,7 @@ def processJobs( site, module_list, max_jobs=10 ):
 
   # iterate over the curent jobs
   results = []
-  for job in BaseJob.objects.filter( site=site, state='queued' ).order_by( 'updated' ):
+  for job in BaseJob.objects.select_for_update().filter( site=site, state='queued' ).order_by( 'updated' ):
     job = job.realJob
     runner = pickle.loads( job.script_runner )
 
@@ -291,7 +291,7 @@ def processJobs( site, module_list, max_jobs=10 ):
 #   the job till it is pickled and saved
 def jobResults( job_id, cookie, data ):
   try:
-    job = BaseJob.objects.get( pk=job_id )
+    job = BaseJob.objects.select_for_update().get( pk=job_id )
   except BaseJob.DoesNotExist:
     raise ForemanException( 'JOB_NOT_FOUND', 'Error saving job results: "Job Not Found"' )
 
@@ -311,7 +311,7 @@ def jobResults( job_id, cookie, data ):
 
 def jobError( job_id, cookie, msg ):
   try:
-    job = BaseJob.objects.get( pk=job_id )
+    job = BaseJob.objects.select_for_update().get( pk=job_id )
   except BaseJob.DoesNotExist:
     raise ForemanException( 'JOB_NOT_FOUND', 'Error setting job to error: "Job Not Found"' )
 

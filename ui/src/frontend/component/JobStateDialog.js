@@ -23,7 +23,7 @@ class JobStateDialog extends React.Component
 
         var state = result[1].data;
 
-        this.setState( { active: true, variable_list: variable_list, cur_line: state.cur_line, stack: state.state, script: state.script } );
+        this.setState( { active: true, variable_list: variable_list, cur_line: state.cur_line, stack: JSON.stringify( state.state ), script: state.script } );
       } );
   };
 

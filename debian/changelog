@@ -1,3 +1,15 @@
+contractor (0.3.1-1) xenial; urgency=medium
+
+  * Transaction related fixes
+
+ -- Peter <peter@xps13-01>  Tue, 12 Mar 2019 11:59:01 -0600
+
+contractor (0.3-1) xenial; urgency=medium
+
+  * Fixes, Tweeks, Improvements
+
+ -- Peter Howe <pnhowe@gmail.com>  Wed, 06 Mar 2019 21:50:06 -0700
+
 contractor (0.2-1) xenial; urgency=medium
 
   * Fixes, Tweeks, Minor Improvements

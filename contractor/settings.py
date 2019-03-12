@@ -12,7 +12,7 @@ CONTRACTOR_HOST = 'http://contractor/'
 PXE_IMAGE_LOCATION = 'http://static/pxe/'
 
 # set to None to disable
-DEBUG_DUMP_LOCATION = '/tmp'
+DEBUG_DUMP_LOCATION = '*CONSOLE*'
 
 # get plugins
 import os
@@ -61,10 +61,14 @@ WSGI_APPLICATION = 'contractor.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': '/opt/contractor/db.sqlite3',
-    }
-}
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'contractor',
+        'USER': 'contractor',
+        'PASSWORD': 'contractor',
+        'HOST': '127.0.0.1',
+        'PORT': '',
+          }
+      }
 
 
 # Internationalization

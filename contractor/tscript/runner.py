@@ -1,3 +1,4 @@
+import sys
 import uuid
 import traceback
 import datetime
@@ -186,7 +187,7 @@ class ExternalFunction( object ):
     pass
 
   def fromSubcontractor( self, data ):
-    # return value is send back to contractor so the plugin in contractor can get some feedback
+    # return value is send back to subcontractor so the plugin in subcontractor can get some feedback  TODO: interesting the code in Forman.lib only accepts 'Accepted', have to look into this
     # data will be a dict
     # this will be called once for every toSubcontractor task sent to subcontractor.  There  could be external
     # logic that looks for timeout/loss of results and call rollback to start from the top
@@ -303,7 +304,11 @@ def _debugDump( message, exception, ast, state ):
     return
 
   try:
-    fp = open( os.path.join( settings.DEBUG_DUMP_LOCATION, datetime.utcnow().isoformat() ), 'w' )
+    if settings.DEBUG_DUMP_LOCATION == '*CONSOLE*':
+      fp = sys.stdout
+    else:
+      fp = open( os.path.join( settings.DEBUG_DUMP_LOCATION, datetime.utcnow().isoformat() ), 'w' )
+
     fp.write( '** Message **\n' )
     fp.write( str( message ) )
     fp.write( '\n\n** AST **\n' )
@@ -313,7 +318,8 @@ def _debugDump( message, exception, ast, state ):
     fp.write( '\n\n** Stack **\n' )
     for line in traceback.TracebackException( type( exception ), exception, exception.__traceback__, lookup_lines=True, capture_locals=True ).format( chain=False ):
        fp.write( line )
-    fp.close()
+    if fp is not sys.stdout:
+      fp.close()
 
   except Exception as e:
     try:
@@ -888,6 +894,7 @@ class Runner( object ):
             raise e
 
           except Exception as e:
+            module = op_data.get( 'module', '<builtin>' )
             _debugDump( 'Handler "{0}" in module "{1}" error during ready/run/value on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )
             raise UnrecoverableError( 'Handler "{0}" in module "{1}" error during ready/run/value on line "{2}": "{3}"({4})'.format( handler.__class__.__name__, module, self.cur_line, str( e ), e.__class__.__name__) )
 
