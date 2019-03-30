@@ -1,6 +1,7 @@
 import re
 import random
 from django.db import models
+from django.db.models import Q
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
 from cinp.orm_django import DjangoCInP as CInP
@@ -405,6 +406,9 @@ class AddressBlock( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
+    if not name_regex.match( self.name ):
+      errors[ 'name' ] = '"{0}" is invalid'.format( self.name[ 0:50 ] )
+
     try:
       subnet_ip = StrToIp( self.subnet )
       ipv4 = IpIsV4( subnet_ip )
@@ -440,10 +444,15 @@ class AddressBlock( models.Model ):
     ( subnet_ip, last_ip ) = CIDRNetworkBounds( subnet_ip, self.prefix, True )
     self.subnet = IpToStr( subnet_ip )
     self._max_address = IpToStr( last_ip )
-    block_count = AddressBlock.objects.filter( subnet__gte=self.subnet, _max_address__lte=self.subnet ).count()
-    block_count += AddressBlock.objects.filter( subnet__gte=self._max_address, _max_address__lte=self._max_address ).count()
-    block_count += AddressBlock.objects.filter( _max_address__gte=self.subnet, _max_address__lte=self._max_address ).count()
-    block_count += AddressBlock.objects.filter( subnet__gte=self.subnet, subnet__lte=self._max_address ).count()
+
+    if self.pk is not None:
+      ABobjects = AddressBlock.objects.filter( ~Q( pk=self.pk ) )
+    else:
+      ABobjects = AddressBlock.objects.all()
+    block_count = ABobjects.filter( subnet__gte=self.subnet, _max_address__lte=self.subnet ).count()
+    block_count += ABobjects.filter( subnet__gte=self._max_address, _max_address__lte=self._max_address ).count()
+    block_count += ABobjects.filter( _max_address__gte=self.subnet, _max_address__lte=self._max_address ).count()
+    block_count += ABobjects.filter( subnet__gte=self.subnet, subnet__lte=self._max_address ).count()
     if block_count > 0:
       errors[ 'subnet' ] = 'This subnet/prefix overlaps with an existing Address Block'
 
@@ -696,7 +705,12 @@ class Address( BaseAddress ):
       errors[ 'vlan' ] = 'must be between 0 and 4096'
 
     if self.is_primary:
-      if self.networked.address_set.filter( is_primary=True ).count() > 0:
+      if self.pk is not None:
+        Aobjects = self.networked.address_set.filter( ~Q( pk=self.pk ) )
+      else:
+        Aobjects = self.networked.address_set.all()
+
+      if Aobjects.filter( is_primary=True ).count() > 0:
         errors[ 'is_primary' ] = 'Networked allready has a primary ip'
 
     if errors:

@@ -25,7 +25,7 @@ class DirectoryException( ValueError ):
     return 'DirectoryException ({0}): {1}'.format( self.code, self.message )
 
 
-@cinp.model( property_list=( 'fqdn' ) )
+@cinp.model( property_list=( 'fqdn', ) )
 class Zone( models.Model ):
   name = models.CharField( max_length=100, primary_key=True )
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
@@ -80,6 +80,11 @@ class Entry( models.Model ):
   target = models.CharField( max_length=255 )  # MX, SRV, CNAME, TXT
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
+
+  @cinp.list_filter( name='zone', paramater_type_list=[ { 'type': 'Model', 'model': Zone } ] )
+  @staticmethod
+  def filter_zone( zone ):
+    return Entry.objects.filter( zone=zone )
 
   @cinp.check_auth()
   @staticmethod

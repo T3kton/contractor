@@ -8,6 +8,16 @@ from contractor.Building.models import Foundation, Structure
 from contractor.lib.config import _updateConfig, mergeValues, getConfig, renderTemplate
 
 
+def _strip_base( value ):
+  for i in ( '__contractor_host', '__pxe_location', '__pxe_template_location', '__last_modified', '__timestamp', '_structure_config_uuid' ):
+    try:
+      del value[ i ]
+    except KeyError:
+      pass
+
+  return value
+
+
 def test_string():
   config = {}
   _updateConfig( {}, [], config )
@@ -258,15 +268,9 @@ def test_render():
 
   assert renderTemplate( 'This {{i}} {{j}} test', config ) == 'This is only  test'
 
+  assert renderTemplate( 'This does not {{exist|tojson}}', {} ) == 'This does not ""'
 
-def _strip_base( value ):
-  for i in ( '__contractor_host', '__pxe_location', '__pxe_template_location', '__last_modified', '__timestamp', '_structure_config_uuid' ):
-    try:
-      del value[ i ]
-    except KeyError:
-      pass
-
-  return value
+  assert renderTemplate( 'This {{i|tojson}}', { 'i': [ 1, "sdf", [ 2, 3 ], { 'a': 'sdf' }, None, datetime.min ] } ) == 'This [1, "sdf", [2, 3], {"a": "sdf"}, null, "0001-01-01T00:00:00"]'
 
 
 @pytest.mark.django_db
@@ -633,7 +637,7 @@ def test_structure():
                   '_foundation_type': 'Unknown',
                   '_provisioning_interface': None,
                   '_provisioning_interface_mac': None,
-                  '_structure_id': 7,
+                  '_structure_id': str1.pk,
                   '_structure_state': 'planned',
                   '_fqdn': 'struct1',
                   '_hostname': 'struct1',
@@ -651,7 +655,7 @@ def test_structure():
                                               '_foundation_type': 'Unknown',
                                               '_provisioning_interface': None,
                                               '_provisioning_interface_mac': None,
-                                              '_structure_id': 7,
+                                              '_structure_id': str1.pk,
                                               '_structure_state': 'planned',
                                               '_fqdn': 'struct1',
                                               '_hostname': 'struct1',
@@ -673,7 +677,7 @@ def test_structure():
                                               '_foundation_type': 'Unknown',
                                               '_provisioning_interface': None,
                                               '_provisioning_interface_mac': None,
-                                              '_structure_id': 7,
+                                              '_structure_id': str1.pk,
                                               '_structure_state': 'planned',
                                               '_fqdn': 'struct1',
                                               '_hostname': 'struct1',
@@ -695,7 +699,7 @@ def test_structure():
                                              '_foundation_type': 'Unknown',
                                              '_provisioning_interface': None,
                                              '_provisioning_interface_mac': None,
-                                             '_structure_id': 7,
+                                             '_structure_id': str1.pk,
                                              '_structure_state': 'planned',
                                              '_fqdn': 'struct1',
                                              '_hostname': 'struct1',
@@ -718,7 +722,7 @@ def test_structure():
                                              '_foundation_type': 'Unknown',
                                              '_provisioning_interface': None,
                                              '_provisioning_interface_mac': None,
-                                             '_structure_id': 7,
+                                             '_structure_id': str1.pk,
                                              '_structure_state': 'planned',
                                              '_fqdn': 'struct1',
                                              '_hostname': 'struct1',

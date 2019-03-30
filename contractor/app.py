@@ -24,6 +24,7 @@ def get_app( debug ):
   app.registerNamespace( '/', 'contractor.Auth' )
   app.registerNamespace( '/', 'contractor.BluePrint' )
   app.registerNamespace( '/', 'contractor.Site' )
+  app.registerNamespace( '/', 'contractor.Directory' )
   app.registerNamespace( '/', 'contractor.Utilities' )
   app.registerNamespace( '/', 'contractor.Building' )
   app.registerNamespace( '/', 'contractor.Foreman' )

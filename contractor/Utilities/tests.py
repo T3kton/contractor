@@ -60,6 +60,19 @@ def test_addressblock():
   ab.full_clean()
   ab.save()
 
+  ab.gateway_offset = 1
+  ab.full_clean()
+  ab.save()
+
+  ab.name = 'something_else'
+  with pytest.raises( ValidationError ):  # a new name means diferent address block, so error
+    ab.full_clean()
+
+  ab = AddressBlock.objects.get( name='test' )
+  ab.gateway_offset = None
+  ab.full_clean()
+  ab.save()
+
   ab = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24, name='test2' )
   with pytest.raises( ValidationError ):
     ab.full_clean()

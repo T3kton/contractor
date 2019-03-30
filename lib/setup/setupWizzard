@@ -10,6 +10,7 @@ import sys
 import argparse
 import subprocess
 
+from django.core.exceptions import ValidationError
 from contractor import settings
 from contractor.lib.ip import CIDRSubnet, StrToIp, IpToStr
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
@@ -122,19 +123,6 @@ addr1_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=1, pr
 addr1_block.full_clean()
 addr1_block.save()
 
-if not args.no_ip_reservation:
-  print( 'reserving address offsets from 2 - 20...')
-  for i in range( 2, 21 ):
-    addr = ReservedAddress( address_block=addr1_block, offset=i, reason='network reserved' )
-    addr.full_clean()
-    addr.save()
-
-  print( 'using offsets 21 - 29 for dynamic pool...' )
-  for i in range( 21, 30 ):
-    addr = DynamicAddress( address_block=addr1_block, offset=i )
-    addr.full_clean()
-    addr.save()
-
 print( 'contractor entry...' )
 fdn_dev = ManualFoundation( site=s1, blueprint=fbp_manual, locator='contractor' )
 fdn_dev.full_clean()
@@ -162,6 +150,28 @@ e.name = 'static'
 e.target = 'contractor.site1.local.'
 e.full_clean()
 e.save()
+
+if not args.no_ip_reservation:
+  print( 'reserving address offsets from 2 - 20...')
+  for i in range( 2, 21 ):
+    addr = ReservedAddress( address_block=addr1_block, offset=i, reason='network reserved' )
+    try:
+      addr.full_clean()
+    except ValidationError:
+      print( 'WARNING offset "{0}" is allready in use, skipped.'.format( i ) )
+      continue
+
+    addr.save()
+
+  print( 'using offsets 21 - 29 for dynamic pool...' )
+  for i in range( 21, 30 ):
+    addr = DynamicAddress( address_block=addr1_block, offset=i )
+    try:
+      addr.full_clean()
+    except ValidationError:
+      print( 'WARNING offset "{0}" is allready in use, skipped.'.format( i ) )
+      continue
+    addr.save()
 
 print( 'Configuring settings file...' )
 filename = settings.__file__

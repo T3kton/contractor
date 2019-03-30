@@ -70,6 +70,8 @@ DATABASES = {
           }
       }
 
+MONGO_HOST = 'mongodb://127.0.0.1:27017/'
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/
