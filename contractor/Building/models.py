@@ -3,7 +3,7 @@ import uuid
 from django.utils import timezone
 from django.db import models
 from django.db.models import Q
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
@@ -13,7 +13,7 @@ from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked
 from contractor.lib.config import getConfig, mergeValues
-from contractor.lib.cache import post_save_callback
+from contractor.Records.lib import post_save_callback, post_delete_callback
 
 # this is where the plan meats the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
 
@@ -690,3 +690,5 @@ class Dependency( models.Model ):
 
 post_save.connect( post_save_callback, sender=Foundation )
 post_save.connect( post_save_callback, sender=Structure )
+post_delete.connect( post_delete_callback, sender=Foundation )
+post_delete.connect( post_delete_callback, sender=Structure )

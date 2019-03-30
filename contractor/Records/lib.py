@@ -1,5 +1,4 @@
 from pymongo import MongoClient
-
 from django.conf import settings
 
 from contractor.lib.config import getConfig
@@ -8,7 +7,7 @@ from contractor.lib.config import getConfig
 _mongo_db = None
 
 
-def _connect():
+def connect():
   global _mongo_db
   if _mongo_db is not None:
     return _mongo_db
@@ -27,11 +26,11 @@ def _collection( db, target ):
   elif 'Foundation' in [ i.__name__ for i in target.__class__.__mro__ ]:
     return db.foundation
   else:
-    raise ValueError( 'Unable to located collection for "{0}"' )
+    raise ValueError( 'Unable to located collection for "{0}"'.format( target ) )
 
 
-def updateConfig( target ):
-  collection = _collection( _connect(), target )
+def updateRecord( target ):
+  collection = _collection( connect(), target )
 
   item = getConfig( target )
   for i in ( '__contractor_host', '__pxe_template_location', '__pxe_location' ):  # these are the same everywhere
@@ -42,12 +41,16 @@ def updateConfig( target ):
   collection.update( key, item, upsert=True )
 
 
-def removeConfig( target ):
-  collection = _collection( _connect(), target )
+def removeRecord( target ):
+  collection = _collection( connect(), target )
 
   query = { '_id': target.pk }
   collection.remove( query )
 
 
 def post_save_callback( **kwargs ):
-  updateConfig( kwargs[ 'instance' ] )
+  updateRecord( kwargs[ 'instance' ] )
+
+
+def post_delete_callback( **kwargs ):
+  removeRecord( kwargs[ 'instance' ] )

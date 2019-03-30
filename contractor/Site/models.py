@@ -1,13 +1,13 @@
 from django.db import models
 from django.db.models import Q
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
 from contractor.fields import MapField, name_regex, config_name_regex
 from contractor.lib.config import getConfig
-from contractor.lib.cache import post_save_callback
+from contractor.Records.lib import post_save_callback, post_delete_callback
 from contractor.Directory.models import Zone
 
 # this is the what we want implemented, ie where, how it's grouped and waht is in thoes sites/groups, the logical aspect
@@ -139,3 +139,4 @@ class Site( models.Model ):
     return 'Site "{0}"({1})'.format( self.description, self.name )
 
 post_save.connect( post_save_callback, sender=Site )
+post_delete.connect( post_delete_callback, sender=Site )

@@ -37,6 +37,7 @@ INSTALLED_APPS = (
     'contractor.Foreman',
     'contractor.SubContractor',
     'contractor.PostOffice',
+    'contractor.Records',
     *plugin_list,
     'django.contrib.auth',
     'django.contrib.contenttypes',

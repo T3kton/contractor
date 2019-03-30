@@ -3,7 +3,7 @@ import pytest
 from contractor.Site.models import Site
 from contractor.Building.models import Structure, Foundation
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
-from contractor.lib.cache import _collection, removeConfig
+from contractor.Records.lib import _collection
 
 
 fake_key = None
@@ -38,6 +38,10 @@ class FakeCollection():
     fake_key = key
     fake_item = item
 
+  def remove( self, key ):
+    global fake_key
+    fake_key = key
+
 
 class FakeDB():
   site = FakeCollection( 'Site' )
@@ -70,8 +74,8 @@ def test_collection():
 
 
 @pytest.mark.django_db
-def test_updateConfig_site( mocker ):
-  mocker.patch( 'contractor.lib.cache._connect', fake_connect )
+def test_site( mocker ):
+  mocker.patch( 'contractor.Records.lib._connect', fake_connect )
   global fake_key
   global fake_item
 
@@ -105,10 +109,14 @@ def test_updateConfig_site( mocker ):
                         'z': 'abc'
                       }
 
+  fake_key = None
+  s.delete()
+  assert fake_key == { '_id': '1234test' }
+
 
 @pytest.mark.django_db
 def test_updateConfig_blueprint( mocker ):
-  mocker.patch( 'contractor.lib.cache._connect', fake_connect )
+  mocker.patch( 'contractor.Records.lib._connect', fake_connect )
   global fake_key
   global fake_item
 
@@ -187,10 +195,18 @@ def test_updateConfig_blueprint( mocker ):
                         'um': 'sally'
                       }
 
+  fake_key = None
+  fb.delete()
+  assert fake_key == { '_id': 'fdntest' }
+
+  fake_key = None
+  sb.delete()
+  assert fake_key == { '_id': 'sbptest' }
+
 
 @pytest.mark.django_db
 def test_updateConfig_foundation( mocker ):
-  mocker.patch( 'contractor.lib.cache._connect', fake_connect )
+  mocker.patch( 'contractor.Records.lib._connect', fake_connect )
   global fake_key
   global fake_item
 
@@ -230,10 +246,14 @@ def test_updateConfig_foundation( mocker ):
                         '_foundation_type': 'Unknown'
                       }
 
+  fake_key = None
+  fdn.delete()
+  assert fake_key == { '_id': 'bobmachine' }
+
 
 @pytest.mark.django_db
 def test_updateConfig_structure( mocker ):
-  mocker.patch( 'contractor.lib.cache._connect', fake_connect )
+  mocker.patch( 'contractor.Records.lib._connect', fake_connect )
   global fake_key
   global fake_item
 
@@ -277,7 +297,9 @@ def test_updateConfig_structure( mocker ):
   str.full_clean()
   str.save()
 
-  # assert fake_key == { '_id': 1 }  # the auto inc value could be all sorts of values
+  pk = str.pk
+
+  assert fake_key == { '_id': pk }  # the auto inc value could be all sorts of values
   assert _tweek_variables( fake_item ) == {
                         '__last_modified': '*DATETIME*',
                         '__timestamp': '*DATETIME*',
@@ -305,7 +327,7 @@ def test_updateConfig_structure( mocker ):
   str.full_clean()
   str.save()
 
-  # assert fake_key == { '_id': 1 }
+  assert fake_key == { '_id': pk }
   assert _tweek_variables( fake_item ) == {
                         '__last_modified': '*DATETIME*',
                         '__timestamp': '*DATETIME*',
@@ -327,3 +349,7 @@ def test_updateConfig_structure( mocker ):
                         '_structure_state': 'planned',
                         'sdf': { 'a': 'rrrr', 'b': [ 1, 2, 3, 4 ] }
                       }
+
+  fake_key = None
+  str.delete()
+  assert fake_key == { '_id': pk }
