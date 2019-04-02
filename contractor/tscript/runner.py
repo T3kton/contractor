@@ -71,7 +71,7 @@ class NoRollback( Exception ):
 # for values in modules, the getter/setter must not block, if you need to block
 # make a external function
 
-# for an inline non-pausing/remote function, you only need to implement execute and return_value, toSubcontractor is not called if ready is immeditally True.
+# for an inline non-pausing/remote function, you only need to implement execute and value, toSubcontractor is not called if ready is immeditally True.
 
 # any exceptions raised in any of these functions will cause the job the script is running for to end up in error state. Using any Excpetions other than
 # ExecutionError and UnrecoverableError will have it's Exception Name displayed in the output, otherwise it is treaded as Unrecoverable... where possible
@@ -133,8 +133,8 @@ class ExternalFunction( object ):
     # True -> can continue, False -> can not continue, <str> -> is treated as a status message and is displaied (otherwise treated as False)
     # anything else is cast to a string and treaded as a non-resumeable error
     # it is probably wise that this funcion does not do any processing, it may be call multiple times with out any other function in the class being called.
-    # do not depend on return_value being called imeditally after ready returns True, ready may have to return True multiple times before the return_value is
-    # reterieved and the object is cleaned up.  It is also possible that ready may still be called after return_value is reterieved.
+    # do not depend on value being called imeditally after ready returns True, ready may have to return True multiple times before the value is
+    # reterieved and the object is cleaned up.  It is also possible that ready may still be called after value is reterieved.
     # NOTE: if ready ever returns True, it can not take that back, bad things may happen.  Including throwing exceptions, they will probably be ignored.
     return True
 

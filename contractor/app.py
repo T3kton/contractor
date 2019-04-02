@@ -30,6 +30,7 @@ def get_app( debug ):
   app.registerNamespace( '/', 'contractor.Foreman' )
   app.registerNamespace( '/', 'contractor.SubContractor' )
   app.registerNamespace( '/', 'contractor.PostOffice' )
+  app.registerNamespace( '/', 'contractor.Records' )
 
   for plugin in plugin_list:
     try:

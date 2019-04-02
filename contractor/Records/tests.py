@@ -3,7 +3,7 @@ import pytest
 from contractor.Site.models import Site
 from contractor.Building.models import Structure, Foundation
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
-from contractor.Records.lib import _collection
+from contractor.Records.lib import collection
 
 
 fake_key = None
@@ -54,23 +54,23 @@ def fake_connect():
   return FakeDB()
 
 
-def test_collection():
-  db = fake_connect()
+def test_collection( mocker ):
+  mocker.patch( 'contractor.Records.lib._connect', fake_connect )
 
   t = Site()
-  assert _collection( db, t ).name == 'Site'
+  assert collection( t ).name == 'Site'
 
   t = Structure()
-  assert _collection( db, t ).name == 'Structure'
+  assert collection( t ).name == 'Structure'
 
   t = Foundation()
-  assert _collection( db, t ).name == 'Foundation'
+  assert collection( t ).name == 'Foundation'
 
   t = StructureBluePrint()
-  assert _collection( db, t ).name == 'BluePrint'
+  assert collection( t ).name == 'BluePrint'
 
   t = FoundationBluePrint()
-  assert _collection( db, t ).name == 'BluePrint'
+  assert collection( t ).name == 'BluePrint'
 
 
 @pytest.mark.django_db

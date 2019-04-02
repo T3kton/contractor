@@ -89,4 +89,4 @@ class User():
     return True
 
   def __str__( self ):
-    return 'User "{0}"'.format( self.username )
+    return 'User'
