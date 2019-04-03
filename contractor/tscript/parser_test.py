@@ -955,3 +955,43 @@ def test_assignment():
               [
                 ( 'L', ( 'A', { 'target': ( 'R', { 'module': None, 'name': 'asdf', 'index': ( 'C', 3 ) } ), 'value': ( 'V', { 'module': None, 'name': 'myval' } ) } ), 1 )
               ] } )
+
+
+def test_exists():
+  node = parse( 'exists( bob )' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'E', ( 'V', { 'module': None, 'name': 'bob' } ) ), 1 ) ] } )
+
+  node = parse( 'exists( top.bottom )' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'E', ( 'V', { 'module': 'top', 'name': 'bottom' } ) ), 1 ) ] } )
+
+  node = parse( 'exists(bob2)' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'E', ( 'V', { 'module': None, 'name': 'bob2' } ) ), 1 ) ] } )
+
+  node = parse( 'exists( bob3)' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'E', ( 'V', { 'module': None, 'name': 'bob3' } ) ), 1 ) ] } )
+
+  node = parse( 'exists(bob4 )' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'E', ( 'V', { 'module': None, 'name': 'bob4' } ) ), 1 ) ] } )
+
+  node = parse( 'exists( bob[1] )' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'E', ( 'R', { 'index': ( 'C', 1 ), 'module': None, 'name': 'bob' } ) ), 1 ) ] } )
+
+  node = parse( 'exists( bob[gh] )' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'E', ( 'R', { 'index': ( 'V', { 'module': None, 'name': 'gh' } ), 'module': None, 'name': 'bob' } ) ), 1 ) ] } )
+
+  node = parse( 'aa = exists( bob )' )
+  assert node == ( 'S', { '_children': [ ( 'L',
+                   ( 'A',
+                     { 'target': ( 'V', { 'module': None, 'name': 'aa' } ),
+                       'value': ( 'E', ( 'V', { 'module': None, 'name': 'bob' } ) )
+                      }
+                    ),
+                  1 ) ] } )
+
+  node = parse( 'if exists( bob ) then 10' )
+  assert node == ( 'S', { '_children': [ ( 'L',
+                    ( 'I',
+                       [ { 'condition': ( 'E', ( 'V', { 'module': None, 'name': 'bob' } ) ),
+                           'expression': ( 'C', 10 ) } 
+                       ] ),
+                    1 ) ] } )

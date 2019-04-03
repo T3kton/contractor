@@ -1379,3 +1379,29 @@ def test_status():
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
   assert runner.done
+
+
+def test_exists():
+  runner = Runner( parse( 'aa = 1' ) )
+  runner.run()
+  assert runner.variable_map == { 'aa': 1 }
+
+  runner = Runner( parse( 'aa = bb' ) )
+  with pytest.raises( NotDefinedError ):
+    runner.run()
+
+  runner = Runner( parse( 'aa = exists( bb )' ) )
+  runner.run()
+  assert runner.variable_map == { 'aa': False }
+
+  runner = Runner( parse( 'bb = 1\naa = exists( bb )' ) )
+  runner.run()
+  assert runner.variable_map == { 'aa': True, 'bb': 1 }
+
+  runner = Runner( parse( 'bb = [ 1, 2 ]\naa = exists( bb )' ) )
+  runner.run()
+  assert runner.variable_map == { 'aa': True, 'bb': [ 1, 2 ] }
+
+  runner = Runner( parse( 'bb = [ 1, 2 ]\naa = exists( bb[ 3 ] )' ) )
+  runner.run()
+  assert runner.variable_map == { 'aa': False, 'bb': [ 1, 2 ] }

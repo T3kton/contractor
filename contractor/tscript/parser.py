@@ -7,8 +7,8 @@ tscript_grammar = """
 script              = lines
 lines               = line*
 line                = ( expression / ws_s ) comment? nl_p
-expression          = ws_s ( jump_point / goto / function / ifelse / whiledo / block / assignment / infix / boolean / not_ / none / other / array_map_item / array / map / variable / time / number_float / number_int / text ) ws_s
-value_expression    = ws_s ( function / assignment / infix / boolean / not_ / none / array_map_item / array / map / variable / time / number_float / number_int / text ) ws_s
+expression          = ws_s ( jump_point / goto / function / ifelse / whiledo / block / assignment / infix / boolean / not_ / none / exists / other / array_map_item / array / map / variable / time / number_float / number_int / text ) ws_s
+value_expression    = ws_s ( function / assignment / infix / boolean / not_ / none / exists / array_map_item / array / map / variable / time / number_float / number_int / text ) ws_s
 constant_expression = ws_s ( boolean / none / time / number_float / number_int / text ) ws_s
 comment             = "#" ~"[^\\r\\n]*"
 jump_point          = ":" label
@@ -17,10 +17,10 @@ paramater_map       = ( ( ws_s label ws_s "=" value_expression "," )* ws_s label
 const_paramater_map = ( ( ws_s label ws_s "=" constant_expression "," )* ws_s label ws_s "=" constant_expression )? ws_s
 block               = "begin(" const_paramater_map ")" lines ws_s "end"
 
-whiledo             = "while" value_expression ws_s "do" em_p expression
+whiledo             = "while" value_expression "do" em_p expression
 other               = ( "continue" / "break" / "pass" )
 
-ifelse              = "if" value_expression ws_s "then" em_p expression ( em_s "elif" ws_s value_expression ws_s "then" em_p expression )* ( em_s "else" em_p expression )?
+ifelse              = "if" value_expression "then" em_p expression ( em_s "elif" value_expression "then" em_p expression )* ( em_s "else" em_p expression )?
 
 not_                = ~"[Nn]ot" value_expression
 
@@ -30,11 +30,12 @@ number_int          = ~"[-+]?[0-9]+"
 text                = ( "'" ~"[^']*" "'" ) / ( '"' ~'[^"]*' '"' )
 boolean             = ~"[Tt]rue" / ~"[Ff]alse"
 none                = ~"[Nn]one"
+exists              = "exists(" ws_s ( array_map_item / variable ) ws_s ")"
 
 array               = "[" ( ( value_expression "," )* value_expression )? ws_s "]"
 map                 = "{" paramater_map "}"
 
-reserved            = ( "begin" / "end" / "while" / "do" / "goto" / other ) !~"[a-zA-Z0-9_]"
+reserved            = ( "begin" / "end" / "while" / "do" / "goto" / "exists" / other ) !~"[a-zA-Z0-9_]"
 variable            = !reserved ( label "." )? label !"("
 
 function            = !reserved ( label "." )? label "(" paramater_map ")"
@@ -72,6 +73,7 @@ class types():
   MAP = 'M'
   FUNCTION = 'F'
   ASSIGNMENT = 'A'
+  EXISTS = 'E'
   OTHER = 'O'
 
 
@@ -246,6 +248,9 @@ class Parser( object ):
   def none( self, node ):
     return ( types.CONSTANT, None )
 
+  def exists( self, node ):
+    return ( types.EXISTS, self._eval( node.children[2] ) )
+
   def array( self, node ):
     children = node.children[1].children
     if len( children ) == 0:
@@ -291,17 +296,17 @@ class Parser( object ):
     return ( types.OTHER, node.children[0].text )
 
   def whiledo( self, node ):
-    return ( types.WHILE, { 'condition': self._eval( node.children[1] ), 'expression': self._eval( node.children[5] ) } )
+    return ( types.WHILE, { 'condition': self._eval( node.children[1] ), 'expression': self._eval( node.children[4] ) } )
 
   def ifelse( self, node ):
     branches = []
-    branches.append( { 'condition': self._eval( node.children[1] ), 'expression': self._eval( node.children[5] ) } )
+    branches.append( { 'condition': self._eval( node.children[1] ), 'expression': self._eval( node.children[4] ) } )
 
-    for item in node.children[6].children:
-      branches.append( { 'condition': self._eval( item.children[3] ), 'expression': self._eval( item.children[7] ) } )
+    for item in node.children[5].children:
+      branches.append( { 'condition': self._eval( item.children[2] ), 'expression': self._eval( item.children[5] ) } )
 
-    if len( node.children[7].children ) > 0:
-      branches.append( { 'condition': None, 'expression': self._eval( node.children[7].children[0].children[3] ) } )
+    if len( node.children[6].children ) > 0:
+      branches.append( { 'condition': None, 'expression': self._eval( node.children[6].children[0].children[3] ) } )
 
     return ( types.IFELSE, branches )
 

@@ -491,7 +491,7 @@ class Runner( object ):
 
     self.ttl = ttl
 
-    while True:  # we are a while loop for the beninit of the goto
+    while True:  # we are a while loop for the benifit of the goto
       try:
         self._evaluate( self.ast, 0 )
         return ''
@@ -682,7 +682,7 @@ class Runner( object ):
       try:
         value = value[ index ]
       except ( IndexError, KeyError ):
-        raise ParamaterError( 'index', 'Index/Key does not exist' )
+        raise NotDefinedError( 'Index/Key does not exist', self.cur_line )
 
       self.state[ state_index ][1] = None
       try:
@@ -807,7 +807,7 @@ class Runner( object ):
 
       if self.state[ state_index ][1] is None:  # TODO: is there a better way to handle this?
         pass
-        # function allready executed and was an Exceptoin last time, just let things pass by us
+        # function allready executed and was an Exception last time, just let things pass by us
 
       else:
         # get the paramaters
@@ -953,6 +953,23 @@ class Runner( object ):
 
         self.state = self.state[ :( state_index + 1 ) ]
 
+    elif op_type == types.EXISTS:
+      try:
+        self.state[ state_index ][1]
+      except IndexError:
+        self.state[ state_index ].append( None )
+
+      try:
+        self._evaluate( op_data, state_index + 1 )
+        result = True
+      except NotDefinedError:
+        result = False
+
+      try:
+        self.state[ state_index ][2] = result
+      except IndexError:
+        self.state[ state_index ].append( result )
+
     elif op_type == types.JUMP_POINT:  # just a NOP execution wise
       pass
 
@@ -962,8 +979,8 @@ class Runner( object ):
     else:
       raise ScriptError( 'Unimplemented "{0}"'.format( op_type ), self.cur_line )
 
-    # if the op_type we just ran does not  return a value, make sure it is cleaned up
-    if op_type not in ( types.CONSTANT, types.VARIABLE, types.ARRAY, types.MAP, types.ARRAY_MAP_ITEM, types.INFIX, types.FUNCTION ):  # all the things that "return" a value
+    # if the op_type we just ran does not return a value, make sure it is cleaned up
+    if op_type not in ( types.CONSTANT, types.VARIABLE, types.ARRAY, types.MAP, types.ARRAY_MAP_ITEM, types.INFIX, types.FUNCTION, types.EXISTS ):  # all the things that "return" a value
       self.state = self.state[ :state_index ]  # remove this an evertying after from the state
     else:
       self.state = self.state[ :state_index + 1 ]  # remove everything after this one, save this one's return value on the stack
