@@ -272,7 +272,7 @@ for hostname in esx_vms:
   hosts.insert( 0, tmp )
 
   fdn = VcenterFoundation( site=s1, blueprint=fbp_vcenter, locator=hostname )
-  fdn.vcenter_host = tmp
+  fdn.vcenter_complex = tmp
   fdn.full_clean()
   fdn.save()
 

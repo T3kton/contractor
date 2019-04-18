@@ -28,7 +28,7 @@ class ForemanException( ValueError ):
     return 'ForemanException ({0}): {1}'.format( self.code, self.message )
 
 
-@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
+@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', 'can_start' ) )
 class BaseJob( models.Model ):
   JOB_STATE_CHOICES = ( 'queued', 'waiting', 'done', 'paused', 'error', 'aborted' )
   site = models.ForeignKey( Site, editable=False, on_delete=models.CASCADE )
@@ -158,6 +158,10 @@ class BaseJob( models.Model ):
     except IndexError:
       return 0.0
 
+  @property
+  def can_start( self ):
+    return False
+
   @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def jobStats( site ):
@@ -244,7 +248,7 @@ class BaseJob( models.Model ):
     return 'BaseJob #{0} in "{1}"'.format( self.pk, self.site.pk )
 
 
-@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
+@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', 'can_start' ) )
 class FoundationJob( BaseJob ):
   foundation = models.OneToOneField( Foundation, editable=False, on_delete=models.CASCADE )
 
@@ -297,6 +301,22 @@ class FoundationJob( BaseJob ):
     """
     return super().jobRunnerState()
 
+  @property
+  def can_start( self ):
+    if self.script_name == 'create':
+      if self.foundation.state != 'located':
+        return False
+
+      try:
+        return self.foundation.dependency.state == 'built'
+      except ObjectDoesNotExist:
+        return True
+
+    elif self.script_name == 'destroy':
+      return True
+
+    return True
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
@@ -311,7 +331,7 @@ class FoundationJob( BaseJob ):
     return 'FoundationJob #{0} for "{1}" in "{2}"'.format( self.pk, self.foundation.pk, self.foundation.site.pk )
 
 
-@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
+@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', 'can_start' ) )
 class StructureJob( BaseJob ):
   structure = models.OneToOneField( Structure, editable=False, on_delete=models.CASCADE )
 
@@ -368,6 +388,22 @@ class StructureJob( BaseJob ):
     """
     return super().jobRunnerState()
 
+  @property
+  def can_start( self ):
+    if self.script_name == 'create':
+      if self.structure.state != 'planned':
+        return False
+
+      try:
+        return self.structure.foundation.state == 'built'
+      except ObjectDoesNotExist:
+        return True
+
+    elif self.script_name == 'destroy':
+      return True
+
+    return True
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def filter_site( site ):
@@ -394,7 +430,7 @@ class DependencyJob( BaseJob ):
       self.dependency.setBuilt()
 
     else:
-      raise ValueError( 'Sciprt Name "{0}" does not match the create nor destroy script names' )  # dependency jobs can only create/destory, no named/utility jobs
+      raise ValueError( 'Sciprt Name "{0}" does not match the create nor destroy script names' )  # dependency jobs can only create/destroy, no named/utility jobs
 
   @cinp.action()
   def pause( self ):
@@ -437,6 +473,19 @@ class DependencyJob( BaseJob ):
     See BaseJob.jobRunnerState
     """
     return super().jobRunnerState()
+
+  @property
+  def can_start( self ):
+    if self.script_name == 'create':
+      try:
+        return self.dependency.structure.state == 'built'
+      except ObjectDoesNotExist:
+        return True
+
+    elif self.script_name == 'destroy':
+      return True
+
+    return True
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod

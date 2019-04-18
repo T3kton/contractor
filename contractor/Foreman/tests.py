@@ -8,9 +8,11 @@ from django.db import transaction
 from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner
 from contractor.Site.models import Site
-from contractor.Foreman.models import BaseJob
+from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependencyJob
+from contractor.Building.models import Foundation, Structure, Dependency
+from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint, BluePrintScript, Script
 
-from contractor.Foreman.lib import processJobs, jobResults
+from contractor.Foreman.lib import processJobs, jobResults, createJob
 
 
 def _stripcookie( item_list ):
@@ -262,3 +264,352 @@ def test_job_locking( mocker ):
     j = BaseJob.objects.get()
     assert j.state == 'queued'
     assert j.jobRunnerState() == {'cur_line': None, 'state': 'DONE'}
+
+
+@pytest.mark.django_db()
+def test_foundation_job_create():  # TODO: should also do tests depending on a Dependency
+  si = Site()
+  si.name = 'test'
+  si.description = 'test'
+  si.full_clean()
+  si.save()
+
+  fb = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
+  fb.foundation_type_list = [ 'Unknown' ]
+  fb.full_clean()
+  fb.save()
+
+  f = Foundation()
+  f.locator = 'test'
+  f.site = si
+  f.blueprint = fb
+  f.full_clean()
+  f.save()
+
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', f )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'other', f )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+
+  assert createJob( 'create', f ) is not None
+  assert f.state == 'planned'
+  j = f.foundationjob
+  assert j.can_start is False
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'create', f )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  f.setLocated()
+  assert j.can_start is True
+  f.foundationjob.delete()
+  f = Foundation.objects.get( pk=f.pk )
+
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', f )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+  with pytest.raises( ValueError ) as execinfo:
+    createJob( 'other', f )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+
+  assert createJob( 'create', f ) is not None
+  assert f.state == 'located'
+  assert j.can_start is True
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'create', f )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  f.foundationjob.delete()
+  f = Foundation.objects.get( pk=f.pk )
+
+  f.setBuilt()
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'create', f )
+  assert str( execinfo.value.code ) == 'ALLREADY_BUILT'
+  assert f.state == 'built'
+
+  assert createJob( 'other', f ) is not None
+  assert f.state == 'built'
+  assert j.can_start is True
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'other', f )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  f.foundationjob.delete()
+  f = Foundation.objects.get( pk=f.pk )
+
+  assert createJob( 'destroy', f ) is not None
+  assert f.state == 'built'
+  assert j.can_start is True
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', f )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  f.foundationjob.delete()
+  f = Foundation.objects.get( pk=f.pk )
+
+
+@pytest.mark.django_db()
+def test_job_create():
+  si = Site()
+  si.name = 'test'
+  si.description = 'test'
+  si.full_clean()
+  si.save()
+
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'create', si )
+  assert str( execinfo.value.code ) == 'INVALID_TARGET'
+
+
+@pytest.mark.django_db()
+def test_structure_job_create():
+  si = Site()
+  si.name = 'test'
+  si.description = 'test'
+  si.full_clean()
+  si.save()
+
+  fb = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
+  fb.foundation_type_list = [ 'Unknown' ]
+  fb.full_clean()
+  fb.save()
+
+  f = Foundation()
+  f.locator = 'test'
+  f.site = si
+  f.blueprint = fb
+  f.full_clean()
+  f.save()
+
+  sb = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
+  sb.full_clean()
+  sb.save()
+  sb.foundation_blueprint_list.add( fb )
+
+  s = Structure()
+  s.foundation = f
+  s.hostname = 'test'
+  s.site = si
+  s.blueprint = sb
+  s.full_clean()
+  s.save()
+
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', s )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'other', s )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+
+  assert createJob( 'create', s ) is not None
+  assert s.state == 'planned'
+  j = s.structurejob
+  assert j.can_start is False
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'create', s )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  f.setBuilt()
+  assert j.can_start is True
+  s.structurejob.delete()
+  s = Structure.objects.get( pk=s.pk )
+
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', s )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'other', s )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+
+  s.setBuilt()
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'create', s )
+  assert str( execinfo.value.code ) == 'ALLREADY_BUILT'
+  assert s.state == 'built'
+
+  assert createJob( 'other', s ) is not None
+  assert s.state == 'built'
+  assert j.can_start is True
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'other', s )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  s.structurejob.delete()
+  s = Structure.objects.get( pk=s.pk )
+
+  assert createJob( 'destroy', s ) is not None
+  assert s.state == 'built'
+  assert j.can_start is True
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', s )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  s.structurejob.delete()
+  s = Structure.objects.get( pk=s.pk )
+
+  f.setLocated()
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', s )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+
+  # test job type checking
+  s.setDestroyed()
+  f.setDestroyed()
+  s = Structure.objects.get( pk=s.pk )
+  f = Foundation.objects.get( pk=f.pk )
+  assert createJob( 'create', f ) is not None
+  assert createJob( 'create', s ) is not None
+  s.structurejob.delete()
+  f.foundationjob.delete()
+  s = Structure.objects.get( pk=s.pk )
+
+  s.setDestroyed()
+  f.setBuilt()
+  s = Structure.objects.get( pk=s.pk )
+  f = Foundation.objects.get( pk=f.pk )
+  assert createJob( 'other', f ) is not None
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'create', s )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  f.foundationjob.delete()
+  s = Structure.objects.get( pk=s.pk )
+
+  s.setBuilt()
+  f.setBuilt()
+  s = Structure.objects.get( pk=s.pk )
+  f = Foundation.objects.get( pk=f.pk )
+  assert createJob( 'destroy', f ) is not None
+  assert createJob( 'destroy', s ) is not None
+  s.structurejob.delete()
+  f.foundationjob.delete()
+  s = Structure.objects.get( pk=s.pk )
+
+  s.setBuilt()
+  f.setBuilt()
+  s = Structure.objects.get( pk=s.pk )
+  f = Foundation.objects.get( pk=f.pk )
+  assert createJob( 'other', f ) is not None
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', s )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  f.foundationjob.delete()
+  s = Structure.objects.get( pk=s.pk )
+
+
+@pytest.mark.django_db()
+def test_dependency_job_create():
+  si = Site()
+  si.name = 'test'
+  si.description = 'test'
+  si.full_clean()
+  si.save()
+
+  fb = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
+  fb.foundation_type_list = [ 'Unknown' ]
+  fb.full_clean()
+  fb.save()
+
+  f = Foundation()
+  f.locator = 'test'
+  f.site = si
+  f.blueprint = fb
+  f.full_clean()
+  f.save()
+
+  sb = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
+  sb.full_clean()
+  sb.save()
+  sb.foundation_blueprint_list.add( fb )
+
+  s = Structure()
+  s.foundation = f
+  s.hostname = 'test'
+  s.site = si
+  s.blueprint = sb
+  s.full_clean()
+  s.save()
+
+  f.setBuilt()
+
+  d = Dependency()
+  d.structure = s
+  d.link = 'soft'
+  d.full_clean()
+  d.save()
+
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', d )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'other', d )
+  assert str( execinfo.value.code ) == 'INVALID_SCRIPT'
+
+  assert createJob( 'create', d ) is not None
+  assert d.state == 'planned'
+  j = d.dependencyjob
+  assert j.can_start is False
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'create', d )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  s.setBuilt()
+  assert j.can_start is True
+  d.dependencyjob.delete()
+  d = Dependency.objects.get( pk=d.pk )
+
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', d )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+
+  d.setBuilt()
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'create', d )
+  assert str( execinfo.value.code ) == 'ALLREADY_BUILT'
+  assert d.state == 'built'
+
+  assert createJob( 'destroy', d ) is not None
+  assert d.state == 'built'
+  assert j.can_start is True
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', d )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  d.dependencyjob.delete()
+  d = Dependency.objects.get( pk=d.pk )
+
+  # test job type checking
+  d.setDestroyed()
+  s.setDestroyed()
+  d = Dependency.objects.get( pk=d.pk )
+  s = Structure.objects.get( pk=s.pk )
+  assert createJob( 'create', s ) is not None
+  assert createJob( 'create', d ) is not None
+  d.dependencyjob.delete()
+  s.structurejob.delete()
+  d = Dependency.objects.get( pk=d.pk )
+
+  d.setDestroyed()
+  s.setBuilt()
+  d = Dependency.objects.get( pk=d.pk )
+  s = Structure.objects.get( pk=s.pk )
+  assert createJob( 'other', s ) is not None
+  with pytest.raises( ValueError ) as execinfo:
+    createJob( 'create', d )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  s.structurejob.delete()
+  d = Dependency.objects.get( pk=d.pk )
+
+  d.setBuilt()
+  s.setBuilt()
+  d = Dependency.objects.get( pk=d.pk )
+  s = Structure.objects.get( pk=s.pk )
+  assert createJob( 'destroy', s ) is not None
+  assert createJob( 'destroy', d ) is not None
+  d.dependencyjob.delete()
+  s.structurejob.delete()
+  d = Dependency.objects.get( pk=d.pk )
+
+  d.setBuilt()
+  s.setBuilt()
+  d = Dependency.objects.get( pk=d.pk )
+  s = Structure.objects.get( pk=s.pk )
+  assert createJob( 'other', s ) is not None
+  with pytest.raises( ValueError ) as execinfo:
+    createJob( 'destroy', d )
+  assert str( execinfo.value.code ) == 'JOB_EXISTS'
+  s.structurejob.delete()
+  d = Dependency.objects.get( pk=d.pk )

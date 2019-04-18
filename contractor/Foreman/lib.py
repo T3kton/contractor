@@ -1,5 +1,6 @@
 import pickle
 from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist
 
 from contractor.Building.models import Foundation, Structure, Dependency
 from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin
@@ -12,44 +13,94 @@ from contractor.tscript.runner import Runner, Pause, ExecutionError, Unrecoverab
 
 RUNNER_MODULE_LIST = []
 
+#  Job Can Create Matrix
+#                                    Associated Asset
+#                   | Structure | Structure | Structure | Foundation | Foundation | Foundation | Foundation | Dependency | Dependency | Dependency |
+#  Job Type         |  Planned  |   Built   |  Has Job  |   Planned  |   Located  |    Built   |   Has Job  |  Planned   |   Built    |   Has Job  |
+# --------------------------------------------------------------------------------------------------------------------------------------------------
+# Structure Create  |    *            B           J           *            *            *             1           .             .           .      |
+# Structure Destroy |    D            *           J           I            I            *             2           .             .           .      |
+# Foundation Create |    .            .           .           *            *            B             J           *             *           1      |
+# Foundation Destroy|    .            .           .           D            D            *             J           I             *           2      |
+# Dependency Create |    *            *           1           .            .            .             .           *             B           J      |
+# Dependency Destroy|    I            *           2           .            .            .             .           D             *           J      |
+# *all* Utility     |    D            *           D           D            D            *             D           .             .           .      |
+# --------------------------------------------------------------------------------------------------------------------------------------------------
+# NOTE: Dependency can depend on Dependency the same way it depends on Structure, so that (dependency-structure) block needs to apply to both (dependency and structure)
+#  * -> yes
+#  1 -> yes if the existing job is a build job
+#  2 -> yes if the existing job is a destroy job
+#  . -> no linkage
+#  B -> Allready Built Error
+#  D -> Not Built Error
+#  J -> Has  Job  Error
+#  I -> Dependant not in Correct state Error
+
 # TODO: make sure a dependency can't create a job for a structure with a job, or a structure that is not built
+
+JOB_LOOKUP_MAP = { 'Foundation': 'foundationjob', 'Structure': 'structurejob', 'Dependency': 'dependencyjob' }
+DEPENDENCY_LOOKUP_MAP = { 'Foundation': ( 'dependency', ), 'Structure': ( 'foundation', ), 'Dependency': ( 'structure', 'dependency' ) }
 
 
 def createJob( script_name, target ):
+  if not isinstance( target, ( Foundation, Structure, Dependency ) ):
+    raise ForemanException( 'INVALID_TARGET', 'target must be a Structure, Foundation, or Dependency' )
+
   if isinstance( target, Dependency ) and script_name not in ( 'create', 'destroy' ):
     raise ForemanException( 'INVALID_SCRIPT', 'Dependency Job can only have a create or destroy script_name' )
+
+  target_class = target.__class__.__name__
+
+  try:
+    if getattr( target, JOB_LOOKUP_MAP[ target_class ] ) is not None:
+      raise ForemanException( 'JOB_EXISTS', 'target has an existing job' )
+  except ObjectDoesNotExist:
+    pass
 
   if script_name == 'create':
     if target.state == 'built':
       raise ForemanException( 'ALLREADY_BUILT', 'target allready built' )
 
-    if isinstance( target, Foundation ):
-      if target.state != 'located':
-        raise ForemanException( 'NOT_LOCATED', 'can not do create job until Foundation is located' )
+    for item in DEPENDENCY_LOOKUP_MAP[ target_class ]:
+      try:
+        target_dependency = getattr( target, item )
+      except ObjectDoesNotExist:
+        target_dependency = None
 
-    elif isinstance( target, Structure ):
-      if target.foundation.state != 'built':
-        raise ForemanException( 'FOUNDATION_NOT_BUILT', 'can not do create job until Foundation supporting Structure is built' )
-
-    elif isinstance( target, Dependency ):
-      script_name = target.create_script_name
-      if script_name is None:
-        target.setBuilt()
-        return None
+      if target_dependency is not None:
+        try:
+          dependency_job = getattr( target_dependency, JOB_LOOKUP_MAP[ target_dependency.__class__.__name__ ] )
+          if dependency_job.script_name != 'create':
+            raise ForemanException( 'JOB_EXISTS', 'target\'s dependency has an existing non-create job' )
+        except ObjectDoesNotExist:
+          pass
 
   elif script_name == 'destroy':
     if target.state != 'built':
-      raise ForemanException( 'NOT_BUILT', 'can only destroy built targets' )
+      raise ForemanException( 'NOT_BUILT', 'target not built' )
 
-    if isinstance( target, Dependency ):
-      script_name = target.destroy_script_name
-      if script_name is None:
-        target.setDestroyed()
-        return None
+    for item in DEPENDENCY_LOOKUP_MAP[ target_class ]:
+      try:
+        target_dependency = getattr( target, item )
+      except ObjectDoesNotExist:
+        target_dependency = None
+
+      if target_dependency is not None:
+        try:
+          dependency_job = getattr( target_dependency, JOB_LOOKUP_MAP[ target_dependency.__class__.__name__ ] )
+          if dependency_job.script_name != 'destroy':
+            raise ForemanException( 'JOB_EXISTS', 'target\'s dependency has an existing non-destroy job' )
+        except ObjectDoesNotExist:
+          pass
+
+        if target_dependency.state != 'built':  # this one should not happen, but just in case
+          raise ForemanException( 'NOT_BUILT', 'the supporting target to the target is not built' )
 
   else:
-    if isinstance( target, Foundation ) and target.state != 'located':
-      raise ForemanException( 'NOT_LOCATED', 'Can Only run Scripts Job on Located Foundations' )
+    if target.state != 'built':
+      raise ForemanException( 'NOT_BUILT', 'target not built' )
+
+  blueprint = target.blueprint
 
   obj_list = []
   if isinstance( target, Structure ):
@@ -60,27 +111,12 @@ def createJob( script_name, target ):
     obj_list.append( ConfigPlugin( target ) )
 
   elif isinstance( target, Foundation ):
-    structure = target.attached_structure
-    if structure is not None:
-      try:
-        StructureJob.objects.get( structure=structure )
-        raise ForemanException( 'JOB_EXISTS', 'Structure associated with this Foundation has a job' )
-      except StructureJob.DoesNotExist:
-        pass
-
     job = FoundationJob()
     job.foundation = target
     obj_list.append( FoundationPlugin( target ) )
     obj_list.append( ConfigPlugin( target ) )
 
   elif isinstance( target, Dependency ):
-    if target.dependency is not None:
-      if target.dependency.state != 'built':
-        raise ForemanException( 'DEPENDANT_NOT_BUILT', 'Can not start Dependency job until Dependency is built')
-    else:
-      if target.structure.state != 'built':
-        raise ForemanException( 'STRUCTURE_NO_BUILT', 'Can not start Dependency job until Structure is built')
-
     job = DependencyJob()
     job.dependency = target
     structure = None
@@ -93,20 +129,11 @@ def createJob( script_name, target ):
     obj_list.append( ROStructurePlugin( structure ) )
     obj_list.append( ConfigPlugin( structure ) )
 
-  else:
-    raise ForemanException( 'INVALID_TARGET', 'target must be a Structure, Foundation, or Dependency' )
-
   job.site = target.site
-  blueprint = target.blueprint
 
   script = blueprint.get_script( script_name )
   if script is None:
-    if script_name == 'create':
-      target.setBuilt()
-    elif script_name == 'destroy':
-      target.setDestroyed()
-
-    return None
+    script = '# empty place holder'
 
   runner = Runner( parse( script ) )
   for module in RUNNER_MODULE_LIST:
@@ -118,7 +145,7 @@ def createJob( script_name, target ):
   for obj in obj_list:
     runner.registerObject( obj )
 
-  job.state = 'queued'
+  job.state = 'waiting'
   job.script_name = script_name
   job.script_runner = pickle.dumps( runner )
   job.full_clean()
@@ -217,6 +244,13 @@ def processJobs( site, module_list, max_jobs=10 ):
       pass
 
     createJob( 'create', target=structure )
+
+  # start waiting jobs
+  for job in BaseJob.objects.select_for_update().filter( site=site, state='waiting' ):
+    if job.can_start:
+      job.state = 'queued'
+      job.full_clean()
+      job.save()
 
   # clean up completed jobs
   for job in BaseJob.objects.select_for_update().filter( site=site, state='done' ):

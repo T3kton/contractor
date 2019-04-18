@@ -11,7 +11,7 @@ from contractor.Site.models import Site
 from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, DynamicAddress
 from contractor_plugins.AMT.models import AMTFoundation
-from contractor_plugins.Vcenter.models import VcenterFoundation, VcenterComplex
+from contractor_plugins.Vcenter.models import VCenterFoundation, VCenterComplex
 
 fbp_manual = FoundationBluePrint.objects.get( pk='generic-amt' )
 fbp_vcenter = FoundationBluePrint.objects.get( pk='generic-vcenter' )
@@ -104,7 +104,7 @@ for hostname in AMT_devices:
   strct.full_clean()
   strct.save()
 
-  cplx = VcenterComplex( name=hostname, site=s1, description='Test ESX Cluster {0}'.format( hostname ) )
+  cplx = VCenterComplex( name=hostname, site=s1, description='Test ESX Cluster {0}'.format( hostname ) )
   cplx.vcenter_host = strct
   cplx.vcenter_username = 'root'
   cplx.vcenter_password = '0skin3rd'
@@ -130,7 +130,7 @@ for hostname in VM_devices:
   tmp = complex_list.pop()
   complex_list.insert( 0, tmp )
   fdn = VcenterFoundation( site=s1, blueprint=fbp_vcenter, locator=hostname )
-  fdn.vcenter_host = tmp
+  fdn.vcenter_complex = tmp
   fdn.full_clean()
   fdn.save()
 
