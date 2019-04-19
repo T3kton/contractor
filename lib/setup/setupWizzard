@@ -136,7 +136,6 @@ iface.full_clean()
 iface.save()
 
 str_dev = Structure( site=s1, blueprint=sbp_xenial, hostname='contractor', foundation=fdn_dev )
-str_dev.auto_build = False
 str_dev.full_clean()
 str_dev.save()
 str_dev.setBuilt()

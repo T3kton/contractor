@@ -37,7 +37,7 @@ class BuildingException( ValueError ):
     return 'BuildingException ({0}): {1}'.format( self.code, self.message )
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
+@cinp.model( property_list=( 'state', 'type', 'class_list', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
 class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )  # if this changes make sure to update architect - instance - foundation_id
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
@@ -153,10 +153,6 @@ class Foundation( models.Model ):
     return []
 
   @property
-  def can_auto_locate( self ):  # child models can decide if it can auto submit job for building, ie: vm (and like foundations) are only canBuild if their structure is auto_build
-    return False
-
-  @property
   def complex( self ):
     return None
 
@@ -213,9 +209,9 @@ class Foundation( models.Model ):
   def filter_site( site ):
     return Foundation.objects.filter( site=site )
 
-  @cinp.list_filter( name='todo', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' }, 'Boolean', 'Boolean', 'String' ] )
+  @cinp.list_filter( name='todo', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' }, 'Boolean', 'String' ] )
   @staticmethod
-  def filter_todo( site, auto_build, has_dependancies, foundation_class ):
+  def filter_todo( site, has_dependancies, foundation_class ):
     args = {}
     args[ 'site' ] = site
     if has_dependancies:
@@ -272,8 +268,6 @@ class Structure( Networked ):
   foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT )      # ie what to build it on
   config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # unique
   config_values = MapField( blank=True, null=True )
-  auto_build = models.BooleanField( default=True )
-  # build_priority = models.IntegerField( default=100 )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )

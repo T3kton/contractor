@@ -14,6 +14,7 @@ from contractor.Site.models import Site
 from contractor.Directory.models import Zone
 from contractor.Building.models import Structure, ComplexStructure, Dependency
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
+from contractor.Forman.lib import createJob
 from contractor.plugins.Manual.models import ManualFoundation, ManualComplex, ManualComplexedFoundation
 
 fbp_manual = FoundationBluePrint.objects.get( pk='manual-foundation-base' )
@@ -86,7 +87,6 @@ iface.full_clean()
 iface.save()
 
 strct_contractor = Structure( site=s1, blueprint=sbp_manual, hostname='contractor', foundation=fdn_contractor )
-strct_contractor.auto_build = False
 strct_contractor.full_clean()
 strct_contractor.save()
 strct_contractor.setBuilt()
@@ -142,13 +142,15 @@ for i in range( 1, 11 ):
   dep.save()
 
   strct = Structure( site=s1, blueprint=sbp_manual, hostname='cpx{0}'.format( i ), foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
   addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=20 + i, is_primary=True )
   addr.full_clean()
   addr.save()
+
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
 
   cpx_member = ComplexStructure( complex=cpx, structure=strct )
   cpx_member.full_clean()
@@ -169,13 +171,15 @@ dep.full_clean()
 dep.save()
 
 strct_strmgr = Structure( site=s1, blueprint=sbp_manual, hostname='strgmgr', foundation=fdn_strmgr )
-strct_strmgr.auto_build = True
 strct_strmgr.full_clean()
 strct_strmgr.save()
 
 addr = Address( networked=strct_strmgr, address_block=addr1_block, interface_name='eth0', offset=40, is_primary=True )
 addr.full_clean()
 addr.save()
+
+createJob( 'create', fdn_strmgr )
+createJob( 'create', strct_strmgr )
 
 print( 'Making a storage cluster...' )
 for i in range( 1, 5 ):
@@ -194,13 +198,15 @@ for i in range( 1, 5 ):
   dep.save()
 
   strct = Structure( site=s1, blueprint=sbp_manual, hostname='strg{0}'.format( i ), foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
   addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=40 + i, is_primary=True )
   addr.full_clean()
   addr.save()
+
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
 
   #  TODO: re-enable this ?
   # print( '******************')
@@ -234,13 +240,15 @@ for i in range( 1, 5 ):
   dep.save()
 
   strct = Structure( site=s1, blueprint=sbp_manual, hostname='cpxmbr{0}'.format( i ), foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
   addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=100 + i, is_primary=True )
   addr.full_clean()
   addr.save()
+
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
 
 if os.environ.get( 'DEMO_MODE', False ):
   print( 'enabling demo mode' )

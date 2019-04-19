@@ -22,4 +22,8 @@ class Migration(migrations.Migration):
             name='id_map',
             field=contractor.fields.JSONField(null=True, blank=True),
         ),
+        migrations.RemoveField(
+            model_name='structure',
+            name='auto_build',
+        ),
     ]

@@ -8,11 +8,12 @@ django.setup()
 
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint, Script
 from contractor.Site.models import Site
-from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependency
-from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
+from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure
+from contractor.Forman.lib import createJob
+from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, DynamicAddress
 from contractor_plugins.AMT.models import AMTFoundation
 from contractor_plugins.VirtualBox.models import VirtualBoxFoundation, VirtualBoxComplex
-from contractor_plugins.Manual.models import ManualFoundation, ManualComplex, ManualComplexedFoundation
+from contractor_plugins.Manual.models import ManualFoundation
 from contractor_plugins.Docker.models import DockerFoundation, DockerComplex
 
 
@@ -96,7 +97,6 @@ if VirtualBox_devices or Docker_devices:
    fni.save()
 
    strct_host = Structure( site=s1, blueprint=sbp_xenial, hostname='localmachine', foundation=fdn )
-   strct_host.auto_build = False
    strct_host.full_clean()
    strct_host.save()
    strct_host.setBuilt()
@@ -172,13 +172,15 @@ for hostname in AMT_devices:
   fni.save()
 
   strct = Structure( site=s1, blueprint=strct_blueprint, hostname=hostname, foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
   addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
   addr.full_clean()
   addr.save()
+
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
 
 for hostname in Manual_devices:
   device = Manual_devices[ hostname ]
@@ -199,13 +201,15 @@ for hostname in Manual_devices:
   fni.save()
 
   strct = Structure( site=s1, blueprint=strct_blueprint, hostname=hostname, foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
   addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
   addr.full_clean()
   addr.save()
+
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
 
 if VirtualBox_devices:
   print( 'creating virtualbox host...' )
@@ -238,7 +242,6 @@ for hostname in VirtualBox_devices:
   fni.save()
 
   strct = Structure( site=s1, blueprint=strct_blueprint, hostname=hostname, foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
@@ -246,6 +249,8 @@ for hostname in VirtualBox_devices:
   addr.full_clean()
   addr.save()
 
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
 
 if Docker_devices:
   print( 'creating docker host...' )
@@ -277,10 +282,12 @@ for hostname in Docker_devices:
   fni.save()
 
   strct = Structure( site=s1, blueprint=strct_blueprint, hostname=hostname, foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
   addr = Address( networked=strct, pointer=Address.objects.get( networked=strct_host, interface_name='lo' ), interface_name='eth0', is_primary=True )
   addr.full_clean()
   addr.save()
+
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
