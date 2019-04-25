@@ -460,7 +460,7 @@ class AddressBlock( models.Model ):
       raise ValidationError( errors )
 
   def __str__( self ):
-    return 'AddressBlock site "{0}" subnet "{1}/{2}"'.format( self.site, self.subnet, self.prefix )
+    return 'AddressBlock "{0}" subnet "{1}/{2}"'.format( self.name, self.subnet, self.prefix )
 
 
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )

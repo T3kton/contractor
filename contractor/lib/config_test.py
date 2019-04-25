@@ -200,6 +200,15 @@ def test_class():
   _updateConfig( { '<bob:joe': '1' }, [ 'joe' ], config )
   assert config == { 'bob': '1adsf', 'jane': 'qwert' }
 
+  _updateConfig( { 'bob:joe': '1' }, [ 'joe' ], config )
+  assert config == { 'bob': '1', 'jane': 'qwert' }
+
+  with pytest.raises( ValueError ):
+    _updateConfig( { 'bob:jo-e': '2' }, [ 'jo-e' ], config )
+
+  _updateConfig( { 'bo-b:joe': '3' }, [ 'joe' ], config )
+  assert config == { 'bo-b': '3', 'bob': '1', 'jane': 'qwert' }
+
 
 def test_mergeValues():
   values = { 'a': 'c' }
@@ -292,6 +301,7 @@ def test_valid_names():
   s1.config_values[ '__bad' ] = 'bad bad bad 1'
   with pytest.raises( ValidationError ):
     s1.full_clean()
+  del s1.config_values[ '__bad' ]
 
   fb1 = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
   fb1.foundation_type_list = [ 'Unknown' ]
@@ -311,6 +321,7 @@ def test_valid_names():
   fb1.config_values[ '__bad' ] = 'bad bad bad 2'
   with pytest.raises( ValidationError ):
     fb1.full_clean()
+  del fb1.config_values[ '__bad' ]
 
   fb1 = FoundationBluePrint.objects.get( pk='fdnb1' )
   fb1.full_clean()
@@ -333,6 +344,7 @@ def test_valid_names():
   sb1.config_values[ '__bad' ] = 'bad bad bad 3'
   with pytest.raises( ValidationError ):
     sb1.full_clean()
+  del sb1.config_values[ '__bad' ]
 
   f1 = Foundation( site=s1, locator='fdn1', blueprint=fb1 )
   f1.full_clean()

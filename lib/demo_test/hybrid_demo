@@ -228,7 +228,7 @@ for hostname in VirtualBox_devices:
 
   print( 'creating VirtualBox {0}...'.format( hostname ) )
   fdn = VirtualBoxFoundation( site=s1, blueprint=fbp_vbox, locator=hostname )
-  fdn.virtualbox_host = cpx_vbox
+  fdn.virtualbox_complex = cpx_vbox
   fdn.config_values = { 'memory_size': 512 }
   fdn.full_clean()
   fdn.save()

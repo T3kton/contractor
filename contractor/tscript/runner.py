@@ -521,8 +521,8 @@ class Runner( object ):
     logging.debug( 'runner: run finish' )
 
   def _evaluate( self, operation, state_index ):
-    logging.debug( 'runner: _evaluate level: "{0}" operation: '.format( state_index, operation ) )
-    logging.debug( 'runner: _evaluate level: "{0}" start state: '.format( state_index, self.state ) )
+    logging.debug( 'runner: _evaluate level: "{0}" operation: "{1}"'.format( state_index, operation ) )
+    logging.debug( 'runner: _evaluate level: "{0}" start state: "{1}"'.format( state_index, self.state ) )
 
     op_type = operation[0]
     op_data = operation[1]

@@ -42,13 +42,15 @@ DEPENDENCY_LOOKUP_MAP = { 'Foundation': ( 'dependency', ), 'Structure': ( 'found
 
 
 def createJob( script_name, target ):
-  if not isinstance( target, ( Foundation, Structure, Dependency ) ):
+  if isinstance( target, Foundation ):
+    target_class = 'Foundation'
+  elif isinstance( target, ( Structure, Dependency ) ):
+    target_class = target.__class__.__name__
+  else:
     raise ForemanException( 'INVALID_TARGET', 'target must be a Structure, Foundation, or Dependency' )
 
   if isinstance( target, Dependency ) and script_name not in ( 'create', 'destroy' ):
     raise ForemanException( 'INVALID_SCRIPT', 'Dependency Job can only have a create or destroy script_name' )
-
-  target_class = target.__class__.__name__
 
   try:
     if getattr( target, JOB_LOOKUP_MAP[ target_class ] ) is not None:
@@ -161,6 +163,7 @@ def processJobs( site, module_list, max_jobs=10 ):
 
   # start waiting jobs
   for job in BaseJob.objects.select_for_update().filter( site=site, state='waiting' ):
+    job = job.realJob
     if job.can_start:
       job.state = 'queued'
       job.full_clean()

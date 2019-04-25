@@ -374,7 +374,7 @@ if virtualbox_vms:
     strct_ip_offset = vm[1]
 
     fdn = VirtualBoxFoundation( site=s1, blueprint=fbp_vbox, locator=hostname )
-    fdn.virtualbox_host = cpx_vbox
+    fdn.virtualbox_complex = cpx_vbox
     fdn.config_values = { 'memory_size': 712 }
     fdn.full_clean()
     fdn.save()

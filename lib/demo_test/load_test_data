@@ -116,7 +116,7 @@ cpx_member.full_clean()
 cpx_member.save()
 
 fdn_vm1 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='test1-vb' )
-fdn_vm1.virtualbox_host = cpx_vm
+fdn_vm1.virtualbox_complex = cpx_vm
 fdn_vm1.config_values = { 'memory_size': 512 }
 fdn_vm1.full_clean()
 fdn_vm1.save()
@@ -130,7 +130,7 @@ fni.full_clean()
 fni.save()
 
 fdn_vm2 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='test2-vb' )
-fdn_vm2.virtualbox_host = cpx_vm
+fdn_vm2.virtualbox_complex = cpx_vm
 fdn_vm2.config_values = { 'memory_size': 512 }
 fdn_vm2.full_clean()
 fdn_vm2.save()

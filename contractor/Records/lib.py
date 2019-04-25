@@ -51,6 +51,8 @@ def updateRecord( target ):
   for i in ( '__contractor_host', '__pxe_template_location', '__pxe_location' ):  # these are the same everywhere
     del item[i]
 
+  # TODO: strip password/hash/hide fields
+
   key = { '_id': target.pk }
 
   db.update( key, item, upsert=True )

@@ -115,8 +115,9 @@ def main():
     try:
       rc = target.doCreate()
     except Exception as e:
-      print( 'Error creating create job: "{0}"'.format( str( e ) ) )
+      print( 'Error creating create job: "{0}"({1})'.format( e, type( e ) ) )
       sys.exit( 1 )
+
     print( 'Create Job for {0} created, job #{1}.'.format( target, rc ) )
     sys.exit( 0 )
 
@@ -124,8 +125,9 @@ def main():
     try:
       rc = target.doDestroy()
     except Exception as e:
-      print( 'Error creating destroy job: "{0}"'.format( str( e ) ) )
+      print( 'Error creating destroy job: "{0}"({1})'.format( e, type( e ) ) )
       sys.exit( 1 )
+
     print( 'Destroy Job for {0} created, job #{1}.'.format( target, rc ) )
     sys.exit( 0 )
 
@@ -146,8 +148,9 @@ def main():
     try:
       rc = createJob( args.run_script, target )
     except Exception as e:
-      print( 'Error creating "{1}" job: "{0}"'.format( str( e ), args.run_script ) )
+      print( 'Error creating "{1}" job: "{0}"'.format( e, args.run_script ) )
       sys.exit( 1 )
+
     print( '"{2}" Job for {0} created, job #{1}.'.format( target, rc, args.run_script ) )
     sys.exit( 0 )
 
