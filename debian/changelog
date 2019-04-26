@@ -1,3 +1,10 @@
+contractor (0.4.0-1) xenial; urgency=medium
+
+  * job creation re-think
+  * mongodb config cache/recorder
+
+ -- Peter Howe <pnhowe@gmail.com>  Fri, 26 Apr 2019 09:54:37 -0600
+
 contractor (0.3.1-1) xenial; urgency=medium
 
   * Transaction related fixes

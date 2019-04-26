@@ -86,6 +86,18 @@ class Networked( models.Model ):
       return None
 
   @property
+  def domain_name( self ):
+    try:
+      zone = self.site.zone
+      if zone is None:
+        return None
+
+    except ( ObjectDoesNotExist, AttributeError ):
+      return None
+
+    return zone.fqdn
+
+  @property
   def fqdn( self ):
     try:
       zone = self.site.zone

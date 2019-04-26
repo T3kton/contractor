@@ -294,6 +294,7 @@ class Structure( Networked ):
              }
 
     result[ '_hostname' ] = self.hostname
+    result[ '_domain_name' ] = self.domain_name
     result[ '_fqdn' ] = self.fqdn
     result[ '_interface_map' ] = {}
     for iface in self.foundation.networkinterface_set.all():  # mabey? mabey not?
