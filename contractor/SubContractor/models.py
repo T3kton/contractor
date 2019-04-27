@@ -1,5 +1,6 @@
 from cinp.orm_django import DjangoCInP as CInP
 
+from contractor.Site.models import Site
 from contractor.Utilities.models import AddressBlock
 from contractor.Foreman.lib import processJobs, jobResults, jobError
 
@@ -12,7 +13,7 @@ class Dispatch():
   def __init__( self ):
     super().__init__()
 
-  @cinp.action( return_type={ 'type': 'Map', 'is_array': True }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' }, { 'type': 'String', 'is_array': True }, 'Integer' ] )
+  @cinp.action( return_type={ 'type': 'Map', 'is_array': True }, paramater_type_list=[ { 'type': 'Model', 'model': Site }, { 'type': 'String', 'is_array': True }, 'Integer' ] )
   @staticmethod
   def getJobs( site, module_list, max_jobs=10 ):
     result = processJobs( site, module_list, max_jobs )
@@ -39,7 +40,7 @@ class DHCPd():
   def __init__( self ):
     super().__init__()
 
-  @cinp.action( return_type={ 'type': 'Map', 'is_array': True }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.action( return_type={ 'type': 'Map', 'is_array': True }, paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def getDynamicPools( site ):
     result = []
@@ -66,7 +67,7 @@ class DHCPd():
 
     return result
 
-  @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def getStaticPools( site ):
     result = {}

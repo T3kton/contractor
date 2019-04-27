@@ -59,6 +59,17 @@ class BaseJob( models.Model ):
 
     return self
 
+  @property
+  def progress( self ):
+    try:
+      return self.status[0][0]
+    except IndexError:
+      return 0.0
+
+  @property
+  def can_start( self ):
+    return False
+
   @cinp.action()
   def pause( self ):
     """
@@ -151,18 +162,7 @@ class BaseJob( models.Model ):
     self.full_clean()
     self.save()
 
-  @property
-  def progress( self ):
-    try:
-      return self.status[0][0]
-    except IndexError:
-      return 0.0
-
-  @property
-  def can_start( self ):
-    return False
-
-  @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def jobStats( site ):
     """
@@ -259,6 +259,22 @@ class FoundationJob( BaseJob ):
     elif self.script_name == 'create':
       self.foundation.setBuilt()
 
+  @property
+  def can_start( self ):
+    if self.script_name == 'create':
+      if self.foundation.state != 'located':
+        return False
+
+      try:
+        return self.foundation.dependency.state == 'built'
+      except ObjectDoesNotExist:
+        return True
+
+    elif self.script_name == 'destroy':
+      return True
+
+    return True
+
   @cinp.action()
   def pause( self ):
     """
@@ -301,23 +317,18 @@ class FoundationJob( BaseJob ):
     """
     return super().jobRunnerState()
 
-  @property
-  def can_start( self ):
-    if self.script_name == 'create':
-      if self.foundation.state != 'located':
-        return False
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Foreman.models.FoundationJob' }, paramater_type_list=[ { 'type': 'Model', 'model': Foundation } ] )
+  @staticmethod
+  def getFoundationJob( foundation ):
+    """
 
-      try:
-        return self.foundation.dependency.state == 'built'
-      except ObjectDoesNotExist:
-        return True
+    """
+    try:
+      return FoundationJob.objects.get( foundation=foundation )
+    except FoundationJob.DoesNotExist:
+      return None
 
-    elif self.script_name == 'destroy':
-      return True
-
-    return True
-
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return FoundationJob.objects.filter( foundation__site=site )
@@ -346,6 +357,22 @@ class StructureJob( BaseJob ):
   def foundation( self ):
     return self.structure.foundation
 
+  @property
+  def can_start( self ):
+    if self.script_name == 'create':
+      if self.structure.state != 'planned':
+        return False
+
+      try:
+        return self.structure.foundation.state == 'built'
+      except ObjectDoesNotExist:
+        return True
+
+    elif self.script_name == 'destroy':
+      return True
+
+    return True
+
   @cinp.action()
   def pause( self ):
     """
@@ -388,23 +415,18 @@ class StructureJob( BaseJob ):
     """
     return super().jobRunnerState()
 
-  @property
-  def can_start( self ):
-    if self.script_name == 'create':
-      if self.structure.state != 'planned':
-        return False
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Foreman.models.StructureJob' }, paramater_type_list=[ { 'type': 'Model', 'model': Structure } ] )
+  @staticmethod
+  def getStructureJob( structure ):
+    """
 
-      try:
-        return self.structure.foundation.state == 'built'
-      except ObjectDoesNotExist:
-        return True
+    """
+    try:
+      return StructureJob.objects.get( structure=structure )
+    except StructureJob.DoesNotExist:
+      return None
 
-    elif self.script_name == 'destroy':
-      return True
-
-    return True
-
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return StructureJob.objects.filter( structure__site=site )
@@ -432,6 +454,19 @@ class DependencyJob( BaseJob ):
     else:
       raise ValueError( 'Sciprt Name "{0}" does not match the create nor destroy script names' )  # dependency jobs can only create/destroy, no named/utility jobs
 
+  @property
+  def can_start( self ):
+    if self.script_name == 'create':
+      try:
+        return self.dependency.structure.state == 'built'
+      except ObjectDoesNotExist:
+        return True
+
+    elif self.script_name == 'destroy':
+      return True
+
+    return True
+
   @cinp.action()
   def pause( self ):
     """
@@ -474,20 +509,18 @@ class DependencyJob( BaseJob ):
     """
     return super().jobRunnerState()
 
-  @property
-  def can_start( self ):
-    if self.script_name == 'create':
-      try:
-        return self.dependency.structure.state == 'built'
-      except ObjectDoesNotExist:
-        return True
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Foreman.models.DependencyJob' }, paramater_type_list=[ { 'type': 'Model', 'model': Dependency } ] )
+  @staticmethod
+  def getDependencyJob( dependency ):
+    """
 
-    elif self.script_name == 'destroy':
-      return True
+    """
+    try:
+      return DependencyJob.objects.get( dependency=dependency )
+    except DependencyJob.DoesNotExist:
+      return None
 
-    return True
-
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return DependencyJob.objects.filter( dependency__foundation__site=site )
@@ -540,7 +573,7 @@ class JobLog( models.Model ):
     log.full_clean()
     log.save()
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return JobLog.objects.filter( site=site )

@@ -204,12 +204,12 @@ class Foundation( models.Model ):
     """
     return mergeValues( getConfig( self.subclass ) )
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Foundation.objects.filter( site=site )
 
-  @cinp.list_filter( name='todo', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' }, 'Boolean', 'String' ] )
+  @cinp.list_filter( name='todo', paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'Boolean', 'String' ] )
   @staticmethod
   def filter_todo( site, has_dependancies, foundation_class ):
     args = {}
@@ -343,7 +343,7 @@ class Structure( Networked ):
 
     return mergeValues( getConfig( self ) )
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Structure.objects.filter( site=site )
@@ -434,14 +434,14 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   def newFoundation( self, hostname ):
     raise ValueError( 'Root Complex dose not support Foundations' )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Foundation' }, paramater_type_list=[ { 'type': 'String' } ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, paramater_type_list=[ { 'type': 'String' } ] )
   def createFoundation( self, hostname ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     self = self.subclass
 
     foundation = self.newFoundation( hostname )  # also need to create the network interfaces
     return foundation
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Complex.objects.filter( site=site )
@@ -531,7 +531,7 @@ class ComplexStructure( models.Model ):
   def state( self ):
     return 'Built'
 
-  @cinp.list_filter( name='complex', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Complex' } ] )
+  @cinp.list_filter( name='complex', paramater_type_list=[ { 'type': 'Model', 'model': Complex } ] )
   @staticmethod
   def filter_complex( complex ):
     return ComplexStructure.objects.filter( complex=complex )
@@ -633,7 +633,7 @@ class Dependency( models.Model ):
   def filter_foundation( foundation ):
     return Dependency.objects.filter( foundation=foundation )
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Dependency.objects.filter( Q( foundation__site=site ) |

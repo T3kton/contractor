@@ -405,7 +405,7 @@ class AddressBlock( models.Model ):
 
     return result
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return AddressBlock.objects.filter( site=site )
@@ -666,7 +666,7 @@ class Address( BaseAddress ):
   def type( self ):
     return 'Address'
 
-  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' } ] )
+  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
   @staticmethod
   def filter_address_block( address_block ):
     return Address.objects.filter( address_block=address_block )
@@ -744,7 +744,7 @@ class ReservedAddress( BaseAddress ):
   def type( self ):
     return 'ReservedAddress'
 
-  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' } ] )
+  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
   @staticmethod
   def filter_address_block( address_block ):
     return ReservedAddress.objects.filter( address_block=address_block )
@@ -782,7 +782,7 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
   def type( self ):
     return 'DynamicAddress'
 
-  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' } ] )
+  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
   @staticmethod
   def filter_address_block( address_block ):
     return DynamicAddress.objects.filter( address_block=address_block )
