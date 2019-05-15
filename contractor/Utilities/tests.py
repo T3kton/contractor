@@ -40,6 +40,10 @@ def test_addressblock():
   s1.full_clean()
   s1.save()
 
+  s2 = Site( name='tsite2', description='test site2' )
+  s2.full_clean()
+  s2.save()
+
   ab = AddressBlock()
   with pytest.raises( ValidationError ):
     ab.full_clean()
@@ -65,10 +69,22 @@ def test_addressblock():
   ab.save()
 
   ab.name = 'something_else'
-  with pytest.raises( ValidationError ):  # a new name means diferent address block, so error
+  ab.full_clean()
+  ab.save()
+
+  ab.name = 'test'
+  ab.full_clean()
+  ab.save()
+
+  ab = AddressBlock( site=s1, subnet=StrToIp( '50.0.0.0' ), prefix=24, name='test' )
+  with pytest.raises( ValidationError ):
     ab.full_clean()
 
-  ab = AddressBlock.objects.get( name='test' )
+  ab = AddressBlock( site=s2, subnet=StrToIp( '51.0.0.0' ), prefix=24, name='test' )
+  ab.full_clean()
+  ab.save()
+
+  ab = AddressBlock.objects.get( site=s1, name='test' )
   ab.gateway_offset = None
   ab.full_clean()
   ab.save()
@@ -150,7 +166,7 @@ def test_addressblock():
   ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=29, gateway_offset=3, name='test23' )
   ab.full_clean()
 
-  ab = AddressBlock.objects.get( name='test' )
+  ab = AddressBlock.objects.get( site=s1, name='test' )
   assert ab.subnet == '0.0.0.0'
   assert ab._max_address == '0.0.0.255'
   assert ab.gateway is None
@@ -160,7 +176,7 @@ def test_addressblock():
   assert ab.offsetBounds == ( 1, 254 )
   assert ab.isIpV4 is True
 
-  ab = AddressBlock.objects.get( name='test8' )
+  ab = AddressBlock.objects.get( site=s1, name='test8' )
   assert ab.subnet == '2.0.0.0'
   assert ab._max_address == '2.255.255.255'
   assert ab.gateway == '2.0.0.1'

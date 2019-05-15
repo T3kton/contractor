@@ -538,11 +538,14 @@ class DependencyJob( BaseJob ):
 class JobLog( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   job_id = models.IntegerField()
+  creator = models.CharField( max_length=150 )  # max length from the django.contrib.auth User.username
   target_class = models.CharField( max_length=50 )
   target_description = models.CharField( max_length=120 )
   script_name = models.CharField( max_length=50 )
   start_finish = models.BooleanField()  # True -> Start
   at = models.DateTimeField( editable=False, auto_now_add=True )
+  updated = models.DateTimeField( editable=False, auto_now=True )
+  created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @classmethod
   def fromJob( cls, job, start_finish ):

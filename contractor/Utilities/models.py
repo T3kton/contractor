@@ -234,9 +234,9 @@ class NetworkInterface( models.Model ):
 @cinp.model( )
 class RealNetworkInterface( NetworkInterface ):
   mac = models.CharField( max_length=18, blank=True, null=True )  # in a globally unique world we would set this to unique, but these virtual days we have to many ways to use the same mac safely, so good luck.
-  foundation = models.ForeignKey( 'Building.Foundation', related_name='networkinterface_set' )
+  foundation = models.ForeignKey( 'Building.Foundation', related_name='networkinterface_set', on_delete=models.CASCADE )
   physical_location = models.CharField( max_length=100 )
-  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
+  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True, on_delete=models.PROTECT )
 
   @property
   def subclass( self ):
@@ -306,7 +306,7 @@ class AbstractNetworkInterface( NetworkInterface ):
 
 @cinp.model( )
 class AggregatedNetworkInterface( AbstractNetworkInterface ):
-  master_interface = models.ForeignKey( NetworkInterface, related_name='+' )
+  master_interface = models.ForeignKey( NetworkInterface, related_name='+', on_delete=models.CASCADE )
   slaves = models.ManyToManyField( NetworkInterface, related_name='+' )
   paramaters = MapField()
 
@@ -337,8 +337,8 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
 
 @cinp.model( property_list=( 'gateway', 'netmask', 'size', 'isIpV4' ) )
 class AddressBlock( models.Model ):
-  name = models.CharField( max_length=40, primary_key=True )
-  site = models.ForeignKey( Site, on_delete=models.CASCADE )
+  name = models.CharField( max_length=40 )
+  site = models.ForeignKey( Site, on_delete=models.PROTECT )
   subnet = IpAddressField()
   prefix = models.IntegerField()
   gateway_offset = models.IntegerField( blank=True, null=True )
@@ -419,7 +419,7 @@ class AddressBlock( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
     if not name_regex.match( self.name ):
-      errors[ 'name' ] = '"{0}" is invalid'.format( self.name[ 0:50 ] )
+      errors[ 'name' ] = 'invalid'
 
     try:
       subnet_ip = StrToIp( self.subnet )
@@ -471,13 +471,16 @@ class AddressBlock( models.Model ):
     if errors:
       raise ValidationError( errors )
 
+  class Meta:
+    unique_together = ( ( 'site', 'name' ), )
+
   def __str__( self ):
-    return 'AddressBlock "{0}" subnet "{1}/{2}"'.format( self.name, self.subnet, self.prefix )
+    return 'AddressBlock "{0}" in "{1}" subnet "{2}/{3}"'.format( self.name, self.site, self.subnet, self.prefix )
 
 
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class BaseAddress( models.Model ):
-  address_block = models.ForeignKey( AddressBlock, blank=True, null=True )
+  address_block = models.ForeignKey( AddressBlock, blank=True, null=True, on_delete=models.CASCADE )
   offset = models.IntegerField( blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -602,11 +605,11 @@ class BaseAddress( models.Model ):
 
 @cinp.model( property_list=( 'ip_address', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class Address( BaseAddress ):
-  networked = models.ForeignKey( Networked )
+  networked = models.ForeignKey( Networked, on_delete=models.CASCADE )
   interface_name = models.CharField( max_length=20 )
   sub_interface = models.IntegerField( default=None, blank=True, null=True )
   vlan = models.IntegerField( default=0 )  # vlan = 0: Untagged/Native VLAN     vlan = 4096: Trunked
-  pointer = models.ForeignKey( 'self', blank=True, null=True )
+  pointer = models.ForeignKey( 'self', blank=True, null=True, on_delete=models.PROTECT )
   is_primary = models.BooleanField( default=False )
 
   @property
@@ -772,7 +775,7 @@ class ReservedAddress( BaseAddress ):
 
 @cinp.model( property_list=( 'ip_address', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto detected
-  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
+  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True, on_delete=models.CASCADE )
 
   @property
   def subclass( self ):
@@ -810,7 +813,7 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
 
 # and Powered
 # class PowerPort( models.Model ):
-#   other_end = models.ForeignKey( 'self' ) # or should there be a sperate table with the plug relation ships
+#   other_end = models.ForeignKey( 'self' , on_delete=models.CASCADE ) # or should there be a sperate table with the plug relation ships
 #   updated = models.DateTimeField( editable=False, auto_now=True )
 #   created = models.DateTimeField( editable=False, auto_now_add=True )
 #   # powered by Structure

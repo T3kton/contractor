@@ -55,10 +55,11 @@ class Foundation( models.Model ):
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
-    try:
+    try:  #  TODO: should we find and clear any jobs (that didn't cause this to be called?)
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
       pass
+
     self.located_at = timezone.now()
     self.built_at = None
     self.save()
@@ -84,6 +85,7 @@ class Foundation( models.Model ):
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
       pass
+
     self.built_at = None
     self.located_at = None
     self.save()
@@ -466,8 +468,8 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
 
 @cinp.model( )
 class ComplexStructure( models.Model ):
-  complex = models.ForeignKey( Complex )
-  structure = models.ForeignKey( Structure )
+  complex = models.ForeignKey( Complex, on_delete=models.CASCADE )
+  structure = models.ForeignKey( Structure, on_delete=models.CASCADE )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 

@@ -8,20 +8,20 @@ import contractor.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('Building', '0001_initial'),
+        ('Building', '0002_initial2'),
     ]
 
     operations = [
         migrations.CreateModel(
             name='FoundationBox',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, verbose_name='ID', serialize=False)),
+                ('id', models.AutoField(verbose_name='ID', auto_created=True, primary_key=True, serialize=False)),
                 ('url', models.CharField(max_length=2048)),
-                ('proxy', models.CharField(blank=True, max_length=512, null=True)),
-                ('type', models.CharField(choices=[('post', 'POST'), ('call', 'call (CINP)')], max_length=4)),
+                ('proxy', models.CharField(null=True, max_length=512, blank=True)),
+                ('type', models.CharField(max_length=4, choices=[('post', 'POST'), ('call', 'call (CINP)')])),
                 ('one_shot', models.BooleanField(default=True)),
                 ('extra_data', contractor.fields.MapField(default={})),
-                ('expires', models.DateTimeField(blank=True, null=True)),
+                ('expires', models.DateTimeField(null=True, blank=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('foundation', models.ForeignKey(related_name='+', to='Building.Foundation')),
@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='FoundationPost',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, verbose_name='ID', serialize=False)),
+                ('id', models.AutoField(verbose_name='ID', auto_created=True, primary_key=True, serialize=False)),
                 ('name', models.CharField(max_length=40)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -46,13 +46,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='StructureBox',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, verbose_name='ID', serialize=False)),
+                ('id', models.AutoField(verbose_name='ID', auto_created=True, primary_key=True, serialize=False)),
                 ('url', models.CharField(max_length=2048)),
-                ('proxy', models.CharField(blank=True, max_length=512, null=True)),
-                ('type', models.CharField(choices=[('post', 'POST'), ('call', 'call (CINP)')], max_length=4)),
+                ('proxy', models.CharField(null=True, max_length=512, blank=True)),
+                ('type', models.CharField(max_length=4, choices=[('post', 'POST'), ('call', 'call (CINP)')])),
                 ('one_shot', models.BooleanField(default=True)),
                 ('extra_data', contractor.fields.MapField(default={})),
-                ('expires', models.DateTimeField(blank=True, null=True)),
+                ('expires', models.DateTimeField(null=True, blank=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('structure', models.ForeignKey(related_name='+', to='Building.Structure')),
@@ -64,7 +64,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='StructurePost',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, verbose_name='ID', serialize=False)),
+                ('id', models.AutoField(verbose_name='ID', auto_created=True, primary_key=True, serialize=False)),
                 ('name', models.CharField(max_length=40)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),

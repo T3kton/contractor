@@ -653,6 +653,7 @@ def test_structure():
                   '_structure_state': 'planned',
                   '_fqdn': 'struct1',
                   '_hostname': 'struct1',
+                  '_domain_name': None,
                   '_interface_map': {},
                   '_blueprint': 'strb1',
                   '_site': 'site1'
@@ -671,6 +672,7 @@ def test_structure():
                                               '_structure_state': 'planned',
                                               '_fqdn': 'struct1',
                                               '_hostname': 'struct1',
+                                              '_domain_name': None,
                                               '_interface_map': {},
                                               '_blueprint': 'strb1',
                                               '_site': 'site1'
@@ -693,6 +695,7 @@ def test_structure():
                                               '_structure_state': 'planned',
                                               '_fqdn': 'struct1',
                                               '_hostname': 'struct1',
+                                              '_domain_name': None,
                                               '_interface_map': {},
                                               '_blueprint': 'strb1',
                                               '_site': 'site1'
@@ -715,6 +718,7 @@ def test_structure():
                                              '_structure_state': 'planned',
                                              '_fqdn': 'struct1',
                                              '_hostname': 'struct1',
+                                             '_domain_name': None,
                                              '_interface_map': {},
                                              '_blueprint': 'strb1',
                                              '_site': 'site1',
@@ -738,6 +742,7 @@ def test_structure():
                                              '_structure_state': 'planned',
                                              '_fqdn': 'struct1',
                                              '_hostname': 'struct1',
+                                             '_domain_name': None,
                                              '_interface_map': {},
                                              '_blueprint': 'strb1',
                                              '_site': 'site1',

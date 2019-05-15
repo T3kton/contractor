@@ -14,9 +14,9 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='BluePrint',
             fields=[
-                ('name', models.CharField(primary_key=True, max_length=40, serialize=False)),
+                ('name', models.CharField(max_length=40, primary_key=True, serialize=False)),
                 ('description', models.CharField(max_length=200)),
-                ('config_values', contractor.fields.MapField(blank=True, default={})),
+                ('config_values', contractor.fields.MapField(null=True, default=contractor.fields.defaultdict, blank=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='BluePrintScript',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(verbose_name='ID', auto_created=True, primary_key=True, serialize=False)),
                 ('name', models.CharField(max_length=50)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PXE',
             fields=[
-                ('name', models.CharField(primary_key=True, max_length=50, serialize=False)),
+                ('name', models.CharField(max_length=50, primary_key=True, serialize=False)),
                 ('boot_script', models.TextField()),
                 ('template', models.TextField()),
                 ('updated', models.DateTimeField(auto_now=True)),
@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Script',
             fields=[
-                ('name', models.CharField(primary_key=True, max_length=40, serialize=False)),
+                ('name', models.CharField(max_length=40, primary_key=True, serialize=False)),
                 ('description', models.CharField(max_length=200)),
                 ('script', models.TextField()),
                 ('updated', models.DateTimeField(auto_now=True)),
@@ -53,20 +53,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='FoundationBluePrint',
             fields=[
-                ('blueprint_ptr', models.OneToOneField(primary_key=True, parent_link=True, auto_created=True, to='BluePrint.BluePrint', serialize=False)),
-                ('foundation_type_list', contractor.fields.StringListField(max_length=200, default=[])),
+                ('blueprint_ptr', models.OneToOneField(to='BluePrint.BluePrint', primary_key=True, parent_link=True, serialize=False, auto_created=True)),
+                ('foundation_type_list', contractor.fields.StringListField(default=list, max_length=200)),
                 ('template', contractor.fields.JSONField(blank=True, default={})),
-                ('physical_interface_names', contractor.fields.StringListField(blank=True, max_length=200, default=[])),
-                ('parent_list', models.ManyToManyField(to='BluePrint.FoundationBluePrint', blank=True)),
+                ('physical_interface_names', contractor.fields.StringListField(blank=True, default=list, max_length=200)),
+                ('parent_list', models.ManyToManyField(blank=True, to='BluePrint.FoundationBluePrint')),
             ],
             bases=('BluePrint.blueprint',),
         ),
         migrations.CreateModel(
             name='StructureBluePrint',
             fields=[
-                ('blueprint_ptr', models.OneToOneField(primary_key=True, parent_link=True, auto_created=True, to='BluePrint.BluePrint', serialize=False)),
+                ('blueprint_ptr', models.OneToOneField(to='BluePrint.BluePrint', primary_key=True, parent_link=True, serialize=False, auto_created=True)),
                 ('foundation_blueprint_list', models.ManyToManyField(to='BluePrint.FoundationBluePrint')),
-                ('parent_list', models.ManyToManyField(to='BluePrint.StructureBluePrint', blank=True)),
+                ('parent_list', models.ManyToManyField(blank=True, to='BluePrint.StructureBluePrint')),
             ],
             bases=('BluePrint.blueprint',),
         ),
@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='blueprint',
             name='scripts',
-            field=models.ManyToManyField(to='BluePrint.Script', through='BluePrint.BluePrintScript'),
+            field=models.ManyToManyField(through='BluePrint.BluePrintScript', to='BluePrint.Script'),
         ),
         migrations.AlterUniqueTogether(
             name='blueprintscript',
