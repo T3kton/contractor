@@ -55,7 +55,7 @@ class Foundation( models.Model ):
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
-    try:  #  TODO: should we find and clear any jobs (that didn't cause this to be called?)
+    try:  # TODO: should we find and clear any jobs (that didn't cause this to be called?)
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
       pass
@@ -90,21 +90,21 @@ class Foundation( models.Model ):
     self.located_at = None
     self.save()
 
-  @cinp.action( return_type='Integer' )
-  def doCreate( self ):
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
+  def doCreate( self, user ):
     """
     This will submit a job to run the create script.
     """
     from contractor.Foreman.lib import createJob
-    return createJob( 'create', self )
+    return createJob( 'create', self, user.username )
 
-  @cinp.action( return_type='Integer' )
-  def doDestroy( self ):
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
+  def doDestroy( self, user ):
     """
     This will submit a job to run the destroy script.
     """
     from contractor.Foreman.lib import createJob
-    return createJob( 'destroy', self )
+    return createJob( 'destroy', self, user.username )
 
   @staticmethod
   def getTscriptValues( write_mode=False ):  # locator is handled seperatly
@@ -323,15 +323,15 @@ class Structure( Networked ):
   def dependencyId( self ):
     return 's-{0}'.format( self.pk )
 
-  @cinp.action( return_type='Integer' )
-  def doCreate( self ):
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ] )
+  def doCreate( self, user ):
     from contractor.Foreman.lib import createJob
-    return createJob( 'create', self )
+    return createJob( 'create', self, user.username )
 
-  @cinp.action( return_type='Integer' )
-  def doDestroy( self ):
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ] )
+  def doDestroy( self, user ):
     from contractor.Foreman.lib import createJob
-    return createJob( 'destroy', self )
+    return createJob( 'destroy', self, user.username )
 
   @cinp.action( return_type='Map' )
   def getConfig( self ):

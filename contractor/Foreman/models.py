@@ -548,7 +548,7 @@ class JobLog( models.Model ):
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @classmethod
-  def fromJob( cls, job, start_finish ):
+  def fromJob( cls, job, start_finish, creator ):
     job = job.realJob
 
     log = cls()
@@ -573,6 +573,7 @@ class JobLog( models.Model ):
 
     log.script_name = job.script_name
     log.start_finish = start_finish
+    log.creator = creator
     log.full_clean()
     log.save()
 

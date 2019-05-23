@@ -41,13 +41,20 @@ JOB_LOOKUP_MAP = { 'Foundation': 'foundationjob', 'Structure': 'structurejob', '
 DEPENDENCY_LOOKUP_MAP = { 'Foundation': ( 'dependency', ), 'Structure': ( 'foundation', ), 'Dependency': ( 'structure', 'dependency' ) }
 
 
-def createJob( script_name, target ):
+def _target_class( target ):
   if isinstance( target, Foundation ):
-    target_class = 'Foundation'
+    return 'Foundation'
   elif isinstance( target, ( Structure, Dependency ) ):
-    target_class = target.__class__.__name__
+    return target.__class__.__name__
   else:
     raise ForemanException( 'INVALID_TARGET', 'target must be a Structure, Foundation, or Dependency' )
+
+
+def createJob( script_name, target, creator ):
+  if not creator:
+    raise ForemanException( 'INVALID_CREATOR', 'creator is blank' )
+
+  target_class = _target_class( target )
 
   if isinstance( target, Dependency ) and script_name not in ( 'create', 'destroy' ):
     raise ForemanException( 'INVALID_SCRIPT', 'Dependency Job can only have a create or destroy script_name' )
@@ -70,7 +77,7 @@ def createJob( script_name, target ):
 
       if target_dependency is not None:
         try:
-          dependency_job = getattr( target_dependency, JOB_LOOKUP_MAP[ target_dependency.__class__.__name__ ] )
+          dependency_job = getattr( target_dependency, JOB_LOOKUP_MAP[ _target_class( target_dependency ) ] )
           if dependency_job.script_name != 'create':
             raise ForemanException( 'JOB_EXISTS', 'target\'s dependency has an existing non-create job' )
         except ObjectDoesNotExist:
@@ -88,7 +95,7 @@ def createJob( script_name, target ):
 
       if target_dependency is not None:
         try:
-          dependency_job = getattr( target_dependency, JOB_LOOKUP_MAP[ target_dependency.__class__.__name__ ] )
+          dependency_job = getattr( target_dependency, JOB_LOOKUP_MAP[ _target_class( target_dependency ) ] )
           if dependency_job.script_name != 'destroy':
             raise ForemanException( 'JOB_EXISTS', 'target\'s dependency has an existing non-destroy job' )
         except ObjectDoesNotExist:
@@ -152,7 +159,7 @@ def createJob( script_name, target ):
   job.full_clean()
   job.save()
 
-  JobLog.fromJob( job, True )
+  JobLog.fromJob( job, True, creator )
 
   return job.pk
 

@@ -8,9 +8,11 @@ django.setup()
 import sys
 import argparse
 import pprint
+import time
 
 from django.core.exceptions import ObjectDoesNotExist
 from contractor.Building.models import Foundation, Structure, Dependency
+from contractor.Foreman.models import BaseJob
 from contractor.Foreman.lib import createJob
 from contractor.lib.config import getConfig
 from contractor.PostOffice.lib import registerEvent
@@ -48,6 +50,18 @@ def _clear_job( target ):
     print( 'Job Deleted' )
 
 
+def _wait_for_job( job_id ):
+  print( 'Waiting for job "{0}"'.format( job_id ) )
+  while True:
+    try:
+      job = BaseJob.objects.get( pk=job_id )
+    except BaseJob.DoesNotExist:
+      return
+
+    print( 'Curent status "{0}" at {1}%, Waiting...'.format( job.state, job.progress ) )
+    time.sleep( 10 )
+
+
 def main():
   parser = argparse.ArgumentParser( description='Boss/Manipulate Structures and Foundations and their jobs', epilog='Only one option from task or force state, if more than one is specified, the force state option is ignored' )
   group = parser.add_argument_group( 'target' )
@@ -61,7 +75,6 @@ def main():
   task_group = group.add_mutually_exclusive_group()
   task_group.add_argument(       '--do-create', help='submit create job', action='store_true' )
   task_group.add_argument(       '--do-destroy', help='submit destroy job', action='store_true' )
-  task_group.add_argument(       '--do-delete', help='delete target', action='store_true' )
   task_group.add_argument(       '--run-script', help='submit a script job', metavar='SCRIPT NAME' )
   task_group.add_argument(       '--pause', help='pause active job', action='store_true' )
   task_group.add_argument(       '--resume', help='resume a paused job', action='store_true' )
@@ -71,6 +84,7 @@ def main():
   task_group.add_argument(       '--clear-dispatched', help='clear the dispatched flag, ie: unstuck a job that subcontractor dropped', action='store_true' )
   task_group.add_argument(       '--show-job', help='display curent job', action='store_true' )
   task_group.add_argument(       '--show-config', help='display config', action='store_true' )
+  task_group.add_argument(       '--delete', help='delete target', action='store_true' )
 
   group = parser.add_argument_group( 'force state', 'WARNING!!! Use with care, it is possible to leave some foundataions/structures orphand if you are not carefull' )
   force_group = group.add_mutually_exclusive_group()
@@ -78,7 +92,11 @@ def main():
   force_group.add_argument(       '--located', help='force a foundation to located state', action='store_true' )
   force_group.add_argument(       '--built', help='force a foundataion/structure to built state', action='store_true' )
   force_group.add_argument(       '--clear-job', help='clear any associated jobs', action='store_true' )
+
+  group = parser.add_argument_group( 'other options' )
   group.add_argument(             '--notify-webhook', help='Notify webhook of the change in state, use with --planned and --built', action='store_true' )
+  group.add_argument(             '--chain', help='Chain to Foundation''s Structure as well, with --do-create', action='store_true' )
+  group.add_argument(             '--wait', help='Wait for created job to finish before returning', action='store_true' )
 
   args = parser.parse_args()
 
@@ -119,6 +137,19 @@ def main():
       sys.exit( 1 )
 
     print( 'Create Job for {0} created, job #{1}.'.format( target, rc ) )
+
+    if args.chain and isinstance( target, Foundation ):
+      try:
+        rc = target.structure.doCreate()
+      except Exception as e:
+        print( 'Error creating create chained job: "{0}"({1})'.format( e, type( e ) ) )
+        sys.exit( 1 )
+
+      print( 'Create Job for {0} created, chained job #{1}.'.format( target, rc ) )
+
+    if args.wait:
+      _wait_for_job( rc )
+
     sys.exit( 0 )
 
   if args.do_destroy:
@@ -129,9 +160,12 @@ def main():
       sys.exit( 1 )
 
     print( 'Destroy Job for {0} created, job #{1}.'.format( target, rc ) )
+    if args.wait:
+      _wait_for_job( rc )
+
     sys.exit( 0 )
 
-  if args.do_delete:
+  if args.delete:
     if not target.can_delete:
       print( 'Target has dependancies/structure can not delete' )
       sys.exit( 1 )
@@ -152,6 +186,9 @@ def main():
       sys.exit( 1 )
 
     print( '"{2}" Job for {0} created, job #{1}.'.format( target, rc, args.run_script ) )
+    if args.wait:
+      _wait_for_job( rc )
+
     sys.exit( 0 )
 
   if args.reset:
