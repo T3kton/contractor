@@ -64,24 +64,24 @@ sbp_demo_web.save()
 print( 'creating sites...' )
 zl = Zone()
 zl.name = 'local'
-zl.email = 'admin@test.local'
-zl.ns_list = [ 'contractor.site1.local.' ]
+zl.email = 'admin@test.test'
+zl.ns_list = [ 'contractor.site1.test.' ]
 zl.full_clean()
 zl.save()
 
 zs1 = Zone()
 zs1.name = 'site1'
 zs1.parent = zl
-zs1.email = 'admin@test.local'
-zs1.ns_list = [ 'contractor.site1.local.' ]
+zs1.email = 'admin@test.test'
+zs1.ns_list = [ 'contractor.site1.test.' ]
 zs1.full_clean()
 zs1.save()
 
 s1 = Site( name='site1', description='Test Site 1' )
 s1.zone = zs1
-s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'domain_name' ] = 'site1.test'
 s1.config_values[ 'dns_servers' ] = [ '192.168.200.51' ]
-s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'dns_search' ] = [ 'site1.test', 'test' ]
 s1.config_values[ 'http_proxy' ] = 'http://192.168.200.50:3128/'
 s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
 s1.full_clean()

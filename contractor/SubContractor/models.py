@@ -3,6 +3,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.Site.models import Site
 from contractor.Utilities.models import AddressBlock
 from contractor.Foreman.lib import processJobs, jobResults, jobError
+from contractor.lib.config import getConfig
 
 cinp = CInP( 'SubContractor', '0.1' )
 
@@ -44,6 +45,14 @@ class DHCPd():
   @staticmethod
   def getDynamicPools( site ):
     result = []
+    site_config = getConfig( site )
+    try:
+      dns_server = site_config[ 'dns_servers' ][0]
+    except ( KeyError, IndexError ):
+      dns_server = '1.1.1.1'
+
+    domain_name = site[ 'domain_name' ]
+
     addr_block_list = AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False ).distinct()  # without the distinct we get an AddressBlock for each DynamicAddress
     for addr_block in addr_block_list:
       item = {
@@ -51,8 +60,8 @@ class DHCPd():
                'gateway': addr_block.gateway,
                'name': addr_block.pk,
                'netmask': addr_block.netmask,
-               'dns_server': '192.168.200.53',
-               'domain_name': 'test.local'
+               'dns_server': dns_server,
+               'domain_name': domain_name
               }
 
       for addr in addr_block.baseaddress_set.filter( dynamicaddress__isnull=False ):

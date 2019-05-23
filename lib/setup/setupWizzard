@@ -91,7 +91,7 @@ sbp_xenial = StructureBluePrint.objects.get( pk='manual-structure-base' )
 print()
 print( 'creating site...' )
 zl = Zone()
-zl.name = 'local'
+zl.name = 'test'
 zl.full_clean()
 zl.save()
 
@@ -103,13 +103,13 @@ zs1.save()
 
 s1 = Site( name='site1', description='Site 1' )
 s1.zone = zs1
-s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'domain_name' ] = 'site1.test'
 if args.dns_server is not None:
   s1.config_values[ 'dns_servers' ] = [ args.dns_server ]
 else:
   s1.config_values[ 'dns_servers' ] = [ contractor_ip_address ]
 
-s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'dns_search' ] = [ 'site1.test', 'test' ]
 s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
 
 if args.proxy_server is not None:
@@ -146,7 +146,7 @@ addr.save()
 
 e = Entry( zone=zs1, type='CNAME' )
 e.name = 'static'
-e.target = 'contractor.site1.local.'
+e.target = 'contractor.site1.test.'
 e.full_clean()
 e.save()
 
@@ -187,7 +187,7 @@ for line in open( filename, 'r' ).readlines():
 if not configured:
   data = open( filename, 'r' ).read()
 
-  data = data.replace( 'BIND_NS_LIST = []', 'BIND_NS_LIST = {0}'.format( [ '{0}.contractor.site1.local'.format( contractor_iface ) ] ) )
+  data = data.replace( 'BIND_NS_LIST = []', 'BIND_NS_LIST = {0}'.format( [ '{0}.contractor.site1.test'.format( contractor_iface ) ] ) )
 
   open( filename, 'w' ).write( data )
 
@@ -196,13 +196,13 @@ subprocess.check_call( [ '/usr/lib/contractor/cron/genDNS' ] )
 
 print( 'Configuring Bind...' )
 configured = False
-for line in open( '/etc/bind/named.conf.local', 'r' ).readlines():
+for line in open( '/etc/bind/named.conf.test', 'r' ).readlines():
   if line.strip() == 'include "/etc/bind/contractor/dns.master";':
     configured = True
     break
 
 if not configured:
-  fp = open( '/etc/bind/named.conf.local', 'w' )
+  fp = open( '/etc/bind/named.conf.test', 'w' )
   fp.write( """//
 // Do any local configuration here
 //
