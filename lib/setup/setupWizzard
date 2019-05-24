@@ -196,13 +196,13 @@ subprocess.check_call( [ '/usr/lib/contractor/cron/genDNS' ] )
 
 print( 'Configuring Bind...' )
 configured = False
-for line in open( '/etc/bind/named.conf.test', 'r' ).readlines():
+for line in open( '/etc/bind/named.conf.local', 'r' ).readlines():
   if line.strip() == 'include "/etc/bind/contractor/dns.master";':
     configured = True
     break
 
 if not configured:
-  fp = open( '/etc/bind/named.conf.test', 'w' )
+  fp = open( '/etc/bind/named.conf.local', 'w' )
   fp.write( """//
 // Do any local configuration here
 //
