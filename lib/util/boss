@@ -18,6 +18,10 @@ from contractor.lib.config import getConfig
 from contractor.PostOffice.lib import registerEvent
 
 
+class CLIUser:
+  username = 'cli'
+
+
 def _get_job( target ):
   if isinstance( target, Foundation ):
     try:
@@ -131,7 +135,7 @@ def main():
 
   if args.do_create:
     try:
-      rc = target.doCreate()
+      rc = target.doCreate( CLIUser() )
     except Exception as e:
       print( 'Error creating create job: "{0}"({1})'.format( e, type( e ) ) )
       sys.exit( 1 )
@@ -140,7 +144,7 @@ def main():
 
     if args.chain and isinstance( target, Foundation ):
       try:
-        rc = target.structure.doCreate()
+        rc = target.structure.doCreate( CLIUser() )
       except Exception as e:
         print( 'Error creating create chained job: "{0}"({1})'.format( e, type( e ) ) )
         sys.exit( 1 )
@@ -154,7 +158,7 @@ def main():
 
   if args.do_destroy:
     try:
-      rc = target.doDestroy()
+      rc = target.doDestroy( CLIUser() )
     except Exception as e:
       print( 'Error creating destroy job: "{0}"({1})'.format( e, type( e ) ) )
       sys.exit( 1 )

@@ -168,6 +168,14 @@ def processJobs( site, module_list, max_jobs=10 ):
   if max_jobs > 100:
     max_jobs = 100
 
+  # how to know if something can just be located, for now, if it has a complex and the complex is up and running
+  # then we can auto locate.  The question is, should we go back to the foundation haveing a can_auto_locate
+  # flag again, do we need that kind of detail?
+  for foundation in Foundation.objects.filter( site=site, located_at__isnull=True, built_at__isnull=True ):
+    foundation = foundation.subclass
+    if foundation.complex.state == 'built':
+      foundation.setLocated()
+
   # start waiting jobs
   for job in BaseJob.objects.select_for_update().filter( site=site, state='waiting' ):
     job = job.realJob
@@ -186,7 +194,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     elif isinstance( job, FoundationJob ):
       registerEvent( job.foundation, job=job )
 
-    JobLog.fromJob( job, False )
+    JobLog.fromJob( job, False, '*INTERNAL*' )
 
     job.delete()
 
