@@ -1,6 +1,7 @@
 import re
 import random
 from django.db import models
+from django.db.models import Q
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
 from cinp.orm_django import DjangoCInP as CInP
@@ -83,6 +84,18 @@ class Networked( models.Model ):
       return self.address_set.get( interface_name=interface_name, is_primary=True ).ip_address
     except Address.DoesNotExist:
       return None
+
+  @property
+  def domain_name( self ):
+    try:
+      zone = self.site.zone
+      if zone is None:
+        return None
+
+    except ( ObjectDoesNotExist, AttributeError ):
+      return None
+
+    return zone.fqdn
 
   @property
   def fqdn( self ):
@@ -221,9 +234,9 @@ class NetworkInterface( models.Model ):
 @cinp.model( )
 class RealNetworkInterface( NetworkInterface ):
   mac = models.CharField( max_length=18, blank=True, null=True )  # in a globally unique world we would set this to unique, but these virtual days we have to many ways to use the same mac safely, so good luck.
-  foundation = models.ForeignKey( 'Building.Foundation', related_name='networkinterface_set' )
+  foundation = models.ForeignKey( 'Building.Foundation', related_name='networkinterface_set', on_delete=models.CASCADE )
   physical_location = models.CharField( max_length=100 )
-  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
+  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True, on_delete=models.PROTECT )
 
   @property
   def subclass( self ):
@@ -293,7 +306,7 @@ class AbstractNetworkInterface( NetworkInterface ):
 
 @cinp.model( )
 class AggregatedNetworkInterface( AbstractNetworkInterface ):
-  master_interface = models.ForeignKey( NetworkInterface, related_name='+' )
+  master_interface = models.ForeignKey( NetworkInterface, related_name='+', on_delete=models.CASCADE )
   slaves = models.ManyToManyField( NetworkInterface, related_name='+' )
   paramaters = MapField()
 
@@ -324,8 +337,8 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
 
 @cinp.model( property_list=( 'gateway', 'netmask', 'size', 'isIpV4' ) )
 class AddressBlock( models.Model ):
-  name = models.CharField( max_length=40, primary_key=True )
-  site = models.ForeignKey( Site, on_delete=models.CASCADE )
+  name = models.CharField( max_length=40 )
+  site = models.ForeignKey( Site, on_delete=models.PROTECT )
   subnet = IpAddressField()
   prefix = models.IntegerField()
   gateway_offset = models.IntegerField( blank=True, null=True )
@@ -392,7 +405,7 @@ class AddressBlock( models.Model ):
 
     return result
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return AddressBlock.objects.filter( site=site )
@@ -405,6 +418,9 @@ class AddressBlock( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
+    if not name_regex.match( self.name ):
+      errors[ 'name' ] = 'invalid'
+
     try:
       subnet_ip = StrToIp( self.subnet )
       ipv4 = IpIsV4( subnet_ip )
@@ -440,23 +456,31 @@ class AddressBlock( models.Model ):
     ( subnet_ip, last_ip ) = CIDRNetworkBounds( subnet_ip, self.prefix, True )
     self.subnet = IpToStr( subnet_ip )
     self._max_address = IpToStr( last_ip )
-    block_count = AddressBlock.objects.filter( subnet__gte=self.subnet, _max_address__lte=self.subnet ).count()
-    block_count += AddressBlock.objects.filter( subnet__gte=self._max_address, _max_address__lte=self._max_address ).count()
-    block_count += AddressBlock.objects.filter( _max_address__gte=self.subnet, _max_address__lte=self._max_address ).count()
-    block_count += AddressBlock.objects.filter( subnet__gte=self.subnet, subnet__lte=self._max_address ).count()
+
+    if self.pk is not None:
+      ABobjects = AddressBlock.objects.filter( ~Q( pk=self.pk ) )
+    else:
+      ABobjects = AddressBlock.objects.all()
+    block_count = ABobjects.filter( subnet__gte=self.subnet, _max_address__lte=self.subnet ).count()
+    block_count += ABobjects.filter( subnet__gte=self._max_address, _max_address__lte=self._max_address ).count()
+    block_count += ABobjects.filter( _max_address__gte=self.subnet, _max_address__lte=self._max_address ).count()
+    block_count += ABobjects.filter( subnet__gte=self.subnet, subnet__lte=self._max_address ).count()
     if block_count > 0:
       errors[ 'subnet' ] = 'This subnet/prefix overlaps with an existing Address Block'
 
     if errors:
       raise ValidationError( errors )
 
+  class Meta:
+    unique_together = ( ( 'site', 'name' ), )
+
   def __str__( self ):
-    return 'AddressBlock site "{0}" subnet "{1}/{2}"'.format( self.site, self.subnet, self.prefix )
+    return 'AddressBlock "{0}" in "{1}" subnet "{2}/{3}"'.format( self.name, self.site, self.subnet, self.prefix )
 
 
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class BaseAddress( models.Model ):
-  address_block = models.ForeignKey( AddressBlock, blank=True, null=True )
+  address_block = models.ForeignKey( AddressBlock, blank=True, null=True, on_delete=models.CASCADE )
   offset = models.IntegerField( blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -581,11 +605,11 @@ class BaseAddress( models.Model ):
 
 @cinp.model( property_list=( 'ip_address', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class Address( BaseAddress ):
-  networked = models.ForeignKey( Networked )
+  networked = models.ForeignKey( Networked, on_delete=models.CASCADE )
   interface_name = models.CharField( max_length=20 )
   sub_interface = models.IntegerField( default=None, blank=True, null=True )
   vlan = models.IntegerField( default=0 )  # vlan = 0: Untagged/Native VLAN     vlan = 4096: Trunked
-  pointer = models.ForeignKey( 'self', blank=True, null=True )
+  pointer = models.ForeignKey( 'self', blank=True, null=True, on_delete=models.PROTECT )
   is_primary = models.BooleanField( default=False )
 
   @property
@@ -645,7 +669,7 @@ class Address( BaseAddress ):
   def type( self ):
     return 'Address'
 
-  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' } ] )
+  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
   @staticmethod
   def filter_address_block( address_block ):
     return Address.objects.filter( address_block=address_block )
@@ -696,7 +720,12 @@ class Address( BaseAddress ):
       errors[ 'vlan' ] = 'must be between 0 and 4096'
 
     if self.is_primary:
-      if self.networked.address_set.filter( is_primary=True ).count() > 0:
+      if self.pk is not None:
+        Aobjects = self.networked.address_set.filter( ~Q( pk=self.pk ) )
+      else:
+        Aobjects = self.networked.address_set.all()
+
+      if Aobjects.filter( is_primary=True ).count() > 0:
         errors[ 'is_primary' ] = 'Networked allready has a primary ip'
 
     if errors:
@@ -718,7 +747,7 @@ class ReservedAddress( BaseAddress ):
   def type( self ):
     return 'ReservedAddress'
 
-  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' } ] )
+  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
   @staticmethod
   def filter_address_block( address_block ):
     return ReservedAddress.objects.filter( address_block=address_block )
@@ -746,7 +775,7 @@ class ReservedAddress( BaseAddress ):
 
 @cinp.model( property_list=( 'ip_address', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto detected
-  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True )
+  pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True, on_delete=models.CASCADE )
 
   @property
   def subclass( self ):
@@ -756,7 +785,7 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
   def type( self ):
     return 'DynamicAddress'
 
-  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' } ] )
+  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
   @staticmethod
   def filter_address_block( address_block ):
     return DynamicAddress.objects.filter( address_block=address_block )
@@ -784,7 +813,7 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
 
 # and Powered
 # class PowerPort( models.Model ):
-#   other_end = models.ForeignKey( 'self' ) # or should there be a sperate table with the plug relation ships
+#   other_end = models.ForeignKey( 'self' , on_delete=models.CASCADE ) # or should there be a sperate table with the plug relation ships
 #   updated = models.DateTimeField( editable=False, auto_now=True )
 #   created = models.DateTimeField( editable=False, auto_now_add=True )
 #   # powered by Structure

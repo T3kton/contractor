@@ -2,8 +2,9 @@ import uuid
 
 from django.utils import timezone
 from django.db import models
-from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.db.models.signals import post_save, post_delete
+from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
@@ -12,6 +13,7 @@ from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked
 from contractor.lib.config import getConfig, mergeValues
+from contractor.Records.lib import post_save_callback, post_delete_callback
 
 # this is where the plan meats the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
 
@@ -35,7 +37,7 @@ class BuildingException( ValueError ):
     return 'BuildingException ({0}): {1}'.format( self.code, self.message )
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list', 'can_auto_locate', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
+@cinp.model( property_list=( 'state', 'type', 'class_list', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
 class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )  # if this changes make sure to update architect - instance - foundation_id
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
@@ -53,10 +55,11 @@ class Foundation( models.Model ):
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
-    try:
+    try:  # TODO: should we find and clear any jobs (that didn't cause this to be called?)
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
       pass
+
     self.located_at = timezone.now()
     self.built_at = None
     self.save()
@@ -82,25 +85,26 @@ class Foundation( models.Model ):
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
       pass
+
     self.built_at = None
     self.located_at = None
     self.save()
 
-  @cinp.action( return_type='Integer' )
-  def doCreate( self ):
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
+  def doCreate( self, user ):
     """
     This will submit a job to run the create script.
     """
     from contractor.Foreman.lib import createJob
-    return createJob( 'create', self )
+    return createJob( 'create', self, user.username )
 
-  @cinp.action( return_type='Integer' )
-  def doDestroy( self ):
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
+  def doDestroy( self, user ):
     """
     This will submit a job to run the destroy script.
     """
     from contractor.Foreman.lib import createJob
-    return createJob( 'destroy', self )
+    return createJob( 'destroy', self, user.username )
 
   @staticmethod
   def getTscriptValues( write_mode=False ):  # locator is handled seperatly
@@ -149,10 +153,6 @@ class Foundation( models.Model ):
   def class_list( self ):
     # top level generic classes: Metal, VM, Container, Switch, PDU
     return []
-
-  @property
-  def can_auto_locate( self ):  # child models can decide if it can auto submit job for building, ie: vm (and like foundations) are only canBuild if their structure is auto_build
-    return False
 
   @property
   def complex( self ):
@@ -206,14 +206,14 @@ class Foundation( models.Model ):
     """
     return mergeValues( getConfig( self.subclass ) )
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Foundation.objects.filter( site=site )
 
-  @cinp.list_filter( name='todo', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' }, 'Boolean', 'Boolean', 'String' ] )
+  @cinp.list_filter( name='todo', paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'Boolean', 'String' ] )
   @staticmethod
-  def filter_todo( site, auto_build, has_dependancies, foundation_class ):
+  def filter_todo( site, has_dependancies, foundation_class ):
     args = {}
     args[ 'site' ] = site
     if has_dependancies:
@@ -270,8 +270,6 @@ class Structure( Networked ):
   foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT )      # ie what to build it on
   config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # unique
   config_values = MapField( blank=True, null=True )
-  auto_build = models.BooleanField( default=True )
-  # build_priority = models.IntegerField( default=100 )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -298,6 +296,7 @@ class Structure( Networked ):
              }
 
     result[ '_hostname' ] = self.hostname
+    result[ '_domain_name' ] = self.domain_name
     result[ '_fqdn' ] = self.fqdn
     result[ '_interface_map' ] = {}
     for iface in self.foundation.networkinterface_set.all():  # mabey? mabey not?
@@ -324,15 +323,15 @@ class Structure( Networked ):
   def dependencyId( self ):
     return 's-{0}'.format( self.pk )
 
-  @cinp.action( return_type='Integer' )
-  def doCreate( self ):
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ] )
+  def doCreate( self, user ):
     from contractor.Foreman.lib import createJob
-    return createJob( 'create', self )
+    return createJob( 'create', self, user.username )
 
-  @cinp.action( return_type='Integer' )
-  def doDestroy( self ):
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ] )
+  def doDestroy( self, user ):
     from contractor.Foreman.lib import createJob
-    return createJob( 'destroy', self )
+    return createJob( 'destroy', self, user.username )
 
   @cinp.action( return_type='Map' )
   def getConfig( self ):
@@ -346,7 +345,7 @@ class Structure( Networked ):
 
     return mergeValues( getConfig( self ) )
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Structure.objects.filter( site=site )
@@ -437,14 +436,14 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   def newFoundation( self, hostname ):
     raise ValueError( 'Root Complex dose not support Foundations' )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Foundation' }, paramater_type_list=[ { 'type': 'String' } ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, paramater_type_list=[ { 'type': 'String' } ] )
   def createFoundation( self, hostname ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     self = self.subclass
 
     foundation = self.newFoundation( hostname )  # also need to create the network interfaces
     return foundation
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Complex.objects.filter( site=site )
@@ -469,8 +468,8 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
 
 @cinp.model( )
 class ComplexStructure( models.Model ):
-  complex = models.ForeignKey( Complex )
-  structure = models.ForeignKey( Structure )
+  complex = models.ForeignKey( Complex, on_delete=models.CASCADE )
+  structure = models.ForeignKey( Structure, on_delete=models.CASCADE )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -534,7 +533,7 @@ class ComplexStructure( models.Model ):
   def state( self ):
     return 'Built'
 
-  @cinp.list_filter( name='complex', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Complex' } ] )
+  @cinp.list_filter( name='complex', paramater_type_list=[ { 'type': 'Model', 'model': Complex } ] )
   @staticmethod
   def filter_complex( complex ):
     return ComplexStructure.objects.filter( complex=complex )
@@ -636,7 +635,7 @@ class Dependency( models.Model ):
   def filter_foundation( foundation ):
     return Dependency.objects.filter( foundation=foundation )
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Dependency.objects.filter( Q( foundation__site=site ) |
@@ -684,3 +683,9 @@ class Dependency( models.Model ):
       structure = self.dependency.structure
 
     return 'Dependency of "{0}" on "{1}"'.format( self.foundation, structure )
+
+
+post_save.connect( post_save_callback, sender=Foundation )
+post_save.connect( post_save_callback, sender=Structure )
+post_delete.connect( post_delete_callback, sender=Foundation )
+post_delete.connect( post_delete_callback, sender=Structure )

@@ -35,6 +35,7 @@ class JobLog extends React.Component
                             target_class: joblog.target_class,
                             target_description: joblog.target_description,
                             script_name: joblog.script_name,
+                            creator: joblog.creator,
                             start_finish: joblog.start_finish,
                             at: joblog.at,
                           } );
@@ -54,6 +55,7 @@ class JobLog extends React.Component
           <TableCell>Target Class</TableCell>
           <TableCell>Target Description</TableCell>
           <TableCell>Script Name</TableCell>
+          <TableCell>Creator</TableCell>
           <TableCell>Start/Finish</TableCell>
           <TableCell>At</TableCell>
         </TableHead>
@@ -64,6 +66,7 @@ class JobLog extends React.Component
             <TableCell>{ item.target_class }</TableCell>
             <TableCell>{ item.target_description }</TableCell>
             <TableCell>{ item.script_name }</TableCell>
+            <TableCell>{ item.creator }</TableCell>
             <TableCell>{ item.start_finish ? 'start' : 'finish' }</TableCell>
             <TableCell>{ item.at }</TableCell>
           </TableRow>

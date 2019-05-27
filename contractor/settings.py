@@ -37,6 +37,7 @@ INSTALLED_APPS = (
     'contractor.Foreman',
     'contractor.SubContractor',
     'contractor.PostOffice',
+    'contractor.Records',
     *plugin_list,
     'other_plugins.text_file',
     'other_plugins.status_indicator',
@@ -69,6 +70,8 @@ DATABASES = {
         'PORT': '',
           }
       }
+
+MONGO_HOST = 'mongodb://127.0.0.1:27017/'
 
 
 # Internationalization

@@ -10,8 +10,9 @@ from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Site.models import Site
 from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, DynamicAddress
+from contractor.Forman.lib import createJob
 from contractor_plugins.AMT.models import AMTFoundation
-from contractor_plugins.Vcenter.models import VcenterFoundation, VcenterComplex
+from contractor_plugins.Vcenter.models import VCenterFoundation, VCenterComplex
 
 fbp_manual = FoundationBluePrint.objects.get( pk='generic-amt' )
 fbp_vcenter = FoundationBluePrint.objects.get( pk='generic-vcenter' )
@@ -20,9 +21,9 @@ sbp_esx = StructureBluePrint.objects.get( pk='generic-esx' )
 
 print( 'creating sites...' )
 s1 = Site( name='site1', description='Test Site 1' )
-s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'domain_name' ] = 'site1.test'
 s1.config_values[ 'dns_servers' ] = [ '192.168.200.53' ]
-s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'dns_search' ] = [ 'site1.test', 'test' ]
 s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
 s1.full_clean()
 s1.save()
@@ -92,7 +93,6 @@ for hostname in AMT_devices:
   strct.config_values[ 'vcenter_password' ] = '0skin3rd'
   strct.config_values[ 'vcenter_datacenter' ] = 'ha-datacenter'
   strct.config_values[ 'vcenter_hostname' ] = hostname + '.'
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
@@ -100,11 +100,14 @@ for hostname in AMT_devices:
   addr.full_clean()
   addr.save()
 
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
+
   strct.config_values[ 'vcenter_host' ] = addr.ip_address
   strct.full_clean()
   strct.save()
 
-  cplx = VcenterComplex( name=hostname, site=s1, description='Test ESX Cluster {0}'.format( hostname ) )
+  cplx = VCenterComplex( name=hostname, site=s1, description='Test ESX Cluster {0}'.format( hostname ) )
   cplx.vcenter_host = strct
   cplx.vcenter_username = 'root'
   cplx.vcenter_password = '0skin3rd'
@@ -117,7 +120,7 @@ for hostname in AMT_devices:
   cpx_member.full_clean()
   cpx_member.save()
 
-complex_list = list( VcenterComplex.objects.all() )
+complex_list = list( VCenterComplex.objects.all() )
 complex_list.sort( key=lambda a: a.pk )  # make the complex_list a dependable order
 
 for hostname in VM_devices:
@@ -129,8 +132,8 @@ for hostname in VM_devices:
 
   tmp = complex_list.pop()
   complex_list.insert( 0, tmp )
-  fdn = VcenterFoundation( site=s1, blueprint=fbp_vcenter, locator=hostname )
-  fdn.vcenter_host = tmp
+  fdn = VCenterFoundation( site=s1, blueprint=fbp_vcenter, locator=hostname )
+  fdn.vcenter_complex = tmp
   fdn.full_clean()
   fdn.save()
 
@@ -143,10 +146,12 @@ for hostname in VM_devices:
   fni.save()
 
   strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
   addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
   addr.full_clean()
   addr.save()
+
+  createJob( 'create', fdn )
+  createJob( 'create', strct )

@@ -1,14 +1,40 @@
 import copy
+import json
 from datetime import datetime, timezone
-from jinja2 import Template
+from jinja2 import Environment, Undefined
 
 from django.conf import settings
 
+from contractor.fields import config_name_regex
+
 VALUE_SORT_ORDER = '-_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz<>~'
+_jinja_environment = None
 
 
 def value_key( item ):
   return VALUE_SORT_ORDER.index( item[0] )
+
+
+def JSONDefault( obj ):
+  if isinstance( obj, datetime ):
+    return obj.isoformat()
+
+  if isinstance( obj, Undefined ):
+    return ''
+
+  return json.JSONEncoder.default( obj )
+
+
+def _jinjaEnv():
+  global _jinja_environment
+
+  if _jinja_environment is not None:
+    return _jinja_environment
+
+  _jinja_environment = Environment()
+  _jinja_environment.policies[ 'json.dumps_kwargs' ] = { 'sort_keys': True, 'default': JSONDefault }
+
+  return _jinja_environment
 
 
 def _updateConfig( config_value_map, class_list, config ):
@@ -16,6 +42,9 @@ def _updateConfig( config_value_map, class_list, config ):
     return
 
   for name in sorted( config_value_map.keys(), key=value_key ):
+    if not config_name_regex.match( name ):
+      raise ValueError( 'invalid config value name "{0}"'.format( name ) )
+
     value = config_value_map[ name ]
 
     try:
@@ -171,8 +200,10 @@ def getConfig( target ):
 
   if hasattr( target, 'class_list' ):
     class_list = target.class_list
+
   elif hasattr( target, 'foundation' ):
     class_list = target.foundation.subclass.class_list
+
   else:
     class_list = []
 
@@ -231,7 +262,7 @@ def _merge( target, value_map ):
     return new, dirty
 
   if isinstance( target, str ):
-    new = Template( target ).render( **value_map )
+    new = _jinjaEnv().from_string( target ).render( **value_map )
     return new, new != target
 
   return target, False
@@ -248,10 +279,12 @@ def mergeValues( value_map ):
 
 
 def renderTemplate( template, value_map ):
+  env = _jinjaEnv()
+
   value_map = mergeValues( value_map )  # merge first, this way results are more consistant with requests that are getting just the values
 
   while template.count( '{{' ):
-    tpl = Template( template )
+    tpl = env.from_string( template )
     template = tpl.render( **value_map )
 
   return template

@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Entry',
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False, auto_created=True, verbose_name='ID')),
+                ('id', models.AutoField(verbose_name='ID', auto_created=True, primary_key=True, serialize=False)),
                 ('type', models.CharField(max_length=20, choices=[('MX', 'MX'), ('SRV', 'SRV'), ('CNAME', 'CNAME'), ('TXT', 'TXT')])),
                 ('name', models.CharField(max_length=255)),
                 ('priority', models.IntegerField(null=True, blank=True)),
@@ -27,8 +27,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Zone',
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False, auto_created=True, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
+                ('name', models.CharField(max_length=100, primary_key=True, serialize=False)),
                 ('ttl', models.IntegerField(default=3600)),
                 ('refresh', models.IntegerField(default=86400)),
                 ('retry', models.IntegerField(default=7200)),

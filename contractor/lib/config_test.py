@@ -8,6 +8,16 @@ from contractor.Building.models import Foundation, Structure
 from contractor.lib.config import _updateConfig, mergeValues, getConfig, renderTemplate
 
 
+def _strip_base( value ):
+  for i in ( '__contractor_host', '__pxe_location', '__pxe_template_location', '__last_modified', '__timestamp', '_structure_config_uuid' ):
+    try:
+      del value[ i ]
+    except KeyError:
+      pass
+
+  return value
+
+
 def test_string():
   config = {}
   _updateConfig( {}, [], config )
@@ -190,6 +200,15 @@ def test_class():
   _updateConfig( { '<bob:joe': '1' }, [ 'joe' ], config )
   assert config == { 'bob': '1adsf', 'jane': 'qwert' }
 
+  _updateConfig( { 'bob:joe': '1' }, [ 'joe' ], config )
+  assert config == { 'bob': '1', 'jane': 'qwert' }
+
+  with pytest.raises( ValueError ):
+    _updateConfig( { 'bob:jo-e': '2' }, [ 'jo-e' ], config )
+
+  _updateConfig( { 'bo-b:joe': '3' }, [ 'joe' ], config )
+  assert config == { 'bo-b': '3', 'bob': '1', 'jane': 'qwert' }
+
 
 def test_mergeValues():
   values = { 'a': 'c' }
@@ -258,15 +277,9 @@ def test_render():
 
   assert renderTemplate( 'This {{i}} {{j}} test', config ) == 'This is only  test'
 
+  assert renderTemplate( 'This does not {{exist|tojson}}', {} ) == 'This does not ""'
 
-def _strip_base( value ):
-  for i in ( '__contractor_host', '__pxe_location', '__pxe_template_location', '__last_modified', '__timestamp', '_structure_config_uuid' ):
-    try:
-      del value[ i ]
-    except KeyError:
-      pass
-
-  return value
+  assert renderTemplate( 'This {{i|tojson}}', { 'i': [ 1, "sdf", [ 2, 3 ], { 'a': 'sdf' }, None, datetime.min ] } ) == 'This [1, "sdf", [2, 3], {"a": "sdf"}, null, "0001-01-01T00:00:00"]'
 
 
 @pytest.mark.django_db
@@ -288,6 +301,7 @@ def test_valid_names():
   s1.config_values[ '__bad' ] = 'bad bad bad 1'
   with pytest.raises( ValidationError ):
     s1.full_clean()
+  del s1.config_values[ '__bad' ]
 
   fb1 = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
   fb1.foundation_type_list = [ 'Unknown' ]
@@ -307,6 +321,7 @@ def test_valid_names():
   fb1.config_values[ '__bad' ] = 'bad bad bad 2'
   with pytest.raises( ValidationError ):
     fb1.full_clean()
+  del fb1.config_values[ '__bad' ]
 
   fb1 = FoundationBluePrint.objects.get( pk='fdnb1' )
   fb1.full_clean()
@@ -329,6 +344,7 @@ def test_valid_names():
   sb1.config_values[ '__bad' ] = 'bad bad bad 3'
   with pytest.raises( ValidationError ):
     sb1.full_clean()
+  del sb1.config_values[ '__bad' ]
 
   f1 = Foundation( site=s1, locator='fdn1', blueprint=fb1 )
   f1.full_clean()
@@ -633,10 +649,11 @@ def test_structure():
                   '_foundation_type': 'Unknown',
                   '_provisioning_interface': None,
                   '_provisioning_interface_mac': None,
-                  '_structure_id': 7,
+                  '_structure_id': str1.pk,
                   '_structure_state': 'planned',
                   '_fqdn': 'struct1',
                   '_hostname': 'struct1',
+                  '_domain_name': None,
                   '_interface_map': {},
                   '_blueprint': 'strb1',
                   '_site': 'site1'
@@ -651,10 +668,11 @@ def test_structure():
                                               '_foundation_type': 'Unknown',
                                               '_provisioning_interface': None,
                                               '_provisioning_interface_mac': None,
-                                              '_structure_id': 7,
+                                              '_structure_id': str1.pk,
                                               '_structure_state': 'planned',
                                               '_fqdn': 'struct1',
                                               '_hostname': 'struct1',
+                                              '_domain_name': None,
                                               '_interface_map': {},
                                               '_blueprint': 'strb1',
                                               '_site': 'site1'
@@ -673,10 +691,11 @@ def test_structure():
                                               '_foundation_type': 'Unknown',
                                               '_provisioning_interface': None,
                                               '_provisioning_interface_mac': None,
-                                              '_structure_id': 7,
+                                              '_structure_id': str1.pk,
                                               '_structure_state': 'planned',
                                               '_fqdn': 'struct1',
                                               '_hostname': 'struct1',
+                                              '_domain_name': None,
                                               '_interface_map': {},
                                               '_blueprint': 'strb1',
                                               '_site': 'site1'
@@ -695,10 +714,11 @@ def test_structure():
                                              '_foundation_type': 'Unknown',
                                              '_provisioning_interface': None,
                                              '_provisioning_interface_mac': None,
-                                             '_structure_id': 7,
+                                             '_structure_id': str1.pk,
                                              '_structure_state': 'planned',
                                              '_fqdn': 'struct1',
                                              '_hostname': 'struct1',
+                                             '_domain_name': None,
                                              '_interface_map': {},
                                              '_blueprint': 'strb1',
                                              '_site': 'site1',
@@ -718,10 +738,11 @@ def test_structure():
                                              '_foundation_type': 'Unknown',
                                              '_provisioning_interface': None,
                                              '_provisioning_interface_mac': None,
-                                             '_structure_id': 7,
+                                             '_structure_id': str1.pk,
                                              '_structure_state': 'planned',
                                              '_fqdn': 'struct1',
                                              '_hostname': 'struct1',
+                                             '_domain_name': None,
                                              '_interface_map': {},
                                              '_blueprint': 'strb1',
                                              '_site': 'site1',

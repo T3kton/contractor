@@ -10,6 +10,7 @@ import sys
 import argparse
 import subprocess
 
+from django.core.exceptions import ValidationError
 from contractor import settings
 from contractor.lib.ip import CIDRSubnet, StrToIp, IpToStr
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
@@ -90,7 +91,7 @@ sbp_xenial = StructureBluePrint.objects.get( pk='manual-structure-base' )
 print()
 print( 'creating site...' )
 zl = Zone()
-zl.name = 'local'
+zl.name = 'test'
 zl.full_clean()
 zl.save()
 
@@ -102,13 +103,13 @@ zs1.save()
 
 s1 = Site( name='site1', description='Site 1' )
 s1.zone = zs1
-s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'domain_name' ] = 'site1.test'
 if args.dns_server is not None:
   s1.config_values[ 'dns_servers' ] = [ args.dns_server ]
 else:
   s1.config_values[ 'dns_servers' ] = [ contractor_ip_address ]
 
-s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'dns_search' ] = [ 'site1.test', 'test' ]
 s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
 
 if args.proxy_server is not None:
@@ -121,19 +122,6 @@ print( 'creating network...' )
 addr1_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=1, prefix=network_prefix, name='main' )
 addr1_block.full_clean()
 addr1_block.save()
-
-if not args.no_ip_reservation:
-  print( 'reserving address offsets from 2 - 20...')
-  for i in range( 2, 21 ):
-    addr = ReservedAddress( address_block=addr1_block, offset=i, reason='network reserved' )
-    addr.full_clean()
-    addr.save()
-
-  print( 'using offsets 21 - 29 for dynamic pool...' )
-  for i in range( 21, 30 ):
-    addr = DynamicAddress( address_block=addr1_block, offset=i )
-    addr.full_clean()
-    addr.save()
 
 print( 'contractor entry...' )
 fdn_dev = ManualFoundation( site=s1, blueprint=fbp_manual, locator='contractor' )
@@ -148,7 +136,6 @@ iface.full_clean()
 iface.save()
 
 str_dev = Structure( site=s1, blueprint=sbp_xenial, hostname='contractor', foundation=fdn_dev )
-str_dev.auto_build = False
 str_dev.full_clean()
 str_dev.save()
 str_dev.setBuilt()
@@ -159,9 +146,31 @@ addr.save()
 
 e = Entry( zone=zs1, type='CNAME' )
 e.name = 'static'
-e.target = 'contractor.site1.local.'
+e.target = 'contractor.site1.test.'
 e.full_clean()
 e.save()
+
+if not args.no_ip_reservation:
+  print( 'reserving address offsets from 2 - 20...')
+  for i in range( 2, 21 ):
+    addr = ReservedAddress( address_block=addr1_block, offset=i, reason='network reserved' )
+    try:
+      addr.full_clean()
+    except ValidationError:
+      print( 'WARNING offset "{0}" is allready in use, skipped.'.format( i ) )
+      continue
+
+    addr.save()
+
+  print( 'using offsets 21 - 29 for dynamic pool...' )
+  for i in range( 21, 30 ):
+    addr = DynamicAddress( address_block=addr1_block, offset=i )
+    try:
+      addr.full_clean()
+    except ValidationError:
+      print( 'WARNING offset "{0}" is allready in use, skipped.'.format( i ) )
+      continue
+    addr.save()
 
 print( 'Configuring settings file...' )
 filename = settings.__file__
@@ -178,7 +187,7 @@ for line in open( filename, 'r' ).readlines():
 if not configured:
   data = open( filename, 'r' ).read()
 
-  data = data.replace( 'BIND_NS_LIST = []', 'BIND_NS_LIST = {0}'.format( [ '{0}.contractor.site1.local'.format( contractor_iface ) ] ) )
+  data = data.replace( 'BIND_NS_LIST = []', 'BIND_NS_LIST = {0}'.format( [ '{0}.contractor.site1.test'.format( contractor_iface ) ] ) )
 
   open( filename, 'w' ).write( data )
 

@@ -1,10 +1,8 @@
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '@(a3yjcc-d3uxt)q7n(tvdfhe4$%u2(dvkd9^cg26+4wmih7l7'
+SECRET_KEY = '@(a3yjcc-d3rtt)q7n(tvdfhe4$%u2(dvkd9^cg26+4wmih7l7'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
-
-ALLOWED_HOSTS = []
 
 # PXE host settings
 
@@ -37,6 +35,7 @@ INSTALLED_APPS = (
     'contractor.Foreman',
     'contractor.SubContractor',
     'contractor.PostOffice',
+    'contractor.Records',
     *plugin_list,
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -46,10 +45,7 @@ INSTALLED_APPS = (
 MIDDLEWARE_CLASSES = (
 )
 
-ROOT_URLCONF = 'contractor.urls'
-
-TEMPLATES = [
-]
+ROOT_URLCONF = ''
 
 WSGI_APPLICATION = 'contractor.wsgi.application'
 
@@ -68,6 +64,7 @@ DATABASES = {
   }
 }
 
+MONGO_HOST = 'mongodb://127.0.0.1:27017/'
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/
@@ -87,5 +84,5 @@ USE_TZ = True
 # NOTE: email should have a '.' in place of the '@', in most cases
 # it dose not have to be a real email address
 BIND_ALLOW_TRANSFER = []
-BIND_SOA_EMAIL = 'hostmaster.site1.local'
-BIND_NS_LIST = [ 'eth0.contractor.site1.local' ]
+BIND_SOA_EMAIL = 'hostmaster.site1.test'
+BIND_NS_LIST = [ 'eth0.contractor.site1.test' ]

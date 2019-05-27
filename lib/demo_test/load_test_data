@@ -10,6 +10,7 @@ from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Site.models import Site
 from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependency
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
+from contractor.Forman.lib import createJob
 from contractor_plugins.VirtualBox.models import VirtualBoxFoundation, VirtualBoxComplex
 from contractor_plugins.AWS.models import AWSEC2Foundation
 from contractor_plugins.Docker.models import DockerFoundation, DockerComplex
@@ -23,16 +24,16 @@ sbp_xenial = StructureBluePrint.objects.get( pk='generic-xenial' )
 
 print( 'creating sites...' )
 s1 = Site( name='site1', description='Test Site 1' )
-s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'domain_name' ] = 'site1.test'
 s1.config_values[ 'dns_servers' ] = [ '127.0.0.1' ]
-s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'dns_search' ] = [ 'site1.test', 'test' ]
 s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
 s1.full_clean()
 s1.save()
 
 s2 = Site( name='site2', description='Test Site 2' )
-s2.config_values[ 'domain_name' ] = 's2.site1.local'
-s2.config_values[ '{dns_search' ] = [ 's2.site1.local' ]
+s2.config_values[ 'domain_name' ] = 's2.site1.test'
+s2.config_values[ '{dns_search' ] = [ 's2.site1.test' ]
 s2.config_values[ 'dns_servers' ] = [ '10.0.0.1' ]
 s2.parent = s1
 s2.full_clean()
@@ -92,7 +93,6 @@ fni.full_clean()
 fni.save()
 
 str_dev = Structure( site=s1, blueprint=sbp_xenial, hostname='localdev', foundation=fdn_dev )
-str_dev.auto_build = False
 str_dev.full_clean()
 str_dev.save()
 str_dev.setBuilt()
@@ -116,7 +116,7 @@ cpx_member.full_clean()
 cpx_member.save()
 
 fdn_vm1 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='test1-vb' )
-fdn_vm1.virtualbox_host = cpx_vm
+fdn_vm1.virtualbox_complex = cpx_vm
 fdn_vm1.config_values = { 'memory_size': 512 }
 fdn_vm1.full_clean()
 fdn_vm1.save()
@@ -130,7 +130,7 @@ fni.full_clean()
 fni.save()
 
 fdn_vm2 = VirtualBoxFoundation( site=s1, blueprint=fbp_vm, locator='test2-vb' )
-fdn_vm2.virtualbox_host = cpx_vm
+fdn_vm2.virtualbox_complex = cpx_vm
 fdn_vm2.config_values = { 'memory_size': 512 }
 fdn_vm2.full_clean()
 fdn_vm2.save()
@@ -182,7 +182,6 @@ fni.save()
 
 print( 'creating manual box structure(s)...' )
 str_manual1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testmanual1', foundation=fdn_manual1 )
-str_manual1.auto_build = False
 str_manual1.full_clean()
 str_manual1.save()
 
@@ -192,7 +191,6 @@ addr.save()
 
 print( 'creating virtual box structure(s)...' )
 str_vm1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm1', foundation=fdn_vm1 )
-str_vm1.auto_build = False
 str_vm1.full_clean()
 str_vm1.save()
 
@@ -201,7 +199,6 @@ addr.full_clean()
 addr.save()
 
 str_vm2 = Structure( site=s1, blueprint=sbp_xenial, hostname='testvm2', foundation=fdn_vm2 )
-str_vm2.auto_build = False
 str_vm2.full_clean()
 str_vm2.save()
 
@@ -211,7 +208,6 @@ addr.save()
 
 print( 'creating aws structure(s)...' )
 str_aws1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testaws1', foundation=fdn_aws1 )
-str_aws1.auto_build = False
 str_aws1.full_clean()
 str_aws1.save()
 
@@ -221,13 +217,15 @@ addr.save()
 
 print( 'creating docker structure(s)...' )
 str_dkr1 = Structure( site=s1, blueprint=sbp_xenial, hostname='testdkr1', foundation=fdn_dkr1 )
-str_dkr1.auto_build = True
 str_dkr1.full_clean()
 str_dkr1.save()
 
 addr = Address( networked=str_dkr1, pointer=Address.objects.get( networked=str_dev, interface_name='lo' ), interface_name='eth0', is_primary=True )
 addr.full_clean()
 addr.save()
+
+createJob( 'create', fdn_dkr1 )
+createJob( 'create', str_dkr1 )
 
 print( 'creating docker inside vm structure(s)...' )
 cpx_dkr_r = DockerComplex( site=s1, name='rmtdkr', description='docker remote complex', built_percentage=100 )
@@ -272,7 +270,6 @@ fni.save()
 
 print( 'creating remote docker structure(s)...' )
 str_dkr2 = Structure( site=s1, blueprint=sbp_xenial, hostname='dkrhttp', foundation=fdn_dkr2 )
-str_dkr2.auto_build = True
 str_dkr2.full_clean()
 str_dkr2.save()
 
@@ -280,14 +277,19 @@ addr = Address( networked=str_dkr2, pointer=Address.objects.get( networked=str_v
 addr.full_clean()
 addr.save()
 
+createJob( 'create', fdn_dkr2 )
+createJob( 'create', str_dkr2 )
+
 str_dkr3 = Structure( site=s1, blueprint=sbp_xenial, hostname='dkrproxy', foundation=fdn_dkr3 )
-str_dkr3.auto_build = True
 str_dkr3.full_clean()
 str_dkr3.save()
 
 addr = Address( networked=str_dkr3, pointer=Address.objects.get( networked=str_vm1, interface_name='eth0' ), interface_name='eth0', is_primary=True )
 addr.full_clean()
 addr.save()
+
+createJob( 'create', fdn_dkr3 )
+createJob( 'create', str_dkr3 )
 
 dep = Dependency( foundation=fdn_dkr3, structure=str_dkr2, link='soft' )
 dep.full_clean()

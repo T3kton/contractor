@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+import os
+
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
+
+import django
+django.setup()
+
+from contractor.Site.models import Site
+from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
+from contractor.Building.models import Foundation, Structure
+from contractor.Records.models import collection
+from contractor.Records.lib import updateRecord, removeRecord
+
+
+class BogusTarget():
+  def __init__( self, type, pk ):
+    self.__class__ = type
+    self.pk = pk
+
+print( 'Updating all Sites...' )
+for site in Site.objects.all():
+  updateRecord( site )
+
+print( 'Updating all Foundation Blueprints...' )
+for blueprint in FoundationBluePrint.objects.all():
+  updateRecord( blueprint )
+
+print( 'Updating all Structure BluePrints...' )
+for blueprint in StructureBluePrint.objects.all():
+  updateRecord( blueprint )
+
+print( 'Updating all Foundations...' )
+for foundation in Foundation.objects.all():
+  updateRecord( foundation )
+
+print( 'Updating all Structures...' )
+for structure in Structure.objects.all():
+  updateRecord( structure )
+
+print( 'Deleting Orphaned Sites...' )
+db_set = set( Site.objects.all().values_list( 'pk', flat=True ) )
+mongo_set = set( [ i[ '_id' ] for i in collection( 'Site' ).find( {}, {} ) ] )
+
+for pk in mongo_set - db_set:
+  removeRecord( BogusTarget( Site, pk ) )
+
+print( 'Deleting FoundationBluePrint Sites...' )
+db_set = set( FoundationBluePrint.objects.all().values_list( 'pk', flat=True ) )
+mongo_set = set( [ i[ '_id' ] for i in collection( 'FoundationBluePrint' ).find( {}, {} ) ] )
+
+for pk in mongo_set - db_set:
+  removeRecord( BogusTarget( FoundationBluePrint, pk ) )
+
+print( 'Deleting StructureBluePrint Sites...' )
+db_set = set( StructureBluePrint.objects.all().values_list( 'pk', flat=True ) )
+mongo_set = set( [ i[ '_id' ] for i in collection( 'StructureBluePrint' ).find( {}, {} ) ] )
+
+for pk in mongo_set - db_set:
+  removeRecord( BogusTarget( StructureBluePrint, pk ) )
+
+print( 'Deleting Foundation Sites...' )
+db_set = set( Foundation.objects.all().values_list( 'pk', flat=True ) )
+mongo_set = set( [ i[ '_id' ] for i in collection( 'Foundation' ).find( {}, {} ) ] )
+
+for pk in mongo_set - db_set:
+  removeRecord( BogusTarget( Foundation, pk ) )
+
+print( 'Deleting Structure Sites...' )
+db_set = set( Structure.objects.all().values_list( 'pk', flat=True ) )
+mongo_set = set( [ i[ '_id' ] for i in collection( 'Structure' ).find( {}, {} ) ] )
+
+for pk in mongo_set - db_set:
+  removeRecord( BogusTarget( Structure, pk ) )
+
+print( 'Done!' )

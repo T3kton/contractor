@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.signals import post_save, post_delete
 from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
@@ -6,6 +7,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, JSONField, StringListField, name_regex, config_name_regex
 from contractor.tscript import parser
 from contractor.lib.config import getConfig
+from contractor.Records.lib import post_save_callback, post_delete_callback
 
 # these are the templates, describe how soomething is made and the template of the thing it's made on
 
@@ -67,7 +69,7 @@ class BluePrint( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if verb == 'DESCRIBE':
+    if verb in ( 'DESCRIBE', 'CALL' ):
       return True
 
     return False
@@ -230,3 +232,9 @@ class PXE( models.Model ):
 
   def __str__( self ):
     return 'PXE "{0}"'.format( self.name, self.script )
+
+
+post_save.connect( post_save_callback, sender=FoundationBluePrint )
+post_save.connect( post_save_callback, sender=StructureBluePrint )
+post_delete.connect( post_delete_callback, sender=FoundationBluePrint )
+post_delete.connect( post_delete_callback, sender=StructureBluePrint )

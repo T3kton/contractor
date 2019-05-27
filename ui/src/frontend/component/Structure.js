@@ -102,7 +102,6 @@ class Structure extends React.Component
                   <tr><th>Type</th><td>{ structure.type }</td></tr>
                   <tr><th>Blueprint</th><td><Link to={ '/blueprint/s/' + structure.blueprint }>{ structure.blueprint }</Link></td></tr>
                   <tr><th>Config UUID</th><td>{ structure.config_uuid }</td></tr>
-                  <tr><th>Auto Build</th><td>{ structure.auto_build }</td></tr>
                   <tr><th>Config Values</th><td><table><thead/><tbody>{ structure.config_values.map( ( item, index ) => ( <tr key={ index }><th>{ item[0] }</th><td>{ item[1] }</td></tr> ) ) }</tbody></table></td></tr>
                   <tr><th>Created</th><td>{ structure.created }</td></tr>
                   <tr><th>Updated</th><td>{ structure.updated }</td></tr>

@@ -26,7 +26,6 @@ class Todo extends React.Component
   state = {
       foundation_list: [],
       foundationClass_list: [],
-      isAutoBuild: true,
       hasDependancies: false,
       foundationClass: null
   };
@@ -54,7 +53,7 @@ class Todo extends React.Component
 
   update( props )
   {
-    props.listGet( props.site, this.state.isAutoBuild, this.state.hasDependancies, this.state.foundationClass )
+    props.listGet( props.site, this.state.hasDependancies, this.state.foundationClass )
       .then( ( result ) =>
       {
         var foundation_list = [];
@@ -64,7 +63,6 @@ class Todo extends React.Component
           id = CInP.extractIds( id )[0];
           foundation_list.push( { id: id,
                                   locator: foundation.locator,
-                                  autoBuild: foundation.can_auto_locate,
                                   dependencyCount: ' ',
                                   complex: ' ',
                                   created: foundation.created,
@@ -81,7 +79,6 @@ class Todo extends React.Component
     return (
       <div>
         <List>
-          <ListCheckbox checked={ this.state.isAutoBuild } onChange={ this.handleOptionChange.bind( this, 'isAutoBuild' ) } caption="Auto Build"/>
           <ListCheckbox checked={ this.state.hasDependancies } onChange={ this.handleOptionChange.bind( this, 'hasDependancies' ) } caption="Has Dependancies"/>
           <ListItem caption="Foundation Class">
              <Dropdown auto onChange={ this.handleClassChange } source={ this.state.foundationClass_list } value={ this.state.foundationClass } allowBlank={false} />
@@ -91,7 +88,6 @@ class Todo extends React.Component
           <TableHead>
             <TableCell numeric>Id</TableCell>
             <TableCell>Locator</TableCell>
-            <TableCell>Is Auto Build</TableCell>
             <TableCell>Num Dependants</TableCell>
             <TableCell>Complex</TableCell>
             <TableCell>Created</TableCell>
@@ -101,7 +97,6 @@ class Todo extends React.Component
             <TableRow key={ item.id }>
               <TableCell numeric><Link to={ '/foundation/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.locator }</TableCell>
-              <TableCell>{ item.autoBuild }</TableCell>
               <TableCell>{ item.dependencyCount }</TableCell>
               <TableCell>{ item.complex }</TableCell>
               <TableCell>{ item.created }</TableCell>

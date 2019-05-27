@@ -94,7 +94,6 @@ class Foundation extends React.Component
                   <tr><th>Locator</th><td>{ foundation.locator }</td></tr>
                   <tr><th>State</th><td>{ foundation.state }</td></tr>
                   <tr><th>Type</th><td>{ foundation.type }</td></tr>
-                  <tr><th>Can Auto Locate/Auto Build</th><td>{ foundation.can_auto_locate }</td></tr>
                   <tr><th>Blueprint</th><td><Link to={ '/blueprint/f/' + foundation.blueprint }>{ foundation.blueprint }</Link></td></tr>
                   <tr><th>Id Map</th><td>{ foundation.id_map }</td></tr>
                   <tr><th>Interfaces</th><td><ul>{ foundation.interfaces.map( ( item, index ) => (

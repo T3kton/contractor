@@ -106,7 +106,15 @@ class StructurePlugin( object ):  # ie: structure with some settable attributes,
 
   def __init__( self, structure ):
     super().__init__()
-    self.structure = structure
+    if isinstance( structure, tuple ):
+      self.structure_class = structure[0]
+      self.structure_pk = structure[1]
+      self.structure = self.structure_class.objects.get( pk=self.structure_pk )
+
+    else:
+      self.structure = structure
+      self.structure_class = self.structure.__class__
+      self.structure_pk = self.structure.pk
 
   def getValues( self ):
     result = {}
@@ -122,6 +130,9 @@ class StructurePlugin( object ):  # ie: structure with some settable attributes,
     result = {}
 
     return result
+
+  def __reduce__( self ):
+    return ( self.__class__, ( ( self.structure_class, self.structure_pk ), ) )
 
 
 class ROStructurePlugin( StructurePlugin ):  # curently Structure is RO, this is so we don't have to figure out what should be RO later

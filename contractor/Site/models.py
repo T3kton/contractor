@@ -1,11 +1,13 @@
 from django.db import models
 from django.db.models import Q
+from django.db.models.signals import post_save, post_delete
 from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
 from contractor.fields import MapField, name_regex, config_name_regex
 from contractor.lib.config import getConfig
+from contractor.Records.lib import post_save_callback, post_delete_callback
 from contractor.Directory.models import Zone
 
 # this is the what we want implemented, ie where, how it's grouped and waht is in thoes sites/groups, the logical aspect
@@ -30,7 +32,7 @@ class SiteException( ValueError ):
 @cinp.model()
 class Site( models.Model ):
   name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length
-  zone = models.ForeignKey( Zone, null=True, blank=True )
+  zone = models.ForeignKey( Zone, null=True, blank=True, on_delete=models.PROTECT )
   description = models.CharField( max_length=200 )
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
   config_values = MapField( blank=True, null=True )
@@ -135,3 +137,6 @@ class Site( models.Model ):
 
   def __str__( self ):
     return 'Site "{0}"({1})'.format( self.description, self.name )
+
+post_save.connect( post_save_callback, sender=Site )
+post_delete.connect( post_delete_callback, sender=Site )

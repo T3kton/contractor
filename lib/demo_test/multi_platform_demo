@@ -11,6 +11,7 @@ from contractor.Site.models import Site
 from contractor.Directory.models import Zone
 from contractor.Building.models import Structure, FoundationNetworkInterface, ComplexStructure, Dependency
 from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, DynamicAddress, ReservedAddress
+from contractor.Forman.lib import createJob
 from contractor_plugins.Manual.models import ManualFoundation
 from contractor_plugins.AMT.models import AMTFoundation
 from contractor_plugins.Docker.models import DockerFoundation, DockerComplex, DockerPort
@@ -63,24 +64,24 @@ sbp_demo_web.save()
 print( 'creating sites...' )
 zl = Zone()
 zl.name = 'local'
-zl.email = 'admin@test.local'
-zl.ns_list = [ 'contractor.site1.local.' ]
+zl.email = 'admin@test.test'
+zl.ns_list = [ 'contractor.site1.test.' ]
 zl.full_clean()
 zl.save()
 
 zs1 = Zone()
 zs1.name = 'site1'
 zs1.parent = zl
-zs1.email = 'admin@test.local'
-zs1.ns_list = [ 'contractor.site1.local.' ]
+zs1.email = 'admin@test.test'
+zs1.ns_list = [ 'contractor.site1.test.' ]
 zs1.full_clean()
 zs1.save()
 
 s1 = Site( name='site1', description='Test Site 1' )
 s1.zone = zs1
-s1.config_values[ 'domain_name' ] = 'site1.local'
+s1.config_values[ 'domain_name' ] = 'site1.test'
 s1.config_values[ 'dns_servers' ] = [ '192.168.200.51' ]
-s1.config_values[ 'dns_search' ] = [ 'site1.local', 'local' ]
+s1.config_values[ 'dns_search' ] = [ 'site1.test', 'test' ]
 s1.config_values[ 'http_proxy' ] = 'http://192.168.200.50:3128/'
 s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
 s1.full_clean()
@@ -164,7 +165,6 @@ for hostname in suport_devices:
   fni.save()
 
   strct = Structure( site=s1, blueprint=sbp_manual, hostname=hostname, foundation=fdn )
-  strct.auto_build = False
   strct.full_clean()
   strct.save()
   strct.setBuilt()
@@ -179,9 +179,11 @@ fdn.full_clean()
 fdn.save()
 
 strcti = Structure( site=s1, blueprint=sbp_indicator, hostname='status', foundation=fdn )
-strcti.auto_build = True
 strcti.full_clean()
 strcti.save()
+
+createJob( 'create', fdn )
+createJob( 'create', strcti )
 
 print( 'Creating Baremetal Machines...' )
 for hostname in AMT_devices:
@@ -220,13 +222,15 @@ for hostname in AMT_devices:
   fni.save()
 
   strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
   addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
   addr.full_clean()
   addr.save()
+
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
 
 dep = Dependency( structure=strct, link='soft' )
 dep.script_structure = strcti
@@ -272,7 +276,7 @@ for hostname in esx_vms:
   hosts.insert( 0, tmp )
 
   fdn = VcenterFoundation( site=s1, blueprint=fbp_vcenter, locator=hostname )
-  fdn.vcenter_host = tmp
+  fdn.vcenter_complex = tmp
   fdn.full_clean()
   fdn.save()
 
@@ -285,13 +289,15 @@ for hostname in esx_vms:
   fni.save()
 
   strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
   addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
   addr.full_clean()
   addr.save()
+
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
 
 dep = Dependency( structure=strct, link='soft' )
 dep.script_structure = strcti
@@ -317,13 +323,15 @@ for hostname in aws_instances:
   fni.save()
 
   str_aws1 = Structure( site=s1, blueprint=sbp_xenial, hostname=hostname, foundation=fdn_aws1 )
-  str_aws1.auto_build = False
   str_aws1.full_clean()
   str_aws1.save()
 
   addr = Address( networked=str_aws1, interface_name='eth0', is_primary=True )
   addr.full_clean()
   addr.save()
+
+  createJob( 'create', fdn_aws1 )
+  createJob( 'create', str_aws1 )
 
 print( 'Creating VirtualBox Structures...' )
 if virtualbox_vms:
@@ -342,13 +350,15 @@ if virtualbox_vms:
   fni.save()
 
   strct = Structure( site=s1, blueprint=sbp_manual, hostname='localvbox', foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
 
   addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=120, is_primary=True )
   addr.full_clean()
   addr.save()
+
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
 
   cpx_vbox = VirtualBoxComplex( site=s1, name='localvbox', description='local virtualbox complex' )
   cpx_vbox.full_clean()
@@ -364,7 +374,7 @@ if virtualbox_vms:
     strct_ip_offset = vm[1]
 
     fdn = VirtualBoxFoundation( site=s1, blueprint=fbp_vbox, locator=hostname )
-    fdn.virtualbox_host = cpx_vbox
+    fdn.virtualbox_complex = cpx_vbox
     fdn.config_values = { 'memory_size': 712 }
     fdn.full_clean()
     fdn.save()
@@ -378,13 +388,15 @@ if virtualbox_vms:
     fni.save()
 
     strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
-    strct.auto_build = True
     strct.full_clean()
     strct.save()
 
     addr = Address( networked=strct, address_block=addr1_block, interface_name='eth0', offset=strct_ip_offset, is_primary=True )
     addr.full_clean()
     addr.save()
+
+    createJob( 'create', fdn )
+    createJob( 'create', strct )
 
 print( 'Creating Docker Complexes...' )
 for strct in Structure.objects.all():
@@ -429,9 +441,11 @@ for hostname in docker_containers:
   fni.save()
 
   strct = Structure( site=s1, blueprint=blueprint, hostname=hostname, foundation=fdn )
-  strct.auto_build = True
   strct.full_clean()
   strct.save()
+
+  createJob( 'create', fdn )
+  createJob( 'create', strct )
 
 
 print( 'Creating Text Files...' )
@@ -441,10 +455,12 @@ fdn.full_clean()
 fdn.save()
 
 strctf = Structure( site=s1, blueprint=sbp_textfile, hostname='file-start', foundation=fdn )
-strctf.auto_build = True
 strctf.config_values[ 'body' ] = 'Job Starting\n'
 strctf.full_clean()
 strctf.save()
+
+createJob( 'create', fdn )
+createJob( 'create', strctf )
 
 fdn = TextFileFoundation( site=s1, blueprint=fbp_textfile, locator='file-done' )
 fdn.file_name = 'build_done'
@@ -452,10 +468,12 @@ fdn.full_clean()
 fdn.save()
 
 strctf = Structure( site=s1, blueprint=sbp_textfile, hostname='file-done', foundation=fdn )
-strctf.auto_build = True
 strctf.config_values[ 'body' ] = 'Job Complete!\n'
 strctf.full_clean()
 strctf.save()
+
+createJob( 'create', fdn )
+createJob( 'create', strctf )
 
 dep = Dependency( structure=strct, link='soft', foundation=fdn )
 dep.script_structure = strcti

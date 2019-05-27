@@ -71,7 +71,7 @@ class NoRollback( Exception ):
 # for values in modules, the getter/setter must not block, if you need to block
 # make a external function
 
-# for an inline non-pausing/remote function, you only need to implement execute and return_value, toSubcontractor is not called if ready is immeditally True.
+# for an inline non-pausing/remote function, you only need to implement execute and value, toSubcontractor is not called if ready is immeditally True.
 
 # any exceptions raised in any of these functions will cause the job the script is running for to end up in error state. Using any Excpetions other than
 # ExecutionError and UnrecoverableError will have it's Exception Name displayed in the output, otherwise it is treaded as Unrecoverable... where possible
@@ -133,8 +133,8 @@ class ExternalFunction( object ):
     # True -> can continue, False -> can not continue, <str> -> is treated as a status message and is displaied (otherwise treated as False)
     # anything else is cast to a string and treaded as a non-resumeable error
     # it is probably wise that this funcion does not do any processing, it may be call multiple times with out any other function in the class being called.
-    # do not depend on return_value being called imeditally after ready returns True, ready may have to return True multiple times before the return_value is
-    # reterieved and the object is cleaned up.  It is also possible that ready may still be called after return_value is reterieved.
+    # do not depend on value being called imeditally after ready returns True, ready may have to return True multiple times before the value is
+    # reterieved and the object is cleaned up.  It is also possible that ready may still be called after value is reterieved.
     # NOTE: if ready ever returns True, it can not take that back, bad things may happen.  Including throwing exceptions, they will probably be ignored.
     return True
 
@@ -491,7 +491,7 @@ class Runner( object ):
 
     self.ttl = ttl
 
-    while True:  # we are a while loop for the beninit of the goto
+    while True:  # we are a while loop for the benifit of the goto
       try:
         self._evaluate( self.ast, 0 )
         return ''
@@ -521,8 +521,8 @@ class Runner( object ):
     logging.debug( 'runner: run finish' )
 
   def _evaluate( self, operation, state_index ):
-    logging.debug( 'runner: _evaluate level: "{0}" operation: '.format( state_index, operation ) )
-    logging.debug( 'runner: _evaluate level: "{0}" start state: '.format( state_index, self.state ) )
+    logging.debug( 'runner: _evaluate level: "{0}" operation: "{1}"'.format( state_index, operation ) )
+    logging.debug( 'runner: _evaluate level: "{0}" start state: "{1}"'.format( state_index, self.state ) )
 
     op_type = operation[0]
     op_data = operation[1]
@@ -682,7 +682,7 @@ class Runner( object ):
       try:
         value = value[ index ]
       except ( IndexError, KeyError ):
-        raise ParamaterError( 'index', 'Index/Key does not exist' )
+        raise NotDefinedError( 'Index/Key does not exist', self.cur_line )
 
       self.state[ state_index ][1] = None
       try:
@@ -807,7 +807,7 @@ class Runner( object ):
 
       if self.state[ state_index ][1] is None:  # TODO: is there a better way to handle this?
         pass
-        # function allready executed and was an Exceptoin last time, just let things pass by us
+        # function allready executed and was an Exception last time, just let things pass by us
 
       else:
         # get the paramaters
@@ -953,6 +953,23 @@ class Runner( object ):
 
         self.state = self.state[ :( state_index + 1 ) ]
 
+    elif op_type == types.EXISTS:
+      try:
+        self.state[ state_index ][1]
+      except IndexError:
+        self.state[ state_index ].append( None )
+
+      try:
+        self._evaluate( op_data, state_index + 1 )
+        result = True
+      except NotDefinedError:
+        result = False
+
+      try:
+        self.state[ state_index ][2] = result
+      except IndexError:
+        self.state[ state_index ].append( result )
+
     elif op_type == types.JUMP_POINT:  # just a NOP execution wise
       pass
 
@@ -962,8 +979,8 @@ class Runner( object ):
     else:
       raise ScriptError( 'Unimplemented "{0}"'.format( op_type ), self.cur_line )
 
-    # if the op_type we just ran does not  return a value, make sure it is cleaned up
-    if op_type not in ( types.CONSTANT, types.VARIABLE, types.ARRAY, types.MAP, types.ARRAY_MAP_ITEM, types.INFIX, types.FUNCTION ):  # all the things that "return" a value
+    # if the op_type we just ran does not return a value, make sure it is cleaned up
+    if op_type not in ( types.CONSTANT, types.VARIABLE, types.ARRAY, types.MAP, types.ARRAY_MAP_ITEM, types.INFIX, types.FUNCTION, types.EXISTS ):  # all the things that "return" a value
       self.state = self.state[ :state_index ]  # remove this an evertying after from the state
     else:
       self.state = self.state[ :state_index + 1 ]  # remove everything after this one, save this one's return value on the stack
