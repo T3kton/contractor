@@ -579,8 +579,7 @@ class Dependency( models.Model ):
     for dependency in Dependency.objects.filter( dependency=self ):
       dependency.setDestroyed()
 
-    if self.link == 'hard':
-      if self.foundation is not None:
+    if self.link == 'hard' and self.foundation is not None:
         self.foundation.setDestroyed()  # TODO: Destroyed or Identified?
 
   @property

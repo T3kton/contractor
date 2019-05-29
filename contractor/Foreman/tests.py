@@ -62,8 +62,8 @@ def _do_processJobs( site, module_list, count ):
 def test_job_locking( mocker ):
   global _from_can_continue, _to_can_continue, _process_jobs_can_finish
 
-  mocker.patch( 'contractor.tscript.runner_plugins_test.remote.fromSubcontractor', _fake_fromSubcontractor )
-  mocker.patch( 'contractor.tscript.runner_plugins_test.remote.toSubcontractor', _fake_toSubcontractor )
+  mocker.patch( 'contractor.tscript.runner_plugins_test.Remote.fromSubcontractor', _fake_fromSubcontractor )
+  mocker.patch( 'contractor.tscript.runner_plugins_test.Remote.toSubcontractor', _fake_toSubcontractor )
 
   with transaction.atomic():
     s = Site( name='test', description='test' )

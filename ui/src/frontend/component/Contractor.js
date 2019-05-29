@@ -140,11 +140,6 @@ class Contractor
     return this.cinp.get( '/api/v1/Building/Complex:' + id + ':' );
   };
 
-  getDependency = ( id ) =>
-  {
-    return this.cinp.get( '/api/v1/Building/Dependency:' + id + ':' );
-  };
-
   getFoundationBluePrint = ( id ) =>
   {
     return this.cinp.get( '/api/v1/BluePrint/FoundationBluePrint:' + id + ':' );

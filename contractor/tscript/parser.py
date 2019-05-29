@@ -58,7 +58,7 @@ em_p                = ~"[\\x0d\\x0a \\x09]+"
 """
 
 
-class types():
+class Types():
   LINE = 'L'
   SCOPE = 'S'
   JUMP_POINT = 'J'
@@ -134,7 +134,7 @@ class Parser( object ):
     except ParseError as e:
       raise ParserError( e.line(), e.column(), 'Error Parsing' )
 
-    return ( types.SCOPE, { '_children': self._eval( ast ) } )
+    return ( Types.SCOPE, { '_children': self._eval( ast ) } )
 
   def _eval( self, node ):
     if node.expr_name[ 0:3 ] in ( 'ws_', 'nl_', 'em_' ):  # ignore wite space
@@ -171,7 +171,7 @@ class Parser( object ):
       if self.line_endings[ i ] > node.start:
         break
 
-    return ( types.LINE, self._eval( node.children[0] ), i + 1 )
+    return ( Types.LINE, self._eval( node.children[0] ), i + 1 )
 
   def expression( self, node ):
     return self._eval( node.children[1] )
@@ -186,7 +186,7 @@ class Parser( object ):
     options = self._eval( node.children[1] )
     options[ '_children' ] = self._eval( node.children[3] )
 
-    return ( types.SCOPE, options )
+    return ( Types.SCOPE, options )
 
   def paramater_map( self, node ):
     children = node.children[0].children
@@ -210,7 +210,7 @@ class Parser( object ):
   def const_paramater_map( self, node ):
     result = self.paramater_map( node )
     for key in result.keys():
-      if result[ key ][0] != types.CONSTANT:
+      if result[ key ][0] != Types.CONSTANT:
         raise Exception( 'Expected Constant paramater, got type "{0}"'.format( result[ key ][0] ) )
 
       result[ key ] = result[ key ][1]
@@ -218,43 +218,43 @@ class Parser( object ):
     return result
 
   def jump_point( self, node ):
-    return ( types.JUMP_POINT, node.children[1].text )
+    return ( Types.JUMP_POINT, node.children[1].text )
 
   def goto( self, node ):
-    return ( types.GOTO, node.children[1].text )
+    return ( Types.GOTO, node.children[1].text )
 
   def time( self, node ):  # days:hours:mins:seconds
     parts = [ int( i ) for i in node.text.split( ':' ) ]
 
     if len( parts ) == 4:
-      return ( types.CONSTANT, timedelta( days=parts[0], hours=parts[1], minutes=parts[2], seconds=parts[3] ) )
+      return ( Types.CONSTANT, timedelta( days=parts[0], hours=parts[1], minutes=parts[2], seconds=parts[3] ) )
     elif len( parts ) == 3:
-      return ( types.CONSTANT, timedelta( hours=parts[0], minutes=parts[1], seconds=parts[2] ) )
+      return ( Types.CONSTANT, timedelta( hours=parts[0], minutes=parts[1], seconds=parts[2] ) )
     else:
-      return ( types.CONSTANT, timedelta( minutes=parts[0], seconds=parts[1] ) )
+      return ( Types.CONSTANT, timedelta( minutes=parts[0], seconds=parts[1] ) )
 
   def number_float( self, node ):
-    return ( types.CONSTANT, float( node.text ) )
+    return ( Types.CONSTANT, float( node.text ) )
 
   def number_int( self, node ):
-    return ( types.CONSTANT, int( node.text ) )
+    return ( Types.CONSTANT, int( node.text ) )
 
   def boolean( self, node ):
-    return ( types.CONSTANT, True if node.text.lower() == 'true' else False )
+    return ( Types.CONSTANT, True if node.text.lower() == 'true' else False )
 
   def text( self, node ):
-    return ( types.CONSTANT, node.children[0].children[1].text )
+    return ( Types.CONSTANT, node.children[0].children[1].text )
 
   def none( self, node ):
-    return ( types.CONSTANT, None )
+    return ( Types.CONSTANT, None )
 
   def exists( self, node ):
-    return ( types.EXISTS, self._eval( node.children[2] ) )
+    return ( Types.EXISTS, self._eval( node.children[2] ) )
 
   def array( self, node ):
     children = node.children[1].children
     if len( children ) == 0:
-      return ( types.ARRAY, [] )
+      return ( Types.ARRAY, [] )
 
     children = children[0].children
     values = []
@@ -263,12 +263,12 @@ class Parser( object ):
 
     values.append( self._eval( children[1] ) )
 
-    return ( types.ARRAY, values )
+    return ( Types.ARRAY, values )
 
   def map( self, node ):
     values = self._eval( node.children[1] )
 
-    return ( types.MAP, values )
+    return ( Types.MAP, values )
 
   def variable( self, node ):
     if len( node.children[1].children ) > 0:
@@ -276,27 +276,27 @@ class Parser( object ):
     else:
       module = None
 
-    return ( types.VARIABLE, { 'module': module, 'name': node.children[2].text } )
+    return ( Types.VARIABLE, { 'module': module, 'name': node.children[2].text } )
 
   def array_map_item( self, node ):
     variable = self._eval( node.children[0] )
-    if variable[0] != types.VARIABLE:
+    if variable[0] != Types.VARIABLE:
       raise Exception( 'Can only index variables' )
 
     index = self._eval( node.children[2] )
-    return ( types.ARRAY_MAP_ITEM, { 'module': variable[1][ 'module' ], 'name': variable[1][ 'name' ], 'index': index } )
+    return ( Types.ARRAY_MAP_ITEM, { 'module': variable[1][ 'module' ], 'name': variable[1][ 'name' ], 'index': index } )
 
   def infix( self, node ):
-    return ( types.INFIX, { 'operator': node.children[2].text, 'left': self._eval( node.children[1] ), 'right': self._eval( node.children[3] ) } )
+    return ( Types.INFIX, { 'operator': node.children[2].text, 'left': self._eval( node.children[1] ), 'right': self._eval( node.children[3] ) } )
 
   def not_( self, node ):  # we are going to abuse the INFIX functino for this one
-    return ( types.INFIX, { 'operator': 'not', 'left': self._eval( node.children[1] ), 'right': ( types.CONSTANT, None ) } )
+    return ( Types.INFIX, { 'operator': 'not', 'left': self._eval( node.children[1] ), 'right': ( Types.CONSTANT, None ) } )
 
   def other( self, node ):
-    return ( types.OTHER, node.children[0].text )
+    return ( Types.OTHER, node.children[0].text )
 
   def whiledo( self, node ):
-    return ( types.WHILE, { 'condition': self._eval( node.children[1] ), 'expression': self._eval( node.children[4] ) } )
+    return ( Types.WHILE, { 'condition': self._eval( node.children[1] ), 'expression': self._eval( node.children[4] ) } )
 
   def ifelse( self, node ):
     branches = []
@@ -308,7 +308,7 @@ class Parser( object ):
     if len( node.children[6].children ) > 0:
       branches.append( { 'condition': None, 'expression': self._eval( node.children[6].children[0].children[3] ) } )
 
-    return ( types.IFELSE, branches )
+    return ( Types.IFELSE, branches )
 
   def function( self, node ):
     params = self._eval( node.children[4] )
@@ -318,9 +318,9 @@ class Parser( object ):
     else:
       module = None
 
-    return ( types.FUNCTION, { 'module': module, 'name': node.children[2].text, 'paramaters': params } )
+    return ( Types.FUNCTION, { 'module': module, 'name': node.children[2].text, 'paramaters': params } )
 
   def assignment( self, node ):
     target = self._eval( node.children[0] )
 
-    return ( types.ASSIGNMENT, { 'target': target, 'value': self._eval( node.children[3] ) } )
+    return ( Types.ASSIGNMENT, { 'target': target, 'value': self._eval( node.children[3] ) } )

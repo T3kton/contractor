@@ -7,7 +7,7 @@ import logging
 from importlib import import_module
 from django.conf import settings
 
-from contractor.tscript.parser import types
+from contractor.tscript.parser import Types
 
 
 # thrown when the scipt would like to pause execution, calling run() resumes execution
@@ -217,7 +217,7 @@ class Interrupt( Exception ):
   pass
 
 
-class delay( ExternalFunction ):
+class Delay( ExternalFunction ):
   def __init__( self, *args, **kwargs ):
     super().__init__( *args, **kwargs )
     self.end_at = None
@@ -269,7 +269,7 @@ builtin_function_map = {
                           'pause': lambda msg: Pause( msg ),
                           'error': lambda msg: ExecutionError( msg ),
                           'fatal_error': lambda msg: UnrecoverableError( msg ),
-                          'delay': delay()
+                          'delay': Delay()
                         }
 
 infix_math_operator_map = {
@@ -351,7 +351,7 @@ class Runner( object ):
     # scan for all the jump points
     for i in range( 0, len( ast[1][ '_children' ] ) ):
       child = ast[1][ '_children' ][i][1]  # jump into the  line
-      if child[0] == types.JUMP_POINT:
+      if child[0] == Types.JUMP_POINT:
         self.jump_point_map[ child[1] ] = i
 
   @property
@@ -383,7 +383,7 @@ class Runner( object ):
       except IndexError:
         step_data = None
 
-      if step_type == types.SCOPE:
+      if step_type == Types.SCOPE:
         tmp = {}
         for item in ( 'description', ):
           try:
@@ -398,7 +398,7 @@ class Runner( object ):
         item_list.append( ( step_data, len( operation[1][ '_children' ] ), 'Scope', tmp ) )
         operation = operation[1][ '_children' ][ step_data ]
 
-      elif step_type == types.WHILE:  # if a while loop is on the stack, we must be in it, keep on going
+      elif step_type == Types.WHILE:  # if a while loop is on the stack, we must be in it, keep on going
         item_list.append( ( 0, 1, 'While', { 'doing': step_data[ 'doing' ] } ) )
         if step_data[ 'doing' ] == 'expression':
           operation = operation[1][ 'expression' ]
@@ -407,7 +407,7 @@ class Runner( object ):
         else:
           raise Exception( 'Unknown While doing "{0}"'.format( step_data[ 'doing' ] ) )
 
-      elif step_type == types.IFELSE:
+      elif step_type == Types.IFELSE:
         item_list.append( ( step_data[ 'index' ], len( operation[1] ), 'IfElse', { 'doing': step_data[ 'doing' ] } ) )
         if step_data[ 'doing' ] == 'expression':
           operation = operation[1][ step_data[ 'index' ] ][ 'expression' ]
@@ -416,10 +416,10 @@ class Runner( object ):
         else:
           raise Exception( 'Unknown IfElse doing "{0}"'.format( step_data[ 'doing' ] ) )
 
-      elif step_type == types.LINE:
+      elif step_type == Types.LINE:
         operation = operation[1]
 
-      elif step_type == types.FUNCTION:
+      elif step_type == Types.FUNCTION:
         tmp = {}
         for item in ( 'dispatched', ):
           try:
@@ -435,15 +435,15 @@ class Runner( object ):
 
         item_list.append( ( 0, 1, 'Function', tmp ) )
 
-      elif step_type == types.ASSIGNMENT:
-        if operation[1][ 'target' ][0] == types.ARRAY_MAP_ITEM and ( step_data is None or 'index' not in step_data ):
+      elif step_type == Types.ASSIGNMENT:
+        if operation[1][ 'target' ][0] == Types.ARRAY_MAP_ITEM and ( step_data is None or 'index' not in step_data ):
           operation = operation[1][ 'target' ][1][ 'index' ]
         elif step_data is None or 'value' not in step_data:
           operation = operation[1][ 'value' ]
         else:
           raise Exception( 'status - assignment confused' )
 
-      elif step_type == types.INFIX:
+      elif step_type == Types.INFIX:
         try:
           step_data[ 'left' ]
           try:
@@ -454,7 +454,7 @@ class Runner( object ):
         except (TypeError, KeyError ):  # NOTE: TypeError occurs when there is no step data, in this case we are still after the left side
           operation = operation[1][ 'left' ]
 
-      elif step_type in ( types.CONSTANT, types.VARIABLE, types.GOTO ):
+      elif step_type in ( Types.CONSTANT, Types.VARIABLE, Types.GOTO ):
         pass
         # raise Exception( 'Not suposed to get here, interesting.' )
 
@@ -479,7 +479,7 @@ class Runner( object ):
     except KeyError:
       raise NotDefinedError( jump_point )
 
-    self.state = [ [ types.SCOPE, pos ] ]
+    self.state = [ [ Types.SCOPE, pos ] ]
 
   def run( self, ttl=1000 ):
     logging.debug( 'runner: run start' )
@@ -544,11 +544,11 @@ class Runner( object ):
     # a blocking function, so you have to check if your state has been setup
     # and sometimes it has to be set up in stages and checked as if you
     # have or haven't been through it before.
-    if op_type == types.LINE:
+    if op_type == Types.LINE:
       self.cur_line = operation[2]
       self._evaluate( op_data, state_index + 1 )
 
-    elif op_type == types.SCOPE:
+    elif op_type == Types.SCOPE:
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -558,13 +558,13 @@ class Runner( object ):
         self._evaluate( op_data[ '_children' ][ self.state[ state_index ][ 1 ] ], state_index + 1 )
         self.state[ state_index ][1] += 1
 
-    elif op_type == types.CONSTANT:  # reterieve constant value
+    elif op_type == Types.CONSTANT:  # reterieve constant value
       try:
         self.state[ state_index ][2] = op_data
       except IndexError:
         self.state[ state_index ] += [ None, op_data ]
 
-    elif op_type == types.VARIABLE:  # reterieve variable value
+    elif op_type == Types.VARIABLE:  # reterieve variable value
       if op_data[ 'module' ] is None:
         try:
           value = self.variable_map[ op_data[ 'name' ] ]
@@ -596,7 +596,7 @@ class Runner( object ):
       except IndexError:
         self.state[ state_index ] += [ None, value ]
 
-    elif op_type == types.ARRAY:  # return array
+    elif op_type == Types.ARRAY:  # return array
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -614,7 +614,7 @@ class Runner( object ):
       self.state[ state_index ].append( self.state[ state_index ][1] )
       self.state[ state_index ][1] = None
 
-    elif op_type == types.MAP:  # return map
+    elif op_type == Types.MAP:  # return map
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -632,7 +632,7 @@ class Runner( object ):
       self.state[ state_index ].append( self.state[ state_index ][1] )
       self.state[ state_index ][1] = None
 
-    elif op_type == types.ARRAY_MAP_ITEM:  # reterieve array index value
+    elif op_type == Types.ARRAY_MAP_ITEM:  # reterieve array index value
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -690,8 +690,8 @@ class Runner( object ):
       except IndexError:
         self.state[ state_index ].append( value )
 
-    elif op_type == types.ASSIGNMENT:  # get the value from 'value', and assign it to the variable defined in 'target'
-      if op_data[ 'target' ][0] not in ( types.VARIABLE, types.ARRAY_MAP_ITEM ) or ( op_data[ 'target' ][0] == types.ARRAY_MAP_ITEM and op_data[ 'target' ][1][ 'module' ] is not None ):
+    elif op_type == Types.ASSIGNMENT:  # get the value from 'value', and assign it to the variable defined in 'target'
+      if op_data[ 'target' ][0] not in ( Types.VARIABLE, Types.ARRAY_MAP_ITEM ) or ( op_data[ 'target' ][0] == Types.ARRAY_MAP_ITEM and op_data[ 'target' ][1][ 'module' ] is not None ):
         raise ParamaterError( 'target', 'Can only assign to variables', self.cur_line )
 
       try:
@@ -699,7 +699,7 @@ class Runner( object ):
       except IndexError:
         self.state[ state_index ].append( {} )
 
-      if op_data[ 'target' ][0] == types.ARRAY_MAP_ITEM:
+      if op_data[ 'target' ][0] == Types.ARRAY_MAP_ITEM:
         try:
           self.state[ state_index ][1][ 'index' ]
         except KeyError:
@@ -726,7 +726,7 @@ class Runner( object ):
       value = copy.deepcopy( self.state[ state_index ][1][ 'value' ] )
 
       if target[ 'module' ] is None:  # we don't evaluate the target, it can only be a variable
-        if op_data[ 'target' ][0] == types.ARRAY_MAP_ITEM:
+        if op_data[ 'target' ][0] == Types.ARRAY_MAP_ITEM:
           self.variable_map[ target[ 'name' ] ][ self.state[ state_index ][1][ 'index' ] ] = value
         else:
          self.variable_map[ target[ 'name' ] ] = value
@@ -751,7 +751,7 @@ class Runner( object ):
           _debugDump( 'setter "{0}" in module "{1}" error on line "{2}"'.format( target[ 'name' ], target[ 'module' ], self.cur_line ), e, self.ast, self.state )
           raise UnrecoverableError( 'setter "{0}" in module "{1}" error on line "{2}": "{3}"({4})'.format( target[ 'name' ], target[ 'module' ], self.cur_line, str( e ), e.__class__.__name__) )
 
-    elif op_type == types.INFIX:  # infix type operators
+    elif op_type == Types.INFIX:  # infix type operators
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -799,7 +799,7 @@ class Runner( object ):
       self.state[ state_index ][1] = None
       self.state[ state_index ].append( value )
 
-    elif op_type == types.FUNCTION:  # FUNCTION
+    elif op_type == Types.FUNCTION:  # FUNCTION
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -906,7 +906,7 @@ class Runner( object ):
         else:
           self.state[ state_index ].append( value )
 
-    elif op_type == types.WHILE:
+    elif op_type == Types.WHILE:
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -926,7 +926,7 @@ class Runner( object ):
           self.state[ state_index ][1][ 'doing' ] = 'condition'
           self.state = self.state[ :( state_index + 1 ) ]
 
-    elif op_type == types.IFELSE:
+    elif op_type == Types.IFELSE:
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -953,7 +953,7 @@ class Runner( object ):
 
         self.state = self.state[ :( state_index + 1 ) ]
 
-    elif op_type == types.EXISTS:
+    elif op_type == Types.EXISTS:
       try:
         self.state[ state_index ][1]
       except IndexError:
@@ -970,17 +970,17 @@ class Runner( object ):
       except IndexError:
         self.state[ state_index ].append( result )
 
-    elif op_type == types.JUMP_POINT:  # just a NOP execution wise
+    elif op_type == Types.JUMP_POINT:  # just a NOP execution wise
       pass
 
-    elif op_type == types.GOTO:
+    elif op_type == Types.GOTO:
       raise Goto( op_data, self.cur_line )
 
     else:
       raise ScriptError( 'Unimplemented "{0}"'.format( op_type ), self.cur_line )
 
     # if the op_type we just ran does not return a value, make sure it is cleaned up
-    if op_type not in ( types.CONSTANT, types.VARIABLE, types.ARRAY, types.MAP, types.ARRAY_MAP_ITEM, types.INFIX, types.FUNCTION, types.EXISTS ):  # all the things that "return" a value
+    if op_type not in ( Types.CONSTANT, Types.VARIABLE, Types.ARRAY, Types.MAP, Types.ARRAY_MAP_ITEM, Types.INFIX, Types.FUNCTION, Types.EXISTS ):  # all the things that "return" a value
       self.state = self.state[ :state_index ]  # remove this an evertying after from the state
     else:
       self.state = self.state[ :state_index + 1 ]  # remove everything after this one, save this one's return value on the stack
@@ -998,7 +998,7 @@ class Runner( object ):
     operation = self.state[ -1 ]
 
     # return None if the top of the stack is not a function
-    if operation[0] != types.FUNCTION:
+    if operation[0] != Types.FUNCTION:
       return None
 
     if operation[1][ 'module' ] not in subcontractor_module_list:
@@ -1031,7 +1031,7 @@ class Runner( object ):
 
     operation = self.state[ -1 ]
 
-    if operation[0] != types.FUNCTION:
+    if operation[0] != Types.FUNCTION:
       return 'Not At a Function'
 
     if operation[1][ 'dispatched' ] is False:
@@ -1055,7 +1055,7 @@ class Runner( object ):
 
     operation = self.state[ -1 ]
 
-    if operation[0] != types.FUNCTION:
+    if operation[0] != Types.FUNCTION:
       return
 
     operation[1][ 'dispatched' ] = False
@@ -1068,7 +1068,7 @@ class Runner( object ):
 
     operation = self.state[ -1 ]
 
-    if operation[0] != types.FUNCTION:
+    if operation[0] != Types.FUNCTION:
       return 'Not At a Function'
 
     handler = operation[1][ 'handler' ]

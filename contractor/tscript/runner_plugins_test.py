@@ -1,13 +1,13 @@
 from contractor.tscript.runner import ExternalFunction, ParamaterError
 
 
-class constant( ExternalFunction ):
+class Constant( ExternalFunction ):
   @property
   def value( self ):
     return 42
 
 
-class multiply( ExternalFunction ):
+class Multiply( ExternalFunction ):
   def __init__( self, *args, **kwargs ):
     super().__init__( *args, **kwargs )
     self._value = 0
@@ -29,7 +29,7 @@ class multiply( ExternalFunction ):
     self._value = state
 
 
-class remote( ExternalFunction ):
+class Remote( ExternalFunction ):
   def __init__( self, *args, **kwargs ):
     super().__init__( *args, **kwargs )
     self.state = None
@@ -70,7 +70,7 @@ class remote( ExternalFunction ):
     self.counter = state[1]
 
 
-class count( ExternalFunction ):
+class Count( ExternalFunction ):
   def __init__( self, *args, **kwargs ):
     super().__init__( *args, **kwargs )
     self.counter = 0
@@ -134,10 +134,10 @@ def set_otherstuff( value ):
 TSCRIPT_NAME = 'testing'
 
 TSCRIPT_FUNCTIONS = {
-                      'constant': constant,
-                      'multiply': multiply,
-                      'remote': remote,
-                      'count': count
+                      'constant': Constant,
+                      'multiply': Multiply,
+                      'remote': Remote,
+                      'count': Count
                     }
 
 TSCRIPT_VALUES = {

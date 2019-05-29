@@ -51,9 +51,7 @@ class User():
   @staticmethod
   def login( username, password ):
     user = auth.authenticate( username=username, password=password )
-    if user is not None:
-      pass
-    else:
+    if user is None:
       raise InvalidRequest( 'Invalid Login' )
 
     request = Request(session=session_engine.SessionStore( None ), user=user )
