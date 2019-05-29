@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from contractor.tscript.parsimonious import Grammar, ParseError, IncompleteParseError
+from parsimonious import Grammar, ParseError, IncompleteParseError
 
 
 tscript_grammar = """
