@@ -36,6 +36,7 @@ RUNNER_MODULE_LIST = []
 #  I -> Dependant not in Correct state Error
 
 # TODO: make sure a dependency can't create a job for a structure with a job, or a structure that is not built
+# TODO: can't create a foundation destroy job when the structure has a job
 
 JOB_LOOKUP_MAP = { 'Foundation': 'foundationjob', 'Structure': 'structurejob', 'Dependency': 'dependencyjob' }
 DEPENDENCY_LOOKUP_MAP = { 'Foundation': ( 'dependency', ), 'Structure': ( 'foundation', ), 'Dependency': ( 'structure', 'dependency' ) }
