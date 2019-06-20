@@ -174,7 +174,8 @@ def processJobs( site, module_list, max_jobs=10 ):
   # flag again, do we need that kind of detail?
   for foundation in Foundation.objects.filter( site=site, located_at__isnull=True, built_at__isnull=True ):
     foundation = foundation.subclass
-    if foundation.complex.state == 'built':
+    complex = foundation.complex
+    if complex is not None and complex.state == 'built':
       foundation.setLocated()
 
   # start waiting jobs

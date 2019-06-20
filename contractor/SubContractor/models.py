@@ -36,7 +36,7 @@ class Dispatch():
     return True
 
 
-@cinp.staticModel()
+@cinp.staticModel()  # TODO: static poller
 class DHCPd():
   def __init__( self ):
     super().__init__()
