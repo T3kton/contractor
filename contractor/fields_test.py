@@ -31,7 +31,7 @@ def test_mapfield_init():
   MapField( default=lambda: 'yeah it is bad, but can we really call the callable during __init__?' )
 
 
-def test_mapfield_cross_contamination( mocker ):
+def test_mapfield_cross_contamination():
   class testModel1( models.Model ):
     f = MapField()
 
@@ -162,7 +162,7 @@ def test_mapfield_validation():
 
 
 @pytest.mark.django_db
-def test_mapfield_save_load_empty_blank( mocker ):
+def test_mapfield_save_load_empty_blank():
   class testModel( models.Model ):
     f = MapField( default=None, null=True, blank=True )
 
@@ -242,7 +242,7 @@ def test_mapfield_save_load_empty_blank( mocker ):
 
 
 @pytest.mark.django_db
-def test_mapfield_save_load_empty_blank_nonnull( mocker ):
+def test_mapfield_save_load_empty_blank_nonnull():
   class testModel( models.Model ):
     f = MapField( blank=True )
 
@@ -325,7 +325,7 @@ def test_mapfield_save_load_empty_blank_nonnull( mocker ):
 
 
 @pytest.mark.django_db
-def test_mapfield_save_default( mocker ):
+def test_mapfield_save_default():
   class testModel( models.Model ):
     f = MapField( default={ 'b': 2 } )
 
@@ -392,7 +392,7 @@ def test_mapfield_save_default( mocker ):
 
 
 @pytest.mark.django_db
-def test_mapfield_save_default_blank( mocker ):
+def test_mapfield_save_default_blank():
   class testModel( models.Model ):
     f = MapField( default={ 'b': 2 }, blank=True )
 
