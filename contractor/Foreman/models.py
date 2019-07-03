@@ -265,12 +265,18 @@ class FoundationJob( BaseJob ):
       if self.foundation.state != 'located':
         return False
 
-      try:
+      if self.foundation.dependency is not None:
         return self.foundation.dependency.state == 'built'
-      except ObjectDoesNotExist:
-        return True
+
+      return True
 
     elif self.script_name == 'destroy':
+      if self.foundation.state != 'built':
+        return False
+
+      if self.foundation.structure is not None:
+        return self.foundation.structure.state == 'planned'
+
       return True
 
     return True
@@ -363,12 +369,16 @@ class StructureJob( BaseJob ):
       if self.structure.state != 'planned':
         return False
 
-      try:
-        return self.structure.foundation.state == 'built'
-      except ObjectDoesNotExist:
-        return True
+      return self.structure.foundation.state == 'built'
 
     elif self.script_name == 'destroy':
+      if self.structure.state != 'built':
+        return False
+
+      for dependency in self.structure.dependant_dependencies:
+        if dependency.state == 'built':
+          return False
+
       return True
 
     return True
@@ -440,7 +450,7 @@ class StructureJob( BaseJob ):
     return 'StructureJob #{0} for "{1}" in "{2}"'.format( self.pk, self.structure.pk, self.structure.site.pk )
 
 
-@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', ) )
+@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', 'can_start' ) )
 class DependencyJob( BaseJob ):
   dependency = models.OneToOneField( Dependency, editable=False, on_delete=models.CASCADE )
 
@@ -457,12 +467,25 @@ class DependencyJob( BaseJob ):
   @property
   def can_start( self ):
     if self.script_name == 'create':
-      try:
+      if self.dependency.state != 'planned':
+        return False
+
+      if self.dependency.structure is not None:
         return self.dependency.structure.state == 'built'
-      except ObjectDoesNotExist:
-        return True
+      else:
+        return self.dependency.dependency.state == 'built'
 
     elif self.script_name == 'destroy':
+      if self.dependency.state != 'built':
+        return False
+
+      if self.dependency.foundation is not None:
+        return self.dependency.foundation.state == 'planned'
+
+      for dependency in self.dependency.dependant_dependencies:
+        if dependency.state == 'built':
+          return False
+
       return True
 
     return True

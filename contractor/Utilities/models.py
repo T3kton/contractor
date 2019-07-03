@@ -171,7 +171,7 @@ class NetworkInterface( models.Model ):
   @property
   def config( self ):
     result = { 'name': self.name, 'address_list': [] }
-    structure = self.foundation.attached_structure
+    structure = self.foundation.structure
     if structure is not None:
       for address in structure.address_set.filter( interface_name=self.name ):
         if address.vlan == 0:
@@ -200,7 +200,7 @@ class NetworkInterface( models.Model ):
   @property
   def addressblock_name_map( self ):
     result = {}
-    structure = self.foundation.attached_structure
+    structure = self.foundation.structure
     if structure is not None:
       for address in structure.address_set.filter( interface_name=self.name ):
         if address.vlan == 0:

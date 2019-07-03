@@ -613,3 +613,257 @@ def test_dependency_job_create():
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   s.structurejob.delete()
   d = Dependency.objects.get( pk=d.pk )
+
+
+@pytest.mark.django_db()
+def test_can_start_create():
+  si = Site()
+  si.name = 'test'
+  si.description = 'test'
+  si.full_clean()
+  si.save()
+
+  fb = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
+  fb.foundation_type_list = [ 'Unknown' ]
+  fb.full_clean()
+  fb.save()
+
+  f = Foundation()
+  f.locator = 'test'
+  f.site = si
+  f.blueprint = fb
+  f.full_clean()
+  f.save()
+
+  sb = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
+  sb.full_clean()
+  sb.save()
+  sb.foundation_blueprint_list.add( fb )
+
+  s = Structure()
+  s.foundation = f
+  s.hostname = 'test'
+  s.site = si
+  s.blueprint = sb
+  s.full_clean()
+  s.save()
+
+  d = Dependency()
+  d.structure = s
+  d.link = 'soft'
+  d.full_clean()
+  d.save()
+
+  d2 = Dependency()
+  d2.dependency = d
+  d2.link = 'soft'
+  d2.full_clean()
+  d2.save()
+
+  createJob( 'create', f, 'tester' )
+  assert f.foundationjob.can_start is False
+
+  createJob( 'create', s, 'tester' )
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+
+  createJob( 'create', d, 'tester' )
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+
+  createJob( 'create', d2, 'tester' )
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False
+
+  f.setLocated()
+  assert f.foundationjob.can_start is True
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False
+
+  f.setBuilt()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is True
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False
+
+  s.setBuilt()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is True
+  assert d2.dependencyjob.can_start is False
+
+  d.setBuilt()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is True
+
+  f.setDestroyed()
+  s.setDestroyed()
+  d.setDestroyed()
+  d2.setDestroyed()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False
+
+  d = Dependency.objects.get( pk=d.pk )
+  d.foundation = f
+  d.full_clean()
+  d.save()
+
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False
+
+  f.setLocated()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False
+
+  d.setBuilt()
+  d2 = Dependency.objects.get( pk=d2.pk )
+  assert f.foundationjob.can_start is True
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is True
+
+
+@pytest.mark.django_db()
+def test_can_start_destroy():
+  si = Site()
+  si.name = 'test'
+  si.description = 'test'
+  si.full_clean()
+  si.save()
+
+  fb = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
+  fb.foundation_type_list = [ 'Unknown' ]
+  fb.full_clean()
+  fb.save()
+
+  f = Foundation()
+  f.locator = 'test'
+  f.site = si
+  f.blueprint = fb
+  f.full_clean()
+  f.save()
+
+  f.setBuilt()
+
+  sb = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
+  sb.full_clean()
+  sb.save()
+  sb.foundation_blueprint_list.add( fb )
+
+  s = Structure()
+  s.foundation = f
+  s.hostname = 'test'
+  s.site = si
+  s.blueprint = sb
+  s.full_clean()
+  s.save()
+
+  s.setBuilt()
+
+  d = Dependency()
+  d.structure = s
+  d.link = 'soft'
+  d.full_clean()
+  d.save()
+
+  d.setBuilt()
+
+  d2 = Dependency()
+  d2.dependency = d
+  d2.link = 'soft'
+  d2.full_clean()
+  d2.save()
+
+  d2.setBuilt()
+
+  createJob( 'destroy', f, 'tester' )
+  assert f.foundationjob.can_start is False
+
+  createJob( 'destroy', s, 'tester' )
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+
+  createJob( 'destroy', d, 'tester' )
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+
+  createJob( 'destroy', d2, 'tester' )
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is True
+
+  d2.setDestroyed()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is True
+  assert d2.dependencyjob.can_start is False
+
+  d.setDestroyed()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is True
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False
+
+  s.setDestroyed()
+  assert f.foundationjob.can_start is True
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False
+
+  f.setDestroyed()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False
+
+  d2.setDestroyed()
+  d.setBuilt()
+  s.setBuilt()
+  f.setBuilt()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is True
+  assert d2.dependencyjob.can_start is False
+
+  d = Dependency.objects.get( pk=d.pk )
+  d.foundation = f
+  d.full_clean()
+  d.save()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False
+
+  f.setDestroyed()
+  s.setBuilt()  # setting foundation to destoyed, destroys the structure, which destroys the dependancy
+  d.setBuilt()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is True
+  assert d2.dependencyjob.can_start is False
+
+  f.setBuilt()
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False
+
+  s.delete()  # setting foundation.structure to None
+  f = Foundation.objects.get( pk=f.pk )
+  assert f.foundationjob.can_start is True
+  assert d.dependencyjob.can_start is False
+  assert d2.dependencyjob.can_start is False

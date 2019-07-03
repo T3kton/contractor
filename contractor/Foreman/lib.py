@@ -131,12 +131,22 @@ def createJob( script_name, target, creator ):
     structure = None
     if target.script_structure:
       structure = target.script_structure
-    else:
+    elif target.structure is not None:
       structure = target.structure
-    # TODO: need a plugin to bring in the target foundation
-    obj_list.append( ROFoundationPlugin( structure.foundation ) )
-    obj_list.append( ROStructurePlugin( structure ) )
-    obj_list.append( ConfigPlugin( structure ) )
+    else:
+      # dependency = target.dependency
+      pass
+
+    if structure is not None:
+      # TODO: need a plugin to bring in the target foundation
+      obj_list.append( ROFoundationPlugin( structure.foundation ) )
+      obj_list.append( ROStructurePlugin( structure ) )
+      obj_list.append( ConfigPlugin( structure ) )
+
+    else:
+      # TODO: this is not done, think this out, what dependancy vaultes need to be loaded
+      # obj_list.append( ConfigPlugin( dependency ) )  ConfigPlugin does not support dependancy yet
+      pass
 
   job.site = target.site
 
