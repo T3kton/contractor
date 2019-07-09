@@ -458,15 +458,15 @@ class AddressBlock( models.Model ):
     self._max_address = IpToStr( last_ip )
 
     if self.pk is not None:
-      ABobjects = AddressBlock.objects.filter( ~Q( pk=self.pk ) )
+      ABobjects = AddressBlock.objects.filter( ~Q( pk=self.pk ), site=self.site )
     else:
-      ABobjects = AddressBlock.objects.all()
+      ABobjects = AddressBlock.objects.filter( site=self.site )
     block_count = ABobjects.filter( subnet__gte=self.subnet, _max_address__lte=self.subnet ).count()
     block_count += ABobjects.filter( subnet__gte=self._max_address, _max_address__lte=self._max_address ).count()
     block_count += ABobjects.filter( _max_address__gte=self.subnet, _max_address__lte=self._max_address ).count()
     block_count += ABobjects.filter( subnet__gte=self.subnet, subnet__lte=self._max_address ).count()
     if block_count > 0:
-      errors[ 'subnet' ] = 'This subnet/prefix overlaps with an existing Address Block'
+      errors[ 'subnet' ] = 'This subnet/prefix overlaps with an existing Address Block in the same site'
 
     if errors:
       raise ValidationError( errors )

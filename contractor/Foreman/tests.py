@@ -635,6 +635,9 @@ def test_can_start_create():
   f.full_clean()
   f.save()
 
+  createJob( 'create', f, 'tester' )
+  assert f.foundationjob.can_start is False
+
   sb = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
   sb.full_clean()
   sb.save()
@@ -648,29 +651,26 @@ def test_can_start_create():
   s.full_clean()
   s.save()
 
+  createJob( 'create', s, 'tester' )
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+
   d = Dependency()
   d.structure = s
   d.link = 'soft'
   d.full_clean()
   d.save()
 
+  createJob( 'create', d, 'tester' )
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is False
+
   d2 = Dependency()
   d2.dependency = d
   d2.link = 'soft'
   d2.full_clean()
   d2.save()
-
-  createJob( 'create', f, 'tester' )
-  assert f.foundationjob.can_start is False
-
-  createJob( 'create', s, 'tester' )
-  assert f.foundationjob.can_start is False
-  assert s.structurejob.can_start is False
-
-  createJob( 'create', d, 'tester' )
-  assert f.foundationjob.can_start is False
-  assert s.structurejob.can_start is False
-  assert d.dependencyjob.can_start is False
 
   createJob( 'create', d2, 'tester' )
   assert f.foundationjob.can_start is False
@@ -757,6 +757,9 @@ def test_can_start_destroy():
 
   f.setBuilt()
 
+  createJob( 'destroy', f, 'tester' )
+  assert f.foundationjob.can_start is True
+
   sb = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
   sb.full_clean()
   sb.save()
@@ -772,6 +775,10 @@ def test_can_start_destroy():
 
   s.setBuilt()
 
+  createJob( 'destroy', s, 'tester' )
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is True
+
   d = Dependency()
   d.structure = s
   d.link = 'soft'
@@ -780,6 +787,11 @@ def test_can_start_destroy():
 
   d.setBuilt()
 
+  createJob( 'destroy', d, 'tester' )
+  assert f.foundationjob.can_start is False
+  assert s.structurejob.can_start is False
+  assert d.dependencyjob.can_start is True
+
   d2 = Dependency()
   d2.dependency = d
   d2.link = 'soft'
@@ -787,18 +799,6 @@ def test_can_start_destroy():
   d2.save()
 
   d2.setBuilt()
-
-  createJob( 'destroy', f, 'tester' )
-  assert f.foundationjob.can_start is False
-
-  createJob( 'destroy', s, 'tester' )
-  assert f.foundationjob.can_start is False
-  assert s.structurejob.can_start is False
-
-  createJob( 'destroy', d, 'tester' )
-  assert f.foundationjob.can_start is False
-  assert s.structurejob.can_start is False
-  assert d.dependencyjob.can_start is False
 
   createJob( 'destroy', d2, 'tester' )
   assert f.foundationjob.can_start is False
