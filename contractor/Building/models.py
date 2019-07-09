@@ -37,7 +37,7 @@ class BuildingException( ValueError ):
     return 'BuildingException ({0}): {1}'.format( self.code, self.message )
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list', { 'name': 'attached_structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
+@cinp.model( property_list=( 'state', 'type', 'class_list', { 'name': 'structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
 class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )  # if this changes make sure to update architect - instance - foundation_id
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
@@ -51,7 +51,7 @@ class Foundation( models.Model ):
   @cinp.action()
   def setLocated( self ):
     """
-    Sets the Foundation to 'located' state.  This will not create a destroy job.
+    Sets the Foundation to 'located' state.  This will not create/destroy any jobs.
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
@@ -67,7 +67,7 @@ class Foundation( models.Model ):
   @cinp.action()
   def setBuilt( self ):
     """
-    Set the Foundation to 'built' state.  This will not create a create job.
+    Set the Foundation to 'built' state.  This will not create/destroy any jobs.
     """
     if self.located_at is None:
       self.located_at = timezone.now()
@@ -77,7 +77,7 @@ class Foundation( models.Model ):
   @cinp.action()
   def setDestroyed( self ):
     """
-    Sets the Foundation to 'destroyed' state.  This will not create a destroy job.
+    Sets the Foundation to 'destroyed' state.  This will not create/destroy any jobs.
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
@@ -168,10 +168,10 @@ class Foundation( models.Model ):
     return True
 
   @property
-  def attached_structure( self ):  # TODO: look arround and see if this is used where it should be, or we can remove this
+  def structure( self ):
     try:
-      return self.structure
-    except AttributeError:
+      return Structure.objects.get( foundation=self )
+    except Structure.DoesNotExist:
       pass
 
     return None
@@ -189,6 +189,13 @@ class Foundation( models.Model ):
   @property
   def description( self ):
     return self.locator
+
+  @property
+  def dependency( self ):
+    try:
+      return Dependency.objects.get( foundation=self )
+    except Dependency.DoesNotExist:
+      return None
 
   @property
   def dependencyId( self ):
@@ -267,7 +274,7 @@ def getUUID():
 @cinp.model( property_list=( 'state', ), read_only_list=( 'config_uuid', ) )
 class Structure( Networked ):
   blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT )  # ie what to bild
-  foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT )      # ie what to build it on
+  foundation = models.OneToOneField( Foundation, related_name='+', on_delete=models.PROTECT )      # ie what to build it on
   config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # unique
   config_values = MapField( blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
@@ -282,7 +289,7 @@ class Structure( Networked ):
     self.built_at = None
     self.config_uuid = str( uuid.uuid4() )  # new on destroyed, that way we can leave anything that might still be kicking arround in the dust
     self.save()
-    for dependency in self.dependency_set.all():
+    for dependency in self.dependant_dependencies:
       dependency.setDestroyed()
 
   def configAttributes( self ):
@@ -318,6 +325,13 @@ class Structure( Networked ):
   @property
   def description( self ):
     return self.hostname
+
+  @property
+  def dependant_dependencies( self ):
+    try:
+      return Dependency.objects.filter( structure=self )
+    except Dependency.DoesNotExist:
+      return []
 
   @property
   def dependencyId( self ):
@@ -558,9 +572,9 @@ class ComplexStructure( models.Model ):
 @cinp.model( property_list=( 'state', ) )
 class Dependency( models.Model ):
   LINK_CHOICES = ( 'soft', 'hard' )  # a hardlink if the structure is set back pulls the foundation back with it, soft does not
-  structure = models.ForeignKey( Structure, on_delete=models.CASCADE, blank=True, null=True )  # depending on this
+  structure = models.ForeignKey( Structure, on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # depending on this
   dependency = models.ForeignKey( 'self', on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # or this
-  foundation = models.OneToOneField( Foundation, on_delete=models.CASCADE, blank=True, null=True )  # this is what is depending
+  foundation = models.OneToOneField( Foundation, on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # this is what is depending
   script_structure = models.ForeignKey( Structure, on_delete=models.CASCADE, related_name='+', blank=True, null=True )  # if this is specified, the script runs on this
   link = models.CharField( max_length=4, choices=[ ( i, i ) for i in LINK_CHOICES ] )
   create_script_name = models.CharField( max_length=40, blank=True, null=True )   # optional script name, this job must complete before built_at is set
@@ -576,11 +590,10 @@ class Dependency( models.Model ):
   def setDestroyed( self ):
     self.built_at = None
     self.save()
-    for dependency in Dependency.objects.filter( dependency=self ):
+    for dependency in self.dependant_dependencies:
       dependency.setDestroyed()
 
-    if self.link == 'hard':
-      if self.foundation is not None:
+    if self.link == 'hard' and self.foundation is not None:
         self.foundation.setDestroyed()  # TODO: Destroyed or Identified?
 
   @property
@@ -609,8 +622,10 @@ class Dependency( models.Model ):
   def blueprint( self ):
     if self.script_structure is not None:
       return self.script_structure.blueprint
-    else:
+    elif self.structure is not None:
       return self.structure.blueprint
+    else:
+      return self.dependency.blueprint
 
   @property
   def description( self ):
@@ -625,6 +640,13 @@ class Dependency( models.Model ):
       right = self.foundation.locator
 
     return '{0}-{1}'.format( left, right )
+
+  @property
+  def dependant_dependencies( self ):
+    try:
+      return Dependency.objects.filter( dependency=self )
+    except Dependency.DoesNotExist:
+      return []
 
   @property
   def dependencyId( self ):

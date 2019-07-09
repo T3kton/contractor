@@ -141,40 +141,40 @@ def _updateConfig( config_value_map, class_list, config ):
 
 
 def _siteConfigInternal( site, class_list, config ):
-  lastModified = site.updated
+  last_modified = site.updated
 
   if site.parent is not None:
-    lastModified = max( lastModified, _siteConfigInternal( site.parent, class_list, config ) )
+    last_modified = max( last_modified, _siteConfigInternal( site.parent, class_list, config ) )
 
   _updateConfig( site.config_values, class_list, config )
 
-  return lastModified
+  return last_modified
 
 
 def _siteConfig( site, class_list, config ):
-  lastModified = _siteConfigInternal( site, class_list, config )
+  last_modified = _siteConfigInternal( site, class_list, config )
 
   config[ '_site' ] = site.pk
 
-  return lastModified
+  return last_modified
 
 
 def _bluePrintConfigInternal( blueprint, class_list, config ):
-  lastModified = blueprint.updated
+  last_modified = blueprint.updated
 
   for parent in blueprint.parent_list.all():
-    lastModified = max( lastModified, _bluePrintConfigInternal( parent, class_list, config ) )
+    last_modified = max( last_modified, _bluePrintConfigInternal( parent, class_list, config ) )
 
   _updateConfig( blueprint.config_values, class_list, config )
-  return lastModified
+  return last_modified
 
 
 def _bluePrintConfig( blueprint, class_list, config ):
-  lastModified = _bluePrintConfigInternal( blueprint, class_list, config )
+  last_modified = _bluePrintConfigInternal( blueprint, class_list, config )
 
   config[ '_blueprint' ] = blueprint.pk
 
-  return lastModified
+  return last_modified
 
 
 def _foundationConfig( foundation, class_list, config ):
@@ -196,7 +196,7 @@ def _structureConfig( structure, class_list, config ):
 
 def getConfig( target ):
   config = {}
-  lastModified = datetime( 1, 1, 1, tzinfo=timezone.utc )
+  last_modified = datetime( 1, 1, 1, tzinfo=timezone.utc )
 
   if hasattr( target, 'class_list' ):
     class_list = target.class_list
@@ -208,21 +208,21 @@ def getConfig( target ):
     class_list = []
 
   if target.__class__.__name__ == 'Site':
-    lastModified = max( lastModified, _siteConfig( target, class_list, config ) )
+    last_modified = max( last_modified, _siteConfig( target, class_list, config ) )
 
   elif target.__class__.__name__ in ( 'BluePrint', 'StructureBluePrint', 'FoundationBluePrint' ):
-    lastModified = max( lastModified, _bluePrintConfig( target, class_list, config ) )
+    last_modified = max( last_modified, _bluePrintConfig( target, class_list, config ) )
 
   elif target.__class__.__name__ == 'Structure':
-    lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
-    lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
-    lastModified = max( lastModified, _foundationConfig( target.foundation.subclass, class_list, config ) )
-    lastModified = max( lastModified, _structureConfig( target, class_list, config ) )
+    last_modified = max( last_modified, _bluePrintConfig( target.blueprint, class_list, config ) )
+    last_modified = max( last_modified, _siteConfig( target.site, class_list, config ) )
+    last_modified = max( last_modified, _foundationConfig( target.foundation.subclass, class_list, config ) )
+    last_modified = max( last_modified, _structureConfig( target, class_list, config ) )
 
   elif 'Foundation' in [ i.__name__ for i in target.__class__.__mro__ ]:
-    lastModified = max( lastModified, _bluePrintConfig( target.blueprint, class_list, config ) )
-    lastModified = max( lastModified, _siteConfig( target.site, class_list, config ) )
-    lastModified = max( lastModified, _foundationConfig( target, class_list, config ) )
+    last_modified = max( last_modified, _bluePrintConfig( target.blueprint, class_list, config ) )
+    last_modified = max( last_modified, _siteConfig( target.site, class_list, config ) )
+    last_modified = max( last_modified, _foundationConfig( target, class_list, config ) )
     try:
       config[ '_structure_id' ] = target.structure.pk
     except AttributeError:
@@ -232,7 +232,7 @@ def getConfig( target ):
     raise ValueError( 'Don\'t know how to get config for "{0}"'.format( target ) )
 
   # Global Attributes
-  config[ '__last_modified' ] = lastModified
+  config[ '__last_modified' ] = last_modified
   config[ '__timestamp' ] = datetime.now( timezone.utc )
   config[ '__contractor_host' ] = settings.CONTRACTOR_HOST
   config[ '__pxe_template_location' ] = '{0}config/pxe_template/'.format( settings.CONTRACTOR_HOST )

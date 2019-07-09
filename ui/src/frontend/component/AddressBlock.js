@@ -66,6 +66,7 @@ class AddressBlock extends React.Component
             var addressBlock = result.data[ id ];
             id = CInP.extractIds( id )[0];
             addressBlock_list.push( { id: id,
+                                    name: addressBlock.name,
                                     subnet: addressBlock.subnet,
                                     prefix: addressBlock.prefix,
                                     created: addressBlock.created,
@@ -136,6 +137,7 @@ class AddressBlock extends React.Component
       <Table selectable={ false } multiSelectable={ false }>
         <TableHead>
           <TableCell numeric>Id</TableCell>
+          <TableCell>Name</TableCell>
           <TableCell>Subnet</TableCell>
           <TableCell>Prefix</TableCell>
           <TableCell>Created</TableCell>
@@ -144,6 +146,7 @@ class AddressBlock extends React.Component
         { this.state.addressBlock_list.map( ( item ) => (
           <TableRow key={ item.id }>
             <TableCell numeric><Link to={ '/addressblock/' + item.id }>{ item.id }</Link></TableCell>
+            <TableCell>{ item.name }</TableCell>
             <TableCell>{ item.subnet }</TableCell>
             <TableCell>{ item.prefix }</TableCell>
             <TableCell>{ item.created }</TableCell>

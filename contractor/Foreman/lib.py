@@ -36,6 +36,7 @@ RUNNER_MODULE_LIST = []
 #  I -> Dependant not in Correct state Error
 
 # TODO: make sure a dependency can't create a job for a structure with a job, or a structure that is not built
+# TODO: can't create a foundation destroy job when the structure has a job
 
 JOB_LOOKUP_MAP = { 'Foundation': 'foundationjob', 'Structure': 'structurejob', 'Dependency': 'dependencyjob' }
 DEPENDENCY_LOOKUP_MAP = { 'Foundation': ( 'dependency', ), 'Structure': ( 'foundation', ), 'Dependency': ( 'structure', 'dependency' ) }
@@ -130,12 +131,22 @@ def createJob( script_name, target, creator ):
     structure = None
     if target.script_structure:
       structure = target.script_structure
-    else:
+    elif target.structure is not None:
       structure = target.structure
-    # TODO: need a plugin to bring in the target foundation
-    obj_list.append( ROFoundationPlugin( structure.foundation ) )
-    obj_list.append( ROStructurePlugin( structure ) )
-    obj_list.append( ConfigPlugin( structure ) )
+    else:
+      # dependency = target.dependency
+      pass
+
+    if structure is not None:
+      # TODO: need a plugin to bring in the target foundation
+      obj_list.append( ROFoundationPlugin( structure.foundation ) )
+      obj_list.append( ROStructurePlugin( structure ) )
+      obj_list.append( ConfigPlugin( structure ) )
+
+    else:
+      # TODO: this is not done, think this out, what dependancy vaultes need to be loaded
+      # obj_list.append( ConfigPlugin( dependency ) )  ConfigPlugin does not support dependancy yet
+      pass
 
   job.site = target.site
 
@@ -173,7 +184,8 @@ def processJobs( site, module_list, max_jobs=10 ):
   # flag again, do we need that kind of detail?
   for foundation in Foundation.objects.filter( site=site, located_at__isnull=True, built_at__isnull=True ):
     foundation = foundation.subclass
-    if foundation.complex.state == 'built':
+    complex = foundation.complex
+    if complex is not None and complex.state == 'built':
       foundation.setLocated()
 
   # start waiting jobs

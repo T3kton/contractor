@@ -9,3 +9,4 @@ htmlcov
 .cache
 
 contractor/plugins
+contractor/settings.py

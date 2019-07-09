@@ -36,7 +36,7 @@ class Dispatch():
     return True
 
 
-@cinp.staticModel()
+@cinp.staticModel()  # TODO: static poller
 class DHCPd():
   def __init__( self ):
     super().__init__()
@@ -51,7 +51,7 @@ class DHCPd():
     except ( KeyError, IndexError ):
       dns_server = '1.1.1.1'
 
-    domain_name = site_config[ 'domain_name' ]
+    domain_name = site_config.get( 'domain_name', '' )
 
     addr_block_list = AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False ).distinct()  # without the distinct we get an AddressBlock for each DynamicAddress
     for addr_block in addr_block_list:

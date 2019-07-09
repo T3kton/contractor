@@ -84,6 +84,14 @@ def test_addressblock():
   ab.full_clean()
   ab.save()
 
+  ab.site = s1
+  with pytest.raises( ValidationError ):
+    ab.full_clean()
+
+  ab.site = s2
+  ab.full_clean()
+  ab.save()
+
   ab = AddressBlock.objects.get( site=s1, name='test' )
   ab.gateway_offset = None
   ab.full_clean()
@@ -92,6 +100,9 @@ def test_addressblock():
   ab = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=24, name='test2' )
   with pytest.raises( ValidationError ):
     ab.full_clean()
+
+  ab = AddressBlock( site=s2, subnet=StrToIp( '0.0.0.0' ), prefix=24, name='test2' )
+  ab.full_clean()
 
   ab = AddressBlock( site=s1, subnet=StrToIp( '1.0.0.0' ), prefix=24, name='test3' )
   ab.full_clean()

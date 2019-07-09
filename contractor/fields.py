@@ -108,7 +108,7 @@ class StringListField( models.CharField ):
 
   def __init__( self, *args, **kwargs ):
     if 'default' not in kwargs:
-      kwargs[ 'default' ] = kwargs[ 'default' ] = list
+      kwargs[ 'default' ] = list
 
     else:
       if not callable( kwargs[ 'default' ] ) and not isinstance( kwargs[ 'default' ], list ):
