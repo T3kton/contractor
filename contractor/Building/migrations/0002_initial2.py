@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('blueprint', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='BluePrint.StructureBluePrint')),
-                ('foundation', models.OneToOneField(to='Building.Foundation', on_delete=django.db.models.deletion.PROTECT)),
+                ('foundation', models.OneToOneField(related_name='+', to='Building.Foundation', on_delete=django.db.models.deletion.PROTECT)),
             ],
             bases=('Utilities.networked',),
         ),
@@ -49,7 +49,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dependency',
             name='foundation',
-            field=models.OneToOneField(null=True, to='Building.Foundation', blank=True),
+            field=models.OneToOneField(related_name='+', null=True, to='Building.Foundation', blank=True),
         ),
         migrations.AddField(
             model_name='dependency',
@@ -59,7 +59,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dependency',
             name='structure',
-            field=models.ForeignKey(null=True, blank=True, to='Building.Structure'),
+            field=models.ForeignKey(related_name='+', null=True, blank=True, to='Building.Structure'),
         ),
         migrations.AddField(
             model_name='complexstructure',
