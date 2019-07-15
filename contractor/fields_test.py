@@ -782,3 +782,59 @@ def test_jsonfield():
   with connection.cursor() as cursor:
     cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ '\x02JSON\x03{"a": 23}' ] )
   assert testModel.objects.get().f == { 'a': 23 }
+
+
+def test_stringfield_init():
+  with pytest.raises( ValueError ):
+    StringListField()
+
+  StringListField( max_length=50 )
+
+  with pytest.raises( ValueError ):
+    StringListField( max_length=50, default=None )
+
+  with pytest.raises( ValueError ):
+    StringListField( max_length=50, default=None, null=True )
+
+  with pytest.raises( ValueError ):
+    StringListField( max_length=50, default='bob' )
+
+  StringListField( max_length=50, default=[ 'bob' ] )
+
+  with pytest.raises( ValueError ):
+    StringListField( max_length=50, default=0 )
+
+  with pytest.raises( ValueError ):
+    StringListField( max_length=50, default={} )
+
+  StringListField( max_length=50, default=lambda: [ '1.2.3.4' ] )
+
+
+def test_ipaddressfield_init():
+  IpAddressField()
+
+  with pytest.raises( ValueError ):
+    IpAddressField( default=None )
+
+  IpAddressField( default=None, null=True )
+
+  with pytest.raises( ValueError ):
+    IpAddressField( default='bob' )
+
+  with pytest.raises( ValueError ):
+    IpAddressField( default=[ 'bob' ] )
+
+  with pytest.raises( ValueError ):
+    IpAddressField( default=0 )
+
+  with pytest.raises( ValueError ):
+    IpAddressField( default={} )
+
+  with pytest.raises( ValueError ):
+    IpAddressField( default='0' )
+
+  IpAddressField( default='127.0.0.1' )
+
+  IpAddressField( default='0.0.0.0' )
+
+  IpAddressField( default=lambda: '1.2.3.4' )

@@ -8,9 +8,9 @@ from django.db import transaction
 from contractor.tscript.parser import parse
 from contractor.tscript.runner import Runner
 from contractor.Site.models import Site
-from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependencyJob
+from contractor.Foreman.models import BaseJob  # , FoundationJob, StructureJob, DependencyJob
 from contractor.Building.models import Foundation, Structure, Dependency
-from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint, BluePrintScript, Script
+from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint  # , BluePrintScript, Script
 
 from contractor.Foreman.lib import processJobs, jobResults, createJob
 

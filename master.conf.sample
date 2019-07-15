@@ -55,13 +55,13 @@ WSGI_APPLICATION = 'contractor.wsgi.application'
 
 DATABASES = {
     'default': {
-      'ENGINE': 'django.db.backends.postgresql_psycopg2',
-      'NAME': 'contractor',
-      'USER': 'contractor',
-      'PASSWORD': 'contractor',
-      'HOST': '127.0.0.1',
-      'PORT': '',
-  }
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'contractor',
+        'USER': 'contractor',
+        'PASSWORD': 'contractor',
+        'HOST': '127.0.0.1',
+        'PORT': '',
+    }
 }
 
 MONGO_HOST = 'mongodb://127.0.0.1:27017/'

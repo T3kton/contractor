@@ -107,6 +107,9 @@ class StringListField( models.CharField ):
   validators = [ validate_list ]
 
   def __init__( self, *args, **kwargs ):
+    if 'max_length' not in kwargs:
+      raise ValueError( '"max_length" is required' )
+
     if 'default' not in kwargs:
       kwargs[ 'default' ] = list
 
@@ -115,7 +118,7 @@ class StringListField( models.CharField ):
         raise ValueError( 'default value must be a list' )
 
     try:
-      del kwargs[ 'null' ]
+      del kwargs[ 'null' ]  # can not be default = None either
     except KeyError:
       pass
 
@@ -152,6 +155,21 @@ class IpAddressField( models.BinaryField ):  # needs 128 bits of storage, the in
   cinp_type = 'String'
 
   def __init__( self, *args, **kwargs ):
+    if 'default' in kwargs:
+      default = kwargs[ 'default' ]
+
+      if kwargs.get( 'null', False ) and default is None:
+        pass
+
+      elif not callable( default ) and not isinstance( default, str ):
+        raise ValueError( 'default value must be a str or callable.' )
+
+      elif not callable( default ):
+        try:
+          validate_ipaddress( default )
+        except ValidationError:
+          raise ValueError( 'invalid default value' )
+
     editable = kwargs.get( 'editable', True )
     super().__init__( *args, **kwargs )  # until Django 2.1, editable for BinaryFields is not able to be made editable
     self.editable = editable

@@ -558,7 +558,7 @@ class DependencyJob( BaseJob ):
 
 
 @cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
-class JobLog( models.Model ):
+class JobLog( models.Model ):  # TODO: replace with start_at and finish_at start_by, finish_by, note (aka, canceleted, restarted, etc)
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   job_id = models.IntegerField()
   creator = models.CharField( max_length=150 )  # max length from the django.contrib.auth User.username

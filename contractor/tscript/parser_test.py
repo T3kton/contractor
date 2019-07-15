@@ -382,9 +382,9 @@ def test_variables():
 
   node = parse( 'mod1.var2' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'V', { 'module': 'mod1', 'name': 'var2' } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'V', { 'module': 'mod1', 'name': 'var2' } ), 1 )
+                          ] } )
 
   # all invalid names
   with pytest.raises( ParserError ):
@@ -428,109 +428,109 @@ def test_variables():
 def test_arrayitem():
   node = parse( 'myval[0]' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'R', { 'module': None, 'name': 'myval', 'index': ( 'C', 0 ) } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'R', { 'module': None, 'name': 'myval', 'index': ( 'C', 0 ) } ), 1 )
+                          ] } )
 
   node = parse( 'myval[ 10 ]' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'R', { 'module': None, 'name': 'myval', 'index': ( 'C', 10 ) } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'R', { 'module': None, 'name': 'myval', 'index': ( 'C', 10 ) } ), 1 )
+                          ] } )
 
   node = parse( 'myval.asdf[ 10 ]' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'R', { 'module': 'myval', 'name': 'asdf', 'index': ( 'C', 10 ) } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'R', { 'module': 'myval', 'name': 'asdf', 'index': ( 'C', 10 ) } ), 1 )
+                          ] } )
 
 
 def test_infix():
   node = parse( '( 1 + 2 )' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '+', 'right': ( 'C', 2 ) } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '+', 'right': ( 'C', 2 ) } ), 1 )
+                          ] } )
 
   node = parse( '(1 + 2)' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '+', 'right': ( 'C', 2 ) } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '+', 'right': ( 'C', 2 ) } ), 1 )
+                          ] } )
 
   node = parse( '( 1+2 )' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '+', 'right': ( 'C', 2 ) } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '+', 'right': ( 'C', 2 ) } ), 1 )
+                          ] } )
 
   node = parse( '(1+2)' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '+', 'right': ( 'C', 2 ) } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '+', 'right': ( 'C', 2 ) } ), 1 )
+                          ] } )
 
   node = parse( '(    1   +   2   )' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '+', 'right': ( 'C', 2 ) } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '+', 'right': ( 'C', 2 ) } ), 1 )
+                          ] } )
 
   node = parse( '( ( 1 * 2 ) + 3 )' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'X', { 'left': ( 'X', { 'left': ( 'C', 1 ), 'operator': '*', 'right': ( 'C', 2 ) } ), 'operator': '+', 'right': ( 'C', 3 ) } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'X', { 'left': ( 'X', { 'left': ( 'C', 1 ), 'operator': '*', 'right': ( 'C', 2 ) } ), 'operator': '+', 'right': ( 'C', 3 ) } ), 1 )
+                          ] } )
 
   node = parse( '( 1 * ( 2 + 3 ) )' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '*', 'right': ( 'X', { 'left': ( 'C', 2 ), 'operator': '+', 'right': ( 'C', 3 ) } ) } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'X', { 'left': ( 'C', 1 ), 'operator': '*', 'right': ( 'X', { 'left': ( 'C', 2 ), 'operator': '+', 'right': ( 'C', 3 ) } ) } ), 1 )
+                          ] } )
 
 
 def test_block_paramaters():
   node = parse( 'begin( )\nend' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'S', { '_children': [] } ), 1 )
-                 ] } )
+                          [
+                              ( 'L', ( 'S', { '_children': [] } ), 1 )
+                          ] } )
 
   node = parse( 'begin( )end' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'S', { '_children': [] } ), 1 )
-                 ] } )
+                          [
+                              ( 'L', ( 'S', { '_children': [] } ), 1 )
+                          ] } )
 
   node = parse( 'begin( description="test" )\nend' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'S', { '_children': [], 'description': 'test' } ), 1 )
-                 ] } )
+                          [
+                              ( 'L', ( 'S', { '_children': [], 'description': 'test' } ), 1 )
+                          ] } )
 
   node = parse( 'begin( description="" )\nend' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'S', { '_children': [], 'description': '' } ), 1 )
-                 ] } )
+                          [
+                              ( 'L', ( 'S', { '_children': [], 'description': '' } ), 1 )
+                          ] } )
 
   node = parse( 'begin( description="test" )end' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'S', { '_children': [], 'description': 'test' } ), 1 )
-                 ] } )
+                          [
+                              ( 'L', ( 'S', { '_children': [], 'description': 'test' } ), 1 )
+                          ] } )
 
   node = parse( 'begin( description="test", expected_time=12:34 )end' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'S', { '_children': [], 'description': 'test', 'expected_time': timedelta( minutes=12, seconds=34 ) } ), 1 )
-                 ] } )
+                          [
+                                ( 'L', ( 'S', { '_children': [], 'description': 'test', 'expected_time': timedelta( minutes=12, seconds=34 ) } ), 1 )
+                          ] } )
 
   node = parse( 'begin( description="test", expected_time=12:34, max_time=1:00:00 )end' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'S', { '_children': [], 'description': 'test', 'expected_time': timedelta( minutes=12, seconds=34 ), 'max_time': timedelta( hours=1 ) } ), 1 )
-                 ] } )
+                          [
+                                ( 'L', ( 'S', { '_children': [], 'description': 'test', 'expected_time': timedelta( minutes=12, seconds=34 ), 'max_time': timedelta( hours=1 ) } ), 1 )
+                          ] } )
 
 
 def test_comment():
@@ -550,27 +550,28 @@ def test_comment():
   assert node == ( 'S', { '_children':
                    [
                        ( 'L', ( 'C', 3 ), 1 )
-                   ] } )
+                          ] } )
 
   node = parse( '3#stuff' )
   assert node == ( 'S', { '_children':
                    [
                        ( 'L', ( 'C', 3 ), 1 )
-                   ] } )
+                          ] } )
 
 
 def test_jumppoint():
   node = parse( ':here' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'J', 'here' ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'J', 'here' ), 1 )
+                          ] } )
 
   node = parse( 'goto there' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'G', 'there' ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'G', 'there' ), 1 )
+                          ] } )
+
 
 def test_while():
   with pytest.raises( ParserError ) as e:
@@ -582,71 +583,71 @@ def test_while():
 
   node = parse( 'while true do 10' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'W', { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) } ), 1 )
-                 ] } )
+                          [
+                              ( 'L', ( 'W', { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) } ), 1 )
+                          ] } )
 
   node = parse( 'while true do \n 10' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'W', { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) } ), 1 )
-                 ] } )
+                          [
+                              ( 'L', ( 'W', { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) } ), 1 )
+                          ] } )
 
   node = parse( 'while true do \n\n 10' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'W', { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) } ), 1 )
-                 ] } )
+                          [
+                              ( 'L', ( 'W', { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) } ), 1 )
+                          ] } )
 
   node = parse( 'while true do \n  \n 10' )
   assert node == ( 'S', { '_children':
-                [
-                  ( 'L', ( 'W', { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) } ), 1 )
-                ] } )
+                          [
+                              ( 'L', ( 'W', { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) } ), 1 )
+                          ] } )
 
   node = parse( 'while myval do 10' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'C', 10 ) } ), 1 )
-                 ] } )
+                          [
+                              ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'C', 10 ) } ), 1 )
+                          ] } )
 
   node = parse( 'while ( True == myval ) do 10' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'W', { 'condition':
-                               ( 'X', { 'left': ( 'C', True ), 'operator': '==', 'right': ( 'V', { 'module': None, 'name': 'myval' } ) } ),
-                            'expression': ( 'C', 10 )
-                          } ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'W', { 'condition':
+                                               ( 'X', { 'left': ( 'C', True ), 'operator': '==', 'right': ( 'V', { 'module': None, 'name': 'myval' } ) } ),
+                                        'expression': ( 'C', 10 )
+                                               } ), 1 )
+                          ] } )
 
   node = parse( 'while myval do\nbegin()end' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { '_children':
-                     [
-                     ]
-                   } ) } ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { '_children':
+                                 [
+                                 ]
+                               } ) } ), 1 )
+                          ] } )
 
   node = parse( 'while myval do\nbegin()\n10\nend' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { '_children':
-                     [
-                       ( 'L', ( 'C', 10 ), 3 )
-                     ]
-                   } ) } ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { '_children':
+                                 [
+                                      ( 'L', ( 'C', 10 ), 3 )
+                                 ]
+                               } ) } ), 1 )
+                          ] } )
 
   node = parse( 'while myval do\nbegin(thep=5)\n10\nend' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { 'thep': 5, '_children':
-                     [
-                       ( 'L', ( 'C', 10 ), 3 )
-                     ]
-                   } ) } ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { 'thep': 5, '_children':
+                                 [
+                                      ( 'L', ( 'C', 10 ), 3 )
+                                 ]
+                               } ) } ), 1 )
+                          ] } )
 
   node = parse( 'continue' )
   assert node == ( 'S', { '_children': [ ( 'L', ( 'O', 'continue' ), 1 ) ] } )
@@ -656,14 +657,14 @@ def test_while():
 
   node = parse( 'while myval do\nbegin()\n10\ncontinue\nend' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { '_children':
-                     [
-                       ( 'L', ( 'C', 10 ), 3 ),
-                       ( 'L', ( 'O', 'continue' ), 4 )
-                     ]
-                   } ) } ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { '_children':
+                                 [
+                                     ( 'L', ( 'C', 10 ), 3 ),
+                                     ( 'L', ( 'O', 'continue' ), 4 )
+                                 ]
+                               } ) } ), 1 )
+                          ] } )
 
 
 def test_ifelse():
@@ -676,29 +677,29 @@ def test_ifelse():
 
   node = parse( 'if True then 10' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'I', [
-                            { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) }
-                          ] ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'I', [
+                                        { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) }
+                                        ] ), 1 )
+                          ] } )
 
   node = parse( 'if True then 10 else 42' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'I', [
-                            { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
-                            { 'condition': None, 'expression': ( 'C', 42 ) }
-                          ] ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'I', [
+                                        { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
+                                        { 'condition': None, 'expression': ( 'C', 42 ) }
+                                        ] ), 1 )
+                          ] } )
 
   node = parse( 'if True then\n10\nelse\n42' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'I', [
-                            { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
-                            { 'condition': None, 'expression': ( 'C', 42 ) }
-                          ] ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'I', [
+                                        { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
+                                        { 'condition': None, 'expression': ( 'C', 42 ) }
+                                        ] ), 1 )
+                          ] } )
 
   with pytest.raises( ParserError ) as e:
     node = parse( 'if True then 10 elif False 200 else 42' )
@@ -709,163 +710,161 @@ def test_ifelse():
 
   node = parse( 'if True then 10 elif False then 200 else 42' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'I', [
-                            { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
-                            { 'condition': ( 'C', False ), 'expression': ( 'C', 200 ) },
-                            { 'condition': None, 'expression': ( 'C', 42 ) }
-                          ] ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'I', [
+                                        { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
+                                        { 'condition': ( 'C', False ), 'expression': ( 'C', 200 ) },
+                                        { 'condition': None, 'expression': ( 'C', 42 ) }
+                                        ] ), 1 )
+                          ] } )
 
   node = parse( 'if True then\n10\nelif False then\n200\nelse\n42' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'I', [
-                            { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
-                            { 'condition': ( 'C', False ), 'expression': ( 'C', 200 ) },
-                            { 'condition': None, 'expression': ( 'C', 42 ) }
-                          ] ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'I', [
+                                        { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
+                                        { 'condition': ( 'C', False ), 'expression': ( 'C', 200 ) },
+                                        { 'condition': None, 'expression': ( 'C', 42 ) }
+                                        ] ), 1 )
+                          ] } )
 
   node = parse( 'if True then 10 elif ( asdf == "a" ) then 100 elif False then 200 else 42' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'I', [
-                            { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
-                            { 'condition': ( 'X', { 'left': ( 'V', { 'module': None, 'name': 'asdf' }  ), 'operator': '==', 'right': ( 'C', 'a' ) } ), 'expression': ( 'C', 100 ) },
-                            { 'condition': ( 'C', False ), 'expression': ( 'C', 200 ) },
-                            { 'condition': None, 'expression': ( 'C', 42 ) }
-                          ] ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'I', [
+                                        { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
+                                        { 'condition': ( 'X', { 'left': ( 'V', { 'module': None, 'name': 'asdf' }  ), 'operator': '==', 'right': ( 'C', 'a' ) } ), 'expression': ( 'C', 100 ) },
+                                        { 'condition': ( 'C', False ), 'expression': ( 'C', 200 ) },
+                                        { 'condition': None, 'expression': ( 'C', 42 ) }
+                                        ] ), 1 )
+                          ] } )
 
   node = parse( 'if True then\n10\nelif ( asdf == "a" ) then\n100\nelif False then\n200\nelse\n42' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'I', [
-                            { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
-                            { 'condition': ( 'X', { 'left': ( 'V', { 'module': None, 'name': 'asdf' } ), 'operator': '==', 'right': ( 'C', 'a' ) } ), 'expression': ( 'C', 100 ) },
-                            { 'condition': ( 'C', False ), 'expression': ( 'C', 200 ) },
-                            { 'condition': None, 'expression': ( 'C', 42 ) }
-                          ] ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'I', [
+                                        { 'condition': ( 'C', True ), 'expression': ( 'C', 10 ) },
+                                        { 'condition': ( 'X', { 'left': ( 'V', { 'module': None, 'name': 'asdf' } ), 'operator': '==', 'right': ( 'C', 'a' ) } ), 'expression': ( 'C', 100 ) },
+                                        { 'condition': ( 'C', False ), 'expression': ( 'C', 200 ) },
+                                        { 'condition': None, 'expression': ( 'C', 42 ) }
+                                        ] ), 1 )
+                          ] } )
 
   node = parse( 'if ( myobj.value >= "my string" ) then\nbegin( testing="this" )\n42\nend' )
   assert node == ( 'S', { '_children':
-                 [
-                   ( 'L', ( 'I', [
-                           { 'condition': ( 'X',
-                                            { 'left': ( 'V', { 'module': 'myobj', 'name': 'value' } ), 'operator': '>=', 'right': ( 'C', "my string" ) } ),
-                            'expression': ( 'S', { 'testing': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
-                           } ] ), 1 )
-                 ] } )
+                          [
+                               ( 'L', ( 'I', [
+                                       { 'condition': ( 'X',
+                                                        { 'left': ( 'V', { 'module': 'myobj', 'name': 'value' } ), 'operator': '>=', 'right': ( 'C', "my string" ) } ),
+                                        'expression': ( 'S', { 'testing': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
+                                         } ] ), 1 )
+                          ] } )
 
   node = parse( 'if ( myobj.value >= "my string" ) then\nbegin( testing="this" )\n42\nend\nelse\nbegin( more="fun" )\n56\nend' )
   assert node == ( 'S', { '_children':
-                    [
-                       ( 'L', ( 'I', [
-                               {
-                                 'condition': ( 'X',
-                                                { 'left': ( 'V', { 'module': 'myobj', 'name': 'value' } ), 'operator': '>=', 'right': ( 'C', "my string" ) } ),
-                                 'expression': ( 'S', { 'testing': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
-                               },
-                               {
-                                 'condition': None,
-                                 'expression': ( 'S', { 'more': 'fun', '_children': [ ( 'L', ( 'C', 56 ), 7 ) ] } ),
-                               }
-                             ] ), 1 )
-                     ] } )
+                          [
+                               ( 'L', ( 'I', [
+                                       {
+                                           'condition': ( 'X',
+                                                          { 'left': ( 'V', { 'module': 'myobj', 'name': 'value' } ), 'operator': '>=', 'right': ( 'C', "my string" ) } ),
+                                           'expression': ( 'S', { 'testing': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
+                                       },
+                                       {
+                                           'condition': None,
+                                           'expression': ( 'S', { 'more': 'fun', '_children': [ ( 'L', ( 'C', 56 ), 7 ) ] } ),
+                                       }
+                                     ] ), 1 )
+                          ] } )
 
   node = parse( 'if True then\n42\nelse\n56' )
   assert node == ( 'S', { '_children':
-                    [
-                       ( 'L', ( 'I', [
-                                { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
-                                { 'condition': None, 'expression': ( 'C', 56 ) }
-                              ] ), 1 )
-                    ] } )
-
+                          [
+                               ( 'L', ( 'I', [
+                                        { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
+                                        { 'condition': None, 'expression': ( 'C', 56 ) }
+                                        ] ), 1 )
+                          ] } )
 
   node = parse( 'if True then  \n  42  \n  \n  \n  else  \n  56' )
   assert node == ( 'S', { '_children':
-                    [
-                       ( 'L', ( 'I', [
-                                { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
-                                { 'condition': None, 'expression': ( 'C', 56 ) }
-                              ] ), 1 )
-                    ] } )
-
+                          [
+                               ( 'L', ( 'I', [
+                                        { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
+                                        { 'condition': None, 'expression': ( 'C', 56 ) }
+                                        ] ), 1 )
+                          ] } )
 
   node = parse( 'if True then\n42\nelif False then\n32\nelse\n56' )
   assert node == ( 'S', { '_children':
-                    [
-                       ( 'L', ( 'I', [
-                                { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
-                                { 'condition': ( 'C', False ), 'expression': ( 'C', 32 ) },
-                                { 'condition': None, 'expression': ( 'C', 56 ) }
-                              ] ), 1 )
-                    ] } )
-
+                          [
+                               ( 'L', ( 'I', [
+                                        { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
+                                        { 'condition': ( 'C', False ), 'expression': ( 'C', 32 ) },
+                                        { 'condition': None, 'expression': ( 'C', 56 ) }
+                                        ] ), 1 )
+                          ] } )
 
   node = parse( 'if True then  \n  42  \n  \n  \n  elif False then\n  32  \n  \n  \n  else  \n  56' )
   assert node == ( 'S', { '_children':
-                    [
-                       ( 'L', ( 'I', [
-                                { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
-                                { 'condition': ( 'C', False ), 'expression': ( 'C', 32 ) },
-                                { 'condition': None, 'expression': ( 'C', 56 ) }
-                              ] ), 1 )
-                    ] } )
+                          [
+                               ( 'L', ( 'I', [
+                                        { 'condition': ( 'C', True ), 'expression': ( 'C', 42 ) },
+                                        { 'condition': ( 'C', False ), 'expression': ( 'C', 32 ) },
+                                        { 'condition': None, 'expression': ( 'C', 56 ) }
+                                        ] ), 1 )
+                          ] } )
+
 
 def test_not():
   node = parse( 'False' )
   assert node == ( 'S', { '_children':
                    [
                        ( 'L', ( 'C', False ), 1 )
-                   ] } )
+                          ] } )
 
   node = parse( 'not False' )
   assert node == ( 'S', { '_children':
                    [
                        ( 'L', ( 'X', { 'operator': 'not', 'left': ( 'C', False ), 'right': ( 'C', None ) } ), 1 )
-                   ] } )
+                          ] } )
 
   node = parse( 'Not True' )
   assert node == ( 'S', { '_children':
                    [
                        ( 'L', ( 'X', { 'operator': 'not', 'left': ( 'C', True ), 'right': ( 'C', None ) } ), 1 )
-                   ] } )
+                          ] } )
 
   node = parse( 'not adsf' )
   assert node == ( 'S', { '_children':
                    [
                        ( 'L', ( 'X', { 'operator': 'not', 'left': ( 'V', { 'name': 'adsf', 'module': None } ), 'right': ( 'C', None ) } ), 1 )
-                   ] } )
+                          ] } )
 
   node = parse( 'not asdf.wert' )
   assert node == ( 'S', { '_children':
                    [
                        ( 'L', ( 'X', { 'operator': 'not', 'left': ( 'V', { 'name': 'wert', 'module': 'asdf' } ), 'right': ( 'C', None ) } ), 1 )
-                   ] } )
+                          ] } )
 
 
 def test_function():
   node = parse( 'hello()' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': {} } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': {} } ), 1 )
+                          ] } )
 
   node = parse( 'hello( )' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': {} } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': {} } ), 1 )
+                          ] } )
 
   node = parse( 'more.hello()' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'F', { 'module': 'more', 'name': 'hello', 'paramaters': {} } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'F', { 'module': 'more', 'name': 'hello', 'paramaters': {} } ), 1 )
+                          ] } )
 
   with pytest.raises( ParserError ) as e:
     node = parse( 'hello( 10 )' )
@@ -876,27 +875,27 @@ def test_function():
 
   node = parse( 'hello( asdf = 10 )' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', 10 ) } } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', 10 ) } } ), 1 )
+                          ] } )
 
   node = parse( 'hello( asdf = "" )' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', '' ) } } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', '' ) } } ), 1 )
+                          ] } )
 
   node = parse( 'hello(asdf=10)' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', 10 ) } } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', 10 ) } } ), 1 )
+                          ] } )
 
   node = parse( 'hello( asdf = 10, zxcv="hi", qwerty=123 )' )
   assert node == ( 'S', { '_children':
-               [
-                 ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', 10 ), 'zxcv': ( 'C', 'hi' ), 'qwerty': ( 'C', 123 ) } } ), 1 )
-               ] } )
+                          [
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', 10 ), 'zxcv': ( 'C', 'hi' ), 'qwerty': ( 'C', 123 ) } } ), 1 )
+                          ] } )
 
 
 def test_assignment():
@@ -916,45 +915,45 @@ def test_assignment():
 
   node = parse( 'asdf=5' )
   assert node == ( 'S', { '_children':
-              [
-                ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'C', 5 ) } ), 1 )
-              ] } )
+                          [
+                              ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'C', 5 ) } ), 1 )
+                          ] } )
 
   node = parse( 'asdf = 5' )
   assert node == ( 'S', { '_children':
-              [
-                ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'C', 5 ) } ), 1 )
-              ] } )
+                          [
+                              ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'C', 5 ) } ), 1 )
+                          ] } )
 
   node = parse( 'asdf.fdsa = 5' )
   assert node == ( 'S', { '_children':
-              [
-                ( 'L', ( 'A', { 'target': ( 'V', { 'module': 'asdf', 'name': 'fdsa' } ), 'value': ( 'C', 5 ) } ), 1 )
-              ] } )
+                          [
+                              ( 'L', ( 'A', { 'target': ( 'V', { 'module': 'asdf', 'name': 'fdsa' } ), 'value': ( 'C', 5 ) } ), 1 )
+                          ] } )
 
   node = parse( 'asdf = myfunc()' )
   assert node == ( 'S', { '_children':
-              [
-                ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'F', { 'module': None, 'name': 'myfunc', 'paramaters': {} } ) } ), 1 )
-              ] } )
+                          [
+                              ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'F', { 'module': None, 'name': 'myfunc', 'paramaters': {} } ) } ), 1 )
+                          ] } )
 
   node = parse( 'asdf = myval' )
   assert node == ( 'S', { '_children':
-              [
-                ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'V', { 'module': None, 'name': 'myval' } ) } ), 1 )
-              ] } )
+                          [
+                              ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'V', { 'module': None, 'name': 'myval' } ) } ), 1 )
+                          ] } )
 
   node = parse( 'asdf = not myval' )
   assert node == ( 'S', { '_children':
-              [
-                ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'X', { 'operator': 'not', 'left': ( 'V', { 'module': None, 'name': 'myval' } ), 'right': ( 'C', None ) } ) } ), 1 )
-              ] } )
+                          [
+                              ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'X', { 'operator': 'not', 'left': ( 'V', { 'module': None, 'name': 'myval' } ), 'right': ( 'C', None ) } ) } ), 1 )
+                          ] } )
 
   node = parse( 'asdf[3] = myval' )
   assert node == ( 'S', { '_children':
-              [
-                ( 'L', ( 'A', { 'target': ( 'R', { 'module': None, 'name': 'asdf', 'index': ( 'C', 3 ) } ), 'value': ( 'V', { 'module': None, 'name': 'myval' } ) } ), 1 )
-              ] } )
+                          [
+                                ( 'L', ( 'A', { 'target': ( 'R', { 'module': None, 'name': 'asdf', 'index': ( 'C', 3 ) } ), 'value': ( 'V', { 'module': None, 'name': 'myval' } ) } ), 1 )
+                          ] } )
 
 
 def test_exists():
@@ -984,14 +983,14 @@ def test_exists():
                    ( 'A',
                      { 'target': ( 'V', { 'module': None, 'name': 'aa' } ),
                        'value': ( 'E', ( 'V', { 'module': None, 'name': 'bob' } ) )
-                      }
-                    ),
+                       }
+                     ),
                   1 ) ] } )
 
   node = parse( 'if exists( bob ) then 10' )
   assert node == ( 'S', { '_children': [ ( 'L',
-                    ( 'I',
+                   ( 'I',
                        [ { 'condition': ( 'E', ( 'V', { 'module': None, 'name': 'bob' } ) ),
-                           'expression': ( 'C', 10 ) } 
-                       ] ),
+                           'expression': ( 'C', 10 ) }
+                         ] ),
                     1 ) ] } )

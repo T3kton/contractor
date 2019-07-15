@@ -264,7 +264,7 @@ class Foundation( models.Model ):
       subclass.delete()
 
   def __str__( self ):
-    return 'Foundation #{0}({1}) of "{2}" in "{3}"'.format( self.pk, self.locator, self.blueprint.pk, self.site.pk )
+    return 'Foundation #{0}({1}) in "{2}"'.format( self.pk, self.locator, self.site.pk )
 
 
 def getUUID():
@@ -397,7 +397,7 @@ class Structure( Networked ):
     super().delete()
 
   def __str__( self ):
-    return 'Structure #{0}({1}) of "{2}" in "{3}"'.format( self.pk, self.hostname, self.blueprint.pk, self.site.pk )
+    return 'Structure #{0}({1}) in "{2}"'.format( self.pk, self.hostname, self.site.pk )
 
 
 @cinp.model( property_list=( 'state', 'type' ) )
