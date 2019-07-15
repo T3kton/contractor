@@ -1,3 +1,11 @@
+contractor (0.5.0-1) xenial; urgency=medium
+
+  * New JobLog
+  * Cleanups and fixes
+  * setup improvments
+
+ -- Peter Howe <pnhowe@gmail.com>  Mon, 15 Jul 2019 17:00:55 -0600
+
 contractor (0.4.0-1) xenial; urgency=medium
 
   * job creation re-think

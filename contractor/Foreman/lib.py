@@ -170,7 +170,7 @@ def createJob( script_name, target, creator ):
   job.full_clean()
   job.save()
 
-  JobLog.fromJob( job, True, creator )
+  JobLog.fromJob( job, creator )
 
   return job.pk
 
@@ -196,6 +196,8 @@ def processJobs( site, module_list, max_jobs=10 ):
       job.full_clean()
       job.save()
 
+      JobLog.started( job )
+
   # clean up completed jobs
   for job in BaseJob.objects.select_for_update().filter( site=site, state='done' ):
     job = job.realJob
@@ -206,7 +208,7 @@ def processJobs( site, module_list, max_jobs=10 ):
     elif isinstance( job, FoundationJob ):
       registerEvent( job.foundation, job=job )
 
-    JobLog.fromJob( job, False, '*INTERNAL*' )
+    JobLog.finished( job )
 
     job.delete()
 

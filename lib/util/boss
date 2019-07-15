@@ -12,7 +12,7 @@ import time
 
 from django.core.exceptions import ObjectDoesNotExist
 from contractor.Building.models import Foundation, Structure, Dependency
-from contractor.Foreman.models import BaseJob
+from contractor.Foreman.models import BaseJob, JobLog
 from contractor.Foreman.lib import createJob
 from contractor.lib.config import getConfig
 from contractor.PostOffice.lib import registerEvent
@@ -50,6 +50,7 @@ def _clear_job( target ):
     print( 'No Job to Delete' )
 
   else:
+    JobLog.canceled( CLIUser().username )
     job.delete()
     print( 'Job Deleted' )
 
@@ -261,6 +262,7 @@ def main():
       if job.state != 'queued':
         print( 'Can only "done" a job if it is queued' )
         sys.exit( 1 )
+
       job.state = 'done'
       job.full_clean()
       job.save()

@@ -1,5 +1,6 @@
 import pickle
 
+from django.utils import timezone
 from django.db import models
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
@@ -558,20 +559,22 @@ class DependencyJob( BaseJob ):
 
 
 @cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
-class JobLog( models.Model ):  # TODO: replace with start_at and finish_at start_by, finish_by, note (aka, canceleted, restarted, etc)
+class JobLog( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   job_id = models.IntegerField()
-  creator = models.CharField( max_length=150 )  # max length from the django.contrib.auth User.username
   target_class = models.CharField( max_length=50 )
   target_description = models.CharField( max_length=120 )
   script_name = models.CharField( max_length=50 )
-  start_finish = models.BooleanField()  # True -> Start
-  at = models.DateTimeField( editable=False, auto_now_add=True )
+  creator = models.CharField( max_length=150 )  # max length from the django.contrib.auth User.username
+  start_at = models.DateTimeField( blank=True, null=True )
+  finished_at = models.DateTimeField( blank=True, null=True )
+  canceled_by = models.CharField( max_length=150, blank=True, null=True )  # max length from the django.contrib.auth User.username
+  canceled_at = models.DateTimeField( blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @classmethod
-  def fromJob( cls, job, start_finish, creator ):
+  def fromJob( cls, job, creator ):
     job = job.realJob
 
     log = cls()
@@ -595,8 +598,29 @@ class JobLog( models.Model ):  # TODO: replace with start_at and finish_at start
       raise ValueError( 'Unknown Job Type "{0}"'.format( job.__class__.__name__ ) )
 
     log.script_name = job.script_name
-    log.start_finish = start_finish
     log.creator = creator
+    log.full_clean()
+    log.save()
+
+  @classmethod
+  def started( cls, job ):
+    log = JobLog.objects.get( job_id=job.pk )
+    log.started_at = timezone.now()
+    log.full_clean()
+    log.save()
+
+  @classmethod
+  def finished( cls, job ):
+    log = JobLog.objects.get( job_id=job.pk )
+    log.finished_at = timezone.now()
+    log.full_clean()
+    log.save()
+
+  @classmethod
+  def canceled( cls, job, by ):
+    log = JobLog.objects.get( job_id=job.pk )
+    log.canceled_at = timezone.now()
+    log.canceled_by = by
     log.full_clean()
     log.save()
 

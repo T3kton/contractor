@@ -36,8 +36,10 @@ class JobLog extends React.Component
                             target_description: joblog.target_description,
                             script_name: joblog.script_name,
                             creator: joblog.creator,
-                            start_finish: joblog.start_finish,
-                            at: joblog.at,
+                            start_at: joblog.start_at,
+                            finished_at: joblog.finished_at,
+                            canceled_by: joblog.canceled_by,
+                            canceled_at: joblog.canceled_at,
                           } );
         }
 
@@ -56,8 +58,10 @@ class JobLog extends React.Component
           <TableCell>Target Description</TableCell>
           <TableCell>Script Name</TableCell>
           <TableCell>Creator</TableCell>
-          <TableCell>Start/Finish</TableCell>
-          <TableCell>At</TableCell>
+          <TableCell>Started At</TableCell>
+          <TableCell>Finished At</TableCell>
+          <TableCell>Canceled By</TableCell>
+          <TableCell>Canceled At</TableCell>
         </TableHead>
         { this.state.joblog_list.map( ( item ) => (
           <TableRow key={ item.id } >
@@ -67,8 +71,10 @@ class JobLog extends React.Component
             <TableCell>{ item.target_description }</TableCell>
             <TableCell>{ item.script_name }</TableCell>
             <TableCell>{ item.creator }</TableCell>
-            <TableCell>{ item.start_finish ? 'start' : 'finish' }</TableCell>
-            <TableCell>{ item.at }</TableCell>
+            <TableCell>{ item.start_at }</TableCell>
+            <TableCell>{ item.finished_at }</TableCell>
+            <TableCell>{ item.canceled_by }</TableCell>
+            <TableCell>{ item.canceled_at }</TableCell>
           </TableRow>
         ) ) }
       </Table>

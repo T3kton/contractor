@@ -16,12 +16,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='BaseJob',
             fields=[
-                ('id', models.AutoField(auto_created=True, verbose_name='ID', serialize=False, primary_key=True)),
-                ('state', models.CharField(choices=[('queued', 'queued'), ('waiting', 'waiting'), ('done', 'done'), ('paused', 'paused'), ('error', 'error'), ('aborted', 'aborted')], max_length=10)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
+                ('state', models.CharField(max_length=10, choices=[('queued', 'queued'), ('waiting', 'waiting'), ('done', 'done'), ('paused', 'paused'), ('error', 'error'), ('aborted', 'aborted')])),
                 ('status', contractor.fields.JSONField(default=[], blank=True)),
-                ('message', models.CharField(default='', blank=True, max_length=1024)),
+                ('message', models.CharField(default='', max_length=1024, blank=True)),
                 ('script_runner', models.BinaryField()),
-                ('script_name', models.CharField(default=False, editable=False, max_length=40)),
+                ('script_name', models.CharField(default=False, max_length=40, editable=False)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
@@ -29,14 +29,16 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='JobLog',
             fields=[
-                ('id', models.AutoField(auto_created=True, verbose_name='ID', serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('job_id', models.IntegerField()),
-                ('creator', models.CharField(max_length=150)),
                 ('target_class', models.CharField(max_length=50)),
                 ('target_description', models.CharField(max_length=120)),
                 ('script_name', models.CharField(max_length=50)),
-                ('start_finish', models.BooleanField()),
-                ('at', models.DateTimeField(auto_now_add=True)),
+                ('creator', models.CharField(max_length=150)),
+                ('start_at', models.DateTimeField(blank=True, null=True)),
+                ('finished_at', models.DateTimeField(blank=True, null=True)),
+                ('canceled_by', models.CharField(max_length=150, null=True, blank=True)),
+                ('canceled_at', models.DateTimeField(blank=True, null=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('site', models.ForeignKey(to='Site.Site')),
@@ -45,7 +47,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='DependencyJob',
             fields=[
-                ('basejob_ptr', models.OneToOneField(parent_link=True, auto_created=True, to='Foreman.BaseJob', serialize=False, primary_key=True)),
+                ('basejob_ptr', models.OneToOneField(primary_key=True, serialize=False, parent_link=True, auto_created=True, to='Foreman.BaseJob')),
                 ('dependency', models.OneToOneField(editable=False, to='Building.Dependency')),
             ],
             bases=('Foreman.basejob',),
@@ -53,7 +55,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='FoundationJob',
             fields=[
-                ('basejob_ptr', models.OneToOneField(parent_link=True, auto_created=True, to='Foreman.BaseJob', serialize=False, primary_key=True)),
+                ('basejob_ptr', models.OneToOneField(primary_key=True, serialize=False, parent_link=True, auto_created=True, to='Foreman.BaseJob')),
                 ('foundation', models.OneToOneField(editable=False, to='Building.Foundation')),
             ],
             bases=('Foreman.basejob',),
@@ -61,7 +63,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='StructureJob',
             fields=[
-                ('basejob_ptr', models.OneToOneField(parent_link=True, auto_created=True, to='Foreman.BaseJob', serialize=False, primary_key=True)),
+                ('basejob_ptr', models.OneToOneField(primary_key=True, serialize=False, parent_link=True, auto_created=True, to='Foreman.BaseJob')),
                 ('structure', models.OneToOneField(editable=False, to='Building.Structure')),
             ],
             bases=('Foreman.basejob',),
