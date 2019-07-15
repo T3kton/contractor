@@ -6,6 +6,7 @@ dpkg
 *.egg-info
 htmlcov
 .coverage
+.coveragerc
 .cache
 
 contractor/plugins

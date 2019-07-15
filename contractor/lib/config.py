@@ -1,7 +1,7 @@
 import copy
 import json
 from datetime import datetime, timezone
-from jinja2 import Environment, Undefined
+from jinja2 import Environment, Undefined, TemplateSyntaxError
 
 from django.conf import settings
 
@@ -283,8 +283,12 @@ def renderTemplate( template, value_map ):
 
   value_map = mergeValues( value_map )  # merge first, this way results are more consistant with requests that are getting just the values
 
-  while template.count( '{{' ):
-    tpl = env.from_string( template )
-    template = tpl.render( **value_map )
+  try:
+    while template.count( '{{' ):
+      tpl = env.from_string( template )
+      template = tpl.render( **value_map )
+
+  except TemplateSyntaxError as e:
+    raise Exception( 'Error parsing template: "{0}" on line: "{1}"'.format( e.message, e.lineno ) )
 
   return template
