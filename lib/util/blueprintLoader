@@ -195,35 +195,39 @@ def loadSFLinks( link_list ):
       structureblueprint.save()
 
 
-try:
-  filename = sys.argv[1]
-except IndexError:
-  print( 'Usage {0} <blueprint file.toml>'.format( sys.argv[0] ) )
-  sys.exit( 1 )
+def main():
+  try:
+    filename = sys.argv[1]
+  except IndexError:
+    print( 'Usage {0} <blueprint file.toml>'.format( sys.argv[0] ) )
+    sys.exit( 1 )
 
-try:
-  item_map = toml.load( filename )
-except FileNotFoundError:
-  print( 'Error opening "{0}"'.format( filename ) )
-  sys.exit( 1 )
+  try:
+    item_map = toml.load( filename )
+  except FileNotFoundError:
+    print( 'Error opening "{0}"'.format( filename ) )
+    sys.exit( 1 )
 
-except toml.TomlDecodeError as e:
-  print( 'Error parsing "{0}": {1}'.format( filename, e ) )
-  sys.exit( 1 )
+  except toml.TomlDecodeError as e:
+    print( 'Error parsing "{0}": {1}'.format( filename, e ) )
+    sys.exit( 1 )
 
-for name in item_map.get( 'script', {} ):
-  loadScript( name, item_map[ 'script' ][ name ] )
+  for name in item_map.get( 'script', {} ):
+    loadScript( name, item_map[ 'script' ][ name ] )
 
-for name in bluePrintOrder( item_map.get( 'foundation', {} ) ):
-  loadFoundationBlueprint( name, item_map[ 'foundation' ][ name ] )
+  for name in bluePrintOrder( item_map.get( 'foundation', {} ) ):
+    loadFoundationBlueprint( name, item_map[ 'foundation' ][ name ] )
 
-for name in bluePrintOrder( item_map.get( 'structure', {} ) ):
-  loadStructureBlueprint( name, item_map[ 'structure' ][ name ] )
+  for name in bluePrintOrder( item_map.get( 'structure', {} ) ):
+    loadStructureBlueprint( name, item_map[ 'structure' ][ name ] )
 
-for name in item_map.get( 'pxe', {} ):
-  loadPXE( name, item_map[ 'pxe' ][ name ] )
+  for name in item_map.get( 'pxe', {} ):
+    loadPXE( name, item_map[ 'pxe' ][ name ] )
 
-loadSFLinks( item_map.get( 'sflinks', [] ) )
+  loadSFLinks( item_map.get( 'sflinks', [] ) )
 
-print( 'Done' )
-sys.exit( 0 )
+  print( 'Done' )
+  sys.exit( 0 )
+
+if __name__ == '__main__':
+  main()

@@ -6,33 +6,38 @@ os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
 import sys
 from contractor import plugins
 
-try:
-  mode = sys.argv[1]
-  plugin_dir = sys.argv[2]
-except IndexError:
-  print( 'Usage: {0} enable <path to plugin dir>'.format( sys.argv[0] ) )
-  sys.exit( 1 )
 
-if mode != 'enable':
-  print( 'Only "enable" mode supported at this time' )
-  sys.exit( 1 )
+def main():
+  try:
+    mode = sys.argv[1]
+    plugin_dir = sys.argv[2]
+  except IndexError:
+    print( 'Usage: {0} enable <path to plugin dir>'.format( sys.argv[0] ) )
+    sys.exit( 1 )
 
-plugin_dir = os.path.abspath( plugin_dir )
+  if mode != 'enable':
+    print( 'Only "enable" mode supported at this time' )
+    sys.exit( 1 )
 
-if not os.path.exists( os.path.join( plugin_dir, 'models.py' ) ):
-  print( 'Path "{0}" must contain the models.py file'.format( plugin_dir ) )
-  sys.exit( 1 )
+  plugin_dir = os.path.abspath( plugin_dir )
 
-contractor_plugin_dir = os.path.dirname( plugins.__file__ )
+  if not os.path.exists( os.path.join( plugin_dir, 'models.py' ) ):
+    print( 'Path "{0}" must contain the models.py file'.format( plugin_dir ) )
+    sys.exit( 1 )
 
-target_path = os.path.join( contractor_plugin_dir, os.path.basename( plugin_dir ) )
+  contractor_plugin_dir = os.path.dirname( plugins.__file__ )
 
-if os.path.exists( target_path ):
-  print( 'Allready enabled' )
+  target_path = os.path.join( contractor_plugin_dir, os.path.basename( plugin_dir ) )
+
+  if os.path.exists( target_path ):
+    print( 'Allready enabled' )
+    sys.exit( 0 )
+
+  print( 'Enabling "{0}" at "{1}"...'.format( plugin_dir, target_path ) )
+  os.symlink( plugin_dir, target_path )
+
+  print( 'Done' )
   sys.exit( 0 )
 
-print( 'Enabling "{0}" at "{1}"...'.format( plugin_dir, target_path ) )
-os.symlink( plugin_dir, target_path )
-
-print( 'Done' )
-sys.exit( 0 )
+if __name__ == '__main__':
+  main()

@@ -1,3 +1,11 @@
+contractor (0.6.0-1) xenial; urgency=medium
+
+  * config file now /etc/contractor.conf
+  * cli utils more consistanttly using __main__ detection
+  * setupwizzard --primary-interface added
+
+ -- Peter Howe <pnhowe@gmail.com>  Tue, 23 Jul 2019 07:13:13 -0600
+
 contractor (0.5.0-1) xenial; urgency=medium
 
   * New JobLog

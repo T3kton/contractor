@@ -24,6 +24,7 @@ parser = argparse.ArgumentParser( description='Contractor SetupWizzard, must be 
 parser.add_argument( '--no-ip-reservation', help='do not reserve static and dynamic ips', action='store_true' )
 parser.add_argument( '--dns-server', help='set the dns server setting for site1, otherwise it will be set to the detected ip', metavar='IP ADDRESS' )
 parser.add_argument( '--proxy-server', help='set the http proxy (mirror_proxy) setting for site1', metavar='HOST' )
+parser.add_argument( '--primary-interface', help='which interface to use as the primary interface for the contractor structure, if not specified it will be auto detected', metavar='INTERFACE' )
 
 args = parser.parse_args()
 
@@ -33,10 +34,15 @@ if os.getuid() != 0:
 
 print( 'Getting network config...' )
 
-line = subprocess.check_output( [ '/sbin/ip', 'route', 'get', '1.0.0.0' ], universal_newlines=True ).splitlines()[0]
-parts = line.split()
-contractor_iface = parts[4]
-contractor_gateway = parts[2]
+if args.primary_interface:
+  contractor_iface = args.primary_interface
+  contractor_gateway = None  # TODO: if this value get's used, need to do some /sbin/ip magic to find the gateway for this interface if there is one
+
+else:
+  line = subprocess.check_output( [ '/sbin/ip', 'route', 'get', '1.0.0.0' ], universal_newlines=True ).splitlines()[0]
+  parts = line.split()
+  contractor_iface = parts[4]
+  contractor_gateway = parts[2]
 
 print( 'Interface Name: "{0}"'.format( contractor_iface ) )
 
@@ -75,7 +81,8 @@ contractor_ip_offset = StrToIp( contractor_ip_address ) - StrToIp( network_subne
 print( '  --- Detected Network Configuration ---')
 print( 'Network/Prefix: "{0}/{1}"'.format( network_subnet, network_prefix ) )
 print( ' Contractor Ip: "{0}", offset "{1}"'.format( contractor_ip_address, contractor_ip_offset ) )
-print( '       Gateway: "{0}"'.format( contractor_gateway ) )
+if contractor_gateway is not None:
+  print( '       Gateway: "{0}"'.format( contractor_gateway ) )
 print( '           DNS: "{0}"'.format( contractor_dns ) )
 print()
 

@@ -13,7 +13,7 @@ install: install-ui
 
 	install -m 644 api/contractor.wsgi $(DESTDIR)/var/www/contractor/api
 	install -m 644 apache.conf $(DESTDIR)/etc/apache2/sites-available/contractor.conf
-	install -m 644 master.conf.sample $(DESTDIR)/etc/contractor
+	install -m 644 contractor.conf.sample $(DESTDIR)/etc
 	install -m 755 lib/cron/* $(DESTDIR)/usr/lib/contractor/cron
 	install -m 755 lib/util/* $(DESTDIR)/usr/lib/contractor/util
 	install -m 755 lib/setup/* $(DESTDIR)/usr/lib/contractor/setup
@@ -25,9 +25,9 @@ version:
 
 clean: clean-ui
 	./setup.py clean || true
-	$(RM) -fr build
-	$(RM) -f dpkg
-	$(RM) -fr htmlcov
+	$(RM) -r build
+	$(RM) dpkg
+	$(RM) -r htmlcov
 	dh_clean || true
 
 dist-clean: clean
@@ -64,7 +64,7 @@ test-setup:
 	su postgres -c "echo \"CREATE ROLE contractor WITH PASSWORD 'contractor' NOSUPERUSER NOCREATEROLE CREATEDB LOGIN;\" | psql"
 	pip3 install -U jinja2
 	pip3 install -e .
-	cp master.conf.sample contractor/settings.py
+	cp contractor.conf.sample contractor/settings.py
 
 lint:
 	flake8 --ignore=E501,E201,E202,E111,E126,E114,E402,W605 --statistics --exclude=migrations .

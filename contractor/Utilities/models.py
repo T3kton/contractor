@@ -370,8 +370,8 @@ class AddressBlock( models.Model ):
     return IpIsV4( StrToIp( self.subnet ) )
 
   @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.Address' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, { 'type': 'String' }, { 'type': 'Boolean' } ] )
-  def nextAddress( self, structure, interface_name, is_primary ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
-    address = Address( networked=structure, interface_name=interface_name, is_primary=is_primary )
+  def nextAddress( self, networked, interface_name, is_primary ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
+    address = Address( networked=networked, interface_name=interface_name, is_primary=is_primary )
     if structure.foundation.subclass.__class__.__name__ == 'DockerFoundation':
       # address.pointer = Address.objects.get( networked=structure.foundation.docker_host.members[0], interface_name='eth0' )
       return None  # set map_ports will do the address

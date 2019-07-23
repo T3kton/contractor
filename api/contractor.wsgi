@@ -1,6 +1,6 @@
 import os
 
-os.environ.setdefault( "DJANGO_SETTINGS_MODULE", "contractor.settings" )
+os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
 
 from cinp.django_file_handler import FILE_STORAGE
 
