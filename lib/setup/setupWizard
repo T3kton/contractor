@@ -138,7 +138,7 @@ fdn_dev.setBuilt()
 
 iface = RealNetworkInterface( name=contractor_iface, is_provisioning=True )
 iface.foundation = fdn_dev
-iface.physical_location = 'eth0'
+iface.physical_location = contractor_iface
 iface.full_clean()
 iface.save()
 

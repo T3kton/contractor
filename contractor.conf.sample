@@ -85,4 +85,4 @@ USE_TZ = True
 # it dose not have to be a real email address
 BIND_ALLOW_TRANSFER = []
 BIND_SOA_EMAIL = 'hostmaster.site1.test'
-BIND_NS_LIST = [ 'eth0.contractor.site1.test' ]
+BIND_NS_LIST = []
