@@ -369,7 +369,7 @@ class AddressBlock( models.Model ):
   def isIpV4( self ):
     return IpIsV4( StrToIp( self.subnet ) )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.Address' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, { 'type': 'String' }, { 'type': 'Boolean' } ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.Address' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.Networked' }, { 'type': 'String' }, { 'type': 'Boolean' } ] )
   def nextAddress( self, networked, interface_name, is_primary ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     address = Address( networked=networked, interface_name=interface_name, is_primary=is_primary )
     if networked.structure.foundation.subclass.__class__.__name__ == 'DockerFoundation':

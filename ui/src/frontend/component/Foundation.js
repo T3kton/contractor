@@ -20,7 +20,7 @@ class Foundation extends React.Component
 
   componentWillReceiveProps( newProps )
   {
-    this.setState( { foundation_list: [], foundation: null } );
+    this.setState( { foundation_list: [], foundation: null, interface_list: [] } );
     this.update( newProps );
   }
 
@@ -35,6 +35,11 @@ class Foundation extends React.Component
           data.site = CInP.extractIds( data.site )[0];
           data.blueprint = CInP.extractIds( data.blueprint )[0];
           this.setState( { foundation: data } );
+        } );
+      props.getFoundationInterfaces( props.id )
+       .then( ( result ) =>
+        {
+          this.setState( { interface_list: result.data } );
         } );
       props.detailGetDependancies( props.id )
         .then( ( result ) =>
@@ -96,8 +101,8 @@ class Foundation extends React.Component
                   <tr><th>Type</th><td>{ foundation.type }</td></tr>
                   <tr><th>Blueprint</th><td><Link to={ '/blueprint/f/' + foundation.blueprint }>{ foundation.blueprint }</Link></td></tr>
                   <tr><th>Id Map</th><td>{ foundation.id_map }</td></tr>
-                  <tr><th>Interfaces</th><td><ul>{ foundation.interfaces.map( ( item, index ) => (
-                    <li key={ index }>{ item }</li>
+                  <tr><th>Interfaces</th><td><ul>{ this.state.interface_list.map( ( item, index ) => (
+                    <li key={ index }>{ JSON.stringify( item ) }</li>
                   ) ) }</ul></td></tr>
                   <tr><th>Class List</th><td>{ foundation.class_list }</td></tr>
                   <tr><th>Created</th><td>{ foundation.created }</td></tr>

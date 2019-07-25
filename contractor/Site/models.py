@@ -64,10 +64,9 @@ class Site( models.Model ):
       foundation = foundation.subclass
       # dependency_list = list( set( [ i.dependencyId for i in foundation.dependency_set.all() ] ) )
       dependency_list = []
-      try:
+      if foundation.dependency:
         dependency_list.append( foundation.dependency.dependencyId )
-      except Dependency.DoesNotExist:
-        pass
+
       try:
         dependency_list += [ foundation.complex.dependencyId ]
         if foundation.complex.site != self:

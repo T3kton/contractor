@@ -45,7 +45,7 @@ class BluePrint extends React.Component
             }
           } );
           data.scripts = data.scripts.map( ( entry ) => ( CInP.extractIds( entry )[0] ) );
-          data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, data.config_values[ key ] ] ) );
+          data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, JSON.stringify( data.config_values[ key ] ) ] ) );
           this.setState( { blueprint: data } );
         } );
     }

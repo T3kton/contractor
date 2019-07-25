@@ -75,7 +75,7 @@ class Site extends React.Component
                   <tr><th>Name</th><td>{ site.name }</td></tr>
                   <tr><th>Parent</th><td><Link to={ '/site/' + site.parent }>{ site.parent }</Link></td></tr>
                   <tr><th>Description</th><td>{ site.description }</td></tr>
-                  <tr><th>Config Values</th><td><table><thead/><tbody>{ site.config_values.map( ( value ) => ( <tr key={ value[0] }><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
+                  <tr><th>Config Values</th><td><table><thead/><tbody>{ site.config_values.map( ( value ) => ( <tr key={ value[0] }><th>{ value[0] }</th><td>{ JSON.stringify( value[1] ) }</td></tr> ) ) }</tbody></table></td></tr>
                   <tr><th>Created</th><td>{ site.created }</td></tr>
                   <tr><th>Updated</th><td>{ site.updated }</td></tr>
                 </tbody>

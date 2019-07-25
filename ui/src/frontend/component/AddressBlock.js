@@ -92,6 +92,7 @@ class AddressBlock extends React.Component
               <table>
                 <thead/>
                 <tbody>
+                  <tr><th>Name</th><td>{ addressBlock.name }</td></tr>
                   <tr><th>Site</th><td><Link to={ '/site/' + addressBlock.site }>{ addressBlock.site }</Link></td></tr>
                   <tr><th>Subnet</th><td>{ addressBlock.subnet }</td></tr>
                   <tr><th>Prefix</th><td>{ addressBlock.prefix }</td></tr>

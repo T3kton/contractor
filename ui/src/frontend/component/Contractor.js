@@ -115,6 +115,11 @@ class Contractor
     return this.cinp.get( '/api/v1/Building/Foundation:' + id + ':' );
   };
 
+  getFoundationInterfaces = ( id ) =>
+  {
+    return this.cinp.call( '/api/v1/Building/Foundation:' + id + ':(getInterfaceList)' );
+  }
+
   getFoundationDependandyList = ( id ) =>
   {
     return this.cinp.getFilteredObjects( '/api/v1/Building/Dependency', 'foundation', { 'foundation': '/api/v1/Building/Foundation:' + id + ':' } );

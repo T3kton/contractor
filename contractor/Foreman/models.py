@@ -634,14 +634,8 @@ class JobLog( models.Model ):
   def checkAuth( user, verb, id_list, action=None ):
     return True
 
-  def save( self, *args, **kwargs ):
-    if self.pk is not None:
-      raise models.ProtectedError()
-
-    super( JobLog, self ).save( *args, **kwargs )
-
   def delete( self ):
-    raise models.ProtectedError()
+    raise models.ProtectedError( 'Can not delete JobLog entries', self )
 
   def __str__( self ):
     return 'JobLog for Job #{0} for "{1}"({2}) at "{3}"'.format( self.job_id, self.target_id, self.target_class, self.at )

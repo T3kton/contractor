@@ -15,7 +15,7 @@ from contractor.Utilities.models import Networked
 from contractor.lib.config import getConfig, mergeValues
 from contractor.Records.lib import post_save_callback, post_delete_callback
 
-# this is where the plan meats the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
+# this is where the plan meets the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
 
 cinp = CInP( 'Building', '0.1' )
 
@@ -213,6 +213,13 @@ class Foundation( models.Model ):
     """
     return mergeValues( getConfig( self.subclass ) )
 
+  @cinp.action( return_type={ 'type': 'Map', 'is_array': True } )
+  def getInterfaceList( self ):
+    """
+    returns the computed config for this foundation
+    """
+    return [ { 'name': i.name, 'physical_location': i.physical_location, 'is_provisioning': i.is_provisioning, 'mac': i.mac } for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
@@ -254,7 +261,7 @@ class Foundation( models.Model ):
 
   def delete( self ):
     if not self.can_delete:
-      raise models.ProtectedError( 'Structure not Deleatable' )
+      raise models.ProtectedError( 'Structure not Deleatable', self )
 
     subclass = self.subclass
 
@@ -392,7 +399,7 @@ class Structure( Networked ):
 
   def delete( self ):
     if not self.can_delete:
-      raise models.ProtectedError( 'Structure not Deleteable' )
+      raise models.ProtectedError( 'Structure not Deleteable', self )
 
     super().delete()
 
