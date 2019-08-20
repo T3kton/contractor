@@ -60,6 +60,11 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/BluePrint/StructureBluePrint' );
   };
 
+  getPXEList = () =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/BluePrint/PXE' );
+  };
+
   getAddressBlockList = ( site ) =>
   {
     return this.cinp.getFilteredObjects( '/api/v1/Utilities/AddressBlock', 'site', { 'site': site } );
@@ -153,6 +158,11 @@ class Contractor
   getStructureBluePrint = ( id ) =>
   {
     return this.cinp.get( '/api/v1/BluePrint/StructureBluePrint:' + id + ':' );
+  };
+
+  getPXE = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/BluePrint/PXE:' + id + ':' );
   };
 
   getScript = ( id ) =>
