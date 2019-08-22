@@ -10,6 +10,7 @@ import sys
 import argparse
 import subprocess
 
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from contractor import settings
 from contractor.lib.ip import CIDRSubnet, StrToIp, IpToStr
@@ -233,5 +234,8 @@ include "/etc/bind/contractor/dns.master";
 }};
 """.format( contractor_dns ) )
   fp.close()
+
+print( 'Creating root user...' )
+User.objects.create_superuser( username='root', password='root', email='root@test.com' )
 
 print( 'Done!' )

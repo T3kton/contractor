@@ -301,18 +301,25 @@ class Structure( Networked ):
 
   def configAttributes( self ):
     provisioning_interface = self.provisioning_interface
+    provisioning_address = self.primary_address
+    primary_interface = self.primary_interface
+    primary_address = self.primary_address
     result = {
                '_structure_id': self.pk,
                '_structure_state': self.state,
                '_structure_config_uuid': self.config_uuid,
+               '_hostname': self.hostname,
+               '_domain_name': self.domain_name,
+               '_fqdn': self.fqdn,
                '_provisioning_interface': provisioning_interface.name if provisioning_interface is not None else None,
-               '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None
+               '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None,
+               '_provisioning_address': provisioning_address.as_dict if provisioning_address is not None else None,
+               '_primary_interface': primary_interface.name if primary_interface is not None else None,
+               '_primary_interface_mac': primary_interface.mac if primary_interface is not None else None,
+               '_primary_address': primary_address.as_dict if primary_address is not None else None,
+               '_interface_map': {}
              }
 
-    result[ '_hostname' ] = self.hostname
-    result[ '_domain_name' ] = self.domain_name
-    result[ '_fqdn' ] = self.fqdn
-    result[ '_interface_map' ] = {}
     for iface in self.foundation.networkinterface_set.all():  # mabey? mabey not?
       result[ '_interface_map' ][ iface.name ] = iface.config
 

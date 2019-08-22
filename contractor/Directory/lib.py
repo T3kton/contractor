@@ -62,7 +62,7 @@ def getHostIp( fqdn ):
     return networked.address_set.get( interface_name=parts[0] ).ip_address
 
   elif len( parts ) == 0:
-    return networked.primary_ip
+    return networked.primary_address.ip_address
 
   raise ValueError( 'Not sure what to do with "{0}" for host "{1}" in "{2}"'.format( parts, networked, zone) )
 
@@ -83,10 +83,10 @@ def _getNetworkedEntries( networked ):
   networked = networked.subclass
   result = {}
 
-  if networked.primary_ip is None:
+  if networked.primary_address is None:
     return result
 
-  ip_addr = networked.primary_ip
+  ip_addr = networked.primary_address.ip_address
   iface = networked.primary_interface
 
   result[ 'A' ] = [ { 'name': '{0}.{1}'.format( iface.name, networked.hostname ), 'address': ip_addr } ]

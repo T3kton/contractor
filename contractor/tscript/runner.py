@@ -318,6 +318,7 @@ def _debugDump( message, exception, ast, state ):
     fp.write( '\n\n** Stack **\n' )
     for line in traceback.TracebackException( type( exception ), exception, exception.__traceback__, lookup_lines=True, capture_locals=True ).format( chain=False ):
        fp.write( line )
+
     if fp is not sys.stdout:
       fp.close()
 

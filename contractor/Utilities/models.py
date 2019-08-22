@@ -60,9 +60,9 @@ class Networked( models.Model ):
       return None
 
   @property
-  def primary_ip( self ):
+  def primary_address( self ):
     try:
-      return self.address_set.get( is_primary=True ).ip_address
+      return self.address_set.get( is_primary=True )
     except Address.DoesNotExist:
       return None
 
@@ -74,15 +74,18 @@ class Networked( models.Model ):
       return None
 
   @property
-  def provisioning_ip( self ):
-    try:
-      interface_name = self.structure.foundation.networkinterface_set.get( is_provisioning=True ).name
-    except NetworkInterface.DoesNotExist:
+  def provisioning_address( self ):
+    interface_name = self.provisioning_interface
+    if interface_name is None:
       return None
 
     try:
-      return self.address_set.get( interface_name=interface_name, is_primary=True ).ip_address
+      return self.address_set.get( interface_name=interface_name, is_primary=True )
     except Address.DoesNotExist:
+      try:
+        return self.address_set.filter( interface_name=interface_name )[ 0 ]
+      except IndexError:
+        pass
       return None
 
   @property
@@ -174,26 +177,7 @@ class NetworkInterface( models.Model ):
     structure = self.foundation.structure
     if structure is not None:
       for address in structure.address_set.filter( interface_name=self.name ):
-        if address.vlan == 0:
-          vlan = None
-          tagged = False
-        else:
-          vlan = address.vlan
-          tagged = True
-
-        result[ 'address_list' ].append( {
-                                           'address': address.ip_address,  # set to 'dhcp' for dhcp
-                                           'netmask': address.netmask,
-                                           'prefix': address.prefix,
-                                           'network': address.network,
-                                           'gateway': address.address_block.gateway,
-                                           'primary': address.is_primary,
-                                           'sub_interface': None,
-                                           'auto': True,
-                                           'vlan': vlan,
-                                           'tagged': tagged,
-                                           'mtu': 1500
-                                         } )
+        result[ 'address_list' ].append( address.as_dict )
 
     return result
 
@@ -519,6 +503,29 @@ class BaseAddress( models.Model ):
       return None
 
     return self.address_block.gateway
+
+  @property
+  def as_dict( self ):
+    if self.vlan == 0:
+      vlan = None
+      tagged = False
+    else:
+      vlan = self.vlan
+      tagged = True
+
+    return {
+             'address': self.ip_address,  # set to 'dhcp' for dhcp
+             'netmask': self.netmask,
+             'prefix': self.prefix,
+             'network': self.network,
+             'gateway': self.address_block.gateway,
+             'primary': self.is_primary,
+             'sub_interface': None,
+             'auto': True,
+             'vlan': vlan,
+             'tagged': tagged,
+             'mtu': 1500
+           }
 
   @property
   def interface( self ):

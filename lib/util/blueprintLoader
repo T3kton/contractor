@@ -7,12 +7,11 @@ django.setup()
 
 import sys
 import toml
+import argparse
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint, BluePrintScript, Script, PXE
 
-# TODO: a paramater to select which type to load
-# TODO: a paramater to update only
-# TODO: a paramater to add only
 # TODO: some way to remove
+# TODO: fix bug when re-adding a Strcutrue blueprint clears out all the foundation blueprint links that allready existed (something like that), I think it's some in the deleting during update
 
 
 # No this isn't the full solution, for now we are punting and putting anything
@@ -68,11 +67,17 @@ def setScripts( blueprint, target ):
       bps.delete()
 
 
-def loadStructureBlueprint( name, target ):
+def loadStructureBlueprint( name, target, mode ):
   print( 'Structure BluePrint "{0}"...'.format( name ) )
   try:
     blueprint = StructureBluePrint.objects.get( name=name )
+    if mode == 'add':
+      print( 'Allready exists, skipping.' )
+      return
   except StructureBluePrint.DoesNotExist:
+    if mode == 'update':
+      print( 'Does not exist, skipping.' )
+      return
     blueprint = StructureBluePrint( name=name )
 
   loadBluePrintCommon( blueprint, target )
@@ -108,11 +113,17 @@ def loadStructureBlueprint( name, target ):
   setScripts( blueprint, target )
 
 
-def loadFoundationBlueprint( name, target ):
+def loadFoundationBlueprint( name, target, mode ):
   print( 'Foundation BluePrint "{0}"...'.format( name ) )
   try:
     blueprint = FoundationBluePrint.objects.get( name=name )
+    if mode == 'add':
+      print( 'Allready exists, skipping.' )
+      return
   except FoundationBluePrint.DoesNotExist:
+    if mode == 'update':
+      print( 'Does not exist, skipping.' )
+      return
     blueprint = FoundationBluePrint( name=name )
 
   loadBluePrintCommon( blueprint, target )
@@ -140,11 +151,17 @@ def loadFoundationBlueprint( name, target ):
   setScripts( blueprint, target )
 
 
-def loadScript( name, target ):
+def loadScript( name, target, mode ):
   print( 'Script "{0}"...'.format( name ) )
   try:
     script = Script.objects.get( name=name )
+    if mode == 'add':
+      print( 'Allready exists, skipping.' )
+      return
   except Script.DoesNotExist:
+    if mode == 'update':
+      print( 'Does not exist, skipping.' )
+      return
     script = Script( name=name )
 
   script.description = target.get( 'description', '' )
@@ -157,11 +174,17 @@ def loadScript( name, target ):
     sys.exit( 1 )
 
 
-def loadPXE( name, target ):
+def loadPXE( name, target, mode ):
   print( 'PXE "{0}"...'.format( name ) )
   try:
     pxe = PXE.objects.get( name=name )
+    if mode == 'add':
+      print( 'Allready exists, skipping.' )
+      return
   except PXE.DoesNotExist:
+    if mode == 'update':
+      print( 'Does not exist, skipping.' )
+      return
     pxe = PXE( name=name )
 
   pxe.boot_script = target.get( 'boot_script', '' )
@@ -174,7 +197,7 @@ def loadPXE( name, target ):
     sys.exit( 1 )
 
 
-def loadSFLinks( link_list ):
+def loadSFLinks( link_list, mode ):
   for structureblueprint, foundationblueprint in link_list:
     print( 'Adding Foundation "{0}" to Structure "{1}"...'.format( foundationblueprint, structureblueprint ) )
     try:
@@ -196,35 +219,62 @@ def loadSFLinks( link_list ):
 
 
 def main():
-  try:
-    filename = sys.argv[1]
-  except IndexError:
-    print( 'Usage {0} <blueprint file.toml>'.format( sys.argv[0] ) )
+  parser = argparse.ArgumentParser( description='Contractor BluePrint Loader' )
+  parser.add_argument( '-t', '--type', help='Entity type to update/add, options: all, pxe, structure, foundation, script, links. default: all', metavar='TYPE', default='all' )
+  parser.add_argument( '-n', '--name', help='Name of the Eninity to update/add, default is to update/add all name, links are not affected by this', metavar='NAME', default=None )
+  group = parser.add_mutually_exclusive_group()
+  group.add_argument( '-a', '--add', help='Only add new Eninities', action='store_true' )
+  group.add_argument( '-u', '--update', help='Only update existing Eninities', action='store_true' )
+  parser.add_argument( 'file', help='blueprint .toml file' )
+
+  args = parser.parse_args()
+
+  if not os.path.exists( args.file ):
+    print( 'file "{0}" not found'.format( args.file ) )
     sys.exit( 1 )
 
   try:
-    item_map = toml.load( filename )
+    item_map = toml.load( args.file )
   except FileNotFoundError:
-    print( 'Error opening "{0}"'.format( filename ) )
+    print( 'Error opening "{0}"'.format( args.file ) )
     sys.exit( 1 )
 
   except toml.TomlDecodeError as e:
-    print( 'Error parsing "{0}": {1}'.format( filename, e ) )
+    print( 'Error parsing "{0}": {1}'.format( args.file, e ) )
     sys.exit( 1 )
 
-  for name in item_map.get( 'script', {} ):
-    loadScript( name, item_map[ 'script' ][ name ] )
+  mode = 'both'
+  if args.add:
+    mode = 'add'
+  elif args.update:
+    mode = 'update'
 
-  for name in bluePrintOrder( item_map.get( 'foundation', {} ) ):
-    loadFoundationBlueprint( name, item_map[ 'foundation' ][ name ] )
+  if args.type in ( 'all', 'script' ):
+    for name in item_map.get( 'script', {} ):
+      if args.name is not None and args.name != name:
+        continue
+      loadScript( name, item_map[ 'script' ][ name ], mode )
 
-  for name in bluePrintOrder( item_map.get( 'structure', {} ) ):
-    loadStructureBlueprint( name, item_map[ 'structure' ][ name ] )
+  if args.type in ( 'all', 'foundation' ):
+    for name in bluePrintOrder( item_map.get( 'foundation', {} ) ):
+      if args.name is not None and args.name != name:
+        continue
+      loadFoundationBlueprint( name, item_map[ 'foundation' ][ name ], mode )
 
-  for name in item_map.get( 'pxe', {} ):
-    loadPXE( name, item_map[ 'pxe' ][ name ] )
+  if args.type in ( 'all', 'structure' ):
+    for name in bluePrintOrder( item_map.get( 'structure', {} ) ):
+      if args.name is not None and args.name != name:
+        continue
+      loadStructureBlueprint( name, item_map[ 'structure' ][ name ], mode )
 
-  loadSFLinks( item_map.get( 'sflinks', [] ) )
+  if args.type in ( 'all', 'pxe' ):
+    for name in item_map.get( 'pxe', {} ):
+      if args.name is not None and args.name != name:
+        continue
+      loadPXE( name, item_map[ 'pxe' ][ name ], mode )
+
+  if args.type in ( 'all', 'links' ):
+    loadSFLinks( item_map.get( 'sflinks', [] ), mode )
 
   print( 'Done' )
   sys.exit( 0 )

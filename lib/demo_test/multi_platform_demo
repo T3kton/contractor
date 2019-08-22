@@ -248,7 +248,7 @@ for strct in Structure.objects.all():
   strct.config_values[ 'vcenter_password' ] = '0skin3rd'
   strct.config_values[ 'vcenter_datacenter' ] = 'ha-datacenter'
   strct.config_values[ 'vcenter_hostname' ] = strct.hostname + '.'
-  strct.config_values[ 'vcenter_host' ] = strct.provisioning_ip
+  strct.config_values[ 'vcenter_host' ] = strct.primary_address.ip_address
   strct.full_clean()
   strct.save()
 
