@@ -164,9 +164,9 @@ class StructurePlugin( object ):  # ie: structure with some settable attributes,
 
     result[ 'id' ] = ( lambda: self.structure.pk, None )
     result[ 'hostname' ] = ( lambda: self.structure.hostname, None )
-    result[ 'provisioning_ip' ] = ( lambda: self.structure.provisioning_address.ip_address, None )
+    result[ 'provisioning_ip' ] = ( lambda: self.structure.provisioning_address.ip_address if self.structure.provisioning_address else None, None )
     result[ 'provisioning_interface' ] = ( lambda: self.structure.provisioning_interface, None )
-    result[ 'primary_ip' ] = ( lambda: self.structure.primary_address.ip_address, None )
+    result[ 'primary_ip' ] = ( lambda: self.structure.primary_address.ip_address if self.structure.primary_address else None, None )
     result[ 'primary_interface' ] = ( lambda: self.structure.primary_interface, None )
 
     return result

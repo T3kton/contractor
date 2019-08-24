@@ -301,7 +301,7 @@ class Structure( Networked ):
 
   def configAttributes( self ):
     provisioning_interface = self.provisioning_interface
-    provisioning_address = self.primary_address
+    provisioning_address = self.provisioning_address
     primary_interface = self.primary_interface
     primary_address = self.primary_address
     result = {

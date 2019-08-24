@@ -75,7 +75,7 @@ class Networked( models.Model ):
 
   @property
   def provisioning_address( self ):
-    interface_name = self.provisioning_interface
+    interface_name = self.provisioning_interface.name
     if interface_name is None:
       return None
 
