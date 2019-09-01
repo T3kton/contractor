@@ -11,7 +11,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, JSONField, name_regex, config_name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
-from contractor.Utilities.models import Networked
+from contractor.Utilities.models import Networked, RealNetworkInterface
 from contractor.lib.config import getConfig, mergeValues
 from contractor.Records.lib import post_save_callback, post_delete_callback
 
@@ -464,11 +464,21 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   def newFoundation( self, hostname ):
     raise ValueError( 'Root Complex dose not support Foundations' )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, paramater_type_list=[ { 'type': 'String' } ] )
-  def createFoundation( self, hostname ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
+  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, paramater_type_list=[ { 'type': 'String' }, { 'type': 'String', 'is_array': True } ] )
+  def createFoundation( self, hostname, interface_name_list ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     self = self.subclass
 
-    foundation = self.newFoundation( hostname )  # also need to create the network interfaces
+    foundation = self.newFoundation( hostname )
+
+    counter = 0
+    for name in interface_name_list:
+      iface = RealNetworkInterface( name=name, is_provisioning=bool( counter == 0 ) )
+      iface.foundation = foundation
+      iface.physical_location = 'eth{0}'.format( counter )
+      iface.full_clean()
+      iface.save()
+      counter += 1
+
     return foundation
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )

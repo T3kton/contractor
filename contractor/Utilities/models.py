@@ -75,7 +75,11 @@ class Networked( models.Model ):
 
   @property
   def provisioning_address( self ):
-    interface_name = self.provisioning_interface.name
+    provisioning_interface = self.provisioning_interface
+    if provisioning_interface is None:
+      return None
+
+    interface_name = provisioning_interface.name
     if interface_name is None:
       return None
 
@@ -177,6 +181,9 @@ class NetworkInterface( models.Model ):
     structure = self.foundation.structure
     if structure is not None:
       for address in structure.address_set.filter( interface_name=self.name ):
+        if 'network' not in result:  # TODO: store the network name somewhere, and remove from addressblock
+          result[ 'network' ] = address.address_block.name
+
         result[ 'address_list' ].append( address.as_dict )
 
     return result
@@ -263,6 +270,9 @@ class RealNetworkInterface( NetworkInterface ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    unique_together = ( ( 'foundation', 'physical_location' ), )
 
   def __str__( self ):
     return 'RealNetworkInterface "{0}" mac "{1}"'.format( self.name, self.mac )
@@ -477,7 +487,7 @@ class BaseAddress( models.Model ):
     return IpToStr( StrToIp( self.address_block.subnet ) + self.offset )
 
   @property
-  def network( self ):
+  def subnet( self ):
     if self.address_block is None:
       return None
 
@@ -517,7 +527,7 @@ class BaseAddress( models.Model ):
              'address': self.ip_address,  # set to 'dhcp' for dhcp
              'netmask': self.netmask,
              'prefix': self.prefix,
-             'network': self.network,
+             'subnet': self.subnet,
              'gateway': self.address_block.gateway,
              'primary': self.is_primary,
              'sub_interface': None,
@@ -627,11 +637,11 @@ class Address( BaseAddress ):
     return super().ip_address
 
   @property
-  def network( self ):
+  def subnet( self ):
     if self.pointer is not None:
-      return self.pointer.network
+      return self.pointer.subnet
 
-    return super().network
+    return super().subnet
 
   @property
   def netmask( self ):

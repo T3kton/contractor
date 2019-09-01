@@ -235,7 +235,10 @@ def getConfig( target ):
   config[ '__last_modified' ] = last_modified
   config[ '__timestamp' ] = datetime.now( timezone.utc )
   config[ '__contractor_host' ] = settings.CONTRACTOR_HOST
-  config[ '__pxe_template_location' ] = '{0}config/pxe_template/'.format( settings.CONTRACTOR_HOST )
+  try:
+    config[ '__pxe_template_location' ] = '{0}config/pxe_template/c/{1}'.format( settings.CONTRACTOR_HOST, config[ '_structure_config_uuid' ] )
+  except KeyError:
+    config[ '__pxe_template_location' ] = '{0}config/pxe_template/'.format( settings.CONTRACTOR_HOST )
   config[ '__pxe_location' ] = settings.PXE_IMAGE_LOCATION
 
   return config
