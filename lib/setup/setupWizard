@@ -23,8 +23,11 @@ from contractor.plugins.Manual.models import ManualFoundation
 
 parser = argparse.ArgumentParser( description='Contractor SetupWizzard, must be run as root' )
 parser.add_argument( '--no-ip-reservation', help='do not reserve static and dynamic ips', action='store_true' )
-parser.add_argument( '--dns-server', help='set the dns server setting for site1, otherwise it will be set to the detected ip', metavar='IP ADDRESS' )
-parser.add_argument( '--proxy-server', help='set the http proxy (mirror_proxy) setting for site1', metavar='HOST' )
+parser.add_argument( '--site-name', help='name of the initial site to create, default: site1', metavar='SITE', default='site1' )
+parser.add_argument( '--site-domain', help='domain name of the initial site to create, default: site1.test', metavar='DOMAIN', default='site1.test' )
+parser.add_argument( '--dns-server', help='set the dns server setting for the initial site, otherwise it will be set to the detected ip', metavar='IP ADDRESS' )
+parser.add_argument( '--ntp-server', help='set the ntp server setting for the initial site, default: ntp.ubuntu.com', metavar='HOST', default='ntp.ubuntu.com' )
+parser.add_argument( '--proxy-server', help='set the http proxy (mirror_proxy) setting for the initial site', metavar='HOST' )
 parser.add_argument( '--primary-interface', help='which interface to use as the primary interface for the contractor structure, if not specified it will be auto detected', metavar='INTERFACE' )
 
 args = parser.parse_args()
@@ -87,38 +90,48 @@ if contractor_gateway is not None:
 print( '           DNS: "{0}"'.format( contractor_dns ) )
 print()
 
-if args.dns_server is not None:
-  print( 'Setting DNS to: {0}'.format( args.dns_server ) )
+if args.dns_server is None:
+  args.dns_server = contractor_ip_address
 
+search_list = []
+tmp = args.site_domain.split( '.' )[ :1:-1 ]
+search_list.append( tmp )
+for item in args.site_domain.split( '.' )[ 1::-1 ]:
+  tmp = item + '.' + tmp
+  search_list.append( tmp )
+search_list.reverse()
+
+print( '  === Values To Be Applied ===' )
+print( 'Site name:        {0}'.format( args.site_name ) )
+print( 'Domain:           {0}'.format( args.domain_name ) )
+print( 'DNS Search Path:  {0}'.format( search_list ) )
+print( 'DNS Server        {0}'.format( args.dns_server ) )
+print( 'NTP Server        {0}'.format( args.ntp_server ) )
 if args.proxy_server is not None:
-  print( 'Setting Proxy Server to: {0}'.format( args.proxy_server ) )
+  print( 'Proxy Server        {0}'.format( args.proxy_server  ) )
 
 fbp_manual = FoundationBluePrint.objects.get( pk='manual-foundation-base' )
 sbp_xenial = StructureBluePrint.objects.get( pk='manual-structure-base' )
 
 print()
-print( 'creating site...' )
-zl = Zone()
-zl.name = 'test'
-zl.full_clean()
-zl.save()
+print( 'creating site "{0}" ({1})...'.format( args.site_name, args.site_domain ) )
+parent = None
+for item in args.site_domain.split( '.' )[::-1]:
+  zone = Zone()
+  zone.name = item
+  if parent is not None:
+    zone.parent = parent
+  zone.full_clean()
+  zone.save()
 
-zs1 = Zone()
-zs1.name = 'site1'
-zs1.parent = zl
-zs1.full_clean()
-zs1.save()
+  parent = zone
 
-s1 = Site( name='site1', description='Site 1' )
-s1.zone = zs1
-s1.config_values[ 'domain_name' ] = 'site1.test'
-if args.dns_server is not None:
-  s1.config_values[ 'dns_servers' ] = [ args.dns_server ]
-else:
-  s1.config_values[ 'dns_servers' ] = [ contractor_ip_address ]
-
-s1.config_values[ 'dns_search' ] = [ 'site1.test', 'test' ]
-s1.config_values[ 'ntp_servers' ] = [ 'ntp.ubuntu.com' ]
+s1 = Site( name=args.site_name, description='Initial Site "{0}"'.format( args.site_name ) )
+s1.zone = zone
+s1.config_values[ 'domain_name' ] = args.site_domain
+s1.config_values[ 'dns_search' ] = search_list
+s1.config_values[ 'dns_servers' ] = [ args.dns_server ]
+s1.config_values[ 'ntp_servers' ] = [ args.ntp_server ]
 
 if args.proxy_server is not None:
   s1.config_values[ 'mirror_proxy' ] = args.proxy_server
@@ -152,9 +165,9 @@ addr = Address( networked=str_dev, address_block=addr1_block, interface_name=con
 addr.full_clean()
 addr.save()
 
-e = Entry( zone=zs1, type='CNAME' )
+e = Entry( zone=zone, type='CNAME' )
 e.name = 'static'
-e.target = 'contractor.site1.test.'
+e.target = 'contractor.{0}.'.format( args.site_domain )
 e.full_clean()
 e.save()
 
@@ -195,7 +208,7 @@ for line in open( filename, 'r' ).readlines():
 if not configured:
   data = open( filename, 'r' ).read()
 
-  data = data.replace( 'BIND_NS_LIST = []', 'BIND_NS_LIST = {0}'.format( [ '{0}.contractor.site1.test'.format( contractor_iface ) ] ) )
+  data = data.replace( 'BIND_NS_LIST = []', 'BIND_NS_LIST = {0}'.format( [ '{0}.contractor.{1}'.format( contractor_iface, args.site_domain ) ] ) )
 
   open( filename, 'w' ).write( data )
 
