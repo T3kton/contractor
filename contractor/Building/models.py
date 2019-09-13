@@ -106,6 +106,17 @@ class Foundation( models.Model ):
     from contractor.Foreman.lib import createJob
     return createJob( 'destroy', self, user.username )
 
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_', 'String' ]  )
+  def doJob( self, user, name ):
+    """
+    This will submit a job to run the specified script.
+    """
+    from contractor.Foreman.lib import createJob
+    if name in ( 'create', 'destroy' ):
+      raise ValueError( 'Invalid Job Name' )
+
+    return createJob( name, self, user.username )
+
   @staticmethod
   def getTscriptValues( write_mode=False ):  # locator is handled seperatly
     return {  # none of these base items are writeable, ignore the write_mode for now
@@ -360,6 +371,14 @@ class Structure( Networked ):
   def doDestroy( self, user ):
     from contractor.Foreman.lib import createJob
     return createJob( 'destroy', self, user.username )
+
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_', 'String' ]  )
+  def doJob( self, user, name ):
+    from contractor.Foreman.lib import createJob
+    if name in ( 'create', 'destroy' ):
+      raise ValueError( 'Invalid Job Name' )
+
+    return createJob( name, self, user.username )
 
   @cinp.action( return_type='Map' )
   def getConfig( self ):
