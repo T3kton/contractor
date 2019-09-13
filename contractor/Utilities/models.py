@@ -472,28 +472,6 @@ class AddressBlock( models.Model ):
     return 'AddressBlock "{0}" in "{1}" subnet "{2}/{3}"'.format( self.name, self.site, self.subnet, self.prefix )
 
 
-@cinp.model()
-class Network( models.Model ):
-  name = models.CharField( max_length=40 )
-  site = models.ForeignKey( Site, on_delete=models.PROTECT )
-  addressblock_list = models.ManyToManyField( through=NetworkAddressBlock )
-
-
-
-  class Meta:
-    unique_together = ( ( 'site', 'name' ), )
-
-  def __str__( self ):
-    return 'Network "{0}" in "{1}"'.format( self.name, self.site )
-
-
-
-NetworkAddressBlock( models.Model ):
-  network
-  addressblock
-  vlan
-
-
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
 class BaseAddress( models.Model ):
   address_block = models.ForeignKey( AddressBlock, blank=True, null=True, on_delete=models.CASCADE )
