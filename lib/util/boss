@@ -185,7 +185,7 @@ def main():
 
   if args.run_script:
     try:
-      rc = createJob( args.run_script, target )
+      rc = createJob( args.run_script, target, CLIUser() )
     except Exception as e:
       print( 'Error creating "{1}" job: "{0}"'.format( e, args.run_script ) )
       sys.exit( 1 )

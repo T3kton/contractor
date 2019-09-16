@@ -1059,6 +1059,9 @@ class Runner( object ):
     if operation[0] != Types.FUNCTION:
       return
 
+    if not isinstance( operation[1], dict ) or 'dispatched' not in operation[1]:
+      return  # or?: raise Exception( 'Function is not dispatched or has allready returned its value' ), we don't say anything if it's not a function
+
     operation[1][ 'dispatched' ] = False
 
     return

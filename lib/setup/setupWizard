@@ -94,16 +94,16 @@ if args.dns_server is None:
   args.dns_server = contractor_ip_address
 
 search_list = []
-tmp = args.site_domain.split( '.' )[ :1:-1 ]
+tmp = args.site_domain.split( '.' )[ -1 ]
 search_list.append( tmp )
-for item in args.site_domain.split( '.' )[ 1::-1 ]:
+for item in args.site_domain.split( '.' )[ -2::-1 ]:
   tmp = item + '.' + tmp
   search_list.append( tmp )
 search_list.reverse()
 
 print( '  === Values To Be Applied ===' )
 print( 'Site name:        {0}'.format( args.site_name ) )
-print( 'Domain:           {0}'.format( args.domain_name ) )
+print( 'Domain:           {0}'.format( args.site_domain ) )
 print( 'DNS Search Path:  {0}'.format( search_list ) )
 print( 'DNS Server        {0}'.format( args.dns_server ) )
 print( 'NTP Server        {0}'.format( args.ntp_server ) )
