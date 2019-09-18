@@ -272,6 +272,11 @@ builtin_function_map = {
                           'delay': Delay()
                         }
 
+
+infix_string_operator_map = {
+                              '.': lambda a, b: a + b,
+                            }
+
 infix_math_operator_map = {
                             '+': lambda a, b: a + b,
                             '-': lambda a, b: a - b,
@@ -783,7 +788,15 @@ class Runner( object ):
       left_val = self.state[ state_index ][1][ 'left' ]
       right_val = self.state[ state_index ][1][ 'right' ]
 
-      if op_data[ 'operator' ] in infix_math_operator_map:  # the number group
+      if op_data[ 'operator' ] in infix_string_operator_map:  # the string group
+        if not isinstance( left_val, str ):
+          left_val = str( left_val )
+        if not isinstance( right_val, str ):
+          right_val = str( right_val )
+
+        value = infix_string_operator_map[ op_data[ 'operator' ] ]( left_val, right_val )
+
+      elif op_data[ 'operator' ] in infix_math_operator_map:  # the number group
         if not isinstance( left_val, ( int, float, bool ) ):
           raise ParamaterError( 'left of operator', 'must be numeric', self.cur_line )
         if not isinstance( right_val, ( int, float, bool ) ):
@@ -791,7 +804,7 @@ class Runner( object ):
 
         value = infix_math_operator_map[ op_data[ 'operator' ] ]( left_val, right_val )
 
-      elif op_data[ 'operator' ] in infix_logical_operator_map:
+      elif op_data[ 'operator' ] in infix_logical_operator_map:  # the logical group
         value = infix_logical_operator_map[ op_data[ 'operator' ] ]( left_val, right_val )
 
       else:

@@ -414,6 +414,12 @@ def test_infix():
   assert runner.done
   assert runner.variable_map == { 'myvar': 3 }
 
+  runner = Runner( parse( 'myvar = ( "1" . "2" )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': '12' }
+
   runner = Runner( parse( 'myvar = ( 1 - 2 )' ) )
   assert runner.variable_map == {}
   runner.run()
@@ -455,6 +461,24 @@ def test_infix():
   runner.run()
   assert runner.done
   assert runner.variable_map == { 'myvar': 5 }
+
+  runner = Runner( parse( 'myvar = ( 5 . "a" )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': '5a' }
+
+  runner = Runner( parse( 'myvar = ( "a" . 2.0 )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': 'a2.0' }
+
+  runner = Runner( parse( 'myvar = ( ( 1 + 3 ) . ( " d " . True ) )' ) )
+  assert runner.variable_map == {}
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'myvar': '4 d True' }
 
   runner = Runner( parse( 'myvar = ( 5 + "a" )' ) )
   assert runner.variable_map == {}

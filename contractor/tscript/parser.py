@@ -41,7 +41,7 @@ variable            = !reserved ( label "." )? label !"("
 function            = !reserved ( label "." )? label "(" paramater_map ")"
 array_map_item      = variable "[" value_expression "]"
 
-infix               = "(" value_expression ( "^" / "*" / "/" / "%" / "+" / "-" / "&" / "|" / "and"/ "or" / "==" / "!=" / "<=" / ">=" / ">" / "<" ) value_expression ")"
+infix               = "(" value_expression ( "." / "^" / "*" / "/" / "%" / "+" / "-" / "&" / "|" / "and"/ "or" / "==" / "!=" / "<=" / ">=" / ">" / "<" ) value_expression ")"
 
 assignment          = ( array_map_item / variable ) ws_s "=" value_expression
 
