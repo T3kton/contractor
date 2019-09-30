@@ -1,7 +1,7 @@
 import pytest
 
 from contractor.Site.models import Site
-from contractor.Utilities.models import AddressBlock, Address, RealNetworkInterface
+from contractor.Utilities.models import AddressBlock, Address, RealNetworkInterface, Network
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint, PXE
 from contractor.Building.models import Foundation, Structure
 from contractor.lib.config_handler import url_regex, handler
@@ -70,6 +70,10 @@ def test_handler():
   ab.full_clean()
   ab.save()
 
+  n = Network( name='test', site=s )
+  n.full_clean()
+  n.save()
+
   fbp = FoundationBluePrint( name='fdn_test', description='foundation test bp' )
   fbp.foundation_type_list = 'Unknown'
   fbp.full_clean()
@@ -91,6 +95,7 @@ def test_handler():
   iface = RealNetworkInterface( name='eth0', is_provisioning=True )
   iface.foundation = fdn
   iface.physical_location = 'eth0'
+  iface.network = n
   iface.full_clean()
   iface.save()
 
