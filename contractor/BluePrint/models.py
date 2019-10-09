@@ -98,20 +98,27 @@ class BluePrint( models.Model ):
 # the material is not associated with the sctructure until fully prepared
 # ipmi type ip addresses will belong to the material, they belong to the device not the OS on the device anyway
 # will need a working pool of "eth0" type ips for the prepare
-@cinp.model( property_list=( 'subcontractor', ) )
+@cinp.model()
 class FoundationBluePrint( BluePrint ):
   parent_list = models.ManyToManyField( 'self', blank=True, symmetrical=False )
   foundation_type_list = StringListField( max_length=200 )  # list of the foundation types this blueprint can be used for
   template = JSONField( default={}, blank=True )
   physical_interface_names = StringListField( max_length=200, blank=True )
 
+  def getTemplate( self ):
+    if self.template:
+      return self.template
+
+    for parent in self.parent_list.all():
+      tmp = parent.getTemplate()
+      if tmp is not None:
+        return tmp
+
+    return None
+
   @cinp.action( 'Map' )
   def getConfig( self ):
     return getConfig( self )
-
-  @property
-  def subcontractor( self ):
-    return { 'type': None }
 
   @cinp.check_auth()
   @staticmethod

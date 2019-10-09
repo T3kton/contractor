@@ -598,7 +598,7 @@ class JobLog( models.Model ):
       raise ValueError( 'Unknown Job Type "{0}"'.format( job.__class__.__name__ ) )
 
     log.script_name = job.script_name
-    log.creator = creator
+    log.creator = creator.username
     log.full_clean()
     log.save()
 

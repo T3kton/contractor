@@ -13,6 +13,8 @@ from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked, RealNetworkInterface
 from contractor.lib.config import getConfig, mergeValues
+from contractor.BluePrint.lib import checkTemplate
+from contractor.Building.lib import structureLookup
 from contractor.Records.lib import post_save_callback, post_delete_callback
 
 # this is where the plan meets the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
@@ -48,18 +50,29 @@ class Foundation( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
-  @cinp.action()
-  def setLocated( self ):
+  @cinp.action( paramater_type_list=[ 'Map' ] )
+  def setLocated( self, id_map=None ):
     """
     Sets the Foundation to 'located' state.  This will not create/destroy any jobs.
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
+
+    template = self.blueprint.getTemplate()
+    if template is not None:
+      if id_map is None:
+        raise Exception( 'Foundations with templates require an id_map' )
+
+      if not checkTemplate( template, id_map ):
+        raise Exception( 'Foundation template mismatch' )
+
     try:  # TODO: should we find and clear any jobs (that didn't cause this to be called?)
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
       pass
 
+    if id_map is not None:
+      self.id_map = id_map
     self.located_at = timezone.now()
     self.built_at = None
     self.save()
@@ -70,7 +83,10 @@ class Foundation( models.Model ):
     Set the Foundation to 'built' state.  This will not create/destroy any jobs.
     """
     if self.located_at is None:
+      if self.blueprint.getTemplate() is not None:
+        raise Exception( 'Foundation with Blueprints with templates must be located first' )
       self.located_at = timezone.now()
+
     self.built_at = timezone.now()
     self.save()
 
@@ -88,6 +104,7 @@ class Foundation( models.Model ):
 
     self.built_at = None
     self.located_at = None
+    self.id_map = None
     self.save()
 
   @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
@@ -391,6 +408,11 @@ class Structure( Networked ):
     self.save()
 
     return mergeValues( getConfig( self ) )
+
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, paramater_type_list=[ 'Map' ] )
+  @staticmethod
+  def structureLookup( info_map=None ):
+    return structureLookup( info_map )
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod

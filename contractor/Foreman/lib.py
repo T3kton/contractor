@@ -277,11 +277,15 @@ def jobResults( job_id, cookie, data ):
 
   job = job.realJob
   runner = pickle.loads( job.script_runner )
-  result = runner.fromSubcontractor( cookie, data )
+  ( result, message ) = runner.fromSubcontractor( cookie, data )
   if result != 'Accepted':  # it wasn't valid/taken, no point in saving anything
     raise ForemanException( 'INVALID_RESULT', 'Error saving job results: "{0}"'.format( result ) )
 
   job.status = runner.status
+  if message is None:
+    job.message = ''
+  else:
+    job.message = message
   job.script_runner = pickle.dumps( runner )
   job.full_clean()
   job.save()

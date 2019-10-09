@@ -15,6 +15,10 @@ from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint 
 from contractor.Foreman.lib import processJobs, jobResults, createJob
 
 
+class TestUser():
+  username = 'tester'
+
+
 def _stripcookie( item_list ):
   for item in item_list:
     cookie = item[ 'cookie' ]
@@ -287,18 +291,18 @@ def test_foundation_job_create():  # TODO: should also do tests depending on a D
   f.save()
 
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'destroy', f, 'tester' )
+    createJob( 'destroy', f, TestUser() )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'other', f, 'tester' )
+    createJob( 'other', f, TestUser() )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
 
-  assert createJob( 'create', f, 'tester' ) is not None
+  assert createJob( 'create', f, TestUser() ) is not None
   assert f.state == 'planned'
   j = f.foundationjob
   assert j.can_start is False
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'create', f, 'tester' )
+    createJob( 'create', f, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   f.setLocated()
   assert j.can_start is True
@@ -306,41 +310,41 @@ def test_foundation_job_create():  # TODO: should also do tests depending on a D
   f = Foundation.objects.get( pk=f.pk )
 
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'destroy', f, 'tester' )
+    createJob( 'destroy', f, TestUser() )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
   with pytest.raises( ValueError ) as execinfo:
-    createJob( 'other', f, 'tester'  )
+    createJob( 'other', f, TestUser()  )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
 
-  assert createJob( 'create', f, 'tester' ) is not None
+  assert createJob( 'create', f, TestUser() ) is not None
   assert f.state == 'located'
   assert j.can_start is True
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'create', f, 'tester' )
+    createJob( 'create', f, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   f.foundationjob.delete()
   f = Foundation.objects.get( pk=f.pk )
 
   f.setBuilt()
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'create', f, 'tester' )
+    createJob( 'create', f, TestUser() )
   assert str( execinfo.value.code ) == 'ALLREADY_BUILT'
   assert f.state == 'built'
 
-  assert createJob( 'other', f, 'tester' ) is not None
+  assert createJob( 'other', f, TestUser() ) is not None
   assert f.state == 'built'
   assert j.can_start is True
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'other', f, 'tester' )
+    createJob( 'other', f, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   f.foundationjob.delete()
   f = Foundation.objects.get( pk=f.pk )
 
-  assert createJob( 'destroy', f, 'tester' ) is not None
+  assert createJob( 'destroy', f, TestUser() ) is not None
   assert f.state == 'built'
   assert j.can_start is True
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'destroy', f, 'tester' )
+    createJob( 'destroy', f, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   f.foundationjob.delete()
   f = Foundation.objects.get( pk=f.pk )
@@ -355,7 +359,7 @@ def test_job_create():
   si.save()
 
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'create', si, 'tester' )
+    createJob( 'create', si, TestUser() )
   assert str( execinfo.value.code ) == 'INVALID_TARGET'
 
 
@@ -393,18 +397,18 @@ def test_structure_job_create():
   s.save()
 
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'destroy', s, 'tester' )
+    createJob( 'destroy', s, TestUser() )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'other', s, 'tester' )
+    createJob( 'other', s, TestUser() )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
 
-  assert createJob( 'create', s, 'tester' ) is not None
+  assert createJob( 'create', s, TestUser() ) is not None
   assert s.state == 'planned'
   j = s.structurejob
   assert j.can_start is False
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'create', s, 'tester' )
+    createJob( 'create', s, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   f.setBuilt()
   assert j.can_start is True
@@ -412,39 +416,39 @@ def test_structure_job_create():
   s = Structure.objects.get( pk=s.pk )
 
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'destroy', s, 'tester' )
+    createJob( 'destroy', s, TestUser() )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'other', s, 'tester' )
+    createJob( 'other', s, TestUser() )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
 
   s.setBuilt()
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'create', s, 'tester' )
+    createJob( 'create', s, TestUser() )
   assert str( execinfo.value.code ) == 'ALLREADY_BUILT'
   assert s.state == 'built'
 
-  assert createJob( 'other', s, 'tester' ) is not None
+  assert createJob( 'other', s, TestUser() ) is not None
   assert s.state == 'built'
   assert j.can_start is True
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'other', s, 'tester' )
+    createJob( 'other', s, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   s.structurejob.delete()
   s = Structure.objects.get( pk=s.pk )
 
-  assert createJob( 'destroy', s, 'tester' ) is not None
+  assert createJob( 'destroy', s, TestUser() ) is not None
   assert s.state == 'built'
   assert j.can_start is True
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'destroy', s, 'tester' )
+    createJob( 'destroy', s, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   s.structurejob.delete()
   s = Structure.objects.get( pk=s.pk )
 
   f.setLocated()
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'destroy', s, 'tester' )
+    createJob( 'destroy', s, TestUser() )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
 
   # test job type checking
@@ -452,8 +456,8 @@ def test_structure_job_create():
   f.setDestroyed()
   s = Structure.objects.get( pk=s.pk )
   f = Foundation.objects.get( pk=f.pk )
-  assert createJob( 'create', f, 'tester' ) is not None
-  assert createJob( 'create', s, 'tester' ) is not None
+  assert createJob( 'create', f, TestUser() ) is not None
+  assert createJob( 'create', s, TestUser() ) is not None
   s.structurejob.delete()
   f.foundationjob.delete()
   s = Structure.objects.get( pk=s.pk )
@@ -462,9 +466,9 @@ def test_structure_job_create():
   f.setBuilt()
   s = Structure.objects.get( pk=s.pk )
   f = Foundation.objects.get( pk=f.pk )
-  assert createJob( 'other', f, 'tester' ) is not None
+  assert createJob( 'other', f, TestUser() ) is not None
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'create', s, 'tester' )
+    createJob( 'create', s, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   f.foundationjob.delete()
   s = Structure.objects.get( pk=s.pk )
@@ -473,8 +477,8 @@ def test_structure_job_create():
   f.setBuilt()
   s = Structure.objects.get( pk=s.pk )
   f = Foundation.objects.get( pk=f.pk )
-  assert createJob( 'destroy', f, 'tester' ) is not None
-  assert createJob( 'destroy', s, 'tester' ) is not None
+  assert createJob( 'destroy', f, TestUser() ) is not None
+  assert createJob( 'destroy', s, TestUser() ) is not None
   s.structurejob.delete()
   f.foundationjob.delete()
   s = Structure.objects.get( pk=s.pk )
@@ -483,9 +487,9 @@ def test_structure_job_create():
   f.setBuilt()
   s = Structure.objects.get( pk=s.pk )
   f = Foundation.objects.get( pk=f.pk )
-  assert createJob( 'other', f, 'tester' ) is not None
+  assert createJob( 'other', f, TestUser() ) is not None
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'destroy', s, 'tester' )
+    createJob( 'destroy', s, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   f.foundationjob.delete()
   s = Structure.objects.get( pk=s.pk )
@@ -533,19 +537,19 @@ def test_dependency_job_create():
   d.save()
 
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'destroy', d, 'tester' )
+    createJob( 'destroy', d, TestUser() )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
 
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'other', d, 'tester' )
+    createJob( 'other', d, TestUser() )
   assert str( execinfo.value.code ) == 'INVALID_SCRIPT'
 
-  assert createJob( 'create', d, 'tester' ) is not None
+  assert createJob( 'create', d, TestUser() ) is not None
   assert d.state == 'planned'
   j = d.dependencyjob
   assert j.can_start is False
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'create', d, 'tester' )
+    createJob( 'create', d, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   s.setBuilt()
   assert j.can_start is True
@@ -553,20 +557,20 @@ def test_dependency_job_create():
   d = Dependency.objects.get( pk=d.pk )
 
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'destroy', d, 'tester' )
+    createJob( 'destroy', d, TestUser() )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
 
   d.setBuilt()
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'create', d, 'tester' )
+    createJob( 'create', d, TestUser() )
   assert str( execinfo.value.code ) == 'ALLREADY_BUILT'
   assert d.state == 'built'
 
-  assert createJob( 'destroy', d, 'tester' ) is not None
+  assert createJob( 'destroy', d, TestUser() ) is not None
   assert d.state == 'built'
   assert j.can_start is True
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'destroy', d, 'tester' )
+    createJob( 'destroy', d, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   d.dependencyjob.delete()
   d = Dependency.objects.get( pk=d.pk )
@@ -576,8 +580,8 @@ def test_dependency_job_create():
   s.setDestroyed()
   d = Dependency.objects.get( pk=d.pk )
   s = Structure.objects.get( pk=s.pk )
-  assert createJob( 'create', s, 'tester' ) is not None
-  assert createJob( 'create', d, 'tester' ) is not None
+  assert createJob( 'create', s, TestUser() ) is not None
+  assert createJob( 'create', d, TestUser() ) is not None
   d.dependencyjob.delete()
   s.structurejob.delete()
   d = Dependency.objects.get( pk=d.pk )
@@ -586,9 +590,9 @@ def test_dependency_job_create():
   s.setBuilt()
   d = Dependency.objects.get( pk=d.pk )
   s = Structure.objects.get( pk=s.pk )
-  assert createJob( 'other', s, 'tester' ) is not None
+  assert createJob( 'other', s, TestUser() ) is not None
   with pytest.raises( ValueError ) as execinfo:
-    createJob( 'create', d, 'tester' )
+    createJob( 'create', d, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   s.structurejob.delete()
   d = Dependency.objects.get( pk=d.pk )
@@ -597,8 +601,8 @@ def test_dependency_job_create():
   s.setBuilt()
   d = Dependency.objects.get( pk=d.pk )
   s = Structure.objects.get( pk=s.pk )
-  assert createJob( 'destroy', s, 'tester' ) is not None
-  assert createJob( 'destroy', d, 'tester' ) is not None
+  assert createJob( 'destroy', s, TestUser() ) is not None
+  assert createJob( 'destroy', d, TestUser() ) is not None
   d.dependencyjob.delete()
   s.structurejob.delete()
   d = Dependency.objects.get( pk=d.pk )
@@ -607,9 +611,9 @@ def test_dependency_job_create():
   s.setBuilt()
   d = Dependency.objects.get( pk=d.pk )
   s = Structure.objects.get( pk=s.pk )
-  assert createJob( 'other', s, 'tester' ) is not None
+  assert createJob( 'other', s, TestUser() ) is not None
   with pytest.raises( ValueError ) as execinfo:
-    createJob( 'destroy', d, 'tester' )
+    createJob( 'destroy', d, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   s.structurejob.delete()
   d = Dependency.objects.get( pk=d.pk )
@@ -635,7 +639,7 @@ def test_can_start_create():
   f.full_clean()
   f.save()
 
-  createJob( 'create', f, 'tester' )
+  createJob( 'create', f, TestUser() )
   assert f.foundationjob.can_start is False
 
   sb = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
@@ -651,7 +655,7 @@ def test_can_start_create():
   s.full_clean()
   s.save()
 
-  createJob( 'create', s, 'tester' )
+  createJob( 'create', s, TestUser() )
   assert f.foundationjob.can_start is False
   assert s.structurejob.can_start is False
 
@@ -661,7 +665,7 @@ def test_can_start_create():
   d.full_clean()
   d.save()
 
-  createJob( 'create', d, 'tester' )
+  createJob( 'create', d, TestUser() )
   assert f.foundationjob.can_start is False
   assert s.structurejob.can_start is False
   assert d.dependencyjob.can_start is False
@@ -672,7 +676,7 @@ def test_can_start_create():
   d2.full_clean()
   d2.save()
 
-  createJob( 'create', d2, 'tester' )
+  createJob( 'create', d2, TestUser() )
   assert f.foundationjob.can_start is False
   assert s.structurejob.can_start is False
   assert d.dependencyjob.can_start is False
@@ -757,7 +761,7 @@ def test_can_start_destroy():
 
   f.setBuilt()
 
-  createJob( 'destroy', f, 'tester' )
+  createJob( 'destroy', f, TestUser() )
   assert f.foundationjob.can_start is True
 
   sb = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
@@ -775,7 +779,7 @@ def test_can_start_destroy():
 
   s.setBuilt()
 
-  createJob( 'destroy', s, 'tester' )
+  createJob( 'destroy', s, TestUser() )
   assert f.foundationjob.can_start is False
   assert s.structurejob.can_start is True
 
@@ -787,7 +791,7 @@ def test_can_start_destroy():
 
   d.setBuilt()
 
-  createJob( 'destroy', d, 'tester' )
+  createJob( 'destroy', d, TestUser() )
   assert f.foundationjob.can_start is False
   assert s.structurejob.can_start is False
   assert d.dependencyjob.can_start is True
@@ -800,7 +804,7 @@ def test_can_start_destroy():
 
   d2.setBuilt()
 
-  createJob( 'destroy', d2, 'tester' )
+  createJob( 'destroy', d2, TestUser() )
   assert f.foundationjob.can_start is False
   assert s.structurejob.can_start is False
   assert d.dependencyjob.can_start is False

@@ -103,6 +103,7 @@ class Migration(migrations.Migration):
                 ('networkinterface_ptr', models.OneToOneField(to='Utilities.NetworkInterface', parent_link=True, serialize=False, primary_key=True, auto_created=True)),
                 ('mac', models.CharField(max_length=18, blank=True, null=True)),
                 ('physical_location', models.CharField(max_length=100)),
+                ('link_name', models.CharField(max_length=100, blank=True, null=True)),
                 ('foundation', models.ForeignKey(to='Building.Foundation', related_name='networkinterface_set')),
                 ('pxe', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='BluePrint.PXE', null=True, blank=True, related_name='+')),
             ],

@@ -71,7 +71,7 @@ class NoRollback( Exception ):
 # for values in modules, the getter/setter must not block, if you need to block
 # make a external function
 
-# for an inline non-pausing/remote function, you only need to implement execute and value, toSubcontractor is not called if ready is immeditally True.
+# for an inline non-pausing/remote function, you only need to implement execute and value, toSubcontractor is not called if done is immeditally True.
 
 # any exceptions raised in any of these functions will cause the job the script is running for to end up in error state. Using any Excpetions other than
 # ExecutionError and UnrecoverableError will have it's Exception Name displayed in the output, otherwise it is treaded as Unrecoverable... where possible
@@ -82,7 +82,7 @@ class NoRollback( Exception ):
 # lock up and never return it's results to fromSubcontractor (lock up, network issues, process terminated, etc.), design acordingly.
 
 # it is perfectly acceptable to not complete the remote function in one request, if some communication betwee contractor and subcontractor modules is needed
-# this is allowed, keep in-mind, you may need to handle retries.  When handeling retries, do not rely on counting the number of times toSubcontractor/run/ready
+# this is allowed, keep in-mind, you may need to handle retries.  When handeling retries, do not rely on counting the number of times toSubcontractor/run/done/message
 # are called, it is acceptable to store local timers.
 
 # any communication between the contractor and subcontractor pairs must happen between to/fromSubcontractor calls, if an operation requires multiple
@@ -99,18 +99,22 @@ first execution:
 
 reset/rollback event:
   rollback()
-  if values to subcontractor is outstanding, that is reset
+  if values to subcontractor is outstanding, that is re-sent
 
 
 following executions:
-  if ready is False or str:
+  if done is False:
     run()
+    set job status to status
     if value dispatched to subcontractor and returned:
       toSubcontractor() -> if not None, value dispatched to subcontractor
 
-  if ready is True:
+  if done is True:
     value is retreived and returned to script
 
+Subcontractor returns result:
+  fromSubcontractor()
+  set job status to status
 """
 
 
@@ -125,28 +129,39 @@ class ExternalFunction( object ):
     super().__init__()
 
   @property
-  def ready( self ):
+  def done( self ):
+    # return True when task is done, False when there is more to do
     # this is called every time contractor wants to know if this script can continue.
     # keep in mind that subcontractor, users, and other processes cause this to be called
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     # this is called frequently, keep it light
-    # True -> can continue, False -> can not continue, <str> -> is treated as a status message and is displaied (otherwise treated as False)
+    # True -> can continue, False -> can not continue
     # anything else is cast to a string and treaded as a non-resumeable error
     # it is probably wise that this funcion does not do any processing, it may be call multiple times with out any other function in the class being called.
-    # do not depend on value being called imeditally after ready returns True, ready may have to return True multiple times before the value is
-    # reterieved and the object is cleaned up.  It is also possible that ready may still be called after value is reterieved.
-    # NOTE: if ready ever returns True, it can not take that back, bad things may happen.  Including throwing exceptions, they will probably be ignored.
+    # do not depend on value being called imeditally after done returns True, done may have to return True multiple times before the value is
+    # reterieved and the object is cleaned up.  It is also possible that done may still be called after value is reterieved.
+    # NOTE: if done ever returns True, it can not take that back, bad things may happen.  Including throwing exceptions, they will probably be ignored.
     return True
 
   @property
+  def message( self ):
+    # this is called when done returns False, or after fromSubContractor is called
+    # the result is used to set the job status message
+    # keep in mind that subcontractor, users, and other processes cause this to be called
+    # this is called frequently, keep it light
+    # it is probably wise that this funcion does not do any processing, it may be call multiple times with out any other function in the class being called.
+    # this can be called multiple times before and after done is True and/or the  vaule has been retrieved
+    return ''
+
+  @property
   def value( self ):
-    # this returns the return value of this function, called only once, after ready returns True
+    # this returns the return value of this function, called only once, after done returns True
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     # if the returned value is an instance of Exception, it is raised and the return value is None, the function is considered executed
     return None
 
   def run( self ):
-    # called after ready is checked and returns False
+    # called after done is checked and returns False
     # raising Pause is allowed
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     pass
@@ -154,7 +169,7 @@ class ExternalFunction( object ):
   def setup( self, parms ):
     # this function is only called once when the function is first called in the script.
     # parms is a dict of the paramaters passed in from the script
-    # if the params are not wnat they should be, raise ParamaterError
+    # if the params are not what they should be, raise ParamaterError
     # make sure to do strict saninity checks on the in bound paramaters.
     # do not raise Pause, any exceptions raised will cause setup to be called again, which
     # is desired when validating paramaters
@@ -179,7 +194,7 @@ class ExternalFunction( object ):
     # this is sent to the subcontractor
     # this should return a tuple
     # first paramater is the function inside the plugin to call, second is the value to send to the function
-    # this is called initially, then again after fromSubcontractor has returnd results until ready is True
+    # this is called initially, then again after fromSubcontractor has returnd results until done is True
     # example: return ( 'myfunc', { 'stuff': 'for', 'myfunc': 'to use' } ) # NOTE: the paramater part can be anything that is serilizable
     # if None is returned, contractor will not be notified to do anything
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
@@ -187,15 +202,14 @@ class ExternalFunction( object ):
     pass
 
   def fromSubcontractor( self, data ):
-    # return value is send back to subcontractor so the plugin in subcontractor can get some feedback  TODO: interesting the code in Forman.lib only accepts 'Accepted', have to look into this
     # data will be a dict
-    # this will be called once for every toSubcontractor task sent to subcontractor.  There  could be external
+    # this will be called once for every toSubcontractor task sent to subcontractor.  There could be external
     # logic that looks for timeout/loss of results and call rollback to start from the top
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
-    # subcontractor threads will be waiting on this function, don't do anything to heavy to hold up contractor
+    # subcontractor threads will be waiting on this function, don't do anything to heavy to hold up contractor/subcontractor
     # if there is a problem with the data from subcontractor or some other fatal error occurs,
-    #   have ready() return True and return an Exception for value, NOTE: this kills this instance of the function unless rolled back
-    return True
+    #   have done return True and return an Exception for value, NOTE: this kills this instance of the function unless rolled back
+    pass
 
   def __getstate__( self ):
     # return serilizable value that will be passed to __setstate__ when execution is resumed
@@ -223,11 +237,12 @@ class Delay( ExternalFunction ):
     self.end_at = None
 
   @property
-  def ready( self ):
-    if datetime.datetime.utcnow() >= self.end_at:
-      return True
-    else:
-      return 'Waiting for {0} more seconds'.format( ( self.end_at - datetime.datetime.utcnow() ).seconds )
+  def done( self ):
+    return datetime.datetime.utcnow() >= self.end_at
+
+  @property
+  def message( self ):
+    return 'Waiting for {0} more seconds'.format( ( self.end_at - datetime.datetime.utcnow() ).seconds )
 
   def setup( self, parms ):
     seconds = 0
@@ -586,10 +601,10 @@ class Runner( object ):
         try:
           getter = module[ op_data[ 'name' ] ][0]  # index 0 is the getter
         except KeyError:
-          raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
+          raise NotDefinedError( '{0}" of module "{1}'.format( op_data[ 'name' ], op_data[ 'module' ] ), self.cur_line )
 
         if getter is None:
-          raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
+          raise ParamaterError( 'target', '"{0}" of module "{1}" is not gettable'.format( op_data[ 'name' ], op_data[ 'module' ] ), self.cur_line )
 
         try:
           value = getter()
@@ -895,12 +910,9 @@ class Runner( object ):
         if isinstance( handler, ExternalFunction ):  # else was allready run and set a value above
           handler._runner = self
           try:
-            ready = handler.ready
-            if ready is not True:
+            if not handler.done:
               handler.run()
-              if ready is False:
-                ready = ''
-              raise Interrupt( ready )
+              raise Interrupt( handler.message )
 
             value = handler.value
 
@@ -909,8 +921,8 @@ class Runner( object ):
 
           except Exception as e:
             module = op_data.get( 'module', '<builtin>' )
-            _debugDump( 'Handler "{0}" in module "{1}" error during ready/run/value on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )
-            raise UnrecoverableError( 'Handler "{0}" in module "{1}" error during ready/run/value on line "{2}": "{3}"({4})'.format( handler.__class__.__name__, module, self.cur_line, str( e ), e.__class__.__name__) )
+            _debugDump( 'Handler "{0}" in module "{1}" error during done/message/run/value on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )
+            raise UnrecoverableError( 'Handler "{0}" in module "{1}" error during done/message/run/value on line "{2}": "{3}"({4})'.format( handler.__class__.__name__, module, self.cur_line, str( e ), e.__class__.__name__) )
 
         self.state[ state_index ][1] = None
         if isinstance( value, Exception ):
@@ -1038,18 +1050,18 @@ class Runner( object ):
 
   def fromSubcontractor( self, cookie, data ):
     if self.done or self.aborted or self.state == []:
-      return 'Script not Running'
+      return ( 'Script not Running', None )
 
     if cookie != self.contractor_cookie:
-      return 'Bad Cookie'
+      return ( 'Bad Cookie', None )
 
     operation = self.state[ -1 ]
 
     if operation[0] != Types.FUNCTION:
-      return 'Not At a Function'
+      return ( 'Not At a Function', None )
 
     if operation[1][ 'dispatched' ] is False:
-      return 'Not Expecting anything'
+      return ( 'Not Expecting Anything', None )
 
     handler = operation[1][ 'handler' ]
     handler._runner = self
@@ -1057,11 +1069,11 @@ class Runner( object ):
       handler.fromSubcontractor( data )
     except Exception as e:
       _debugDump( 'Handler "{0}" in module "{1}" error during fromSubcontractor on line "{2}"'.format( handler.__class__.__name__, operation[1][ 'module' ], self.cur_line ), e, self.ast, self.state )
-      return 'Error'  # TODO: log something?
+      return ( 'Error', None )  # TODO: log something?
 
     operation[1][ 'dispatched' ] = False
 
-    return 'Accepted'
+    return ( 'Accepted', handler.message )
 
   def clearDispatched( self ):
     if self.done or self.aborted or self.state == []:

@@ -18,7 +18,7 @@ from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Building.models import Structure
 from contractor.Site.models import Site
 from contractor.Directory.models import Zone, Entry
-from contractor.Utilities.models import RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress
+from contractor.Utilities.models import Network, RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress, NetworkAddressBlock
 from contractor.plugins.Manual.models import ManualFoundation
 
 parser = argparse.ArgumentParser( description='Contractor SetupWizzard, must be run as root' )
@@ -78,16 +78,24 @@ if contractor_dns is None:
   print( 'Unable to discover DNS' )
   sys.exit( 1 )
 
+try:
+  contractor_iface, contractor_vlan = args.primary_interface.split( '.' )
+except IndexError:
+  contractor_vlan = 0
+
 network_subnet = IpToStr( CIDRSubnet( StrToIp( contractor_ip_address ), network_prefix ) )
 
 contractor_ip_offset = StrToIp( contractor_ip_address ) - StrToIp( network_subnet )
 
 print( '  --- Detected Network Configuration ---')
+print( '     Interface: "{0}"'.format( contractor_iface ) )
 print( 'Network/Prefix: "{0}/{1}"'.format( network_subnet, network_prefix ) )
 print( ' Contractor Ip: "{0}", offset "{1}"'.format( contractor_ip_address, contractor_ip_offset ) )
 if contractor_gateway is not None:
   print( '       Gateway: "{0}"'.format( contractor_gateway ) )
 print( '           DNS: "{0}"'.format( contractor_dns ) )
+if contractor_vlan:
+  print( '          VLAN: "{0}"'.format( contractor_vlan ) )
 print()
 
 if args.dns_server is None:
@@ -140,28 +148,43 @@ s1.full_clean()
 s1.save()
 
 print( 'creating network...' )
-addr1_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=1, prefix=network_prefix, name='main' )
-addr1_block.full_clean()
-addr1_block.save()
+ntwk = Network( name='main', site=s1 )
+ntwk.full_clean()
+ntwk.save()
 
-print( 'contractor entry...' )
-fdn_dev = ManualFoundation( site=s1, blueprint=fbp_manual, locator='contractor' )
-fdn_dev.full_clean()
-fdn_dev.save()
-fdn_dev.setBuilt()
+if contractor_gateway is not None:
+  gateway_offset = StrToIp( contractor_gateway ) - StrToIp( network_subnet )
+  if gateway_offset < 1 or gateway_offset > 254:
+    print( 'Bad caculated gateway offset: "{0}"'.format( gateway_offset ) )
+  addr_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=gateway_offset, prefix=network_prefix, name='main' )
+else:
+  addr_block = AddressBlock( site=s1, subnet=network_subnet, prefix=network_prefix, name='main' )
 
-iface = RealNetworkInterface( name=contractor_iface, is_provisioning=True )
-iface.foundation = fdn_dev
+addr_block.full_clean()
+addr_block.save()
+
+nab = NetworkAddressBlock( network=ntwk, address_block=addr_block, vlan=contractor_vlan )
+nab.full_clean()
+nab.save()
+
+print( 'creating contractor host...' )
+fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator='contractor' )
+fdn.full_clean()
+fdn.save()
+fdn.setBuilt()
+
+iface = RealNetworkInterface( name=contractor_iface, is_provisioning=True, network=ntwk )
+iface.foundation = fdn
 iface.physical_location = contractor_iface
 iface.full_clean()
 iface.save()
 
-str_dev = Structure( site=s1, blueprint=sbp_xenial, hostname='contractor', foundation=fdn_dev )
-str_dev.full_clean()
-str_dev.save()
-str_dev.setBuilt()
+strct = Structure( site=s1, blueprint=sbp_xenial, hostname='contractor', foundation=fdn )
+strct.full_clean()
+strct.save()
+strct.setBuilt()
 
-addr = Address( networked=str_dev, address_block=addr1_block, interface_name=contractor_iface, offset=contractor_ip_offset, is_primary=True )
+addr = Address( networked=strct, address_block=addr_block, interface_name=contractor_iface, offset=contractor_ip_offset, is_primary=True )
 addr.full_clean()
 addr.save()
 
@@ -174,7 +197,7 @@ e.save()
 if not args.no_ip_reservation:
   print( 'reserving address offsets from 2 - 20...')
   for i in range( 2, 21 ):
-    addr = ReservedAddress( address_block=addr1_block, offset=i, reason='network reserved' )
+    addr = ReservedAddress( address_block=addr_block, offset=i, reason='network reserved' )
     try:
       addr.full_clean()
     except ValidationError:
@@ -185,7 +208,7 @@ if not args.no_ip_reservation:
 
   print( 'using offsets 21 - 29 for dynamic pool...' )
   for i in range( 21, 30 ):
-    addr = DynamicAddress( address_block=addr1_block, offset=i )
+    addr = DynamicAddress( address_block=addr_block, offset=i )
     try:
       addr.full_clean()
     except ValidationError:

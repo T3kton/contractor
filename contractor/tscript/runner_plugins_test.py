@@ -36,12 +36,16 @@ class Remote( ExternalFunction ):
     self.counter = 0
 
   @property
-  def ready( self ):
+  def done( self ):
+    return self.state is not None
+
+  @property
+  def message( self  ):
     if self.state is None:
       return 'Not Initilized'
 
-    if self.state is not None:
-      return True
+    else:
+      return 'Current State "{0}"'.format( self.state )
 
   @property
   def value( self ):
@@ -92,10 +96,11 @@ class Count( ExternalFunction ):
     self.counter += self.count_by
 
   @property
-  def ready( self ):
-    if self.counter >= self.stop_at:
-      return True
+  def done( self ):
+    return self.counter >= self.stop_at
 
+  @property
+  def message( self ):
     return 'at {0} of {1}'.format( self.counter, self.stop_at )
 
   def __getstate__( self ):

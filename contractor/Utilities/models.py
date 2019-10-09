@@ -414,6 +414,7 @@ class RealNetworkInterface( NetworkInterface ):
   mac = models.CharField( max_length=18, blank=True, null=True )  # in a globally unique world we would set this to unique, but these virtual days we have to many ways to use the same mac safely, so good luck.
   foundation = models.ForeignKey( 'Building.Foundation', related_name='networkinterface_set', on_delete=models.CASCADE )
   physical_location = models.CharField( max_length=100 )
+  link_name = models.CharField( max_length=100, blank=True, null=True )  # Until NetworkInterfaces can plug to each other and better ways of storing LLDP info
   pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True, on_delete=models.PROTECT )
 
   @property
@@ -516,7 +517,7 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
     return 'AggregatedNetworkInterface "{0}"'.format( self.name )
 
 
-@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'ip_address', 'subclass', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
+@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'type', 'ip_address', 'subnet', 'netmask', 'prefix', 'gateway' ) )
 class BaseAddress( models.Model ):
   address_block = models.ForeignKey( AddressBlock, blank=True, null=True, on_delete=models.CASCADE )
   offset = models.IntegerField( blank=True, null=True )
@@ -653,7 +654,7 @@ class BaseAddress( models.Model ):
     return 'BaseAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
 
 
-@cinp.model( property_list=( 'ip_address', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
+@cinp.model( property_list=( 'type', 'ip_address', 'subnet', 'netmask', 'prefix', 'gateway' ) )
 class Address( BaseAddress ):
   networked = models.ForeignKey( Networked, on_delete=models.CASCADE )
   interface_name = models.CharField( max_length=20 )
@@ -788,7 +789,7 @@ class Address( BaseAddress ):
     return 'Address in Block "{0}" offset "{1}" networked "{2}" on interface "{3}"'.format( self.address_block, self.offset, self.networked, self.interface_name )
 
 
-@cinp.model( property_list=( 'ip_address', 'type' ) )
+@cinp.model( property_list=( 'type', 'ip_address', 'subnet', 'netmask', 'prefix', 'gateway' ) )
 class ReservedAddress( BaseAddress ):
   reason = models.CharField( max_length=50 )
 
@@ -826,7 +827,7 @@ class ReservedAddress( BaseAddress ):
     return 'ReservedAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
 
 
-@cinp.model( property_list=( 'ip_address', 'type', 'network', 'netmask', 'gateway', 'prefix' ) )
+@cinp.model( property_list=( 'type', 'ip_address', 'subnet', 'netmask', 'prefix', 'gateway' ) )
 class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto detected
   pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True, on_delete=models.CASCADE )
 
