@@ -100,7 +100,7 @@ class Foundation extends React.Component
                   <tr><th>State</th><td>{ foundation.state }</td></tr>
                   <tr><th>Type</th><td>{ foundation.type }</td></tr>
                   <tr><th>Blueprint</th><td><Link to={ '/blueprint/f/' + foundation.blueprint }>{ foundation.blueprint }</Link></td></tr>
-                  <tr><th>Id Map</th><td>{ foundation.id_map }</td></tr>
+                  <tr><th>Id Map</th><td>{ JSON.stringify( foundation.id_map ) }</td></tr>
                   <tr><th>Interfaces</th><td><ul>{ this.state.interface_list.map( ( item, index ) => (
                     <li key={ index }>{ JSON.stringify( item ) }</li>
                   ) ) }</ul></td></tr>

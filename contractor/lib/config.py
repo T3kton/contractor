@@ -228,6 +228,9 @@ def getConfig( target ):
     except AttributeError:
       pass
 
+  elif 'BaseAddress' in [ i.__name__ for i in target.__class__.__mro__ ]:
+    last_modified = max( last_modified, _siteConfig( target.address_block.site, class_list, config ) )
+
   else:
     raise ValueError( 'Don\'t know how to get config for "{0}"'.format( target ) )
 

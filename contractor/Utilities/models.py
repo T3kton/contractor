@@ -606,11 +606,17 @@ class BaseAddress( models.Model ):
   @staticmethod
   def lookup( ip_address ):
     try:
+      ip_address_ip = StrToIp( ip_address )
+    except ValueError:
+      return None
+
+    ip_address = IpToStr( ip_address_ip )  # so it is in a consistant format
+    try:
       address_block = AddressBlock.objects.get( subnet__lte=ip_address, _max_address__gte=ip_address )
     except AddressBlock.DoesNotExist:
       return None
 
-    offset = StrToIp( ip_address ) - StrToIp( address_block.subnet )
+    offset = ip_address_ip - StrToIp( address_block.subnet )
     try:
       return BaseAddress.objects.get( address_block=address_block, offset=offset )
     except BaseAddress.DoesNotExist:

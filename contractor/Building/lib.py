@@ -1,8 +1,7 @@
-# from contractor.Building.models import Structure
-from contractor.Utilities.models import NetworkInterface, Address
+from contractor.Utilities.models import RealNetworkInterface, BaseAddress
 
 
-def structureLookup( info_map ):  # TODO: do we bail when what we come to failes? or do we keep going, or a paramater that saies to keep trying, and/or a list of all the possibilities
+def foundationLookup( info_map ):  # TODO: do we bail when what we come to failes? or do we keep going, or a paramater that saies to keep trying, and/or a list of all the possibilities
   # if 'config_uuid' in info_map:
   #   try:
   #     return Structure.objects.get( config_uuid=info_map[ 'config_uuid' ] )
@@ -10,14 +9,24 @@ def structureLookup( info_map ):  # TODO: do we bail when what we come to failes
   #     return None
 
   if 'lldp' in info_map:
-    iface_list = NetworkInterface.objects.filter( link_name=info_map[ 'lldp' ] )
-    if len( iface_list ) > 1:
-      raise Exception( 'To Many results' )
+    for iface_name, lldp_info in info_map[ 'lldp' ].items():
+      lldp_name = '{0}-{1}-{2}-{3}'.format( lldp_info[ 'mac' ], lldp_info[ 'slot' ], lldp_info[ 'port' ], lldp_info[ 'subport' ] )
+      try:
+        iface = RealNetworkInterface.objects.get( link_name=lldp_name )
+        return ( 'lldp by mac interface: "{0}"'.format( iface_name ), iface.foundation )
+      except ( RealNetworkInterface.MultipleObjectsReturned, RealNetworkInterface.DoesNotExist ):
+        pass
 
-    return iface_list[0].foundation.structure
+      lldp_name = '{0}-{1}-{2}-{3}'.format( lldp_info[ 'name' ], lldp_info[ 'slot' ], lldp_info[ 'port' ], lldp_info[ 'subport' ] )
+      try:
+        iface = RealNetworkInterface.objects.get( link_name=lldp_name )
+        return ( 'lldp by name interface: "{0}"'.format( iface_name ), iface.foundation )
+      except ( RealNetworkInterface.MultipleObjectsReturned, RealNetworkInterface.DoesNotExist ):
+        pass
 
   if 'ip_address' in info_map:
-    address = Address.lookup( info_map[ 'ip_address' ] )
-    return address.structure
+    address = BaseAddress.lookup( info_map[ 'ip_address' ] ).subclass
+    if address.type == 'Address':
+      return ( 'ip_address: "{0}"'.format( info_map[ 'ip_address' ] ), address.structure.foundation )
 
-  return None
+  return ( None, None )

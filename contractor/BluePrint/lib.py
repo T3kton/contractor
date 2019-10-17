@@ -1,2 +1,4 @@
 def checkTemplate( template, id_map ):
-  return True
+  error = ''
+
+  return error

@@ -238,7 +238,7 @@ class PXE( models.Model ):
     return True
 
   def __str__( self ):
-    return 'PXE "{0}"'.format( self.name, self.script )
+    return 'PXE "{0}"'.format( self.name )
 
 
 post_save.connect( post_save_callback, sender=FoundationBluePrint )
