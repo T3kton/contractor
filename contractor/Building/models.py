@@ -13,6 +13,8 @@ from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked, RealNetworkInterface
 from contractor.lib.config import getConfig, mergeValues
+from contractor.BluePrint.lib import checkTemplate
+from contractor.Building.lib import foundationLookup
 from contractor.Records.lib import post_save_callback, post_delete_callback
 
 # this is where the plan meets the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
@@ -48,6 +50,37 @@ class Foundation( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
+  @cinp.action( return_type={ 'type': 'String' }, paramater_type_list=[ 'Map' ] )
+  def setIdMap( self, id_map ):
+    template = self.blueprint.getTemplate()
+
+    if template is not None:
+      error = checkTemplate( template, id_map )
+      if error:
+        return str( error )
+
+    self.id_map = id_map
+    self.full_clean()
+    self.save()
+
+    for iface in RealNetworkInterface.objects.filter( foundation=self ):
+      if iface.physical_location in id_map[ 'network' ]:
+        iface.mac = id_map[ 'network' ][ iface.physical_location ][ 'mac' ]
+        iface.full_clean()
+        iface.save()
+
+    return 'Good'
+
+  # @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, paramater_type_list=[ 'Map' ] )
+  @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ 'Map' ] )
+  @staticmethod
+  def lookup( info_map=None ):
+    ( matched_by, foundation ) = foundationLookup( info_map )
+    if foundation is not None:
+      foundation = foundation.locator
+
+    return { 'matched_by': matched_by, 'locator': foundation }
+
   @cinp.action()
   def setLocated( self ):
     """
@@ -55,6 +88,11 @@ class Foundation( models.Model ):
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
+
+    template = self.blueprint.getTemplate()
+    if template is not None and not self.id_map:
+      raise Exception( 'Foundations with blueprints, which specify templates, require id_map to be set before setting to Located' )
+
     try:  # TODO: should we find and clear any jobs (that didn't cause this to be called?)
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
@@ -62,6 +100,7 @@ class Foundation( models.Model ):
 
     self.located_at = timezone.now()
     self.built_at = None
+    self.full_clean()
     self.save()
 
   @cinp.action()
@@ -70,8 +109,12 @@ class Foundation( models.Model ):
     Set the Foundation to 'built' state.  This will not create/destroy any jobs.
     """
     if self.located_at is None:
+      if self.blueprint.getTemplate() is not None:
+        raise Exception( 'Foundation with Blueprints with templates must be located first' )
       self.located_at = timezone.now()
+
     self.built_at = timezone.now()
+    self.full_clean()
     self.save()
 
   @cinp.action()
@@ -88,6 +131,8 @@ class Foundation( models.Model ):
 
     self.built_at = None
     self.located_at = None
+    self.id_map = None
+    self.full_clean()
     self.save()
 
   @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
@@ -105,6 +150,17 @@ class Foundation( models.Model ):
     """
     from contractor.Foreman.lib import createJob
     return createJob( 'destroy', self, user.username )
+
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_', 'String' ]  )
+  def doJob( self, user, name ):
+    """
+    This will submit a job to run the specified script.
+    """
+    from contractor.Foreman.lib import createJob
+    if name in ( 'create', 'destroy' ):
+      raise ValueError( 'Invalid Job Name' )
+
+    return createJob( name, self, user.username )
 
   @staticmethod
   def getTscriptValues( write_mode=False ):  # locator is handled seperatly
@@ -290,11 +346,13 @@ class Structure( Networked ):
 
   def setBuilt( self ):
     self.built_at = timezone.now()
+    self.full_clean()
     self.save()
 
   def setDestroyed( self ):
     self.built_at = None
     self.config_uuid = str( uuid.uuid4() )  # new on destroyed, that way we can leave anything that might still be kicking arround in the dust
+    self.full_clean()
     self.save()
     for dependency in self.dependant_dependencies:
       dependency.setDestroyed()
@@ -360,6 +418,14 @@ class Structure( Networked ):
   def doDestroy( self, user ):
     from contractor.Foreman.lib import createJob
     return createJob( 'destroy', self, user.username )
+
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_', 'String' ]  )
+  def doJob( self, user, name ):
+    from contractor.Foreman.lib import createJob
+    if name in ( 'create', 'destroy' ):
+      raise ValueError( 'Invalid Job Name' )
+
+    return createJob( name, self, user.username )
 
   @cinp.action( return_type='Map' )
   def getConfig( self ):
@@ -609,10 +675,12 @@ class Dependency( models.Model ):
 
   def setBuilt( self ):
     self.built_at = timezone.now()
+    self.full_clean()
     self.save()
 
   def setDestroyed( self ):
     self.built_at = None
+    self.full_clean()
     self.save()
     for dependency in self.dependant_dependencies:
       dependency.setDestroyed()

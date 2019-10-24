@@ -1,7 +1,7 @@
 import pytest
 
 from contractor.Site.models import Site
-from contractor.Utilities.models import AddressBlock, Address, RealNetworkInterface
+from contractor.Utilities.models import AddressBlock, Address, RealNetworkInterface, Network
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint, PXE
 from contractor.Building.models import Foundation, Structure
 from contractor.lib.config_handler import url_regex, handler
@@ -17,36 +17,64 @@ def test_url_regex():
   assert url_regex.match( '/config/234/1' ) is None
   assert url_regex.match( '/config/234/00000000-0000-4000-0000-000000000000' ) is None
   assert url_regex.match( '/config/234/locator' ) is None
+  assert url_regex.match( '/config/234/0.0.0.0' ) is None
+  assert url_regex.match( '/config/234/1::0' ) is None
   assert url_regex.match( '/config/234/s/1' ) is None
   assert url_regex.match( '/config/234/c/00000000-0000-4000-0000-000000000000' ) is None
   assert url_regex.match( '/config/234/f/locator' ) is None
+  assert url_regex.match( '/config/234/a/0.0.0.0' ) is None
   assert url_regex.match( '/config/config/1' ) is None
   assert url_regex.match( '/config/config/00000000-0000-4000-0000-000000000000' ) is None
   assert url_regex.match( '/config/config/locator' ) is None
+  assert url_regex.match( '/config/config/0.0.0.0' ) is None
+  assert url_regex.match( '/config/config/1::0' ) is None
 
-  assert url_regex.match( '/config/config/' ).groups() == ( 'config', None, None, None, None )
-  assert url_regex.match( '/config/boot_script/' ).groups() == ( 'boot_script', None, None, None, None )
-  assert url_regex.match( '/config/pxe_template/' ).groups() == ( 'pxe_template', None, None, None, None )
+  assert url_regex.match( '/config/config/' ).groups() == ( 'config', None, None, None, None, None, None, None, None )
+  assert url_regex.match( '/config/boot_script/' ).groups() == ( 'boot_script', None, None, None, None, None, None, None, None )
+  assert url_regex.match( '/config/pxe_template/' ).groups() == ( 'pxe_template', None, None, None, None, None, None, None, None )
 
   assert url_regex.match( '/config/config/s/00000000-0000-4000-0000-000000000000' ) is None
   assert url_regex.match( '/config/config/s/locator' ) is None
-  assert url_regex.match( '/config/config/s/1' ).groups() == ( 'config', 's/1', None, 's/1', None )
+  assert url_regex.match( '/config/config/s/0.0.0.0' ) is None
+  assert url_regex.match( '/config/config/s/1::0' ) is None
+  assert url_regex.match( '/config/config/s/1' ).groups() == ( 'config', 's/1', None, 's/1', None, None, None, None, None )
   assert url_regex.match( '/config/config/s/sdf' ) is None
-  assert url_regex.match( '/config/config/s/234' ).groups() == ( 'config', 's/234', None, 's/234', None )
+  assert url_regex.match( '/config/config/s/234' ).groups() == ( 'config', 's/234', None, 's/234', None, None, None, None, None )
   assert url_regex.match( '/config/config/s/2d3' ) is None
 
   assert url_regex.match( '/config/config/c/123' ) is None
   assert url_regex.match( '/config/config/c/locator' ) is None
+  assert url_regex.match( '/config/config/c/0.0.0.0' ) is None
+  assert url_regex.match( '/config/config/c/1::0' ) is None
   assert url_regex.match( '/config/config/c/123-123' ) is None
-  assert url_regex.match( '/config/config/c/00000000-0000-4000-0000-000000000000' ).groups() == ( 'config', 'c/00000000-0000-4000-0000-000000000000', 'c/00000000-0000-4000-0000-000000000000', None, None )
-  assert url_regex.match( '/config/config/c/085de71d-9123-45ef-8322-93fa3d1cacea' ).groups() == ( 'config', 'c/085de71d-9123-45ef-8322-93fa3d1cacea', 'c/085de71d-9123-45ef-8322-93fa3d1cacea', None, None )
+  assert url_regex.match( '/config/config/c/00000000-0000-4000-0000-000000000000' ).groups() == ( 'config', 'c/00000000-0000-4000-0000-000000000000', 'c/00000000-0000-4000-0000-000000000000', None, None, None, None, None, None )
+  assert url_regex.match( '/config/config/c/085de71d-9123-45ef-8322-93fa3d1cacea' ).groups() == ( 'config', 'c/085de71d-9123-45ef-8322-93fa3d1cacea', 'c/085de71d-9123-45ef-8322-93fa3d1cacea', None, None, None, None, None, None )
   assert url_regex.match( '/config/config/c/085de71d-9123-45ef-8322-93fa3d1cacea/' ) is None
 
-  assert url_regex.match( '/config/config/f/12' ).groups() == ( 'config', 'f/12', None, None, 'f/12' )
-  assert url_regex.match( '/config/config/f/00000000-0000-4000-0000-000000000000' ).groups() == ( 'config', 'f/00000000-0000-4000-0000-000000000000', None, None, 'f/00000000-0000-4000-0000-000000000000' )
-  assert url_regex.match( '/config/config/f/locator' ).groups() == ( 'config', 'f/locator', None, None, 'f/locator' )
-  assert url_regex.match( '/config/config/f/something-really_fancy' ).groups() == ( 'config', 'f/something-really_fancy', None, None, 'f/something-really_fancy' )
-  assert url_regex.match( '/config/config/f/n00b' ).groups() == ( 'config', 'f/n00b', None, None, 'f/n00b' )
+  assert url_regex.match( '/config/config/f/0.0.0.0' ) is None
+  assert url_regex.match( '/config/config/f/1::0' ) is None
+  assert url_regex.match( '/config/config/f/12' ).groups() == ( 'config', 'f/12', None, None, 'f/12', None, None, None, None )
+  assert url_regex.match( '/config/config/f/00000000-0000-4000-0000-000000000000' ).groups() == ( 'config', 'f/00000000-0000-4000-0000-000000000000', None, None, 'f/00000000-0000-4000-0000-000000000000', None, None, None, None )
+  assert url_regex.match( '/config/config/f/locator' ).groups() == ( 'config', 'f/locator', None, None, 'f/locator', None, None, None, None )
+  assert url_regex.match( '/config/config/f/something-really_fancy' ).groups() == ( 'config', 'f/something-really_fancy', None, None, 'f/something-really_fancy', None, None, None, None )
+  assert url_regex.match( '/config/config/f/n00b' ).groups() == ( 'config', 'f/n00b', None, None, 'f/n00b', None, None, None, None )
+
+  assert url_regex.match( '/config/config/a/00000000-0000-4000-0000-000000000000' ) is None
+  assert url_regex.match( '/config/config/a/locator' ) is None
+  assert url_regex.match( '/config/config/a/1' ) is None
+  assert url_regex.match( '/config/config/a/0.0.0.0' ).groups() == ( 'config', 'a/0.0.0.0', None, None, None, 'a/0.0.0.0', '0.0.0.0', '0.0.0.0', None )
+  assert url_regex.match( '/config/config/a/234.22.12.3' ).groups() == ( 'config', 'a/234.22.12.3', None, None, None, 'a/234.22.12.3', '234.22.12.3', '234.22.12.3', None )
+  assert url_regex.match( '/config/config/a/a.b.c.d' ) is None
+  assert url_regex.match( '/config/config/a/0.0.0.d' ) is None
+  assert url_regex.match( '/config/config/a/0.0.0' ) is None
+  assert url_regex.match( '/config/config/a/1::0' ).groups() == ( 'config', 'a/1::0', None, None, None, 'a/1::0', '1::0', None, ':' )
+  assert url_regex.match( '/config/config/a/2001:db8:0:0:1:0:0:1' ).groups() == ( 'config', 'a/2001:db8:0:0:1:0:0:1', None, None, None, 'a/2001:db8:0:0:1:0:0:1', '2001:db8:0:0:1:0:0:1', None, '0:' )
+  assert url_regex.match( '/config/config/a/2001:DB8:0:0:1:0:0:1' ).groups() == ( 'config', 'a/2001:DB8:0:0:1:0:0:1', None, None, None, 'a/2001:DB8:0:0:1:0:0:1', '2001:DB8:0:0:1:0:0:1', None, '0:' )
+  assert url_regex.match( '/config/config/a/2001:db8::0:1:0:0:1' ).groups() == ( 'config', 'a/2001:db8::0:1:0:0:1', None, None, None, 'a/2001:db8::0:1:0:0:1', '2001:db8::0:1:0:0:1', None, '0:' )
+  assert url_regex.match( '/config/config/a/2001::' ).groups() == ( 'config', 'a/2001::', None, None, None, 'a/2001::', '2001::', None, ':' )
+  assert url_regex.match( '/config/config/a/::ffff' ).groups() == ( 'config', 'a/::ffff', None, None, None, 'a/::ffff', '::ffff', None, ':' )
+  assert url_regex.match( '/config/config/a/0.0.0.0/' ) is None
+  assert url_regex.match( '/config/config/a/1::0/' ) is None
 
 
 class Request:
@@ -70,6 +98,10 @@ def test_handler():
   ab.full_clean()
   ab.save()
 
+  n = Network( name='test', site=s )
+  n.full_clean()
+  n.save()
+
   fbp = FoundationBluePrint( name='fdn_test', description='foundation test bp' )
   fbp.foundation_type_list = 'Unknown'
   fbp.full_clean()
@@ -91,6 +123,7 @@ def test_handler():
   iface = RealNetworkInterface( name='eth0', is_provisioning=True )
   iface.foundation = fdn
   iface.physical_location = 'eth0'
+  iface.network = n
   iface.full_clean()
   iface.save()
 

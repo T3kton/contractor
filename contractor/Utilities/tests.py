@@ -3,7 +3,7 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from contractor.lib.ip import StrToIp
-from contractor.Utilities.models import Networked, AddressBlock, BaseAddress, Address, ReservedAddress, DynamicAddress
+from contractor.Utilities.models import Networked, AddressBlock, Network, NetworkAddressBlock, BaseAddress, Address, ReservedAddress, DynamicAddress, NetworkInterface
 from contractor.Site.models import Site
 
 
@@ -229,6 +229,85 @@ def test_addressblock():
 
 
 @pytest.mark.django_db
+def test_network():
+  s1 = Site( name='tsite1', description='test site1' )
+  s1.full_clean()
+  s1.save()
+
+  ab1 = AddressBlock( site=s1, subnet=StrToIp( '10.0.0.0' ), prefix=24, name='test' )
+  ab1.full_clean()
+  ab1.save()
+
+  n1 = Network()
+  with pytest.raises( ValidationError ):
+    n1.full_clean()
+
+  n1 = Network( name='test', site=s1 )
+  n1.full_clean()
+  n1.save()
+
+  n2 = Network( name='test', site=s1 )
+  with pytest.raises( ValidationError ):
+    n2.full_clean()
+
+  nab1 = NetworkAddressBlock( network=n1, address_block=ab1 )
+  nab1.full_clean()
+  nab1.save()
+
+  nab2 = NetworkAddressBlock( network=n1, address_block=ab1, vlan=0 )
+  nab2.full_clean()
+
+  nab2 = NetworkAddressBlock( network=n1, address_block=ab1, vlan=1 )
+  nab2.full_clean()
+
+  nab2 = NetworkAddressBlock( network=n1, address_block=ab1, vlan=-1 )
+  with pytest.raises( ValidationError ):
+    nab2.full_clean()
+
+  nab2 = NetworkAddressBlock( network=n1, address_block=ab1, vlan=4097 )
+  with pytest.raises( ValidationError ):
+    nab2.full_clean()
+
+  nab2 = NetworkAddressBlock( network=n1, address_block=ab1, vlan=2, vlan_tagged=False )
+  nab2.full_clean()
+
+  nab2 = NetworkAddressBlock( network=n1, address_block=ab1, vlan=2, vlan_tagged=True )
+  nab2.full_clean()
+
+  nab2 = NetworkAddressBlock( network=n1, address_block=ab1, vlan=0, vlan_tagged=False )
+  nab2.full_clean()
+
+  nab2 = NetworkAddressBlock( network=n1, address_block=ab1, vlan=0, vlan_tagged=True )
+  with pytest.raises( ValidationError ):
+    nab2.full_clean()
+
+
+@pytest.mark.django_db
+def test_networkinterface():
+  s1 = Site( name='tsite1', description='test site1' )
+  s1.full_clean()
+  s1.save()
+
+  n1 = Network( name='test', site=s1 )
+  n1.full_clean()
+  n1.save()
+
+  ni1 = NetworkInterface()
+  with pytest.raises( ValidationError ):
+    ni1.full_clean()
+
+  ni1 = NetworkInterface( name='eth0', network=n1 )
+  ni1.full_clean()
+  ni1.save()
+
+  ni2 = NetworkInterface( name='3 d', network=n1 )
+  with pytest.raises( ValidationError ):
+    ni2.full_clean()
+
+  assert ni1.config == { 'name': 'eth0', 'network': 'test', 'address_list': [] }
+
+
+@pytest.mark.django_db
 def test_baseaddress():
   s1 = Site( name='tsite1', description='test site1' )
   s1.full_clean()
@@ -249,6 +328,7 @@ def test_baseaddress():
   ba1 = BaseAddress()
   ba1.full_clean()
   ba1.save()
+  assert ba1.as_dict == { 'address': None, 'netmask': None, 'prefix': None, 'subnet': None, 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress( address_block=ab1 )
   with pytest.raises( ValidationError ):
@@ -269,6 +349,7 @@ def test_baseaddress():
   ba = BaseAddress( address_block=ab1, offset=1 )
   ba.full_clean()
   ba.save()
+  assert ba.as_dict == { 'address': '0.0.0.1', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress( address_block=ab1, offset=1 )
   with pytest.raises( ValidationError ):
@@ -276,6 +357,7 @@ def test_baseaddress():
 
   ba = BaseAddress( address_block=ab1, offset=254 )
   ba.full_clean()
+  assert ba.as_dict == { 'address': '0.0.0.254', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress( address_block=ab1, offset=255 )
   with pytest.raises( ValidationError ):
@@ -283,9 +365,11 @@ def test_baseaddress():
 
   ba = BaseAddress( address_block=ab2, offset=0 )
   ba.full_clean()
+  assert ba.as_dict == { 'address': '1.0.0.0', 'netmask': '255.255.255.254', 'prefix': 31, 'subnet': '1.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress( address_block=ab2, offset=1 )
   ba.full_clean()
+  assert ba.as_dict == { 'address': '1.0.0.1', 'netmask': '255.255.255.254', 'prefix': 31, 'subnet': '1.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress( address_block=ab2, offset=2 )
   with pytest.raises( ValidationError ):
@@ -305,14 +389,17 @@ def test_baseaddress():
 
   ba = BaseAddress( address_block=ab3, offset=2 )
   ba.full_clean()
+  assert ba.as_dict == { 'address': '2.0.0.2', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '2.0.0.0', 'gateway': '2.0.0.1', 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress.objects.get( address_block=ab1, offset=1 )
   assert ba.type == 'Unknown'
   assert ba.ip_address == '0.0.0.1'
+  assert ba.as_dict == { 'address': '0.0.0.1', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress.objects.get( pk=ba1.pk )
   assert ba.type == 'Unknown'
   assert ba.ip_address is None
+  assert ba.as_dict == { 'address': None, 'netmask': None, 'prefix': None, 'subnet': None, 'gateway': None, 'auto': True, 'mtu': 1500 }
 
 
 @pytest.mark.django_db
@@ -340,10 +427,12 @@ def test_address():
   ad1 = Address( networked=nwd, interface_name='tun0' )
   ad1.full_clean()
   ad1.save()
+  assert ad1.as_dict == { 'address': None, 'netmask': None, 'prefix': None, 'subnet': None, 'gateway': None, 'sub_interface': None, 'primary': False, 'auto': True, 'mtu': 1500 }
 
   ad1.address_block = ab2
   ad1.offset = 5
   ad1.save()
+  assert ad1.as_dict == { 'address': '1.0.0.5', 'netmask': '255.255.255.254', 'prefix': 31, 'subnet': '1.0.0.0', 'gateway': None, 'sub_interface': None, 'primary': False, 'auto': True, 'mtu': 1500 }
 
   ad = Address( address_block=ab1 )
   with pytest.raises( ValidationError ):
@@ -360,6 +449,7 @@ def test_address():
   ad = Address( address_block=ab1, offset=1, networked=nwd, interface_name='lo' )
   ad.full_clean()
   ad.save()
+  assert ad.as_dict == { 'address': '0.0.0.1', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'sub_interface': None, 'primary': False, 'auto': True, 'mtu': 1500 }
 
   ad = Address( address_block=ab1, offset=1, pointer=ad1, networked=nwd, interface_name='vpn0' )
   with pytest.raises( ValidationError ):
@@ -384,6 +474,7 @@ def test_address():
   ad = Address( pointer=ad1, networked=nwd, interface_name='vpn0' )
   ad.full_clean()
   ad.save()
+  assert ad.as_dict == { 'address': '1.0.0.5', 'netmask': '255.255.255.254', 'prefix': 31, 'subnet': '1.0.0.0', 'gateway': None, 'sub_interface': None, 'primary': False, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress( address_block=ab1, offset=1 )
   with pytest.raises( ValidationError ):
@@ -392,6 +483,7 @@ def test_address():
   ba = BaseAddress( address_block=ab1, offset=2 )
   ba.full_clean()
   ba.save()
+  assert ba.as_dict == { 'address': '0.0.0.2', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ad = Address( address_block=ab1, offset=2, networked=nwd, interface_name='eth0' )
   with pytest.raises( ValidationError ):
@@ -399,20 +491,6 @@ def test_address():
 
   ad = Address( address_block=ab1, offset=3, networked=nwd, interface_name='lo' )
   ad.full_clean()
-
-  ad = Address( address_block=ab2, offset=0, networked=nwd, interface_name='lo', vlan=0 )
-  ad.full_clean()
-
-  ad = Address( address_block=ab2, offset=0, networked=nwd, interface_name='lo', vlan=1 )
-  ad.full_clean()
-
-  ad = Address( address_block=ab2, offset=0, networked=nwd, interface_name='lo', vlan=-1 )
-  with pytest.raises( ValidationError ):
-    ad.full_clean()
-
-  ad = Address( address_block=ab2, offset=0, networked=nwd, interface_name='lo', vlan=4097 )
-  with pytest.raises( ValidationError ):
-    ad.full_clean()
 
   ad = Address( address_block=ab2, offset=0, networked=nwd, interface_name='lo', sub_interface=0 )
   ad.full_clean()
@@ -427,6 +505,7 @@ def test_address():
   ad = Address( address_block=ab2, offset=0, networked=nwd, interface_name='lo', is_primary=True )
   ad.full_clean()
   ad.save()
+  assert ad.as_dict == { 'address': '1.0.0.0', 'netmask': '255.255.255.254', 'prefix': 31, 'subnet': '1.0.0.0', 'gateway': None, 'sub_interface': None, 'primary': True, 'auto': True, 'mtu': 1500 }
 
   ad = Address( address_block=ab2, offset=1, networked=nwd, interface_name='lo', is_primary=True )
   with pytest.raises( ValidationError ):
@@ -440,23 +519,29 @@ def test_address():
   assert ad.ip_address == '0.0.0.1'
   assert ad.structure is None   # TODO: make a networked with a structure and test that
   assert ad.interface is None   # TODO: dido ^
+  assert ad.as_dict == { 'address': '0.0.0.1', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'sub_interface': None, 'primary': False, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress.objects.get( address_block=ab1, offset=1 )
   assert ba.type == 'Address'
   assert ba.ip_address == '0.0.0.1'
+  assert ba.as_dict == { 'address': '0.0.0.1', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress.objects.get( address_block=ab1, offset=2 )
   assert ba.type == 'Unknown'
   assert ba.ip_address == '0.0.0.2'
+  assert ba.as_dict == { 'address': '0.0.0.2', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ad = Address.objects.get( networked=nwd, interface_name='vpn0' )
   assert ad.type == 'Address'
   assert ad.ip_address == '1.0.0.5'
+  assert ad.as_dict == { 'address': '1.0.0.5', 'netmask': '255.255.255.254', 'prefix': 31, 'subnet': '1.0.0.0', 'gateway': None, 'sub_interface': None, 'primary': False, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress.objects.get( pk=ad.baseaddress_ptr.pk )
   assert ba.type == 'Address'
   assert ba.ip_address is None
   assert ba.subclass.ip_address == '1.0.0.5'
+  assert ba.as_dict == { 'address': None, 'netmask': None, 'prefix': None, 'subnet': None, 'gateway': None, 'auto': True, 'mtu': 1500 }
+  assert ba.subclass.as_dict == { 'address': '1.0.0.5', 'netmask': '255.255.255.254', 'prefix': 31, 'subnet': '1.0.0.0', 'gateway': None, 'sub_interface': None, 'primary': False, 'auto': True, 'mtu': 1500 }
 
 
 @pytest.mark.django_db
@@ -496,6 +581,7 @@ def test_reservedaddress():
   ra = ReservedAddress( address_block=ab1, offset=1, reason='testing' )
   ra.full_clean()
   ra.save()
+  assert ra.as_dict == { 'address': '0.0.0.1', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress( address_block=ab1, offset=1 )
   with pytest.raises( ValidationError ):
@@ -504,6 +590,7 @@ def test_reservedaddress():
   ba = BaseAddress( address_block=ab1, offset=2 )
   ba.full_clean()
   ba.save()
+  assert ba.as_dict == { 'address': '0.0.0.2', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ra = ReservedAddress( address_block=ab1, offset=2, reason='testing' )
   with pytest.raises( ValidationError ):
@@ -512,14 +599,17 @@ def test_reservedaddress():
   ra = BaseAddress.objects.get( address_block=ab1, offset=1 )
   assert ra.type == 'ReservedAddress'
   assert ra.ip_address == '0.0.0.1'
+  assert ra.as_dict == { 'address': '0.0.0.1', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress.objects.get( address_block=ab1, offset=1 )
   assert ba.type == 'ReservedAddress'
   assert ba.ip_address == '0.0.0.1'
+  assert ba.as_dict == { 'address': '0.0.0.1', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress.objects.get( address_block=ab1, offset=2 )
   assert ba.type == 'Unknown'
   assert ba.ip_address == '0.0.0.2'
+  assert ba.as_dict == { 'address': '0.0.0.2', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
 
 @pytest.mark.django_db
@@ -551,6 +641,7 @@ def test_dynamicaddress():
   da = DynamicAddress( address_block=ab1, offset=1 )  # TODO: test with PXE set
   da.full_clean()
   da.save()
+  assert da.as_dict == { 'address': '0.0.0.1', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress( address_block=ab1, offset=1 )
   with pytest.raises( ValidationError ):
@@ -559,6 +650,7 @@ def test_dynamicaddress():
   ba = BaseAddress( address_block=ab1, offset=2 )
   ba.full_clean()
   ba.save()
+  assert ba.as_dict == { 'address': '0.0.0.2', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   da = DynamicAddress( address_block=ab1, offset=2 )
   with pytest.raises( ValidationError ):
@@ -567,11 +659,14 @@ def test_dynamicaddress():
   da = DynamicAddress.objects.get( address_block=ab1, offset=1 )
   assert da.type == 'DynamicAddress'
   assert da.ip_address == '0.0.0.1'
+  assert da.as_dict == { 'address': '0.0.0.1', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress.objects.get( address_block=ab1, offset=1 )
   assert ba.type == 'DynamicAddress'
   assert ba.ip_address == '0.0.0.1'
+  assert ba.as_dict == { 'address': '0.0.0.1', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
 
   ba = BaseAddress.objects.get( address_block=ab1, offset=2 )
   assert ba.type == 'Unknown'
   assert ba.ip_address == '0.0.0.2'
+  assert ba.as_dict == { 'address': '0.0.0.2', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True, 'mtu': 1500 }
