@@ -9,6 +9,7 @@ django.setup()
 import sys
 import argparse
 import subprocess
+import getpass
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -22,6 +23,7 @@ from contractor.Utilities.models import Network, RealNetworkInterface, AddressBl
 from contractor.plugins.Manual.models import ManualFoundation
 
 parser = argparse.ArgumentParser( description='Contractor SetupWizzard, must be run as root' )
+parser.add_argument( '--root-password', help='password to use for the root user, if not specified it will be prompted for' )
 parser.add_argument( '--no-ip-reservation', help='do not reserve static and dynamic ips', action='store_true' )
 parser.add_argument( '--site-name', help='name of the initial site to create, default: site1', metavar='SITE', default='site1' )
 parser.add_argument( '--site-domain', help='domain name of the initial site to create, default: site1.test', metavar='DOMAIN', default='site1.test' )
@@ -35,6 +37,12 @@ args = parser.parse_args()
 if os.getuid() != 0:
   print( 'This must be run as root' )
   sys.exit( 1 )
+
+if args.root_password:
+  root_password = args.root_password
+else:
+  print( 'Please Specify the password to use for the root user' )
+  root_password = getpass.getpass()
 
 print( 'Getting network config...' )
 
@@ -79,8 +87,12 @@ if contractor_dns is None:
   sys.exit( 1 )
 
 try:
-  contractor_iface, contractor_vlan = args.primary_interface.split( '.' )
-except IndexError:
+  if args.primary_interface:
+    contractor_iface, contractor_vlan = args.primary_interface.split( '.' )
+  else:
+    contractor_iface, contractor_vlan = contractor_iface.split( '.' )
+
+except ValueError:
   contractor_vlan = 0
 
 network_subnet = IpToStr( CIDRSubnet( StrToIp( contractor_ip_address ), network_prefix ) )
@@ -116,7 +128,7 @@ print( 'DNS Search Path:  {0}'.format( search_list ) )
 print( 'DNS Server        {0}'.format( args.dns_server ) )
 print( 'NTP Server        {0}'.format( args.ntp_server ) )
 if args.proxy_server is not None:
-  print( 'Proxy Server        {0}'.format( args.proxy_server  ) )
+  print( 'Proxy Server      {0}'.format( args.proxy_server  ) )
 
 fbp_manual = FoundationBluePrint.objects.get( pk='manual-foundation-base' )
 sbp_xenial = StructureBluePrint.objects.get( pk='manual-structure-base' )
@@ -272,6 +284,6 @@ include "/etc/bind/contractor/dns.master";
   fp.close()
 
 print( 'Creating root user...' )
-User.objects.create_superuser( username='root', password='root', email='root@test.com' )
+User.objects.create_superuser( username='root', password=root_password, email='root@{0}'.format( args.site_domain ) )
 
 print( 'Done!' )
