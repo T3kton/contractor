@@ -3,6 +3,7 @@ import { Layout, NavDrawer, Panel, Sidebar, Chip, FontIcon, AppBar, Navigation, 
 import { BrowserRouter as Router, Route, Link } from 'react-router-dom';
 import Home from './Home';
 import Site from './Site';
+import Network from './Network';
 import Foundation from './Foundation';
 import Dependency from './Dependency';
 import Structure from './Structure';
@@ -101,6 +102,7 @@ class App extends React.Component
           <Navigation type="vertical">
             <Link to="/"><Button icon="home">Home</Button></Link>
             <Link to="/sites"><Button icon="business">Sites</Button></Link>
+            <Link to="/networks"><Button icon="router">Networks</Button></Link>
             <Link to="/blueprints"><Button icon="import_contacts">BluePrints</Button></Link>
             <Link to="/pxes"><Button icon="import_contacts">PXEs</Button></Link>
             <Link to="/foundations"><Button icon="storage">Foundations</Button></Link>
@@ -127,6 +129,7 @@ class App extends React.Component
             <Route exact={true} path="/" component={ Home }/>
             <Route path="/site/:id" render={ ( { match } ) => ( <Site id={ match.params.id } detailGet={ this.contractor.getSite } getConfig={ this.contractor.getConfig } /> ) } />
             <Route path="/blueprint/f/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getFoundationBluePrint } getConfig={ this.contractor.getConfig } getScript={ this.contractor.getScript }/> ) } />
+            <Route path="/network/:id" render={ ( { match } ) => ( <Network id={ match.params.id } detailGet={ this.contractor.getNetwork } /> ) } />
             <Route path="/blueprint/s/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getStructureBluePrint } getConfig={ this.contractor.getConfig } getScript={ this.contractor.getScript } /> ) } />
             <Route path="/pxe/:id" render={ ( { match } ) => ( <PXE id={ match.params.id } detailGet={ this.contractor.getPXE } /> ) } />
             <Route path="/foundation/:id" render={ ( { match } ) => ( <Foundation id={ match.params.id } detailGet={ this.contractor.getFoundation } getFoundationInterfaces={ this.contractor.getFoundationInterfaces } detailGetDependancies={ this.contractor.getFoundationDependandyList } getConfig={ this.contractor.getConfig } /> ) } />
@@ -138,6 +141,7 @@ class App extends React.Component
             <Route path="/job/s/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="structure" contractor={ this.contractor } /> ) } />
             <Route path="/job/d/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="dependency" contractor={ this.contractor } /> ) } />
             <Route exact={true} path="/sites" render={ () => ( <Site listGet={ this.contractor.getSiteList } /> ) } />
+            <Route exact={true} path="/networks" render={ () => ( <Network listGet={ this.contractor.getNetworkList } /> ) } />
             <Route exact={true} path="/blueprints" render={ () => ( <BluePrint listGetF={ this.contractor.getFoundationBluePrintList } listGetS={ this.contractor.getStructureBluePrintList } /> ) }/>
             <Route exact={true} path="/pxes" render={ () => ( <PXE site={ this.state.cur_site } listGet={ this.contractor.getPXEList } /> ) } />
             <Route exact={true} path="/foundations" render={ () => ( <Foundation site={ this.state.cur_site } listGet={ this.contractor.getFoundationList } /> ) } />

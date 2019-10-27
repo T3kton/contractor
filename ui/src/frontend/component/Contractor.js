@@ -30,6 +30,11 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Site/Site' ); // figure out a way to deal with lots of sites when there are more than 100
   };
 
+  getNetworkList = () =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Utilities/Network' );
+  };
+
   getFoundationList = ( site ) =>
   {
     return this.cinp.getFilteredObjects( '/api/v1/Building/Foundation', 'site', { 'site': site } );
@@ -113,6 +118,11 @@ class Contractor
   getSite = ( id ) =>
   {
     return this.cinp.get( '/api/v1/Site/Site:' + id + ':' );
+  };
+
+  getNetwork = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/Utilities/Network:' + id + ':' );
   };
 
   getFoundation = ( id ) =>
