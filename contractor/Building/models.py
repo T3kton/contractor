@@ -141,7 +141,7 @@ class Foundation( models.Model ):
     This will submit a job to run the create script.
     """
     from contractor.Foreman.lib import createJob
-    return createJob( 'create', self, user.username )
+    return createJob( 'create', self, user )
 
   @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
   def doDestroy( self, user ):
@@ -149,7 +149,7 @@ class Foundation( models.Model ):
     This will submit a job to run the destroy script.
     """
     from contractor.Foreman.lib import createJob
-    return createJob( 'destroy', self, user.username )
+    return createJob( 'destroy', self, user )
 
   @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_', 'String' ]  )
   def doJob( self, user, name ):
@@ -160,7 +160,7 @@ class Foundation( models.Model ):
     if name in ( 'create', 'destroy' ):
       raise ValueError( 'Invalid Job Name' )
 
-    return createJob( name, self, user.username )
+    return createJob( name, self, user )
 
   @staticmethod
   def getTscriptValues( write_mode=False ):  # locator is handled seperatly
@@ -412,12 +412,12 @@ class Structure( Networked ):
   @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ] )
   def doCreate( self, user ):
     from contractor.Foreman.lib import createJob
-    return createJob( 'create', self, user.username )
+    return createJob( 'create', self, user )
 
   @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ] )
   def doDestroy( self, user ):
     from contractor.Foreman.lib import createJob
-    return createJob( 'destroy', self, user.username )
+    return createJob( 'destroy', self, user )
 
   @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_', 'String' ]  )
   def doJob( self, user, name ):
@@ -425,7 +425,7 @@ class Structure( Networked ):
     if name in ( 'create', 'destroy' ):
       raise ValueError( 'Invalid Job Name' )
 
-    return createJob( name, self, user.username )
+    return createJob( name, self, user )
 
   @cinp.action( return_type='Map' )
   def getConfig( self ):
