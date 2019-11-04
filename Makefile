@@ -55,14 +55,13 @@ clean-ui:
 .PHONY:: build-ui install-ui clean-ui
 
 test-distros:
-	echo ubuntu-xenial
+	echo ubuntu-bionic
 
 test-requires:
 	echo flake8 python3-pip python3-django python3-psycopg2 python3-pymongo python3-parsimonious python3-jinja2 python3-pytest python3-pytest-cov python3-pytest-django python3-pytest-mock python3-pytest-timeout postgresql mongodb
 
 test-setup:
 	su postgres -c "echo \"CREATE ROLE contractor WITH PASSWORD 'contractor' NOSUPERUSER NOCREATEROLE CREATEDB LOGIN;\" | psql"
-	pip3 install -U jinja2
 	pip3 install -e .
 	cp contractor.conf.sample contractor/settings.py
 
@@ -75,7 +74,7 @@ test:
 .PHONY:: test-distros test-requires test
 
 dpkg-distros:
-	echo ubuntu-xenial
+	echo ubuntu-bionic
 
 dpkg-requires:
 	echo dpkg-dev debhelper python3-dev python3-setuptools nodejs npm nodejs-legacy
@@ -90,6 +89,6 @@ dpkg:
 	touch dpkg
 
 dpkg-file:
-	echo $(shell ls ../contractor_*.deb):xenial
+	echo $(shell ls ../contractor_*.deb):bionic
 
 .PHONY:: dpkg-distros dpkg-requires dpkg dpkg-file

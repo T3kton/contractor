@@ -95,6 +95,16 @@ class JSONField( models.TextField ):
 
     return value
 
+  def to_python( self, value ):
+    if value is None:
+      return None
+
+    if isinstance( value, str ) and value.startswith( JSON_MAGIC ):
+      return json.loads( value[ len( JSON_MAGIC ): ] )
+
+    else:
+      return value
+
   def get_prep_value( self, value ):
     if value is None:
       return None

@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import MapField, JSONField, StringListField, name_regex, config_name_regex
+from contractor.fields import MapField, StringListField, name_regex, config_name_regex
 from contractor.tscript import parser
 from contractor.lib.config import getConfig
 from contractor.Records.lib import post_save_callback, post_delete_callback
@@ -102,7 +102,7 @@ class BluePrint( models.Model ):
 class FoundationBluePrint( BluePrint ):
   parent_list = models.ManyToManyField( 'self', blank=True, symmetrical=False )
   foundation_type_list = StringListField( max_length=200 )  # list of the foundation types this blueprint can be used for
-  template = JSONField( default={}, blank=True )
+  template = MapField( blank=True )
   physical_interface_names = StringListField( max_length=200, blank=True )
 
   def getTemplate( self ):

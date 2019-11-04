@@ -271,6 +271,19 @@ def test_job_locking( mocker ):
 
 
 @pytest.mark.django_db()
+def test_job_create():
+  si = Site()
+  si.name = 'test'
+  si.description = 'test'
+  si.full_clean()
+  si.save()
+
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'create', si, TestUser() )
+  assert str( execinfo.value.code ) == 'INVALID_TARGET'
+
+
+@pytest.mark.django_db()
 def test_foundation_job_create():  # TODO: should also do tests depending on a Dependency
   si = Site()
   si.name = 'test'
@@ -351,20 +364,136 @@ def test_foundation_job_create():  # TODO: should also do tests depending on a D
 
 
 @pytest.mark.django_db()
-def test_job_create():
+def test_foundation_with_structure_job_create():
   si = Site()
   si.name = 'test'
   si.description = 'test'
   si.full_clean()
   si.save()
 
+  fb = FoundationBluePrint( name='fdnb1', description='Foundation BluePrint 1' )
+  fb.foundation_type_list = [ 'Unknown' ]
+  fb.full_clean()
+  fb.save()
+
+  f = Foundation()
+  f.locator = 'test'
+  f.site = si
+  f.blueprint = fb
+  f.full_clean()
+  f.save()
+
+  sb = StructureBluePrint( name='strb1', description='Structure BluePrint 1' )
+  sb.full_clean()
+  sb.save()
+  sb.foundation_blueprint_list.add( fb )
+
+  s = Structure()
+  s.foundation = f
+  s.hostname = 'test'
+  s.site = si
+  s.blueprint = sb
+  s.full_clean()
+  s.save()
+
+  f.setDestroyed()
+  assert createJob( 'create', f, TestUser() ) is not None
+  f.foundationjob.delete()
+  f = Foundation.objects.get( pk=f.pk )
+  f.setLocated()
+  assert createJob( 'create', f, TestUser() ) is not None
+  f.foundationjob.delete()
+  f = Foundation.objects.get( pk=f.pk )
+  f.setBuilt()
   with pytest.raises( Exception ) as execinfo:
-    createJob( 'create', si, TestUser() )
-  assert str( execinfo.value.code ) == 'INVALID_TARGET'
+    createJob( 'create', f, TestUser() )
+  assert str( execinfo.value.code ) == 'ALLREADY_BUILT'
+
+  f.setDestroyed()
+  s.setBuilt()
+  assert createJob( 'create', f, TestUser() ) is not None
+  f.foundationjob.delete()
+  f = Foundation.objects.get( pk=f.pk )
+  f.setLocated()
+  s.setBuilt()
+  assert createJob( 'create', f, TestUser() ) is not None
+  f.foundationjob.delete()
+  f = Foundation.objects.get( pk=f.pk )
+  f.setBuilt()
+  s.setBuilt()
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'create', f, TestUser() )
+  assert str( execinfo.value.code ) == 'ALLREADY_BUILT'
+
+  s.setDestroyed()
+  f.setBuilt()
+  assert createJob( 'destroy', f, TestUser() ) is not None
+  f.foundationjob.delete()
+  f = Foundation.objects.get( pk=f.pk )
+  f.setLocated()
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', f, TestUser() )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+  f.setDestroyed()
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', f, TestUser() )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+
+  s.setBuilt()
+  f.setBuilt()
+  assert createJob( 'destroy', f, TestUser() ) is not None
+  f.foundationjob.delete()
+  f = Foundation.objects.get( pk=f.pk )
+  f.setLocated()
+  s.setBuilt()
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', f, TestUser() )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+  f.setDestroyed()
+  s.setBuilt()
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', f, TestUser() )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
+
+  for foundation_job_name in ():  # ( 'create', 'destroy', 'other' ):
+    s.setDestroyed()
+    createJob( 'create', s, TestUser() )
+    f.setDestroyed()
+    with pytest.raises( Exception ) as execinfo:
+      createJob( foundation_job_name, f, TestUser() )
+    assert str( execinfo.value.code ) == 'STRUCTURE_JOB'
+    f.setLocated()
+    with pytest.raises( Exception ) as execinfo:
+      createJob( foundation_job_name, f, TestUser() )
+    assert str( execinfo.value.code ) == 'STRUCTURE_JOB'
+    f.setBuilt()
+    with pytest.raises( Exception ) as execinfo:
+      createJob( foundation_job_name, f, TestUser() )
+    assert str( execinfo.value.code ) == 'STRUCTURE_JOB'
+    s.structurejob.delete()
+    s = Structure.objects.get( pk=s.pk )
+
+    for structure_job_name in ( 'destroy', 'other' ):
+      s.setBuilt()
+      createJob( structure_job_name, s, TestUser() )
+      f.setDestroyed()
+      with pytest.raises( Exception ) as execinfo:
+        createJob( foundation_job_name, f, TestUser() )
+      assert str( execinfo.value.code ) == 'STRUCTURE_JOB'
+      f.setLocated()
+      with pytest.raises( Exception ) as execinfo:
+        createJob( foundation_job_name, f, TestUser() )
+      assert str( execinfo.value.code ) == 'STRUCTURE_JOB'
+      f.setBuilt()
+      with pytest.raises( Exception ) as execinfo:
+        createJob( foundation_job_name, f, TestUser() )
+      assert str( execinfo.value.code ) == 'STRUCTURE_JOB'
+      s.structurejob.delete()
+      s = Structure.objects.get( pk=s.pk )
 
 
 @pytest.mark.django_db()
-def test_structure_job_create():
+def test_structure_job_create():  # TODO: test structures with dependency
   si = Site()
   si.name = 'test'
   si.description = 'test'

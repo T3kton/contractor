@@ -32,7 +32,7 @@ RUNNER_MODULE_LIST = []
 #  . -> no linkage
 #  B -> Allready Built Error
 #  D -> Not Built Error
-#  J -> Has  Job  Error
+#  J -> Has Job Error
 #  I -> Dependant not in Correct state Error
 
 # TODO: make sure a dependency can't create a job for a structure with a job, or a structure that is not built
