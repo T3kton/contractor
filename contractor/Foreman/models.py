@@ -590,7 +590,7 @@ class JobLog( models.Model ):
   target_description = models.CharField( max_length=120 )
   script_name = models.CharField( max_length=50 )
   creator = models.CharField( max_length=150 )  # max length from the django.contrib.auth User.username
-  start_at = models.DateTimeField( blank=True, null=True )
+  started_at = models.DateTimeField( blank=True, null=True )
   finished_at = models.DateTimeField( blank=True, null=True )
   canceled_by = models.CharField( max_length=150, blank=True, null=True )  # max length from the django.contrib.auth User.username
   canceled_at = models.DateTimeField( blank=True, null=True )

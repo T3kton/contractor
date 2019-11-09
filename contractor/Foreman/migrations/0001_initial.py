@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ('target_description', models.CharField(max_length=120)),
                 ('script_name', models.CharField(max_length=50)),
                 ('creator', models.CharField(max_length=150)),
-                ('start_at', models.DateTimeField(blank=True, null=True)),
+                ('started_at', models.DateTimeField(blank=True, null=True)),
                 ('finished_at', models.DateTimeField(blank=True, null=True)),
                 ('canceled_by', models.CharField(max_length=150, null=True, blank=True)),
                 ('canceled_at', models.DateTimeField(blank=True, null=True)),
