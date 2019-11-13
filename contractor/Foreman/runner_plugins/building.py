@@ -118,6 +118,7 @@ class FoundationPlugin( object ):  # TODO: really should have the RO version be 
     result[ 'id' ] = ( lambda: self.foundation_pk, None )
     result[ 'class' ] = ( lambda: self.foundation_class, None )
     result[ 'foundation' ] = ( lambda: self.foundation, None )
+    result[ 'provisioning_interface' ] = ( lambda: self.foundation.provisioning_interface, None )
 
     return result
 

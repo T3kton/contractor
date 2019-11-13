@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_save, post_delete
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
 from cinp.orm_django import DjangoCInP as CInP
 
@@ -178,7 +178,10 @@ class Foundation( models.Model ):
     return {}
 
   def configAttributes( self ):
+    provisioning_interface = self.provisioning_interface
     return {
+              '_provisioning_interface': provisioning_interface.name if provisioning_interface is not None else None,
+              '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None,
               '_foundation_id': self.pk,
               '_foundation_type': self.type,
               '_foundation_state': self.state,
@@ -187,6 +190,13 @@ class Foundation( models.Model ):
               '_foundation_id_map': self.id_map,
               '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
             }
+
+  @property
+  def provisioning_interface( self ):
+    try:
+      return self.networkinterface_set.get( is_provisioning=True )
+    except ObjectDoesNotExist:
+      return None
 
   @property
   def subclass( self ):
