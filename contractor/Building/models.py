@@ -129,6 +129,11 @@ class Foundation( models.Model ):
     except AttributeError:
       pass
 
+    for iface in RealNetworkInterface.objects.filter( foundation=self ):
+      iface.mac = None
+      iface.full_clean()
+      iface.save()
+
     self.built_at = None
     self.located_at = None
     self.id_map = None
@@ -512,7 +517,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
     return self
 
   @property
-  def state( self ):
+  def state( self ):  # TODO: should we detect if the state has gone back to planned and set all the attached foundations to planned when that happens?
     state_list = [ 1 if i.state == 'built' else 0 for i in self.members.all() ]
 
     if len( state_list ) == 0:
