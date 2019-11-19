@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_save, post_delete
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
 from cinp.orm_django import DjangoCInP as CInP
 
@@ -129,6 +129,11 @@ class Foundation( models.Model ):
     except AttributeError:
       pass
 
+    for iface in RealNetworkInterface.objects.filter( foundation=self ):
+      iface.mac = None
+      iface.full_clean()
+      iface.save()
+
     self.built_at = None
     self.located_at = None
     self.id_map = None
@@ -178,14 +183,25 @@ class Foundation( models.Model ):
     return {}
 
   def configAttributes( self ):
+    provisioning_interface = self.provisioning_interface
     return {
+              '_provisioning_interface': provisioning_interface.name if provisioning_interface is not None else None,
+              '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None,
               '_foundation_id': self.pk,
               '_foundation_type': self.type,
               '_foundation_state': self.state,
               '_foundation_class_list': self.class_list,
               '_foundation_locator': self.locator,
+              '_foundation_id_map': self.id_map,
               '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
             }
+
+  @property
+  def provisioning_interface( self ):
+    try:
+      return self.networkinterface_set.get( is_provisioning=True )
+    except ObjectDoesNotExist:
+      return None
 
   @property
   def subclass( self ):
@@ -274,7 +290,7 @@ class Foundation( models.Model ):
     """
     returns the computed config for this foundation
     """
-    return [ { 'name': i.name, 'physical_location': i.physical_location, 'is_provisioning': i.is_provisioning, 'mac': i.mac } for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
+    return [ { 'name': i.name, 'physical_location': i.physical_location, 'is_provisioning': i.is_provisioning, 'mac': i.mac, 'pxe': i.pxe } for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
@@ -501,7 +517,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
     return self
 
   @property
-  def state( self ):
+  def state( self ):  # TODO: should we detect if the state has gone back to planned and set all the attached foundations to planned when that happens?
     state_list = [ 1 if i.state == 'built' else 0 for i in self.members.all() ]
 
     if len( state_list ) == 0:

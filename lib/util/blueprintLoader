@@ -129,7 +129,7 @@ def loadFoundationBlueprint( name, target, mode ):
   loadBluePrintCommon( blueprint, target )
 
   blueprint.foundation_type_list = target.get( 'foundation_types', [] )
-  blueprint.template = target.get( 'template', '' )
+  blueprint.template = target.get( 'template', {} )
   blueprint.physical_interface_names = target.get( 'physical_interface_names', [] )
 
   blueprint.full_clean()

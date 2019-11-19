@@ -49,6 +49,7 @@ class Structure extends React.Component
                 address_list.push( { id: id,
                                         offset: address.offset,
                                         ip_address: address.ip_address,
+                                        interface_name: address.interface_name,
                                         created: address.created,
                                         updated: address.updated,
                                       } );
@@ -108,10 +109,10 @@ class Structure extends React.Component
                   <tr><th>Built At</th><td>{ structure.built_at }</td></tr>
                   <tr><th colSpan="2">Ip Addresses</th></tr>
                   <tr><td colSpan="2"><table>
-                  <thead><tr><th>Offset</th><th>Ip Address</th><th>Created</th><th>Updated</th></tr></thead>
+                  <thead><tr><th>Offset</th><th>Ip Address</th><th>Interface</th><th>Created</th><th>Updated</th></tr></thead>
                   <tbody>
                   { this.state.address_list.map( ( item ) => (
-                    <tr key={ item.id }><td>{ item.offset }</td><td>{ item.ip_address }</td><td>{ item.created }</td><td>{ item.updated }</td></tr>
+                    <tr key={ item.id }><td>{ item.offset }</td><td>{ item.ip_address }</td><td>{ item.interface_name }</td><td>{ item.created }</td><td>{ item.updated }</td></tr>
                   ) ) }
                   </tbody>
                   </table></td></tr>

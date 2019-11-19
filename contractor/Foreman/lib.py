@@ -32,11 +32,12 @@ RUNNER_MODULE_LIST = []
 #  . -> no linkage
 #  B -> Allready Built Error
 #  D -> Not Built Error
-#  J -> Has  Job  Error
+#  J -> Has Job Error
 #  I -> Dependant not in Correct state Error
 
 # TODO: make sure a dependency can't create a job for a structure with a job, or a structure that is not built
-# TODO: can't create a foundation destroy job when the structure has a job
+# TODO: can't create a foundation destroy job when the structure has a create job - right now everything looks down to see if it can have a job
+#       do we want to look up too?  or should the job be created, but just not start....
 
 JOB_LOOKUP_MAP = { 'Foundation': 'foundationjob', 'Structure': 'structurejob', 'Dependency': 'dependencyjob' }
 DEPENDENCY_LOOKUP_MAP = { 'Foundation': ( 'dependency', ), 'Structure': ( 'foundation', ), 'Dependency': ( 'structure', 'dependency' ) }

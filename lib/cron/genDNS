@@ -62,7 +62,7 @@ print( 'Writing master config...' )
 open( MASTER_FILE, 'w' ).write( genMasterFile( ZONE_DIR, zone_file_list ) )
 
 print( 'Writing cache...' )
-open( CACHE_FILE, 'w' ).write( json.dumps( cache, 2 ) )
+open( CACHE_FILE, 'w' ).write( json.dumps( cache ) )
 
 print( 'Checking...' )
 try:

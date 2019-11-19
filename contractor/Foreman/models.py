@@ -276,7 +276,16 @@ class FoundationJob( BaseJob ):
         return False
 
       if self.foundation.structure is not None:
-        return self.foundation.structure.state == 'planned'
+        if self.foundation.structure.state != 'planned':
+          return False
+
+        try:
+          self.foundation.structure.structurejob
+          return False
+        except ObjectDoesNotExist:
+          pass
+
+        return True
 
       return True
 
@@ -377,8 +386,14 @@ class StructureJob( BaseJob ):
         return False
 
       for dependency in self.structure.dependant_dependencies:
-        if dependency.state == 'built':
+        if dependency.state != 'planned':
           return False
+
+        try:
+          dependency.dependencyjob
+          return False
+        except ObjectDoesNotExist:
+          pass
 
       return True
 
@@ -481,7 +496,16 @@ class DependencyJob( BaseJob ):
         return False
 
       if self.dependency.foundation is not None:
-        return self.dependency.foundation.state == 'planned'
+        if self.dependency.foundation.state != 'planned':
+          return False
+
+        try:
+          self.dependency.foundation.foundationjob
+          return False
+        except ObjectDoesNotExist:
+          pass
+
+        return True
 
       for dependency in self.dependency.dependant_dependencies:
         if dependency.state == 'built':
@@ -566,7 +590,7 @@ class JobLog( models.Model ):
   target_description = models.CharField( max_length=120 )
   script_name = models.CharField( max_length=50 )
   creator = models.CharField( max_length=150 )  # max length from the django.contrib.auth User.username
-  start_at = models.DateTimeField( blank=True, null=True )
+  started_at = models.DateTimeField( blank=True, null=True )
   finished_at = models.DateTimeField( blank=True, null=True )
   canceled_by = models.CharField( max_length=150, blank=True, null=True )  # max length from the django.contrib.auth User.username
   canceled_at = models.DateTimeField( blank=True, null=True )

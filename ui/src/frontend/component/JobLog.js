@@ -36,7 +36,7 @@ class JobLog extends React.Component
                             target_description: joblog.target_description,
                             script_name: joblog.script_name,
                             creator: joblog.creator,
-                            start_at: joblog.start_at,
+                            started_at: joblog.started_at,
                             finished_at: joblog.finished_at,
                             canceled_by: joblog.canceled_by,
                             canceled_at: joblog.canceled_at,
@@ -71,7 +71,7 @@ class JobLog extends React.Component
             <TableCell>{ item.target_description }</TableCell>
             <TableCell>{ item.script_name }</TableCell>
             <TableCell>{ item.creator }</TableCell>
-            <TableCell>{ item.start_at }</TableCell>
+            <TableCell>{ item.started_at }</TableCell>
             <TableCell>{ item.finished_at }</TableCell>
             <TableCell>{ item.canceled_by }</TableCell>
             <TableCell>{ item.canceled_at }</TableCell>
