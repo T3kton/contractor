@@ -8,6 +8,10 @@ def foundationLookup( info_map ):  # TODO: do we bail when what we come to faile
   #   except Structure.DoesNotExist:
   #     return None
 
+  if 'hardware' in info_map:
+    # look up hardware by info_map[ 'hardware' ][ 'dmi' ][ 'Base Board Information' ][ 'Product Name' or 'Serial Number' or 'Asset Tag' ]
+    pass
+
   if 'lldp' in info_map:
     for iface_name, lldp_info in info_map[ 'lldp' ].items():
       lldp_name = '{0}-{1}-{2}-{3}'.format( lldp_info[ 'mac' ], lldp_info[ 'slot' ], lldp_info[ 'port' ], lldp_info[ 'subport' ] )

@@ -53,8 +53,8 @@ class DHCPd():
 
     domain_name = site_config.get( 'domain_name', '' )
 
-    addr_block_list = AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False ).distinct()  # without the distinct we get an AddressBlock for each DynamicAddress
-    for addr_block in addr_block_list:
+    # without the distinct we get an AddressBlock for each DynamicAddress
+    for addr_block in AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False ).distinct():
       item = {
                'address_map': {},
                'gateway': addr_block.gateway,
@@ -80,8 +80,8 @@ class DHCPd():
   @staticmethod
   def getStaticPools( site ):
     result = {}
-    addr_block_list = AddressBlock.objects.filter( site=site, baseaddress__address__networked__isnull=False )
-    for addr_block in addr_block_list:
+    # without the distinct we get an AddressBlock for each Networked
+    for addr_block in AddressBlock.objects.filter( site=site, baseaddress__address__networked__isnull=False ).distinct():
       for addr in addr_block.baseaddress_set.filter( address__networked__isnull=False ):
         addr = addr.subclass
         iface = addr.interface
