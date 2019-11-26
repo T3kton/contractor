@@ -92,7 +92,7 @@ def loadStructureBlueprint( name, target, mode ):
     except FoundationBluePrint.DoesNotExist:
       print( 'Unable to find Foundation BluePrint "{0}"'.format( name ) )
 
-  if blueprint.foundation_blueprint_list != foundation_blueprint_list:
+  if blueprint.foundation_blueprint_list != foundation_blueprint_list:  # TODO: should we think of a way to perserve links made in other blueprint files?
     blueprint.foundation_blueprint_list = foundation_blueprint_list
     blueprint.full_clean()
     blueprint.save()

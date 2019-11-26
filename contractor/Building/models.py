@@ -326,7 +326,7 @@ class Foundation( models.Model ):
       errors[ 'locator' ] = 'Invalid'
 
     if self.blueprint_id is not None and self.type not in self.blueprint.foundation_type_list:
-        errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint.description, self.type )
+        errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint, self.type )
 
     if errors:
       raise ValidationError( errors )
@@ -475,7 +475,7 @@ class Structure( Networked ):
     errors = {}
 
     if self.foundation_id is not None and self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
-      errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint.description, self.foundation.blueprint.description )
+      errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint, self.foundation.blueprint )
 
     if self.config_values is not None:
       for name in self.config_values:
