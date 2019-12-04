@@ -589,7 +589,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
 @cinp.model( )
 class ComplexStructure( models.Model ):
   complex = models.ForeignKey( Complex, on_delete=models.CASCADE )
-  structure = models.ForeignKey( Structure, on_delete=models.CASCADE )
+  structure = models.OneToOneField( Structure, on_delete=models.CASCADE )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
