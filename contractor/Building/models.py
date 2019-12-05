@@ -14,7 +14,6 @@ from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked, RealNetworkInterface
 from contractor.lib.config import getConfig, mergeValues
 from contractor.BluePrint.lib import checkTemplate
-from contractor.Building.lib import foundationLookup
 from contractor.Records.lib import post_save_callback, post_delete_callback
 
 # this is where the plan meets the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
@@ -70,16 +69,6 @@ class Foundation( models.Model ):
         iface.save()
 
     return 'Good'
-
-  # @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, paramater_type_list=[ 'Map' ] )
-  @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ 'Map' ] )
-  @staticmethod
-  def lookup( info_map=None ):
-    ( matched_by, foundation ) = foundationLookup( info_map )
-    if foundation is not None:
-      foundation = foundation.locator
-
-    return { 'matched_by': matched_by, 'locator': foundation }
 
   @cinp.action()
   def setLocated( self ):
