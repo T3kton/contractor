@@ -13,7 +13,6 @@ from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked, RealNetworkInterface
 from contractor.lib.config import getConfig, mergeValues
-from contractor.BluePrint.lib import checkTemplate
 from contractor.Records.lib import post_save_callback, post_delete_callback
 
 # this is where the plan meets the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
@@ -51,12 +50,9 @@ class Foundation( models.Model ):
 
   @cinp.action( return_type={ 'type': 'String' }, paramater_type_list=[ 'Map' ] )
   def setIdMap( self, id_map ):
-    template = self.blueprint.getTemplate()
-
-    if template is not None:
-      error = checkTemplate( template, id_map )
-      if error:
-        return str( error )
+    error = self.blueprint.validateIdMap( id_map )
+    if error is not None:
+      return error
 
     self.id_map = id_map
     self.full_clean()
@@ -68,7 +64,7 @@ class Foundation( models.Model ):
         iface.full_clean()
         iface.save()
 
-    return 'Good'
+    return None
 
   @cinp.action()
   def setLocated( self ):
@@ -77,6 +73,8 @@ class Foundation( models.Model ):
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
+    if self.cartographer or self.foundationjob or self.structure.structurejob:
+      raise Exception( 'All related jobs and cartographer instances must be cleared before setting Located' )
 
     template = self.blueprint.getTemplate()
     if template is not None and not self.id_map:
@@ -93,10 +91,13 @@ class Foundation( models.Model ):
     self.save()
 
   @cinp.action()
-  def setBuilt( self ):
+  def setBuilt( self ):  # TOD: don't we want to clear out any jobs, or at least thrown an error if there is a job
     """
     Set the Foundation to 'built' state.  This will not create/destroy any jobs.
     """
+    if self.cartographer or self.foundationjob or self.structure.structurejob:
+      raise Exception( 'All related jobs and cartographer instances must be cleared before setting Built' )
+
     if self.located_at is None:
       if self.blueprint.getTemplate() is not None:
         raise Exception( 'Foundation with Blueprints with templates must be located first' )
@@ -113,6 +114,9 @@ class Foundation( models.Model ):
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
+    if self.cartographer or self.foundationjob or self.structure.structurejob:
+      raise Exception( 'All related jobs and cartographer instances must be cleared before setting Destroyed' )
+
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
@@ -350,11 +354,17 @@ class Structure( Networked ):
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   def setBuilt( self ):
+    if self.structurejob:
+      raise Exception( 'All related jobs must be cleared before setting Built' )
+
     self.built_at = timezone.now()
     self.full_clean()
     self.save()
 
   def setDestroyed( self ):
+    if self.structurejob:
+      raise Exception( 'All related jobs must be cleared before setting Destroyed' )
+
     self.built_at = None
     self.config_uuid = str( uuid.uuid4() )  # new on destroyed, that way we can leave anything that might still be kicking arround in the dust
     self.full_clean()
@@ -679,11 +689,17 @@ class Dependency( models.Model ):
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   def setBuilt( self ):
+    if self.dependencyjob:
+      raise Exception( 'All related jobs must be cleared before setting Built' )
+
     self.built_at = timezone.now()
     self.full_clean()
     self.save()
 
   def setDestroyed( self ):
+    if self.dependencyjob:
+      raise Exception( 'All related jobs must be cleared before setting Destroyed' )
+
     self.built_at = None
     self.full_clean()
     self.save()

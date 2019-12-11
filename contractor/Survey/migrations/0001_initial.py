@@ -33,13 +33,4 @@ class Migration(migrations.Migration):
                 ('parent', models.ForeignKey(to='Survey.Plot', null=True, on_delete=django.db.models.deletion.PROTECT, blank=True)),
             ],
         ),
-        migrations.CreateModel(
-            name='Template',
-            fields=[
-                ('name', models.CharField(primary_key=True, max_length=40, serialize=False)),
-                ('item_map', contractor.fields.MapField(default=contractor.fields.defaultdict)),
-                ('updated', models.DateTimeField(auto_now=True)),
-                ('created', models.DateTimeField(auto_now_add=True)),
-            ],
-        ),
     ]

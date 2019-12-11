@@ -1,4 +1,3 @@
-import re
 from contractor.Utilities.models import RealNetworkInterface, BaseAddress
 
 
@@ -35,16 +34,3 @@ def foundationLookup( info_map ):  # TODO: do we bail when what we come to faile
       return ( 'ip_address: "{0}"'.format( info_map[ 'ip_address' ] ), address.structure.foundation )
 
   return ( None, None )
-
-
-def validateTemplate( id_map, item_map ):  # return message as a string if something does not match
-  for name in item_map:
-    try:
-      value = id_map[ name.split( '.' ) ]
-    except KeyError:
-      return 'Item "{0}" not found'.format( name )
-
-    if not re.match( id_map[ name ], value ):
-      return 'Item "{0}" does not match "{1}"'.format( name, id_map[ name ] )
-
-  return None
