@@ -552,10 +552,13 @@ def test_foundation():
                   '__pxe_location': 'http://static/pxe/',
                   '_foundation_class_list': [],
                   '_foundation_id': 'fdn1',
+                  '_foundation_id_map': None,
                   '_foundation_interface_list': [],
                   '_foundation_locator': 'fdn1',
                   '_foundation_state': 'planned',
                   '_foundation_type': 'Unknown',
+                  '_provisioning_interface': None,
+                  '_provisioning_interface_mac': None,
                   '_blueprint': 'fdnb1',
                   '_site': 'site1'
                 }
@@ -563,10 +566,13 @@ def test_foundation():
   assert _strip_base( getConfig( f1 ) ) == {
                                             '_foundation_class_list': [],
                                             '_foundation_id': 'fdn1',
+                                            '_foundation_id_map': None,
                                             '_foundation_interface_list': [],
                                             '_foundation_locator': 'fdn1',
                                             '_foundation_state': 'planned',
                                             '_foundation_type': 'Unknown',
+                                            '_provisioning_interface': None,
+                                            '_provisioning_interface_mac': None,
                                             '_blueprint': 'fdnb1',
                                             '_site': 'site1'
                                            }
@@ -578,10 +584,13 @@ def test_foundation():
   assert _strip_base( getConfig( f1 ) ) == {
                                             '_foundation_class_list': [],
                                             '_foundation_id': 'fdn1',
+                                            '_foundation_id_map': None,
                                             '_foundation_interface_list': [],
                                             '_foundation_locator': 'fdn1',
                                             '_foundation_state': 'planned',
                                             '_foundation_type': 'Unknown',
+                                            '_provisioning_interface': None,
+                                            '_provisioning_interface_mac': None,
                                             '_blueprint': 'fdnb1',
                                             '_site': 'site1',
                                             'lucky': 'blueprint'
@@ -594,10 +603,13 @@ def test_foundation():
   assert _strip_base( getConfig( f1 ) ) == {
                                             '_foundation_class_list': [],
                                             '_foundation_id': 'fdn1',
+                                            '_foundation_id_map': None,
                                             '_foundation_interface_list': [],
                                             '_foundation_locator': 'fdn1',
                                             '_foundation_state': 'planned',
                                             '_foundation_type': 'Unknown',
+                                            '_provisioning_interface': None,
+                                            '_provisioning_interface_mac': None,
                                             '_blueprint': 'fdnb1',
                                             '_site': 'site1',
                                             'lucky': 'site'
@@ -643,6 +655,7 @@ def test_structure():
                   '__pxe_location': 'http://static/pxe/',
                   '_foundation_class_list': [],
                   '_foundation_id': 'fdn1',
+                  '_foundation_id_map': None,
                   '_foundation_interface_list': [],
                   '_foundation_locator': 'fdn1',
                   '_foundation_state': 'planned',
@@ -666,6 +679,7 @@ def test_structure():
   assert _strip_base( getConfig( str1 ) ) == {
                                               '_foundation_class_list': [],
                                               '_foundation_id': 'fdn1',
+                                              '_foundation_id_map': None,
                                               '_foundation_interface_list': [],
                                               '_foundation_locator': 'fdn1',
                                               '_foundation_state': 'planned',
@@ -693,6 +707,7 @@ def test_structure():
   assert _strip_base( getConfig( str1 ) ) == {
                                               '_foundation_class_list': [],
                                               '_foundation_id': 'fdn1',
+                                              '_foundation_id_map': None,
                                               '_foundation_interface_list': [],
                                               '_foundation_locator': 'fdn1',
                                               '_foundation_state': 'planned',
@@ -720,6 +735,7 @@ def test_structure():
   assert _strip_base( getConfig( str1 ) ) == {
                                              '_foundation_class_list': [],
                                              '_foundation_id': 'fdn1',
+                                             '_foundation_id_map': None,
                                              '_foundation_interface_list': [],
                                              '_foundation_locator': 'fdn1',
                                              '_foundation_state': 'planned',
@@ -748,6 +764,7 @@ def test_structure():
   assert _strip_base( getConfig( str1 ) ) == {
                                              '_foundation_class_list': [],
                                              '_foundation_id': 'fdn1',
+                                             '_foundation_id_map': None,
                                              '_foundation_interface_list': [],
                                              '_foundation_locator': 'fdn1',
                                              '_foundation_state': 'planned',

@@ -14,13 +14,13 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Locator',
+            name='Cartographer',
             fields=[
-                ('identifier', models.CharField(primary_key=True, max_length=100, serialize=False)),
+                ('identifier', models.CharField(max_length=100, primary_key=True, serialize=False)),
                 ('message', models.CharField(max_length=200)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('foundation', models.OneToOneField(to='Building.Foundation', on_delete=django.db.models.deletion.PROTECT, null=True, related_name='+', blank=True)),
+                ('foundation', models.OneToOneField(to='Building.Foundation', null=True, on_delete=django.db.models.deletion.PROTECT, blank=True)),
             ],
         ),
         migrations.CreateModel(

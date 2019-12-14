@@ -66,14 +66,33 @@ class Foundation( models.Model ):
 
     return None
 
-  @cinp.action()
+  def _canSetState( self, job=None ):  # You can't set state if there is a related job, unless that job (that is hopfully being passed in from the job that is calling this) is that related job
+    try:
+       self.cartographer
+       return False
+    except ObjectDoesNotExist:
+      pass
+
+    try:
+       return self.foundationjob == job
+    except ObjectDoesNotExist:
+      pass
+
+    try:
+      self.structure.structurejob
+      return False
+    except ( ObjectDoesNotExist, AttributeError ):
+      pass
+
+    return True
+
   def setLocated( self ):
     """
     Sets the Foundation to 'located' state.  This will not create/destroy any jobs.
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
-    if self.cartographer or self.foundationjob or self.structure.structurejob:
+    if not self._canSetState():
       raise Exception( 'All related jobs and cartographer instances must be cleared before setting Located' )
 
     template = self.blueprint.getTemplate()
@@ -90,12 +109,11 @@ class Foundation( models.Model ):
     self.full_clean()
     self.save()
 
-  @cinp.action()
-  def setBuilt( self ):  # TOD: don't we want to clear out any jobs, or at least thrown an error if there is a job
+  def setBuilt( self, job=None ):
     """
     Set the Foundation to 'built' state.  This will not create/destroy any jobs.
     """
-    if self.cartographer or self.foundationjob or self.structure.structurejob:
+    if not self._canSetState( job ):
       raise Exception( 'All related jobs and cartographer instances must be cleared before setting Built' )
 
     if self.located_at is None:
@@ -107,14 +125,13 @@ class Foundation( models.Model ):
     self.full_clean()
     self.save()
 
-  @cinp.action()
-  def setDestroyed( self ):
+  def setDestroyed( self, job=None ):
     """
     Sets the Foundation to 'destroyed' state.  This will not create/destroy any jobs.
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
-    if self.cartographer or self.foundationjob or self.structure.structurejob:
+    if not self._canSetState( job ):
       raise Exception( 'All related jobs and cartographer instances must be cleared before setting Destroyed' )
 
     try:
@@ -353,16 +370,24 @@ class Structure( Networked ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
-  def setBuilt( self ):
-    if self.structurejob:
+  def _canSetState( self, job=None ):
+    try:
+       return self.structurejob == job
+    except ObjectDoesNotExist:
+      pass
+
+    return True
+
+  def setBuilt( self, job=None ):
+    if not self._canSetState( job ):
       raise Exception( 'All related jobs must be cleared before setting Built' )
 
     self.built_at = timezone.now()
     self.full_clean()
     self.save()
 
-  def setDestroyed( self ):
-    if self.structurejob:
+  def setDestroyed( self, job=None ):
+    if not self._canSetState( job ):
       raise Exception( 'All related jobs must be cleared before setting Destroyed' )
 
     self.built_at = None
@@ -688,16 +713,24 @@ class Dependency( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
-  def setBuilt( self ):
-    if self.dependencyjob:
+  def _canSetState( self, job=None ):
+    try:
+      return self.dependencyjob == job
+    except ObjectDoesNotExist:
+      pass
+
+    return True
+
+  def setBuilt( self, job=None ):
+    if not self._canSetState( job ):
       raise Exception( 'All related jobs must be cleared before setting Built' )
 
     self.built_at = timezone.now()
     self.full_clean()
     self.save()
 
-  def setDestroyed( self ):
-    if self.dependencyjob:
+  def setDestroyed( self, job=None ):
+    if not self._canSetState( job ):
       raise Exception( 'All related jobs must be cleared before setting Destroyed' )
 
     self.built_at = None
@@ -707,7 +740,7 @@ class Dependency( models.Model ):
       dependency.setDestroyed()
 
     if self.link == 'hard' and self.foundation is not None:
-        self.foundation.setDestroyed()  # TODO: Destroyed or Identified?
+        self.foundation.setDestroyed()
 
   @property
   def state( self ):

@@ -30,6 +30,11 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Site/Site' ); // figure out a way to deal with lots of sites when there are more than 100
   };
 
+  getPlotList = () =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Survey/Plot' );
+  };
+
   getNetworkList = () =>
   {
     return this.cinp.getFilteredObjects( '/api/v1/Utilities/Network' );
@@ -95,6 +100,11 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Foreman/JobLog', 'site', { 'site': site } );
   };
 
+  getCartographerList = () =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Survey/Cartographer' );
+  };
+
   getTodoList = ( site, hasDependancies, foundationClass ) =>
   {
     return this.cinp.getFilteredObjects( '/api/v1/Building/Foundation', 'todo', { 'site': site, 'has_dependancies': hasDependancies, 'foundation_class': foundationClass } );
@@ -118,6 +128,11 @@ class Contractor
   getSite = ( id ) =>
   {
     return this.cinp.get( '/api/v1/Site/Site:' + id + ':' );
+  };
+
+  getPlot = ( id ) =>
+  {
+    return this.cinp.get( '/api/v1/Survey/Plot:' + id + ':' );
   };
 
   getNetwork = ( id ) =>

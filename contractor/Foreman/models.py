@@ -255,10 +255,10 @@ class FoundationJob( BaseJob ):
 
   def done( self ):
     if self.script_name == 'destroy':
-      self.foundation.setDestroyed()
+      self.foundation.setDestroyed( self )
 
     elif self.script_name == 'create':
-      self.foundation.setBuilt()
+      self.foundation.setBuilt( self )
 
   @property
   def can_start( self ):
@@ -364,10 +364,10 @@ class StructureJob( BaseJob ):
 
   def done( self ):
     if self.script_name == 'destroy':
-      self.structure.setDestroyed()
+      self.structure.setDestroyed( self )
 
     elif self.script_name == 'create':
-      self.structure.setBuilt()
+      self.structure.setBuilt( self )
 
   @property
   def foundation( self ):
@@ -472,10 +472,10 @@ class DependencyJob( BaseJob ):
 
   def done( self ):
     if self.script_name == self.dependency.destroy_script_name:
-      self.dependency.setDestroyed()
+      self.dependency.setDestroyed( self )
 
     elif self.script_name == self.dependency.create_script_name:
-      self.dependency.setBuilt()
+      self.dependency.setBuilt( self )
 
     else:
       raise ValueError( 'Sciprt Name "{0}" does not match the create nor destroy script names' )  # dependency jobs can only create/destroy, no named/utility jobs
