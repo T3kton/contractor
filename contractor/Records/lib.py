@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 from django.conf import settings
 
-from contractor.lib.config import getConfig
+from contractor.lib.config import getConfig, mergeValues
 
 
 _mongo_db = None
@@ -40,21 +40,43 @@ def collection( target ):
       return db.structure
     elif 'Foundation' in [ i.__name__ for i in target.__class__.__mro__ ]:
       return db.foundation
-    else:
-      raise ValueError( 'Unable to located collection for "{0}"'.format( target ) )
+
+    raise ValueError( 'Unable to located collection for "{0}"'.format( target ) )
+
+
+def prepConfig( config ):
+  if not isinstance( config, dict ):
+    return config
+
+  for key in list( config.keys() ):
+    if not isinstance( key, str ):
+      config[ str( key ) ] = config[ key ]
+      del config[ key ]
+      key = str( key )
+
+    elif any( i in key for i in ( 'password', 'token', 'secret' ) ):  # this should match subcontractor/subcontractor/handler.py - _hideify_internal
+      del config[ key ]
+      continue
+
+    if isinstance( config[ key ], dict ):
+      config[ key ] = prepConfig( config[ key ] )
+
+    elif isinstance( config[ key ], ( list, tuple ) ):
+      config[ key ] = [ prepConfig( i ) for i in config[ key ] ]
+
+  return config
 
 
 def updateRecord( target ):
   db = collection( target )
 
-  item = getConfig( target )
+  item = mergeValues( getConfig( target ) )
   for i in ( '__contractor_host', '__pxe_template_location', '__pxe_location' ):  # these are the same everywhere
     del item[i]
 
-  # TODO: strip password/hash/hide fields
-
   key = { '_id': target.pk }
 
+  prepConfig( item )
   db.update( key, item, upsert=True )
 
 

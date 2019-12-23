@@ -68,13 +68,13 @@ class Foundation( models.Model ):
 
   def _canSetState( self, job=None ):  # You can't set state if there is a related job, unless that job (that is hopfully being passed in from the job that is calling this) is that related job
     try:
-       self.cartographer
-       return False
+      self.cartographer
+      return False
     except ObjectDoesNotExist:
       pass
 
     try:
-       return self.foundationjob == job
+      return self.foundationjob == job
     except ObjectDoesNotExist:
       pass
 
@@ -92,17 +92,22 @@ class Foundation( models.Model ):
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
-    if not self._canSetState():
+    try:
+      job = self.foundationjob
+      if job.script_name != 'create':
+        job = None
+    except ObjectDoesNotExist:
+      job = None
+
+    if not self._canSetState( job ):
       raise Exception( 'All related jobs and cartographer instances must be cleared before setting Located' )
+
+    if self.structure is not None and self.structure.state != 'planned':
+      raise Exception( 'Attached Structure must be in Planned state' )
 
     template = self.blueprint.getTemplate()
     if template is not None and not self.id_map:
       raise Exception( 'Foundations with blueprints, which specify templates, require id_map to be set before setting to Located' )
-
-    try:  # TODO: should we find and clear any jobs (that didn't cause this to be called?)
-      self.structure.setDestroyed()  # TODO: this may be a little harsh
-    except AttributeError:
-      pass
 
     self.located_at = timezone.now()
     self.built_at = None
@@ -372,7 +377,7 @@ class Structure( Networked ):
 
   def _canSetState( self, job=None ):
     try:
-       return self.structurejob == job
+      return self.structurejob == job
     except ObjectDoesNotExist:
       pass
 

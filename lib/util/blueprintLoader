@@ -14,6 +14,20 @@ from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint,
 # TODO: fix bug when re-adding a Strcutrue blueprint clears out all the foundation blueprint links that allready existed (something like that), I think it's some in the deleting during update
 
 
+def mapFieldConvert( value ):
+  if isinstance( value, dict ):
+    value = dict( value )  # no this is not reduntant, the Toml dict is an instance of dict, but is not pickle able, so force it into a regular dict
+
+    for key in value.keys():
+      value[ key ] = mapFieldConvert( value[ key ] )
+
+  elif isinstance( value, list ):
+    for index in range( 0, len( value ) ):
+      value[ index ] = mapFieldConvert( value[ index ] )
+
+  return value
+
+
 # No this isn't the full solution, for now we are punting and putting anything
 # that is a parent first, eventually we need to deal with parents with parents
 # that need to be in the right order
@@ -32,11 +46,16 @@ def bluePrintOrder( entity_map ):
 
 
 def loadBluePrintCommon( blueprint, target ):
-  for name in ( 'description', 'config_values' ):
+  for name in ( 'description', ):
     try:
       setattr( blueprint, name, target[ name ] )
     except KeyError:
       pass
+
+  try:
+    blueprint[ 'config_values' ] = mapFieldConvert( target[ 'config_values' ] )
+  except KeyError:
+    pass
 
 
 def setScripts( blueprint, target ):
@@ -129,7 +148,7 @@ def loadFoundationBlueprint( name, target, mode ):
   loadBluePrintCommon( blueprint, target )
 
   blueprint.foundation_type_list = target.get( 'foundation_types', [] )
-  blueprint.template = target.get( 'template', {} )
+  blueprint.template = mapFieldConvert( target.get( 'template', {} ) )
   blueprint.physical_interface_names = target.get( 'physical_interface_names', [] )
 
   blueprint.full_clean()

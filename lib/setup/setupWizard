@@ -18,7 +18,7 @@ from contractor.lib.ip import CIDRSubnet, StrToIp, IpToStr
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Building.models import Structure
 from contractor.Site.models import Site
-from contractor.Plot.models import Plot
+from contractor.Survey.models import Plot
 from contractor.Directory.models import Zone, Entry
 from contractor.Utilities.models import Network, RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress, NetworkAddressBlock
 from contractor.plugins.Manual.models import ManualFoundation
@@ -136,7 +136,7 @@ sbp_xenial = StructureBluePrint.objects.get( pk='manual-structure-base' )
 
 print()
 print( 'Creating test plot...' )
-p1 = Plot( name='test land', corners='Your testing area' )
+p1 = Plot( name='test', corners='Your testing area' )
 p1.full_clean()
 p1.save()
 

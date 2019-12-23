@@ -12,6 +12,7 @@ from contractor.Building.models import Foundation, Structure, Dependency
 
 # stuff for getting handeling tasks, everything here should be ephemerial, only things that are in progress/flight
 
+PICKLE_PROTOCOL = 4
 cinp = CInP( 'Foreman', '0.1' )
 
 
@@ -115,7 +116,7 @@ class BaseJob( models.Model ):
     runner = pickle.loads( self.script_runner )
     runner.clearDispatched()
     self.status = runner.status
-    self.script_runner = pickle.dumps( runner )
+    self.script_runner = pickle.dumps( runner, protocol=PICKLE_PROTOCOL )
 
     self.state = 'queued'
     self.full_clean()
@@ -138,7 +139,7 @@ class BaseJob( models.Model ):
       raise ValueError( 'Unable to rollback "{0}"'.format( msg ) )
 
     self.status = runner.status
-    self.script_runner = pickle.dumps( runner )
+    self.script_runner = pickle.dumps( runner, protocol=PICKLE_PROTOCOL )
     self.state = 'queued'
     self.full_clean()
     self.save()
@@ -158,7 +159,7 @@ class BaseJob( models.Model ):
     runner = pickle.loads( self.script_runner )
     runner.clearDispatched()
     self.status = runner.status
-    self.script_runner = pickle.dumps( runner )
+    self.script_runner = pickle.dumps( runner, protocol=PICKLE_PROTOCOL )
 
     self.full_clean()
     self.save()

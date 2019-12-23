@@ -71,7 +71,7 @@ class NoRollback( Exception ):
 # for values in modules, the getter/setter must not block, if you need to block
 # make a external function
 
-# for an inline non-pausing/remote function, you only need to implement execute and value, toSubcontractor is not called if done is immeditally True.
+# for an inline non-pausing/non-remote function, you only need to implement execute and value, toSubcontractor is not called if done is immeditally True.
 
 # any exceptions raised in any of these functions will cause the job the script is running for to end up in error state. Using any Excpetions other than
 # ExecutionError and UnrecoverableError will have it's Exception Name displayed in the output, otherwise it is treaded as Unrecoverable... where possible
@@ -905,7 +905,14 @@ class Runner( object ):
             except TypeError as e:
               raise ParamaterError( '<unknown>', e, self.cur_line )
 
-            value = handler( **paramaters )
+            try:
+              value = handler( **paramaters )
+            except ( ParamaterError, Pause, ExecutionError, UnrecoverableError, Interrupt ) as e:
+              raise e
+
+            except Exception as e:
+              _debugDump( 'Handler "{0}" in module "{1}" error on line "{2}"'.format( handler.__class__.__name__, module, self.cur_line ), e, self.ast, self.state )
+              raise UnrecoverableError( 'Handler "{0}" in module "{1}" error on line "{2}": "{3}"({4})'.format( handler.__class__.__name__, module, self.cur_line, str( e ), e.__class__.__name__) )
 
         if isinstance( handler, ExternalFunction ):  # else was allready run and set a value above
           handler._runner = self

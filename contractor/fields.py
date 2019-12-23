@@ -1,4 +1,5 @@
 import json
+import pickle
 import re
 
 from django.db import models
@@ -28,8 +29,8 @@ def defaultdict():
   return dict()
 
 
-class MapField( models.TextField ):
-  description = 'JSON Encoded Map'
+class MapField( models.BinaryField ):
+  description = 'Map Field'
   cinp_type = 'Map'
   empty_values = [ None, {} ]
 
@@ -52,12 +53,12 @@ class MapField( models.TextField ):
       return None
 
     try:
-      value = json.loads( value )
+      value = pickle.loads( value )
     except ValueError:
-      raise ValidationError( '"%(value)s" is not valid JSON.', params={ 'value': value[ 0:100 ] }, code='invalid' )
+      raise ValidationError( 'DB Value is not a valid Pickle.', code='invalid' )
 
     if value is not None and not isinstance( value, dict ):
-      raise ValidationError( 'DB Stored JSON does not encode a dict.', code='invalid' )
+      raise ValidationError( 'DB Stored Value does not encode a dict.', code='invalid' )
 
     return value
 
@@ -77,7 +78,7 @@ class MapField( models.TextField ):
     if not isinstance( value, dict ):
       raise ValidationError( 'value is not a dict.', code='invalid'  )
 
-    return json.dumps( value )
+    return pickle.dumps( value, protocol=4 )
 
 
 class JSONField( models.TextField ):
