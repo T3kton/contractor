@@ -67,7 +67,7 @@ class Box( models.Model ):
   proxy = models.CharField( max_length=512, blank=True, null=True )
   type = models.CharField( max_length=4, choices=BOX_TYPE )
   one_shot = models.BooleanField( default=True )
-  extra_data = MapField( default={} )
+  extra_data = MapField()
   expires = models.DateTimeField( blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )

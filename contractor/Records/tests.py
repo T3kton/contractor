@@ -240,10 +240,13 @@ def test_updateConfig_foundation( mocker ):
                         '_blueprint': 'fdnbp_test',
                         '_foundation_class_list': [],
                         '_foundation_id': 'bobmachine',
+                        '_foundation_id_map': None,
                         '_foundation_interface_list': [],
                         '_foundation_locator': 'bobmachine',
                         '_foundation_state': 'planned',
-                        '_foundation_type': 'Unknown'
+                        '_foundation_type': 'Unknown',
+                        '_provisioning_interface': None,
+                        '_provisioning_interface_mac': None
                       }
 
   fake_key = None
@@ -307,6 +310,7 @@ def test_updateConfig_structure( mocker ):
                         '_blueprint': 'strbp_test',
                         '_foundation_class_list': [],
                         '_foundation_id': 'fdn_test',
+                        '_foundation_id_map': None,
                         '_foundation_interface_list': [],
                         '_foundation_locator': 'fdn_test',
                         '_foundation_state': 'planned',
@@ -340,6 +344,7 @@ def test_updateConfig_structure( mocker ):
                         '_blueprint': 'strbp_test',
                         '_foundation_class_list': [],
                         '_foundation_id': 'fdn_test',
+                        '_foundation_id_map': None,
                         '_foundation_interface_list': [],
                         '_foundation_locator': 'fdn_test',
                         '_foundation_state': 'planned',

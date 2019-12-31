@@ -1,4 +1,5 @@
 import json
+import pickle
 import re
 
 from django.db import models
@@ -28,8 +29,8 @@ def defaultdict():
   return dict()
 
 
-class MapField( models.TextField ):
-  description = 'JSON Encoded Map'
+class MapField( models.BinaryField ):
+  description = 'Map Field'
   cinp_type = 'Map'
   empty_values = [ None, {} ]
 
@@ -45,19 +46,29 @@ class MapField( models.TextField ):
     else:
       kwargs[ 'default' ] = defaultdict
 
-    super().__init__( *args, **kwargs )
+    editable = kwargs.get( 'editable', True )
+    super().__init__( *args, **kwargs )  # until Django 2.1, editable for BinaryFields is not able to be made editable
+    self.editable = editable
+
+  def deconstruct( self ):
+    editable = self.editable
+    self.editable = False  # have to set this to non default so BinaryField's deconstruct works
+    name, path, args, kwargs = super( MapField, self ).deconstruct()
+    self.editable = editable
+    kwargs[ 'editable' ] = self.editable
+    return name, path, args, kwargs
 
   def from_db_value( self, value, expression, connection, context ):
     if value is None:
       return None
 
     try:
-      value = json.loads( value )
+      value = pickle.loads( value )
     except ValueError:
-      raise ValidationError( '"%(value)s" is not valid JSON.', params={ 'value': value[ 0:100 ] }, code='invalid' )
+      raise ValidationError( 'DB Value is not a valid Pickle.', code='invalid' )
 
     if value is not None and not isinstance( value, dict ):
-      raise ValidationError( 'DB Stored JSON does not encode a dict.', code='invalid' )
+      raise ValidationError( 'DB Stored Value does not encode a dict.', code='invalid' )
 
     return value
 
@@ -77,7 +88,7 @@ class MapField( models.TextField ):
     if not isinstance( value, dict ):
       raise ValidationError( 'value is not a dict.', code='invalid'  )
 
-    return json.dumps( value )
+    return pickle.dumps( value, protocol=4 )
 
 
 class JSONField( models.TextField ):
@@ -184,7 +195,7 @@ class IpAddressField( models.BinaryField ):  # needs 128 bits of storage, the in
     super().__init__( *args, **kwargs )  # until Django 2.1, editable for BinaryFields is not able to be made editable
     self.editable = editable
 
-  def deconstruct(self):
+  def deconstruct( self ):
     editable = self.editable
     self.editable = False  # have to set this to non default so BinaryField's deconstruct works
     name, path, args, kwargs = super( IpAddressField, self ).deconstruct()

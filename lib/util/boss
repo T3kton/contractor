@@ -313,7 +313,6 @@ Status:
     sys.exit( 0 )
 
   if args.planned:
-    _clear_job( target )
     target.setDestroyed()
     registerEvent( target, name='destroy' )
     print( '{0} now set to planned.'.format( target ) )
@@ -324,13 +323,11 @@ Status:
       print( 'Can only set Foundations to located' )
       sys.exit( 1 )
 
-    _clear_job( target )
     target.setLocated()
     print( '{0} now set to located.'.format( target ) )
     sys.exit( 0 )
 
   if args.built:
-    _clear_job( target )
     target.setBuilt()
     registerEvent( target, name='create' )
     print( '{0} now set to built.'.format( target ) )

@@ -3,6 +3,7 @@ import { Layout, NavDrawer, Panel, Sidebar, Chip, FontIcon, AppBar, Navigation, 
 import { BrowserRouter as Router, Route, Link } from 'react-router-dom';
 import Home from './Home';
 import Site from './Site';
+import Plot from './Plot';
 import Network from './Network';
 import Foundation from './Foundation';
 import Dependency from './Dependency';
@@ -12,6 +13,7 @@ import BluePrint from './BluePrint';
 import PXE from './PXE';
 import AddressBlock from './AddressBlock';
 import Job from './Job';
+import Cartographer from './Cartographer';
 import JobLog from './JobLog';
 import Todo from './Todo';
 import SiteGraph from './SiteGraph';
@@ -102,6 +104,7 @@ class App extends React.Component
           <Navigation type="vertical">
             <Link to="/"><Button icon="home">Home</Button></Link>
             <Link to="/sites"><Button icon="business">Sites</Button></Link>
+            <Link to="/plots"><Button icon="map">Plots</Button></Link>
             <Link to="/networks"><Button icon="router">Networks</Button></Link>
             <Link to="/blueprints"><Button icon="import_contacts">BluePrints</Button></Link>
             <Link to="/pxes"><Button icon="import_contacts">PXEs</Button></Link>
@@ -111,6 +114,7 @@ class App extends React.Component
             <Link to="/complexes"><Button icon="location_city">Complexes</Button></Link>
             <Link to="/addressblocks"><Button icon="compare_arrows">Address Blocks</Button></Link>
             <Link to="/jobs"><Button icon="dvr">Jobs</Button></Link>
+            <Link to="/cartographer"><Button icon="public">Cartographer</Button></Link>
             <Link to="/joblog"><Button icon="reorder">Job Log</Button></Link>
             <Link to="/todo"><Button icon="check_box">Todo</Button></Link>
             <Link to="/graph"><Button icon="timeline">Graph</Button></Link>
@@ -128,6 +132,7 @@ class App extends React.Component
           <div ref="content">
             <Route exact={true} path="/" component={ Home }/>
             <Route path="/site/:id" render={ ( { match } ) => ( <Site id={ match.params.id } detailGet={ this.contractor.getSite } getConfig={ this.contractor.getConfig } /> ) } />
+            <Route path="/plot/:id" render={ ( { match } ) => ( <Plot id={ match.params.id } detailGet={ this.contractor.getPlot } /> ) } />
             <Route path="/blueprint/f/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getFoundationBluePrint } getConfig={ this.contractor.getConfig } getScript={ this.contractor.getScript }/> ) } />
             <Route path="/network/:id" render={ ( { match } ) => ( <Network id={ match.params.id } detailGet={ this.contractor.getNetwork } /> ) } />
             <Route path="/blueprint/s/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getStructureBluePrint } getConfig={ this.contractor.getConfig } getScript={ this.contractor.getScript } /> ) } />
@@ -141,6 +146,7 @@ class App extends React.Component
             <Route path="/job/s/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="structure" contractor={ this.contractor } /> ) } />
             <Route path="/job/d/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="dependency" contractor={ this.contractor } /> ) } />
             <Route exact={true} path="/sites" render={ () => ( <Site listGet={ this.contractor.getSiteList } /> ) } />
+            <Route exact={true} path="/plots" render={ () => ( <Plot listGet={ this.contractor.getPlotList } /> ) } />
             <Route exact={true} path="/networks" render={ () => ( <Network listGet={ this.contractor.getNetworkList } /> ) } />
             <Route exact={true} path="/blueprints" render={ () => ( <BluePrint listGetF={ this.contractor.getFoundationBluePrintList } listGetS={ this.contractor.getStructureBluePrintList } /> ) }/>
             <Route exact={true} path="/pxes" render={ () => ( <PXE site={ this.state.cur_site } listGet={ this.contractor.getPXEList } /> ) } />
@@ -150,6 +156,7 @@ class App extends React.Component
             <Route exact={true} path="/complexes" render={ () => ( <Complex site={ this.state.cur_site } listGet={ this.contractor.getComplexList } /> ) } />
             <Route exact={true} path="/addressblocks" render={ () => ( <AddressBlock site={ this.state.cur_site } listGet={ this.contractor.getAddressBlockList } /> ) } />
             <Route exact={true} path="/jobs" render={ () => ( <Job site={ this.state.cur_site } listGetF={ this.contractor.getFoundationJobList } listGetS={ this.contractor.getStructureJobList } listGetD={ this.contractor.getDependencyJobList } /> ) } />
+            <Route exact={true} path="/cartographer" render={ () => ( <Cartographer listGet={ this.contractor.getCartographerList } /> ) } />
             <Route exact={true} path="/joblog" render={ () => ( <JobLog site={ this.state.cur_site } listGet={ this.contractor.getJobLogList } /> ) } />
             <Route exact={true} path="/todo" render={ () => ( <Todo site={ this.state.cur_site } listGet={ this.contractor.getTodoList } classListGet={ this.contractor.getFoundationClassList } /> ) } />
             <Route exact={true} path="/graph" render={ () => ( <SiteGraph site={ this.state.cur_site } siteDependencyMap={ this.contractor.getSiteDependencyMap } /> ) } />

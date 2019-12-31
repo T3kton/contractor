@@ -13,8 +13,6 @@ from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Networked, RealNetworkInterface
 from contractor.lib.config import getConfig, mergeValues
-from contractor.BluePrint.lib import checkTemplate
-from contractor.Building.lib import foundationLookup
 from contractor.Records.lib import post_save_callback, post_delete_callback
 
 # this is where the plan meets the resources to make it happen, the actuall impelemented thing, and these represent things, you can't delete the records without cleaning up what ever they are pointing too
@@ -52,12 +50,9 @@ class Foundation( models.Model ):
 
   @cinp.action( return_type={ 'type': 'String' }, paramater_type_list=[ 'Map' ] )
   def setIdMap( self, id_map ):
-    template = self.blueprint.getTemplate()
-
-    if template is not None:
-      error = checkTemplate( template, id_map )
-      if error:
-        return str( error )
+    error = self.blueprint.validateIdMap( id_map )
+    if error is not None:
+      return error
 
     self.id_map = id_map
     self.full_clean()
@@ -69,45 +64,63 @@ class Foundation( models.Model ):
         iface.full_clean()
         iface.save()
 
-    return 'Good'
+    return None
 
-  # @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, paramater_type_list=[ 'Map' ] )
-  @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ 'Map' ] )
-  @staticmethod
-  def lookup( info_map=None ):
-    ( matched_by, foundation ) = foundationLookup( info_map )
-    if foundation is not None:
-      foundation = foundation.locator
+  def _canSetState( self, job=None ):  # You can't set state if there is a related job, unless that job (that is hopfully being passed in from the job that is calling this) is that related job
+    try:
+      self.cartographer
+      return False
+    except ObjectDoesNotExist:
+      pass
 
-    return { 'matched_by': matched_by, 'locator': foundation }
+    try:
+      return self.foundationjob == job
+    except ObjectDoesNotExist:
+      pass
 
-  @cinp.action()
+    try:
+      self.structure.structurejob
+      return False
+    except ( ObjectDoesNotExist, AttributeError ):
+      pass
+
+    return True
+
   def setLocated( self ):
     """
     Sets the Foundation to 'located' state.  This will not create/destroy any jobs.
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
+    try:
+      job = self.foundationjob
+      if job.script_name != 'create':
+        job = None
+    except ObjectDoesNotExist:
+      job = None
+
+    if not self._canSetState( job ):
+      raise Exception( 'All related jobs and cartographer instances must be cleared before setting Located' )
+
+    if self.structure is not None and self.structure.state != 'planned':
+      raise Exception( 'Attached Structure must be in Planned state' )
 
     template = self.blueprint.getTemplate()
     if template is not None and not self.id_map:
       raise Exception( 'Foundations with blueprints, which specify templates, require id_map to be set before setting to Located' )
-
-    try:  # TODO: should we find and clear any jobs (that didn't cause this to be called?)
-      self.structure.setDestroyed()  # TODO: this may be a little harsh
-    except AttributeError:
-      pass
 
     self.located_at = timezone.now()
     self.built_at = None
     self.full_clean()
     self.save()
 
-  @cinp.action()
-  def setBuilt( self ):
+  def setBuilt( self, job=None ):
     """
     Set the Foundation to 'built' state.  This will not create/destroy any jobs.
     """
+    if not self._canSetState( job ):
+      raise Exception( 'All related jobs and cartographer instances must be cleared before setting Built' )
+
     if self.located_at is None:
       if self.blueprint.getTemplate() is not None:
         raise Exception( 'Foundation with Blueprints with templates must be located first' )
@@ -117,13 +130,15 @@ class Foundation( models.Model ):
     self.full_clean()
     self.save()
 
-  @cinp.action()
-  def setDestroyed( self ):
+  def setDestroyed( self, job=None ):
     """
     Sets the Foundation to 'destroyed' state.  This will not create/destroy any jobs.
 
     NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
+    if not self._canSetState( job ):
+      raise Exception( 'All related jobs and cartographer instances must be cleared before setting Destroyed' )
+
     try:
       self.structure.setDestroyed()  # TODO: this may be a little harsh
     except AttributeError:
@@ -326,7 +341,7 @@ class Foundation( models.Model ):
       errors[ 'locator' ] = 'Invalid'
 
     if self.blueprint_id is not None and self.type not in self.blueprint.foundation_type_list:
-        errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint.description, self.type )
+        errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint, self.type )
 
     if errors:
       raise ValidationError( errors )
@@ -360,12 +375,26 @@ class Structure( Networked ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
-  def setBuilt( self ):
+  def _canSetState( self, job=None ):
+    try:
+      return self.structurejob == job
+    except ObjectDoesNotExist:
+      pass
+
+    return True
+
+  def setBuilt( self, job=None ):
+    if not self._canSetState( job ):
+      raise Exception( 'All related jobs must be cleared before setting Built' )
+
     self.built_at = timezone.now()
     self.full_clean()
     self.save()
 
-  def setDestroyed( self ):
+  def setDestroyed( self, job=None ):
+    if not self._canSetState( job ):
+      raise Exception( 'All related jobs must be cleared before setting Destroyed' )
+
     self.built_at = None
     self.config_uuid = str( uuid.uuid4() )  # new on destroyed, that way we can leave anything that might still be kicking arround in the dust
     self.full_clean()
@@ -475,7 +504,7 @@ class Structure( Networked ):
     errors = {}
 
     if self.foundation_id is not None and self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
-      errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint.description, self.foundation.blueprint.description )
+      errors[ 'foundation' ] = 'The blueprint "{0}" is not allowed on foundation "{1}"'.format( self.blueprint, self.foundation.blueprint )
 
     if self.config_values is not None:
       for name in self.config_values:
@@ -589,7 +618,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
 @cinp.model( )
 class ComplexStructure( models.Model ):
   complex = models.ForeignKey( Complex, on_delete=models.CASCADE )
-  structure = models.ForeignKey( Structure, on_delete=models.CASCADE )
+  structure = models.OneToOneField( Structure, on_delete=models.CASCADE )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -689,12 +718,26 @@ class Dependency( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
-  def setBuilt( self ):
+  def _canSetState( self, job=None ):
+    try:
+      return self.dependencyjob == job
+    except ObjectDoesNotExist:
+      pass
+
+    return True
+
+  def setBuilt( self, job=None ):
+    if not self._canSetState( job ):
+      raise Exception( 'All related jobs must be cleared before setting Built' )
+
     self.built_at = timezone.now()
     self.full_clean()
     self.save()
 
-  def setDestroyed( self ):
+  def setDestroyed( self, job=None ):
+    if not self._canSetState( job ):
+      raise Exception( 'All related jobs must be cleared before setting Destroyed' )
+
     self.built_at = None
     self.full_clean()
     self.save()
@@ -702,7 +745,7 @@ class Dependency( models.Model ):
       dependency.setDestroyed()
 
     if self.link == 'hard' and self.foundation is not None:
-        self.foundation.setDestroyed()  # TODO: Destroyed or Identified?
+        self.foundation.setDestroyed()
 
   @property
   def state( self ):

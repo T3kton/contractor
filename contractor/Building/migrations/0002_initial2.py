@@ -69,7 +69,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='complexstructure',
             name='structure',
-            field=models.ForeignKey(to='Building.Structure'),
+            field=models.OneToOneField(to='Building.Structure'),
         ),
         migrations.AddField(
             model_name='complex',

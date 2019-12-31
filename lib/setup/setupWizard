@@ -18,6 +18,7 @@ from contractor.lib.ip import CIDRSubnet, StrToIp, IpToStr
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Building.models import Structure
 from contractor.Site.models import Site
+from contractor.Survey.models import Plot
 from contractor.Directory.models import Zone, Entry
 from contractor.Utilities.models import Network, RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress, NetworkAddressBlock
 from contractor.plugins.Manual.models import ManualFoundation
@@ -134,7 +135,12 @@ fbp_manual = FoundationBluePrint.objects.get( pk='manual-foundation-base' )
 sbp_xenial = StructureBluePrint.objects.get( pk='manual-structure-base' )
 
 print()
-print( 'creating site "{0}" ({1})...'.format( args.site_name, args.site_domain ) )
+print( 'Creating test plot...' )
+p1 = Plot( name='test', corners='Your testing area' )
+p1.full_clean()
+p1.save()
+
+print( 'Creating site "{0}" ({1})...'.format( args.site_name, args.site_domain ) )
 parent = None
 for item in args.site_domain.split( '.' )[::-1]:
   zone = Zone()

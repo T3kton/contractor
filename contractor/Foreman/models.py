@@ -12,6 +12,7 @@ from contractor.Building.models import Foundation, Structure, Dependency
 
 # stuff for getting handeling tasks, everything here should be ephemerial, only things that are in progress/flight
 
+PICKLE_PROTOCOL = 4
 cinp = CInP( 'Foreman', '0.1' )
 
 
@@ -115,7 +116,7 @@ class BaseJob( models.Model ):
     runner = pickle.loads( self.script_runner )
     runner.clearDispatched()
     self.status = runner.status
-    self.script_runner = pickle.dumps( runner )
+    self.script_runner = pickle.dumps( runner, protocol=PICKLE_PROTOCOL )
 
     self.state = 'queued'
     self.full_clean()
@@ -138,7 +139,7 @@ class BaseJob( models.Model ):
       raise ValueError( 'Unable to rollback "{0}"'.format( msg ) )
 
     self.status = runner.status
-    self.script_runner = pickle.dumps( runner )
+    self.script_runner = pickle.dumps( runner, protocol=PICKLE_PROTOCOL )
     self.state = 'queued'
     self.full_clean()
     self.save()
@@ -158,7 +159,7 @@ class BaseJob( models.Model ):
     runner = pickle.loads( self.script_runner )
     runner.clearDispatched()
     self.status = runner.status
-    self.script_runner = pickle.dumps( runner )
+    self.script_runner = pickle.dumps( runner, protocol=PICKLE_PROTOCOL )
 
     self.full_clean()
     self.save()
@@ -255,10 +256,10 @@ class FoundationJob( BaseJob ):
 
   def done( self ):
     if self.script_name == 'destroy':
-      self.foundation.setDestroyed()
+      self.foundation.setDestroyed( self )
 
     elif self.script_name == 'create':
-      self.foundation.setBuilt()
+      self.foundation.setBuilt( self )
 
   @property
   def can_start( self ):
@@ -364,10 +365,10 @@ class StructureJob( BaseJob ):
 
   def done( self ):
     if self.script_name == 'destroy':
-      self.structure.setDestroyed()
+      self.structure.setDestroyed( self )
 
     elif self.script_name == 'create':
-      self.structure.setBuilt()
+      self.structure.setBuilt( self )
 
   @property
   def foundation( self ):
@@ -472,10 +473,10 @@ class DependencyJob( BaseJob ):
 
   def done( self ):
     if self.script_name == self.dependency.destroy_script_name:
-      self.dependency.setDestroyed()
+      self.dependency.setDestroyed( self )
 
     elif self.script_name == self.dependency.create_script_name:
-      self.dependency.setBuilt()
+      self.dependency.setBuilt( self )
 
     else:
       raise ValueError( 'Sciprt Name "{0}" does not match the create nor destroy script names' )  # dependency jobs can only create/destroy, no named/utility jobs

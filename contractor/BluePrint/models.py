@@ -7,9 +7,9 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, StringListField, name_regex, config_name_regex
 from contractor.tscript import parser
 from contractor.lib.config import getConfig
+from contractor.BluePrint.lib import validateTemplate
 from contractor.Records.lib import post_save_callback, post_delete_callback
 
-# these are the templates, describe how soomething is made and the template of the thing it's made on
 
 cinp = CInP( 'BluePrint', '0.1' )
 
@@ -102,7 +102,7 @@ class BluePrint( models.Model ):
 class FoundationBluePrint( BluePrint ):
   parent_list = models.ManyToManyField( 'self', blank=True, symmetrical=False )
   foundation_type_list = StringListField( max_length=200 )  # list of the foundation types this blueprint can be used for
-  template = MapField( blank=True )
+  template = MapField( blank=True, null=True )
   physical_interface_names = StringListField( max_length=200, blank=True )
 
   def getTemplate( self ):
@@ -115,6 +115,13 @@ class FoundationBluePrint( BluePrint ):
         return tmp
 
     return None
+
+  def validateIdMap( self, id_map ):
+    template = self.getTemplate()
+    if template is None:
+      return None
+
+    return validateTemplate( id_map, template )
 
   @cinp.action( 'Map' )
   def getConfig( self ):

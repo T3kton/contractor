@@ -61,6 +61,10 @@ def _do_processJobs( site, module_list, count ):
       time.sleep( 0.1 )
 
 
+def fake_canSetState( self, job=None ):
+  return True
+
+
 @pytest.mark.timeout( 20, method='thread' )
 @pytest.mark.django_db( transaction=True )
 def test_job_locking( mocker ):
@@ -315,9 +319,9 @@ def test_foundation_job_create():  # TODO: should also do tests depending on a D
   with pytest.raises( Exception ) as execinfo:
     createJob( 'create', f, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
-  f.setLocated()
   f.foundationjob.delete()
   f = Foundation.objects.get( pk=f.pk )
+  f.setLocated()
 
   with pytest.raises( Exception ) as execinfo:
     createJob( 'destroy', f, TestUser() )
@@ -495,9 +499,9 @@ def test_structure_job_create():  # TODO: test structures with dependency
   with pytest.raises( Exception ) as execinfo:
     createJob( 'create', s, TestUser() )
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
-  f.setBuilt()
   s.structurejob.delete()
   s = Structure.objects.get( pk=s.pk )
+  f.setBuilt()
 
   with pytest.raises( Exception ) as execinfo:
     createJob( 'destroy', s, TestUser() )
@@ -543,6 +547,7 @@ def test_structure_job_create():  # TODO: test structures with dependency
   s.structurejob.delete()
   f.foundationjob.delete()
   s = Structure.objects.get( pk=s.pk )
+  f = Foundation.objects.get( pk=f.pk )
 
   s.setDestroyed()
   f.setBuilt()
@@ -554,6 +559,7 @@ def test_structure_job_create():  # TODO: test structures with dependency
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   f.foundationjob.delete()
   s = Structure.objects.get( pk=s.pk )
+  f = Foundation.objects.get( pk=f.pk )
 
   s.setBuilt()
   f.setBuilt()
@@ -564,6 +570,7 @@ def test_structure_job_create():  # TODO: test structures with dependency
   s.structurejob.delete()
   f.foundationjob.delete()
   s = Structure.objects.get( pk=s.pk )
+  f = Foundation.objects.get( pk=f.pk )
 
   s.setBuilt()
   f.setBuilt()
@@ -575,6 +582,7 @@ def test_structure_job_create():  # TODO: test structures with dependency
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   f.foundationjob.delete()
   s = Structure.objects.get( pk=s.pk )
+  f = Foundation.objects.get( pk=f.pk )
 
 
 @pytest.mark.django_db()
@@ -663,6 +671,7 @@ def test_dependency_job_create():
   d.dependencyjob.delete()
   s.structurejob.delete()
   d = Dependency.objects.get( pk=d.pk )
+  s = Structure.objects.get( pk=s.pk )
 
   d.setDestroyed()
   s.setBuilt()
@@ -674,6 +683,7 @@ def test_dependency_job_create():
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   s.structurejob.delete()
   d = Dependency.objects.get( pk=d.pk )
+  s = Structure.objects.get( pk=s.pk )
 
   d.setBuilt()
   s.setBuilt()
@@ -684,6 +694,7 @@ def test_dependency_job_create():
   d.dependencyjob.delete()
   s.structurejob.delete()
   d = Dependency.objects.get( pk=d.pk )
+  s = Structure.objects.get( pk=s.pk )
 
   d.setBuilt()
   s.setBuilt()
@@ -695,10 +706,15 @@ def test_dependency_job_create():
   assert str( execinfo.value.code ) == 'JOB_EXISTS'
   s.structurejob.delete()
   d = Dependency.objects.get( pk=d.pk )
+  s = Structure.objects.get( pk=s.pk )
 
 
 @pytest.mark.django_db()
-def test_can_start_create():
+def test_can_start_create( mocker ):
+  mocker.patch( 'contractor.Building.models.Foundation._canSetState', fake_canSetState )  # disable the job checking
+  mocker.patch( 'contractor.Building.models.Structure._canSetState', fake_canSetState )
+  mocker.patch( 'contractor.Building.models.Dependency._canSetState', fake_canSetState )
+
   si = Site()
   si.name = 'test'
   si.description = 'test'
@@ -818,7 +834,11 @@ def test_can_start_create():
 
 
 @pytest.mark.django_db()
-def test_can_start_destroy():
+def test_can_start_destroy( mocker ):
+  mocker.patch( 'contractor.Building.models.Foundation._canSetState', fake_canSetState )  # disable the job checking
+  mocker.patch( 'contractor.Building.models.Structure._canSetState', fake_canSetState )
+  mocker.patch( 'contractor.Building.models.Dependency._canSetState', fake_canSetState )
+
   si = Site()
   si.name = 'test'
   si.description = 'test'
@@ -970,9 +990,12 @@ def test_can_start_destroy():
   assert f.foundationjob.can_start is True
 
 
-
 @pytest.mark.django_db()
-def test_can_start_mixed():
+def test_can_start_mixed( mocker ):
+  mocker.patch( 'contractor.Building.models.Foundation._canSetState', fake_canSetState )  # disable the job checking
+  mocker.patch( 'contractor.Building.models.Structure._canSetState', fake_canSetState )
+  mocker.patch( 'contractor.Building.models.Dependency._canSetState', fake_canSetState )
+
   si = Site()
   si.name = 'test'
   si.description = 'test'
