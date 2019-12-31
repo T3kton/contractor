@@ -21,9 +21,8 @@ def mapFieldConvert( value ):
     for key in value.keys():
       value[ key ] = mapFieldConvert( value[ key ] )
 
-  elif isinstance( value, list ):
-    for index in range( 0, len( value ) ):
-      value[ index ] = mapFieldConvert( value[ index ] )
+  elif isinstance( value, ( list, tuple ) ):
+    value = [ mapFieldConvert( i ) for i in value ]
 
   return value
 

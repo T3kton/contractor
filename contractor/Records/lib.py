@@ -45,24 +45,21 @@ def collection( target ):
 
 
 def prepConfig( config ):
-  if not isinstance( config, dict ):
-    return config
+  if isinstance( config, dict ):
+    for key in list( config.keys() ):
+      if not isinstance( key, str ):
+        config[ str( key ) ] = config[ key ]
+        del config[ key ]
+        key = str( key )
 
-  for key in list( config.keys() ):
-    if not isinstance( key, str ):
-      config[ str( key ) ] = config[ key ]
-      del config[ key ]
-      key = str( key )
+      elif any( i in key for i in ( 'password', 'token', 'secret' ) ):  # this should match subcontractor/subcontractor/handler.py - _hideify_internal
+        del config[ key ]
+        continue
 
-    elif any( i in key for i in ( 'password', 'token', 'secret' ) ):  # this should match subcontractor/subcontractor/handler.py - _hideify_internal
-      del config[ key ]
-      continue
-
-    if isinstance( config[ key ], dict ):
       config[ key ] = prepConfig( config[ key ] )
 
-    elif isinstance( config[ key ], ( list, tuple ) ):
-      config[ key ] = [ prepConfig( i ) for i in config[ key ] ]
+  elif isinstance( config, ( list, tuple ) ):
+    config = [ prepConfig( i ) for i in config ]
 
   return config
 
