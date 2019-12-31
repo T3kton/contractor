@@ -52,7 +52,7 @@ def loadBluePrintCommon( blueprint, target ):
       pass
 
   try:
-    blueprint[ 'config_values' ] = mapFieldConvert( target[ 'config_values' ] )
+    blueprint.config_values = mapFieldConvert( target[ 'config_values' ] )
   except KeyError:
     pass
 

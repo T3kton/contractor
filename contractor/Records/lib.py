@@ -52,7 +52,7 @@ def prepConfig( config ):
         del config[ key ]
         key = str( key )
 
-      elif any( i in key for i in ( 'password', 'token', 'secret' ) ):  # this should match subcontractor/subcontractor/handler.py - _hideify_internal
+      elif any( [ i in key for i in ( 'password', 'token', 'secret' ) ] ):  # this should match subcontractor/subcontractor/handler.py - _hideify_internal
         del config[ key ]
         continue
 
