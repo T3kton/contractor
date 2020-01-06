@@ -1,6 +1,7 @@
 import React from 'react';
 import CInP from './cinp';
 import { Table, TableHead, TableRow, TableCell } from 'react-toolbox';
+import { Link } from 'react-router-dom';
 
 class Cartographer extends React.Component
 {
@@ -31,6 +32,7 @@ class Cartographer extends React.Component
           id = CInP.extractIds( id )[0];
           cartographer_list.push( { id: id,
                             identifier: cartographer.identifier,
+                            message: cartographer.message,
                             foundation: CInP.extractIds( cartographer.foundation )[0],
                             created: cartographer.created,
                             updated: cartographer.updated
@@ -47,6 +49,7 @@ class Cartographer extends React.Component
       <Table selectable={ false } multiSelectable={ false }>
         <TableHead>
           <TableCell>Identifier</TableCell>
+          <TableCell>Message</TableCell>
           <TableCell>Foundation</TableCell>
           <TableCell>Created</TableCell>
           <TableCell>Updated</TableCell>
@@ -54,6 +57,7 @@ class Cartographer extends React.Component
         { this.state.cartographer_list.map( ( item ) => (
           <TableRow key={ item.id } >
             <TableCell>{ item.identifier }</TableCell>
+            <TableCell>{ item.message }</TableCell>
             <TableCell><Link to={ '/plot/' + item.foundation }>{ item.foundation }</Link></TableCell>
             <TableCell>{ item.created }</TableCell>
             <TableCell>{ item.updated }</TableCell>

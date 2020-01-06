@@ -67,7 +67,11 @@ def prepConfig( config ):
 def updateRecord( target ):
   db = collection( target )
 
-  item = mergeValues( getConfig( target ) )
+  if target.__class__.__name__ in ( 'StructureBluePrint', 'FoundationBluePrint' ):
+    item = getConfig( target )
+  else:
+    item = mergeValues( getConfig( target ) )
+
   for i in ( '__contractor_host', '__pxe_template_location', '__pxe_location' ):  # these are the same everywhere
     del item[i]
 
