@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Cartographer',
             fields=[
-                ('identifier', models.CharField(max_length=100, primary_key=True, serialize=False)),
+                ('identifier', models.CharField(max_length=64, primary_key=True, serialize=False)),
                 ('message', models.CharField(max_length=200)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),

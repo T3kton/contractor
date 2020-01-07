@@ -53,7 +53,7 @@ class Plot( models.Model ):
 
 @cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
 class Cartographer( models.Model ):
-  identifier = models.CharField( max_length=100, primary_key=True )
+  identifier = models.CharField( max_length=64, primary_key=True )
   foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT, null=True, blank=True )
   message = models.CharField( max_length=200 )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -63,15 +63,18 @@ class Cartographer( models.Model ):
   @staticmethod
   def register( identifier ):
     try:
-      Cartographer.objects.get( identifier=identifier )
-      raise ValueError( 'Identifier "{0}" in use'.format( identifier ) )
+      locator = Cartographer.objects.get( identifier=identifier )
+      locator.message = 'restarting'
+      locator.full_clean()
+      locator.save()
+      return
 
     except Cartographer.DoesNotExist:
       pass
 
     locator = Cartographer()
     locator.identifier = identifier
-
+    locator.message = 'new'
     locator.full_clean()
     locator.save()
 
@@ -96,8 +99,11 @@ class Cartographer( models.Model ):
 
   @cinp.action()
   def done( self ):
+    foundation = self.foundation
     self.delete()
-    self.foundation.setLocated()
+    foundation.cartographer = None  # the Cartographer instance is gone, but the object cache still has it, a little tweeking to help it get located
+    foundation.refresh_from_db()
+    foundation.setLocated()
 
   @cinp.check_auth()
   @staticmethod

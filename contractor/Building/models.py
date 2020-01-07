@@ -200,7 +200,7 @@ class Foundation( models.Model ):
   def configAttributes( self ):
     provisioning_interface = self.provisioning_interface
     return {
-              '_provisioning_interface': provisioning_interface.name if provisioning_interface is not None else None,
+              '_provisioning_interface': provisioning_interface.physical_location if provisioning_interface is not None else None,  # what ever deals with the provisioning interface will have to deal with the physical_location, otherwise tools that are not the final target OS will be confused
               '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None,
               '_foundation_id': self.pk,
               '_foundation_type': self.type,
@@ -414,7 +414,7 @@ class Structure( Networked ):
                '_hostname': self.hostname,
                '_domain_name': self.domain_name,
                '_fqdn': self.fqdn,
-               '_provisioning_interface': provisioning_interface.name if provisioning_interface is not None else None,
+               '_provisioning_interface': provisioning_interface.physical_location if provisioning_interface is not None else None,
                '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None,
                '_provisioning_address': provisioning_address.as_dict if provisioning_address is not None else None,
                '_primary_interface': primary_interface.name if primary_interface is not None else None,

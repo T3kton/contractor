@@ -433,6 +433,11 @@ class RealNetworkInterface( NetworkInterface ):
 
     return result
 
+  @cinp.list_filter( name='foundation', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Foundation' } ] )
+  @staticmethod
+  def filter_foundation( foundation ):
+    return RealNetworkInterface.objects.filter( foundation=foundation )
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
