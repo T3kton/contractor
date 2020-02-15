@@ -145,7 +145,7 @@ class BaseJob( models.Model ):
     self.save()
 
   @cinp.action()
-  def clear_dispatched( self ):
+  def clearDispatched( self ):
     """
     Resets a job that is in 'queued' state, and subcontractor lost the job.  Make
     sure to verify that subcontractor has lost the job results before calling this.

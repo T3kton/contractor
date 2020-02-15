@@ -31,7 +31,7 @@ class Recorder():
 
   @cinp.action( return_type='String', paramater_type_list=[ { 'type': 'String', 'choice_list': [ 'Site', 'BluePrint', 'Structure', 'Foundation' ] }, 'String', 'Integer' ] )
   @staticmethod
-  def query_objects( group, query, max_results=100 ):
+  def queryObjects( group, query, max_results=100 ):
     db = collection( group )
 
     try:

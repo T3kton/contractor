@@ -74,7 +74,7 @@ class User():
 
   @cinp.action( paramater_type_list=[ '_USER_', 'String' ] )
   @staticmethod
-  def change_password( user, password ):
+  def changePassword( user, password ):
     user.set_password( password )
     user.save()
 

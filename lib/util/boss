@@ -275,10 +275,10 @@ def main():
       sys.exit( 0 )
 
     if job.state != 'queued':
-      print( 'Can only "clear_dispatched" a job if it is queued' )
+      print( 'Can only clear the dispatched flag a job if it is queued' )
       sys.exit( 1 )
 
-    job.clear_dispatched()
+    job.clearDispatched()
     print( 'Dispatched flag cleared' )
     sys.exit( 0 )
 
