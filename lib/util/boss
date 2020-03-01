@@ -22,30 +22,8 @@ class CLIUser:
   username = 'cli'
 
 
-def _get_job( target ):
-  if isinstance( target, Foundation ):
-    try:
-      return target.foundationjob
-    except ( AttributeError, ObjectDoesNotExist ):
-      pass
-
-  if isinstance( target, Structure ):
-    try:
-      return target.structurejob
-    except ( AttributeError, ObjectDoesNotExist ):
-      pass
-
-  if isinstance( target, Dependency ):
-    try:
-      return target.dependencyjob
-    except ( AttributeError, ObjectDoesNotExist ):
-      pass
-
-  return None
-
-
 def _clear_job( target ):
-  job = _get_job( target )
+  job = target.getJob()
   if job is None:
     print( 'No Job to Delete' )
 
@@ -197,7 +175,7 @@ def main():
     sys.exit( 0 )
 
   if args.reset:
-    job = _get_job( target )
+    job = target.getJob()
     if job is None:
       print( 'No Job to Reset' )
       sys.exit( 1 )
@@ -211,7 +189,7 @@ def main():
       sys.exit( 0 )
 
   if args.pause:
-    job = _get_job( target )
+    job = target.getJob()
     if job is None:
       print( 'No Job to Pause' )
       sys.exit( 1 )
@@ -225,7 +203,7 @@ def main():
       sys.exit( 0 )
 
   if args.resume:
-    job = _get_job( target )
+    job = target.getJob()
     if job is None:
       print( 'No Job to Resume' )
       sys.exit( 1 )
@@ -239,7 +217,7 @@ def main():
       sys.exit( 0 )
 
   if args.rollback:
-    job = _get_job( target )
+    job = target.getJob()
     if job is None:
       print( 'No Job to Rollback' )
       sys.exit( 1 )
@@ -253,7 +231,7 @@ def main():
       sys.exit( 0 )
 
   if args.done:
-    job = _get_job( target )
+    job = target.getJob()
     if job is None:
       print( 'No Job to set to done' )
       sys.exit( 1 )
@@ -269,7 +247,7 @@ def main():
       sys.exit( 0 )
 
   if args.clear_dispatched:
-    job = _get_job( target )
+    job = target.getJob()
     if job is None:
       print( 'No Job' )
       sys.exit( 0 )
@@ -283,7 +261,7 @@ def main():
     sys.exit( 0 )
 
   if args.show_job:
-    job = _get_job( target )
+    job = target.getJob()
     if job is None:
       print( 'No Job' )
       sys.exit( 0 )
