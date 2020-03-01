@@ -96,6 +96,7 @@ class Foundation( models.Model ):
       job = self.foundationjob
       if job.script_name != 'create':
         job = None
+
     except ObjectDoesNotExist:
       job = None
 
@@ -181,6 +182,18 @@ class Foundation( models.Model ):
       raise ValueError( 'Invalid Job Name' )
 
     return createJob( name, self, user )
+
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Foreman.models.FoundationJob' }  )
+  def getJob( self ):
+    """
+    Return the Job for this Foundation if there is one
+    """
+    try:
+      return self.foundationjob
+    except ObjectDoesNotExist:
+      pass
+
+    return None
 
   @staticmethod
   def getTscriptValues( write_mode=False ):  # locator is handled seperatly
@@ -471,6 +484,15 @@ class Structure( Networked ):
       raise ValueError( 'Invalid Job Name' )
 
     return createJob( name, self, user )
+
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Foreman.models.StructureJob' }  )
+  def getJob( self ):
+    try:
+      return self.structurejob
+    except ObjectDoesNotExist:
+      pass
+
+    return None
 
   @cinp.action( return_type='Map' )
   def getConfig( self ):
@@ -802,6 +824,15 @@ class Dependency( models.Model ):
   @property
   def dependencyId( self ):
     return 'd-{0}'.format( self.pk )
+
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Foreman.models.DependencyJob' }  )
+  def getJob( self ):
+    try:
+      return self.dependencyjob
+    except ObjectDoesNotExist:
+      pass
+
+    return None
 
   @cinp.list_filter( name='foundation', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Foundation' } ] )
   @staticmethod
