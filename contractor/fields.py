@@ -126,6 +126,7 @@ class JSONField( models.TextField ):
 class StringListField( models.CharField ):
   description = 'String List'
   validators = [ validate_list ]
+  cinp_is_array = True
 
   def __init__( self, *args, **kwargs ):
     if 'max_length' not in kwargs:
