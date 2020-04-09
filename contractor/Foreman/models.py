@@ -236,7 +236,7 @@ class BaseJob( models.Model ):
 
     return False
 
-  def clean( self, *args, **kwargs ):  # also need to make sure a Structure is in only one complex
+  def clean( self, *args, **kwargs ):  # TODO: also need to make sure a Structure is in only one complex
     super().clean( *args, **kwargs )
     errors = {}
 
@@ -587,6 +587,7 @@ class DependencyJob( BaseJob ):
 class JobLog( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   job_id = models.IntegerField()
+  target_id = models.CharField( max_length=100 )  # must be at least as long the pk for Foundation(Char 100), Structure(Int64), Dependency(Int64)
   target_class = models.CharField( max_length=50 )
   target_description = models.CharField( max_length=120 )
   script_name = models.CharField( max_length=50 )
@@ -606,16 +607,19 @@ class JobLog( models.Model ):
     log.job_id = job.pk
     if isinstance( job, StructureJob ):
       log.target_class = 'Structure'
+      log.target_id = job.structure.pk
       log.site = job.structure.site
       log.target_description = job.structure.description
 
     elif isinstance( job, FoundationJob ):
       log.target_class = 'Foundation'
+      log.target_id = job.foundation.locator
       log.site = job.foundation.site
       log.target_description = job.foundation.description
 
     elif isinstance( job, DependencyJob ):
       log.target_class = 'Dependency'
+      log.target_id = job.dependency.name
       log.site = job.dependency.site
       log.target_description = job.dependency.description
 
@@ -653,6 +657,26 @@ class JobLog( models.Model ):
   @staticmethod
   def filter_site( site ):
     return JobLog.objects.filter( site=site )
+
+  @cinp.list_filter( name='job', paramater_type_list=[ 'Integer' ] )
+  @staticmethod
+  def filter_job( job_id ):
+    return JobLog.objects.filter( job_id=job_id )
+
+  @cinp.list_filter( name='structure', paramater_type_list=[ { 'type': 'Model', 'model': Structure } ] )
+  @staticmethod
+  def filter_structure( structure ):
+    return JobLog.objects.filter( site=structure.site, target_class='Structure', target_id=structure.pk )
+
+  @cinp.list_filter( name='foundation', paramater_type_list=[ { 'type': 'Model', 'model': Foundation } ] )
+  @staticmethod
+  def filter_foundation( foundation ):
+    return JobLog.objects.filter( site=foundation.site, target_class='Foundation', target_id=foundation.locator )
+
+  @cinp.list_filter( name='dependency', paramater_type_list=[ { 'type': 'Model', 'model': Dependency } ] )
+  @staticmethod
+  def filter_dependency( dependency ):
+    return JobLog.objects.filter( site=dependency.site, target_class='Dependency', target_id=dependency.name )
 
   @cinp.check_auth()
   @staticmethod

@@ -32,6 +32,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('job_id', models.IntegerField()),
                 ('target_class', models.CharField(max_length=50)),
+                ('target_id', models.CharField(max_length=100)),
                 ('target_description', models.CharField(max_length=120)),
                 ('script_name', models.CharField(max_length=50)),
                 ('creator', models.CharField(max_length=150)),

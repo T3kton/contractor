@@ -1,8 +1,10 @@
 contractor (0.8.0-1) bionic; urgency=medium
 
-  * 
+  * Moved to bionic
+  * Added Survey namespace
+  * lots of updates
 
- -- Peter Howe <pnhowe@gmail.com>  Fri, 13 Sep 2019 07:37:39 -0600
+ -- Peter Howe <pnhowe@gmail.com>  Mon, 16 Mar 2020 22:00:41 -0600
 
 contractor (0.7.0-1) xenial; urgency=medium
 
