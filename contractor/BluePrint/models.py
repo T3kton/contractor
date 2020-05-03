@@ -28,7 +28,7 @@ class BluePrintException( ValueError ):
     return 'BluePrintException ({0}): {1}'.format( self.code, self.message )
 
 
-@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ] )
+@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( { 'name': 'script_map', 'type': 'Map' }, ), hide_field_list=( 'scripts', ) )
 class BluePrint( models.Model ):
   name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length
   description = models.CharField( max_length=200 )
@@ -47,6 +47,14 @@ class BluePrint( models.Model ):
           return tmp
 
       return None
+
+  @property
+  def script_map( self ):
+    result = {}
+    for blueprintscript in self.blueprintscript_set.all():
+      result[ blueprintscript.name ] = blueprintscript.script
+
+    return result
 
   @property
   def subclass( self ):
@@ -98,7 +106,7 @@ class BluePrint( models.Model ):
 # the material is not associated with the sctructure until fully prepared
 # ipmi type ip addresses will belong to the material, they belong to the device not the OS on the device anyway
 # will need a working pool of "eth0" type ips for the prepare
-@cinp.model()
+@cinp.model( property_list=( { 'name': 'script_map', 'type': 'Map' }, ), hide_field_list=( 'scripts', ) )
 class FoundationBluePrint( BluePrint ):
   parent_list = models.ManyToManyField( 'self', blank=True, symmetrical=False )
   foundation_type_list = StringListField( max_length=200 )  # list of the foundation types this blueprint can be used for
@@ -145,7 +153,7 @@ class FoundationBluePrint( BluePrint ):
     return 'FoundationBluePrint "{0}"({1})'.format( self.description, self.name )
 
 
-@cinp.model(  )
+@cinp.model( property_list=( { 'name': 'script_map', 'type': 'Map' }, ), hide_field_list=( 'scripts', ) )
 class StructureBluePrint( BluePrint ):
   parent_list = models.ManyToManyField( 'self', blank=True, symmetrical=False )  # TODO: go through a "through" field and have a foundation class select which parent, this way there can be a container parent and a VM parent and simmaler
   foundation_blueprint_list = models.ManyToManyField( FoundationBluePrint )  # list of possible foundations this blueprint could be implemented on
@@ -209,6 +217,11 @@ class BluePrintScript( models.Model ):
   name = models.CharField( max_length=50 )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
+
+  @cinp.list_filter( name='blueprint', paramater_type_list=[ { 'type': 'Model', 'model': BluePrint } ] )
+  @staticmethod
+  def filter_site( blueprint ):
+    return BluePrintScript.objects.filter( blueprint=blueprint )
 
   @cinp.check_auth()
   @staticmethod
