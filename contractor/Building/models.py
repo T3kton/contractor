@@ -225,6 +225,10 @@ class Foundation( models.Model ):
             }
 
   @property
+  def console( self ):
+    return 'console'
+
+  @property
   def provisioning_interface( self ):
     try:
       return self.networkinterface_set.get( is_provisioning=True )
@@ -382,7 +386,7 @@ def getUUID():
 class Structure( Networked ):
   blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT )  # ie what to bild
   foundation = models.OneToOneField( Foundation, related_name='+', on_delete=models.PROTECT )      # ie what to build it on
-  config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # unique
+  config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # TODO: make sure the uuid isn't allready used?, it is a really big set space, not sure if it is really needed
   config_values = MapField( blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )

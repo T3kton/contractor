@@ -66,9 +66,9 @@ class DHCPd():
 
       for addr in addr_block.baseaddress_set.filter( dynamicaddress__isnull=False ):
         addr = addr.subclass
-        try:  # TODO: this needs to be retought a bit, really should be passing in the bootfile
+        try:
           addr.pxe.name
-          item[ 'address_map' ][ addr.ip_address ] = 'undionly_console.kpxe'
+          item[ 'address_map' ][ addr.ip_address ] = addr.console
         except AttributeError:
           item[ 'address_map' ][ addr.ip_address ] = None
 
@@ -93,7 +93,7 @@ class DHCPd():
                                 'netmask': addr_block.netmask,
                                 'gateway': addr_block.gateway,
                                 'host_name': addr.structure.hostname,
-                                'boot_file': 'undionly_console.kpxe'
+                                'boot_file': addr.console
                               }
 
         site_config = addr_block.site.getConfig()

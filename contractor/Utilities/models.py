@@ -530,6 +530,10 @@ class BaseAddress( models.Model ):
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   @property
+  def console( self ):
+    return 'console'
+
+  @property
   def ip_address( self ):
     if self.address_block is None or self.offset is None:
       return None
@@ -672,6 +676,19 @@ class Address( BaseAddress ):
   sub_interface = models.IntegerField( default=None, blank=True, null=True )
   pointer = models.ForeignKey( 'self', blank=True, null=True, on_delete=models.PROTECT )
   is_primary = models.BooleanField( default=False )
+
+  @property
+  def console( self ):
+    foundation = None
+    try:
+      foundation = self.networked.structure.foundation
+    except ( ObjectDoesNotExist, AttributeError ):
+      pass
+
+    if foundation is not None:
+      return foundation.console
+
+    return 'console'
 
   @property
   def ip_address( self ):
