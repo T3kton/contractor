@@ -122,7 +122,7 @@ class App extends React.Component
         </NavDrawer>
         <Panel>
           <AppBar title="Contractor" leftIcon="menu" rightIcon="face" onLeftIconClick={ this.menuClick }>
-            <Chip><SiteSelector onSiteChange={ this.selectSite } curSite={ this.state.cur_site } siteListGetter={ this.contractor.getSiteList } /></Chip>
+            <SiteSelector onSiteChange={ this.selectSite } curSite={ this.state.cur_site } siteListGetter={ this.contractor.getSiteList } />
             <Chip><FontIcon title='Jobs' value='dvr' /> { this.state.curJobs }</Chip>
             <Chip><FontIcon title='Alerts' value='announcement' /> { this.state.alerts }</Chip>
             <Button icon='update' inverse={ !this.state.autoUpdate } onClick={ this.toggleAutoUpdate } />

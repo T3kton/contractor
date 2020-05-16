@@ -686,7 +686,7 @@ class Address( BaseAddress ):
       pass
 
     if foundation is not None:
-      return foundation.console
+      return foundation.subclass.console
 
     return 'console'
 

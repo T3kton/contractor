@@ -64,6 +64,7 @@ test-setup:
 	su postgres -c "echo \"CREATE ROLE contractor WITH PASSWORD 'contractor' NOSUPERUSER NOCREATEROLE CREATEDB LOGIN;\" | psql"
 	pip3 install -e .
 	cp contractor.conf.sample contractor/settings.py
+	touch test-setup
 
 lint:
 	flake8 --ignore=E501,E201,E202,E111,E126,E114,E402,W605 --statistics --exclude=migrations .
@@ -71,7 +72,7 @@ lint:
 test:
 	py.test-3 -x --cov=contractor --cov-report html --cov-report term --ds=contractor.settings -vv contractor
 
-.PHONY:: test-distros test-requires test
+.PHONY:: test-distros test-requires lint test
 
 dpkg-distros:
 	echo ubuntu-bionic

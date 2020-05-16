@@ -87,12 +87,16 @@ def _getNetworkedEntries( networked ):
     return result
 
   ip_addr = networked.primary_address.ip_address
+
+  result[ 'TXT' ] = []
+  result[ 'PTR' ] = [ { 'target': networked.fqdn, 'value': ip_addr } ]
+
   iface = networked.primary_interface
+  if iface is None:
+    return result
 
   result[ 'A' ] = [ { 'name': '{0}.{1}'.format( iface.name, networked.hostname ), 'address': ip_addr } ]
   result[ 'CNAME' ] = [ { 'name': networked.hostname, 'target': '{0}.{1}'.format( iface.name, networked.hostname ) } ]
-  result[ 'TXT' ] = []
-  result[ 'PTR' ] = [ { 'target': networked.fqdn, 'value': ip_addr } ]
 
   return result
 

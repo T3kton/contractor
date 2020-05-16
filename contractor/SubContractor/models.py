@@ -93,7 +93,7 @@ class DHCPd():
                                 'netmask': addr_block.netmask,
                                 'gateway': addr_block.gateway,
                                 'host_name': addr.structure.hostname,
-                                'boot_file': addr.console
+                                'console': addr.console
                               }
 
         site_config = addr_block.site.getConfig()

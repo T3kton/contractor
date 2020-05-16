@@ -184,6 +184,8 @@ def _foundationConfig( foundation, class_list, config ):
     config.update( complex.configAttributes() )
     return max( foundation.updated, complex.updated )
 
+  config[ '_console' ] = foundation.console
+
   return foundation.updated
 
 
@@ -290,7 +292,7 @@ def renderTemplate( template, value_map ):
   value_map = mergeValues( value_map )  # merge first, this way results are more consistant with requests that are getting just the values
 
   try:
-    while template.count( '{{' ):
+    while template.count( '{{' ) or template.count( '{%' ):
       tpl = env.from_string( template )
       template = tpl.render( **value_map )
 
