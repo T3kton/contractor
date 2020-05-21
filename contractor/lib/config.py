@@ -184,8 +184,6 @@ def _foundationConfig( foundation, class_list, config ):
     config.update( complex.configAttributes() )
     return max( foundation.updated, complex.updated )
 
-  config[ '_console' ] = foundation.console
-
   return foundation.updated
 
 

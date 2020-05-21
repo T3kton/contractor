@@ -27,7 +27,7 @@ class DirectoryException( ValueError ):
 
 @cinp.model( property_list=( 'fqdn', ) )
 class Zone( models.Model ):
-  name = models.CharField( max_length=100, primary_key=True )
+  name = models.CharField( max_length=100 )
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
   ttl = models.IntegerField( default=3600 )
   refresh = models.IntegerField( default=86400 )
@@ -71,7 +71,7 @@ class Zone( models.Model ):
 @cinp.model()
 class Entry( models.Model ):
   TYPE_CHOICES = ( 'MX', 'SRV', 'CNAME', 'TXT' )
-  zone = models.ForeignKey( Zone, on_delete=models.CASCADE )
+  zone = models.ForeignKey( Zone, blank=True, null=True, on_delete=models.CASCADE )  # if zone is None, the Entry is global
   type = models.CharField( max_length=20, choices=[ ( i, i ) for i in TYPE_CHOICES ] )
   name = models.CharField( max_length=255 )
   priority = models.IntegerField( blank=True, null=True )  # MX, SRV

@@ -296,6 +296,11 @@ class Network( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
+  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @staticmethod
+  def filter_site( site ):
+    return Network.objects.filter( site=site )
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
@@ -776,8 +781,8 @@ class Address( BaseAddress ):
       errors[ 'interface_name' ] = '"{0}" is invalid'.format( self.interface_name[ 0:50 ] )
 
     try:
-      if self.address_block and self.networked and self.address_block.site != self.networked.site:
-        errors[ 'address_block' ] = 'Address is not in the same site as the Networked it belongs to'
+      if self.is_primary and self.address_block and self.networked and self.address_block.site != self.networked.site:
+        errors[ 'address_block' ] = 'Primary Address is not in the same site as the Networked it belongs to'
     except ObjectDoesNotExist:
       pass  # something else should make sure address_block and networked are defined
 

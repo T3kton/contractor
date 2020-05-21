@@ -206,7 +206,7 @@ addr = Address( networked=strct, address_block=addr_block, interface_name=contra
 addr.full_clean()
 addr.save()
 
-e = Entry( zone=zone, type='CNAME' )
+e = Entry( type='CNAME' )
 e.name = 'static'
 e.target = 'contractor.{0}.'.format( args.site_domain )
 e.full_clean()

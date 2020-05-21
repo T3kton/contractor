@@ -27,7 +27,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Zone',
             fields=[
-                ('name', models.CharField(max_length=100, primary_key=True, serialize=False)),
+                ('id', models.AutoField(verbose_name='ID', auto_created=True, primary_key=True, serialize=False)),
+                ('name', models.CharField(max_length=100)),
                 ('ttl', models.IntegerField(default=3600)),
                 ('refresh', models.IntegerField(default=86400)),
                 ('retry', models.IntegerField(default=7200)),
@@ -41,7 +42,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='entry',
             name='zone',
-            field=models.ForeignKey(to='Directory.Zone'),
+            field=models.ForeignKey(blank=True, null=True, to='Directory.Zone'),
         ),
         migrations.AlterUniqueTogether(
             name='zone',

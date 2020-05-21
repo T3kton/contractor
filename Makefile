@@ -78,7 +78,7 @@ dpkg-distros:
 	echo ubuntu-bionic
 
 dpkg-requires:
-	echo dpkg-dev debhelper python3-dev python3-setuptools nodejs npm nodejs-legacy
+	echo dpkg-dev debhelper python3-dev python3-setuptools nodejs npm nodejs
 
 dpkg-setup:
 	cd ui && npm install

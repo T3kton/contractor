@@ -10,6 +10,10 @@ CONTRACTOR_HOST = 'http://contractor/'
 PXE_IMAGE_LOCATION = 'http://static/pxe/'
 
 # set to None to disable, or '*CONSOLE*' to output to stdout
+# NOTE: if you are running under apache under systemd, you might want to
+#       disable "PrivateTmp" in /lib/systemd/system/apache2.service, otherwise
+#       this location will be in a /tmp/systemd-private-642338ab7569487cace3420cfe6dbf01-apache2.service-vBR2Zn
+#       type directory
 DEBUG_DUMP_LOCATION = '/tmp'
 
 # get plugins

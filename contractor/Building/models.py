@@ -221,7 +221,8 @@ class Foundation( models.Model ):
               '_foundation_class_list': self.class_list,
               '_foundation_locator': self.locator,
               '_foundation_id_map': self.id_map,
-              '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
+              '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all().order_by( 'physical_location' ) ],
+              '_console': self.console
             }
 
   @property
@@ -358,7 +359,7 @@ class Foundation( models.Model ):
       errors[ 'locator' ] = 'Invalid'
 
     if self.blueprint_id is not None and self.type not in self.blueprint.foundation_type_list:
-        errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint, self.type )
+        errors[ 'blueprint' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint, self.type )
 
     if errors:
       raise ValidationError( errors )

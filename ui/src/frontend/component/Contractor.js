@@ -37,7 +37,7 @@ class Contractor
 
   getNetworkList = () =>
   {
-    return this.cinp.getFilteredObjects( '/api/v1/Utilities/Network' );
+    return this.cinp.getFilteredObjects( '/api/v1/Utilities/Network', 'site', { 'site': site }  );
   };
 
   getFoundationList = ( site ) =>

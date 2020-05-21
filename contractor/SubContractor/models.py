@@ -93,6 +93,7 @@ class DHCPd():
                                 'netmask': addr_block.netmask,
                                 'gateway': addr_block.gateway,
                                 'host_name': addr.structure.hostname,
+                                'config_uuid': addr.structure.config_uuid,
                                 'console': addr.console
                               }
 

@@ -2,7 +2,7 @@ import os
 
 from django.conf import settings
 
-from contractor.Directory.models import Zone
+from contractor.Directory.models import Zone, Entry
 
 TEMPLATES = {}
 TEMPLATES[ 'SOA' ] = """$TTL {ttl}
@@ -88,7 +88,7 @@ def _getNetworkedEntries( networked ):
 
   ip_addr = networked.primary_address.ip_address
 
-  result[ 'TXT' ] = []
+  result[ 'TXT' ] = []  # TODO: forward and reverse TXT with full names
   result[ 'PTR' ] = [ { 'target': networked.fqdn, 'value': ip_addr } ]
 
   iface = networked.primary_interface
@@ -110,9 +110,9 @@ def genZone( zone, ptr_list, zone_file_list ):
 
   for ns in settings.BIND_NS_LIST:
     record_map[ 'NS' ].append( { 'name': '@', 'server': ns } )
-    if ns.endswith( zone_fqdn ):
-      ns_ip = getHostIp( ns )
-      record_map[ 'A' ].append( { 'name': ns[ :-len( zone_fqdn ) - 1], 'address': ns_ip } )
+    # if ns.endswith( zone_fqdn ):  #  this should be coveredby the  site.networked set right?
+    #   ns_ip = getHostIp( ns )
+    #   record_map[ 'A' ].append( { 'name': ns[ :-len( zone_fqdn ) - 1], 'address': ns_ip } )
 
   for site in zone.site_set.all():
     for networked in site.networked_set.all():
@@ -121,6 +121,19 @@ def genZone( zone, ptr_list, zone_file_list ):
         record_map[ entry_type ] += entry_list[ entry_type ]
 
   for entry in zone.entry_set.all():
+    record_map[ entry.type ].append( {
+                                       'name': entry.name,
+                                       'priority': entry.priority,
+                                       'weight': entry.weight,
+                                       'port': entry.port,
+                                       'target': entry.target
+                                     } )
+
+  existing_names = [ i[ 'name' ] for i in ( record_map[ 'A' ] + record_map[ 'AAAA' ] + record_map[ 'CNAME' ] ) ]
+  for entry in Entry.objects.filter( zone__isnull=True ):
+    if entry.type == 'CNAME' and entry.name in existing_names:
+      continue
+
     record_map[ entry.type ].append( {
                                        'name': entry.name,
                                        'priority': entry.priority,
