@@ -56,7 +56,6 @@ class DHCPd():
     # without the distinct we get an AddressBlock for each DynamicAddress
     for addr_block in AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False ).distinct():
       item = {
-               'address_map': {},
                'gateway': addr_block.gateway,
                'name': addr_block.pk,
                'netmask': addr_block.netmask,
@@ -64,13 +63,7 @@ class DHCPd():
                'domain_name': domain_name
               }
 
-      for addr in addr_block.baseaddress_set.filter( dynamicaddress__isnull=False ):
-        addr = addr.subclass
-        try:
-          addr.pxe.name
-          item[ 'address_map' ][ addr.ip_address ] = addr.console
-        except AttributeError:
-          item[ 'address_map' ][ addr.ip_address ] = None
+      item[ 'address_list' ] = [ addr.ip_address for addr in addr_block.baseaddress_set.filter( dynamicaddress__isnull=False ) ]
 
       result.append( item )
 
@@ -87,6 +80,7 @@ class DHCPd():
         iface = addr.interface
         if iface is None or iface.mac is None:
           continue
+        networkaddressblock = addr_block.networkaddressblock_set.get( network=iface.network )
 
         result[ iface.mac ] = {
                                 'ip_address': addr.ip_address,
@@ -94,6 +88,8 @@ class DHCPd():
                                 'gateway': addr_block.gateway,
                                 'host_name': addr.structure.hostname,
                                 'config_uuid': addr.structure.config_uuid,
+                                'mtu': iface.network.mtu,
+                                'vlan': networkaddressblock.vlan,
                                 'console': addr.console
                               }
 

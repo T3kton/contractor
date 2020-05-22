@@ -292,6 +292,7 @@ class AddressBlock( models.Model ):
 class Network( models.Model ):
   name = models.CharField( max_length=40 )
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
+  mtu = models.IntegerField( blank=True, null=True )
   address_block_list = models.ManyToManyField( AddressBlock, through='NetworkAddressBlock' )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -317,8 +318,7 @@ class Network( models.Model ):
 class NetworkAddressBlock( models.Model ):
   network = models.ForeignKey( Network, on_delete=models.CASCADE )
   address_block = models.ForeignKey( AddressBlock, on_delete=models.CASCADE )
-  vlan = models.IntegerField( default=0 )  # vlan = 0: Untagged/Native VLAN     vlan = 4096: Trunked
-  vlan_tagged = models.BooleanField( default=False )
+  vlan = models.IntegerField( blank=True, null=True )  # vlan = don't specify vlan, 0: Untagged/Native VLAN, 4096: Trunked
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -378,6 +378,9 @@ class NetworkInterface( models.Model ):
   @property
   def config( self ):
     result = { 'name': self.name, 'network': self.network.name, 'address_list': [] }
+    if self.network.mtu is not None:
+      result[ 'mtu' ] = self.network.mtu
+
     try:
       structure = self.foundation.structure
     except AttributeError:
@@ -387,8 +390,8 @@ class NetworkInterface( models.Model ):
       for address in structure.address_set.filter( interface_name=self.name ):
         nab = NetworkAddressBlock( network=self.network, address_block=address.address_block )
         address_config = address.as_dict
-        address_config[ 'vlan' ] = nab.vlan
-        address_config[ 'tagged' ] = nab.vlan_tagged
+        if nab.vlan is not None:
+          address_config[ 'vlan' ] = nab.vlan
         result[ 'address_list' ].append( address_config )
 
     return result
@@ -581,8 +584,7 @@ class BaseAddress( models.Model ):
              'prefix': self.prefix,
              'subnet': self.subnet,
              'gateway': self.gateway,
-             'auto': True,
-             'mtu': 1500
+             'auto': True
            }
 
   @property
