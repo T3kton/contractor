@@ -43,6 +43,7 @@ class Migration(migrations.Migration):
             name='Network',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, primary_key=True, auto_created=True)),
+                ('mtu', models.IntegerField(null=True, blank=True)),
                 ('name', models.CharField(max_length=40)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -52,8 +53,7 @@ class Migration(migrations.Migration):
             name='NetworkAddressBlock',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, primary_key=True, auto_created=True)),
-                ('vlan', models.IntegerField(default=0)),
-                ('vlan_tagged', models.BooleanField(default=False)),
+                ('vlan', models.IntegerField(null=True, blank=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('address_block', models.ForeignKey(to='Utilities.AddressBlock')),
@@ -82,7 +82,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('baseaddress_ptr', models.OneToOneField(to='Utilities.BaseAddress', parent_link=True, serialize=False, primary_key=True, auto_created=True)),
                 ('interface_name', models.CharField(max_length=20)),
-                ('sub_interface', models.IntegerField(null=True, default=None, blank=True)),
+                ('alias_index', models.IntegerField(null=True, default=None, blank=True)),
                 ('is_primary', models.BooleanField(default=False)),
                 ('networked', models.ForeignKey(to='Utilities.Networked')),
                 ('pointer', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='Utilities.Address', null=True, blank=True)),
@@ -162,5 +162,9 @@ class Migration(migrations.Migration):
         migrations.AlterUniqueTogether(
             name='realnetworkinterface',
             unique_together=set([('foundation', 'physical_location')]),
+        ),
+        migrations.AlterUniqueTogether(
+            name='address',
+            unique_together=set([('interface_name', 'alias_index')]),
         ),
     ]

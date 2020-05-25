@@ -47,7 +47,7 @@ ui/build/%:
 install-ui: build-ui
 	mkdir -p $(DESTDIR)/var/www/contractor/ui/
 	install -m 644 ui/build/* $(DESTDIR)/var/www/contractor/ui/
-	echo "window.API_BASE_URI = 'http://' + window.location.hostname;" > $(DESTDIR)/var/www/contractor/ui/env.js
+	echo "window.API_BASE_URI = window.location.protocol + '//' + window.location.host;" > $(DESTDIR)/var/www/contractor/ui/env.js
 
 clean-ui:
 	$(RM) -fr ui/build

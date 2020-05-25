@@ -234,25 +234,6 @@ if not args.no_ip_reservation:
       continue
     addr.save()
 
-print( 'Configuring settings file...' )
-filename = settings.__file__
-
-configured = False
-for line in open( filename, 'r' ).readlines():
-  if line.startswith( 'BIND_NS_LIST =' ):
-    parts = line.split( '=' )
-    if parts[1].strip() != '[]':
-      configured = True
-
-    break
-
-if not configured:
-  data = open( filename, 'r' ).read()
-
-  data = data.replace( 'BIND_NS_LIST = []', 'BIND_NS_LIST = {0}'.format( [ '{0}.contractor.{1}'.format( contractor_iface, args.site_domain ) ] ) )
-
-  open( filename, 'w' ).write( data )
-
 print( 'Generating Bind files...' )
 subprocess.check_call( [ '/usr/lib/contractor/cron/genDNS' ] )
 

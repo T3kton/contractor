@@ -54,16 +54,16 @@ class DHCPd():
     domain_name = site_config.get( 'domain_name', '' )
 
     # without the distinct we get an AddressBlock for each DynamicAddress
-    for addr_block in AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False ).distinct():
+    for address_block in AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False ).distinct():
       item = {
-               'gateway': addr_block.gateway,
-               'name': addr_block.pk,
-               'netmask': addr_block.netmask,
+               'gateway': address_block.gateway,
+               'name': address_block.pk,
+               'netmask': address_block.netmask,
                'dns_server': dns_server,
                'domain_name': domain_name
               }
 
-      item[ 'address_list' ] = [ addr.ip_address for addr in addr_block.baseaddress_set.filter( dynamicaddress__isnull=False ) ]
+      item[ 'address_list' ] = [ addr.ip_address for addr in address_block.baseaddress_set.filter( dynamicaddress__isnull=False ) ]
 
       result.append( item )
 
@@ -74,26 +74,26 @@ class DHCPd():
   def getStaticPools( site ):
     result = {}
     # without the distinct we get an AddressBlock for each Networked
-    for addr_block in AddressBlock.objects.filter( site=site, baseaddress__address__networked__isnull=False ).distinct():
-      for addr in addr_block.baseaddress_set.filter( address__networked__isnull=False ):
+    for address_block in AddressBlock.objects.filter( site=site, baseaddress__address__networked__isnull=False ).distinct():
+      for addr in address_block.baseaddress_set.filter( address__networked__isnull=False ):
         addr = addr.subclass
         iface = addr.interface
         if iface is None or iface.mac is None:
           continue
-        networkaddressblock = addr_block.networkaddressblock_set.get( network=iface.network )
+        nab = address_block.networkaddressblock_set.get( network=iface.network )
 
         result[ iface.mac ] = {
                                 'ip_address': addr.ip_address,
-                                'netmask': addr_block.netmask,
-                                'gateway': addr_block.gateway,
+                                'netmask': address_block.netmask,
+                                'gateway': address_block.gateway,
                                 'host_name': addr.structure.hostname,
                                 'config_uuid': addr.structure.config_uuid,
                                 'mtu': iface.network.mtu,
-                                'vlan': networkaddressblock.vlan,
+                                'vlan': nab.vlan,
                                 'console': addr.console
                               }
 
-        site_config = addr_block.site.getConfig()
+        site_config = address_block.site.getConfig()
 
         try:
           result[ iface.mac ][ 'dns_server' ] = site_config[ 'dns_servers' ][0]

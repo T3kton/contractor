@@ -307,6 +307,16 @@ class Network( models.Model ):
   def checkAuth( user, verb, id_list, action=None ):
     return True
 
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+
+    if self.mtu is not None and ( self.mtu > 9022 or self.mtu < 512 ):
+      errors[ 'mtu' ] = 'must be between 512 and 9022'
+
+    if errors:
+      raise ValidationError( errors )
+
   class Meta:
     unique_together = ( ( 'site', 'name' ), )
 
@@ -331,11 +341,10 @@ class NetworkAddressBlock( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
 
-    if self.vlan > 4096 or self.vlan < 0:
+    if not self.vlan:
+      self.vlan = None
+    elif self.vlan > 4096 or self.vlan < 0:
       errors[ 'vlan' ] = 'must be between 0 and 4096'
-
-    if self.vlan_tagged and self.vlan == 0:
-      errors[ 'vlan_tagged' ] = 'can not tag vlan 0'
 
     if errors:
       raise ValidationError( errors )
@@ -387,7 +396,7 @@ class NetworkInterface( models.Model ):
       structure = None
 
     if structure is not None:
-      for address in structure.address_set.filter( interface_name=self.name ):
+      for address in structure.address_set.filter( interface_name=self.name ).order_by( 'alias_index' ):
         nab = NetworkAddressBlock( network=self.network, address_block=address.address_block )
         address_config = address.as_dict
         if nab.vlan is not None:
@@ -680,7 +689,7 @@ class BaseAddress( models.Model ):
 class Address( BaseAddress ):
   networked = models.ForeignKey( Networked, on_delete=models.CASCADE )
   interface_name = models.CharField( max_length=20 )
-  sub_interface = models.IntegerField( default=None, blank=True, null=True )
+  alias_index = models.IntegerField( default=None, blank=True, null=True )  # use None for one/first ip on that interface, leave blank, NOTE: gateway/is_primary/dhcp is taken from index "None"
   pointer = models.ForeignKey( 'self', blank=True, null=True, on_delete=models.PROTECT )
   is_primary = models.BooleanField( default=False )
 
@@ -742,7 +751,7 @@ class Address( BaseAddress ):
   @property
   def as_dict( self ):
     result = super().as_dict
-    result[ 'sub_interface' ] = self.sub_interface
+    result[ 'alias_index' ] = self.alias_index
     result[ 'primary' ] = self.is_primary
     return result
 
@@ -802,11 +811,11 @@ class Address( BaseAddress ):
     except ObjectDoesNotExist:
       pass
 
-    if not self.sub_interface:
-      self.sub_interface = None
+    if not self.alias_index:
+      self.alias_index = None
     else:
-      if self.sub_interface < 0:
-        errors[ 'sub_interface' ] = 'Must be a positive value'
+      if self.alias_index < 1:
+        errors[ 'alias_index' ] = 'If Defined, must be greater than 1'
 
     if self.is_primary:
       if self.pk is not None:
@@ -822,6 +831,9 @@ class Address( BaseAddress ):
 
   def __str__( self ):
     return 'Address in Block "{0}" offset "{1}" networked "{2}" on interface "{3}"'.format( self.address_block, self.offset, self.networked, self.interface_name )
+
+  class Meta:
+    unique_together = ( ( 'interface_name', 'alias_index' ), )
 
 
 @cinp.model( property_list=( 'type', 'ip_address', 'subnet', 'netmask', 'prefix', 'gateway' ) )

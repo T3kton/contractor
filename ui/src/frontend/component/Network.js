@@ -37,7 +37,7 @@ class Network extends React.Component
     }
     else
     {
-      props.listGet()
+      props.listGet( props.site )
         .then( ( result ) =>
         {
           var network_list = [];
@@ -72,6 +72,7 @@ class Network extends React.Component
                 <tbody>
                   <tr><th>Site</th><td><Link to={ '/site/' + network.site }>{ network.site }</Link></td></tr>
                   <tr><th>Name</th><td>{ network.name }</td></tr>
+                  <tr><th>MTU</th><td>{ network.mtu }</td></tr>
                   <tr><th>Address Blocks</th><td>{ network.address_block_list.map( ( id ) => ( <Link to={ '/addressblock/' + id }>{ id }</Link> ) ) }</td></tr>
                   <tr><th>Created</th><td>{ network.created }</td></tr>
                   <tr><th>Updated</th><td>{ network.updated }</td></tr>
