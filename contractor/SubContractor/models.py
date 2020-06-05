@@ -1,7 +1,7 @@
 from cinp.orm_django import DjangoCInP as CInP
 
 from contractor.Site.models import Site
-from contractor.Utilities.models import AddressBlock
+from contractor.Utilities.models import AddressBlock, NetworkAddressBlock
 from contractor.Foreman.lib import processJobs, jobResults, jobError
 from contractor.lib.config import getConfig
 
@@ -33,7 +33,10 @@ class Dispatch():
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    if verb == 'DESCRIBE':
+      return True
+
+    return verb == 'CALL' and user.username == 'subcontractor'
 
 
 @cinp.staticModel()  # TODO: static poller
@@ -80,7 +83,11 @@ class DHCPd():
         iface = addr.interface
         if iface is None or iface.mac is None:
           continue
-        nab = address_block.networkaddressblock_set.get( network=iface.network )
+
+        try:
+          nab = address_block.networkaddressblock_set.get( network=iface.network )
+        except NetworkAddressBlock.DoesNotExist:
+          continue
 
         result[ iface.mac ] = {
                                 'ip_address': addr.ip_address,
@@ -110,4 +117,7 @@ class DHCPd():
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    if verb == 'DESCRIBE':
+      return True
+
+    return verb == 'CALL' and user.username == 'subcontractor'

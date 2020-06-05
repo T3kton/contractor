@@ -30,7 +30,7 @@ class BluePrintException( ValueError ):
 
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( { 'name': 'script_map', 'type': 'Map' }, ), hide_field_list=( 'scripts', ) )
 class BluePrint( models.Model ):
-  name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length
+  name = models.CharField( max_length=40, primary_key=True )  # update Architect and MCP if this changes max_length
   description = models.CharField( max_length=200 )
   scripts = models.ManyToManyField( 'Script', through='BluePrintScript' )
   config_values = MapField( blank=True, null=True )
@@ -77,10 +77,13 @@ class BluePrint( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if verb in ( 'DESCRIBE', 'CALL' ):
-      return True
+    if not cinp.basic_auth_check( user, verb, BluePrint ):  # TODO: when 'view' permission becomes optional, tie getConfig to it
+      return False
 
-    return False
+    if verb == 'CALL':
+      return action == 'getConfig'
+
+    return True
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -96,6 +99,9 @@ class BluePrint( models.Model ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    default_permissions = ()  # only CALL
 
   def __str__( self ):
     return 'BluePrint "{0}"({1})'.format( self.description, self.name )
@@ -138,6 +144,12 @@ class FoundationBluePrint( BluePrint ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, FoundationBluePrint ):  # TODO: when 'view' permission becomes optional, tie getConfig to it
+      return False
+
+    if verb == 'CALL':
+      return action == 'getConfig'
+
     return True
 
   def clean( self, *args, **kwargs ):
@@ -148,6 +160,10 @@ class FoundationBluePrint( BluePrint ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'FoundationBluePrint "{0}"({1})'.format( self.description, self.name )
@@ -173,7 +189,17 @@ class StructureBluePrint( BluePrint ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, StructureBluePrint ):  # TODO: when 'view' permission becomes optional, tie getConfig to it
+      return False
+
+    if verb == 'CALL':
+      return action == 'getConfig'
+
     return True
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'StructureBluePrint "{0}"({1})'.format( self.description, self.name )
@@ -190,7 +216,7 @@ class Script( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, Script )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -205,6 +231,10 @@ class Script( models.Model ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'Script "{0}"({1})'.format( self.description, self.name )
@@ -226,7 +256,7 @@ class BluePrintScript( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, BluePrintScript )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -239,6 +269,7 @@ class BluePrintScript( models.Model ):
 
   class Meta:
     unique_together = ( ( 'blueprint', 'name' ), )
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'BluePrintScript for BluePrint "{0}" Named "{1}" Script "{2}"'.format( self.blueprint, self.name, self.script )
@@ -255,7 +286,11 @@ class PXE( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, PXE )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'PXE "{0}"'.format( self.name )

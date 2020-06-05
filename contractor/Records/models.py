@@ -4,6 +4,20 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.Records.lib import collection
 
 
+class RecordsException( ValueError ):
+  def __init__( self, code, message ):
+    super().__init__( message )
+    self.message = message
+    self.code = code
+
+  @property
+  def response_data( self ):
+    return { 'class': 'RecordsException', 'error': self.code, 'message': self.message }
+
+  def __str__( self ):
+    return 'RecordsException ({0}): {1}'.format( self.code, self.message )
+
+
 cinp = CInP( 'Records', '0.1' )
 
 
@@ -58,7 +72,16 @@ class Recorder():
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, Recorder ):
+      return False
+
+    if verb == 'CALL':
+      return action in ( 'query', 'queryObjects' )
+
     return True
+
+  class Meta:
+    default_permissions = ()  # only CALL
 
   def __str__( self ):
     return 'Recorder'

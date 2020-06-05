@@ -147,7 +147,7 @@ class App extends React.Component
             <Route path="/job/d/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="dependency" contractor={ this.contractor } /> ) } />
             <Route exact={true} path="/sites" render={ () => ( <Site listGet={ this.contractor.getSiteList } /> ) } />
             <Route exact={true} path="/plots" render={ () => ( <Plot listGet={ this.contractor.getPlotList } /> ) } />
-            <Route exact={true} path="/networks" render={ () => ( <Network listGet={ this.contractor.getNetworkList } /> ) } />
+            <Route exact={true} path="/networks" render={ () => ( <Network site={ this.state.cur_site } listGet={ this.contractor.getNetworkList } /> ) } />
             <Route exact={true} path="/blueprints" render={ () => ( <BluePrint listGetF={ this.contractor.getFoundationBluePrintList } listGetS={ this.contractor.getStructureBluePrintList } /> ) }/>
             <Route exact={true} path="/pxes" render={ () => ( <PXE site={ this.state.cur_site } listGet={ this.contractor.getPXEList } /> ) } />
             <Route exact={true} path="/foundations" render={ () => ( <Foundation site={ this.state.cur_site } listGet={ this.contractor.getFoundationList } /> ) } />

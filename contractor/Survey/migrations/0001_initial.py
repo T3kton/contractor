@@ -22,6 +22,7 @@ class Migration(migrations.Migration):
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('foundation', models.OneToOneField(to='Building.Foundation', null=True, on_delete=django.db.models.deletion.PROTECT, blank=True)),
             ],
+            options={'default_permissions': ('delete',)},
         ),
         migrations.CreateModel(
             name='Plot',

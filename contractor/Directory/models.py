@@ -47,7 +47,7 @@ class Zone( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, Zone )
 
   def clean( self, *args, **kwargs ):  # TODO: also make sure there are no hostnames in the attached sites of the parent that have the same name as this, this logic needs to go on Networked as well
     super().clean( *args, **kwargs )
@@ -63,6 +63,7 @@ class Zone( models.Model ):
 
   class Meta:
     unique_together = ( ( 'name', 'parent' ), )
+    # default_permissions = ('add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'Zone "{0}"({1})'.format( self.name, self.fqdn )
@@ -89,7 +90,7 @@ class Entry( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, Entry )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -106,6 +107,10 @@ class Entry( models.Model ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'Entry of type "{0}" for "{1}" in "{2}"'.format( self.type, self.name, self.zone )

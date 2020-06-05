@@ -42,7 +42,10 @@ class FoundationPost( Post ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, FoundationPost )
+
+  class Meta:
+    default_permissions = ()  # 'view' )
 
   def __str__( self ):
     return 'FoundationPost for "{0}" on "{1}"'.format( self.foundation, self.name )
@@ -55,7 +58,10 @@ class StructurePost( Post ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, StructurePost )
+
+  class Meta:
+    default_permissions = ()  # 'view' )
 
   def __str__( self ):
     return 'StructurePost for "{0}" on "{1}"'.format( self.structure, self.name )
@@ -110,7 +116,17 @@ class FoundationBox( Box ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, FoundationBox ):
+      return False
+
+    if action == 'CALL':
+      return user.has_perm( 'PostOffice.change_foundationbox' )
+
     return True
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'FoundationBox for "{0}"'.format( self.foundation )
@@ -127,7 +143,17 @@ class StructureBox( Box ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, StructureBox ):
+      return False
+
+    if action == 'CALL':
+      return user.has_perm( 'PostOffice.change_structurebox' )
+
     return True
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'StructureBox for "{0}"'.format( self.structure )

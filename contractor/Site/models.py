@@ -111,7 +111,7 @@ class Site( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, Site )  # TODO: when 'view' permission becomes optional, tie getConfig to it
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -134,8 +134,13 @@ class Site( models.Model ):
     if errors:
       raise ValidationError( errors )
 
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
+
   def __str__( self ):
     return 'Site "{0}"({1})'.format( self.description, self.name )
+
 
 post_save.connect( post_save_callback, sender=Site )
 post_delete.connect( post_delete_callback, sender=Site )

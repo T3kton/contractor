@@ -29,6 +29,7 @@ class Migration(migrations.Migration):
                 ('blueprint', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='BluePrint.StructureBluePrint')),
                 ('foundation', models.OneToOneField(related_name='+', to='Building.Foundation', on_delete=django.db.models.deletion.PROTECT)),
             ],
+            options={'permissions': (('can_create_structure_job', 'Can Create Structure Jobs'), ('can_config_structure', 'Can Update Structure Config Values'))},
             bases=('Utilities.networked',),
         ),
         migrations.AddField(

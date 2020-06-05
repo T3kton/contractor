@@ -20,6 +20,7 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
+            options={'default_permissions': ()},
         ),
         migrations.CreateModel(
             name='BluePrintScript',

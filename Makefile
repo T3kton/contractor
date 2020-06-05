@@ -18,7 +18,7 @@ install: install-ui
 	install -m 755 lib/util/* $(DESTDIR)/usr/lib/contractor/util
 	install -m 755 lib/setup/* $(DESTDIR)/usr/lib/contractor/setup
 
-	./setup.py install --root $(DESTDIR) --install-purelib=/usr/lib/python3/dist-packages/ --prefix=/usr --no-compile -O0
+	./setup.py install --root=$(DESTDIR) --install-purelib=/usr/lib/python3/dist-packages/ --prefix=/usr --no-compile -O0
 
 version:
 	echo $(VERSION)

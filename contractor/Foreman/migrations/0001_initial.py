@@ -25,6 +25,7 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
+            options={'default_permissions': (), 'permissions': (('can_base_job', 'Can Work With Base Jobs'),)},
         ),
         migrations.CreateModel(
             name='JobLog',
@@ -44,6 +45,7 @@ class Migration(migrations.Migration):
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('site', models.ForeignKey(to='Site.Site')),
             ],
+            options={'default_permissions': ()},
         ),
         migrations.CreateModel(
             name='DependencyJob',
@@ -52,6 +54,7 @@ class Migration(migrations.Migration):
                 ('dependency', models.OneToOneField(editable=False, to='Building.Dependency')),
             ],
             bases=('Foreman.basejob',),
+            options={'default_permissions': (), 'permissions': (('can_dependency_job', 'Can Work With Dependency Jobs'),)},
         ),
         migrations.CreateModel(
             name='FoundationJob',
@@ -60,6 +63,7 @@ class Migration(migrations.Migration):
                 ('foundation', models.OneToOneField(editable=False, to='Building.Foundation')),
             ],
             bases=('Foreman.basejob',),
+            options={'default_permissions': (), 'permissions': (('can_foundation_job', 'Can Work With Foundation Jobs'),)},
         ),
         migrations.CreateModel(
             name='StructureJob',
@@ -68,6 +72,7 @@ class Migration(migrations.Migration):
                 ('structure', models.OneToOneField(editable=False, to='Building.Structure')),
             ],
             bases=('Foreman.basejob',),
+            options={'default_permissions': (), 'permissions': (('can_structure_job', 'Can Work With Structure Jobs'),)},
         ),
         migrations.AddField(
             model_name='basejob',

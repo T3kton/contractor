@@ -41,6 +41,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'default_permissions': (),
             },
         ),
         migrations.CreateModel(
@@ -72,6 +73,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'default_permissions': (),
             },
         ),
     ]

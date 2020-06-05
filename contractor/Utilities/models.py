@@ -119,7 +119,7 @@ class Networked( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, Networked )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -140,6 +140,7 @@ class Networked( models.Model ):
 
   class Meta:
     unique_together = ( ( 'site', 'hostname' ), )
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'Networked hostname "{0}" in "{1}"'.format( self.hostname, self.site.name )
@@ -223,6 +224,18 @@ class AddressBlock( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, AddressBlock ):
+      return False
+
+    if verb == 'CALL':
+      if action == 'usage':
+        return True
+
+      if action == 'nextAddress':
+        return user.has_perm( 'Utilities.add_address' )
+
+      return False
+
     return True
 
   def clean( self, *args, **kwargs ):
@@ -283,6 +296,7 @@ class AddressBlock( models.Model ):
 
   class Meta:
     unique_together = ( ( 'site', 'name' ), )
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'AddressBlock "{0}" in "{1}" subnet "{2}/{3}"'.format( self.name, self.site, self.subnet, self.prefix )
@@ -305,7 +319,7 @@ class Network( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, Network )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -319,6 +333,7 @@ class Network( models.Model ):
 
   class Meta:
     unique_together = ( ( 'site', 'name' ), )
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'Network "{0}" in "{1}"'.format( self.name, self.site )
@@ -328,14 +343,19 @@ class Network( models.Model ):
 class NetworkAddressBlock( models.Model ):
   network = models.ForeignKey( Network, on_delete=models.CASCADE )
   address_block = models.ForeignKey( AddressBlock, on_delete=models.CASCADE )
-  vlan = models.IntegerField( blank=True, null=True )  # vlan = don't specify vlan, 0: Untagged/Native VLAN, 4096: Trunked
+  vlan = models.IntegerField( blank=True, null=True )  # vlan = don't specify vlan, 0: Untagged/Native VLAN, 4095: Trunked
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
+
+  @cinp.list_filter( name='network', paramater_type_list=[ { 'type': 'Model', 'model': Network } ] )
+  @staticmethod
+  def filter_network( network ):
+    return NetworkAddressBlock.objects.filter( network=network )
 
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, NetworkAddressBlock )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -343,11 +363,15 @@ class NetworkAddressBlock( models.Model ):
 
     if not self.vlan:
       self.vlan = None
-    elif self.vlan > 4096 or self.vlan < 0:
-      errors[ 'vlan' ] = 'must be between 0 and 4096'
+    elif self.vlan > 4095 or self.vlan < 0:
+      errors[ 'vlan' ] = 'must be between 0 and 4095'
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'NetworkAddressBlock "{0}" to "{1}"'.format( self.network, self.address_block )
@@ -408,10 +432,7 @@ class NetworkInterface( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if verb == 'DESCRIBE':
-      return True
-
-    return False
+    return cinp.basic_auth_check( user, verb, NetworkInterface )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -419,8 +440,20 @@ class NetworkInterface( models.Model ):
     if not name_regex.match( self.name ):
       errors[ 'name' ] = '"{0}" is invalid'.format( self.name[ 0:50 ] )
 
+    if self.is_provisioning:
+      if self.pk is not None:
+        RNIobjects = self.foundation.networkinterface_set.filter( ~Q( pk=self.pk ), is_provisioning=True )
+      else:
+        RNIobjects = self.foundation.networkinterface_set.filter( is_provisioning=True )
+
+      if RNIobjects.count() > 0:
+        errors[ 'is_provisioning' ] = 'This foundation allready has a provisioning interface'
+
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    default_permissions = ()  # nothing
 
   def __str__( self ):
     return 'NetworkInterface "{0}"'.format( self.name )
@@ -458,7 +491,7 @@ class RealNetworkInterface( NetworkInterface ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, RealNetworkInterface )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -483,6 +516,7 @@ class RealNetworkInterface( NetworkInterface ):
 
   class Meta:
     unique_together = ( ( 'foundation', 'physical_location' ), )
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'RealNetworkInterface "{0}" mac "{1}"'.format( self.name, self.mac )
@@ -502,7 +536,11 @@ class AbstractNetworkInterface( NetworkInterface ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, AbstractNetworkInterface )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'AbstractNetworkInterface "{0}"'.format( self.name )
@@ -520,7 +558,7 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
 
   @property
   def type( self ):
-    return 'Aggragated'
+    return 'Aggregated'
 
   @property
   def config( self ):
@@ -533,7 +571,11 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, AggregatedNetworkInterface )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'AggregatedNetworkInterface "{0}"'.format( self.name )
@@ -652,10 +694,13 @@ class BaseAddress( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if verb == 'DESCRIBE':
-      return True
+    if not cinp.basic_auth_check( user, verb, BaseAddress ):
+      return False
 
-    return False
+    if verb == 'CALL':
+      return action == 'lookup'
+
+    return True
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -680,6 +725,7 @@ class BaseAddress( models.Model ):
 
   class Meta:
     unique_together = ( ( 'address_block', 'offset' ), )
+    default_permissions = ()
 
   def __str__( self ):
     return 'BaseAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
@@ -783,7 +829,7 @@ class Address( BaseAddress ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, Address )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -791,7 +837,7 @@ class Address( BaseAddress ):
     if not name_regex.match( self.interface_name ):
       errors[ 'interface_name' ] = '"{0}" is invalid'.format( self.interface_name[ 0:50 ] )
 
-    try:
+    try:  # TODO: Do we realy care about this.... I think the only think that might care is the DNS, the host CNAME and all
       if self.is_primary and self.address_block and self.networked and self.address_block.site != self.networked.site:
         errors[ 'address_block' ] = 'Primary Address is not in the same site as the Networked it belongs to'
     except ObjectDoesNotExist:
@@ -829,11 +875,12 @@ class Address( BaseAddress ):
     if errors:
       raise ValidationError( errors )
 
-  def __str__( self ):
-    return 'Address in Block "{0}" offset "{1}" networked "{2}" on interface "{3}"'.format( self.address_block, self.offset, self.networked, self.interface_name )
-
   class Meta:
     unique_together = ( ( 'interface_name', 'alias_index' ), )
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
+
+  def __str__( self ):
+    return 'Address in Block "{0}" offset "{1}" networked "{2}" on interface "{3}"'.format( self.address_block, self.offset, self.networked, self.interface_name )
 
 
 @cinp.model( property_list=( 'type', 'ip_address', 'subnet', 'netmask', 'prefix', 'gateway' ) )
@@ -856,7 +903,7 @@ class ReservedAddress( BaseAddress ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, ReservedAddress )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -869,6 +916,10 @@ class ReservedAddress( BaseAddress ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'ReservedAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )
@@ -894,7 +945,7 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, DynamicAddress )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -907,6 +958,10 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'DynamicAddress block "{0}" offset "{1}"'.format( self.address_block, self.offset )

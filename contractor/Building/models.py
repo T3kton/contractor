@@ -37,7 +37,7 @@ class BuildingException( ValueError ):
     return 'BuildingException ({0}): {1}'.format( self.code, self.message )
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list', { 'name': 'structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
+@cinp.model( property_list=( 'state', 'type', 'class_list', { 'name': 'structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
 class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )  # if this changes make sure to update architect - instance - foundation_id
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
@@ -47,24 +47,6 @@ class Foundation( models.Model ):
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
-
-  @cinp.action( return_type={ 'type': 'String' }, paramater_type_list=[ 'Map' ] )
-  def setIdMap( self, id_map ):
-    error = self.blueprint.validateIdMap( id_map )
-    if error is not None:
-      return error
-
-    self.id_map = id_map
-    self.full_clean()
-    self.save()
-
-    for iface in RealNetworkInterface.objects.filter( foundation=self ):
-      if iface.physical_location in id_map[ 'network' ]:
-        iface.mac = id_map[ 'network' ][ iface.physical_location ][ 'mac' ]
-        iface.full_clean()
-        iface.save()
-
-    return None
 
   def _canSetState( self, job=None ):  # You can't set state if there is a related job, unless that job (that is hopfully being passed in from the job that is calling this) is that related job
     try:
@@ -156,45 +138,6 @@ class Foundation( models.Model ):
     self.full_clean()
     self.save()
 
-  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
-  def doCreate( self, user ):
-    """
-    This will submit a job to run the create script.
-    """
-    from contractor.Foreman.lib import createJob
-    return createJob( 'create', self, user )
-
-  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
-  def doDestroy( self, user ):
-    """
-    This will submit a job to run the destroy script.
-    """
-    from contractor.Foreman.lib import createJob
-    return createJob( 'destroy', self, user )
-
-  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_', 'String' ]  )
-  def doJob( self, user, name ):
-    """
-    This will submit a job to run the specified script.
-    """
-    from contractor.Foreman.lib import createJob
-    if name in ( 'create', 'destroy' ):
-      raise ValueError( 'Invalid Job Name' )
-
-    return createJob( name, self, user )
-
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Foreman.models.FoundationJob' }  )
-  def getJob( self ):
-    """
-    Return the Job for this Foundation if there is one
-    """
-    try:
-      return self.foundationjob
-    except ObjectDoesNotExist:
-      pass
-
-    return None
-
   @staticmethod
   def getTscriptValues( write_mode=False ):  # locator is handled seperatly
     return {  # none of these base items are writeable, ignore the write_mode for now
@@ -266,11 +209,12 @@ class Foundation( models.Model ):
   @property
   def can_delete( self ):
     try:
-      return self.structure.state != 'build'
+      self.structure
+      return False
     except AttributeError:
       pass
 
-    return True
+    return self.state in ( 'located', 'planned' ) and ( self.foundationjob_set.all().count == 0 )
 
   @property
   def structure( self ):
@@ -305,6 +249,63 @@ class Foundation( models.Model ):
   @property
   def dependencyId( self ):
     return 'f-{0}'.format( self.pk )
+
+  @cinp.action( return_type={ 'type': 'String' }, paramater_type_list=[ 'Map' ] )
+  def setIdMap( self, id_map ):
+    error = self.blueprint.validateIdMap( id_map )
+    if error is not None:
+      return error
+
+    self.id_map = id_map
+    self.full_clean()
+    self.save()
+
+    for iface in RealNetworkInterface.objects.filter( foundation=self ):
+      if iface.physical_location in id_map[ 'network' ]:
+        iface.mac = id_map[ 'network' ][ iface.physical_location ][ 'mac' ]
+        iface.full_clean()
+        iface.save()
+
+    return None
+
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
+  def doCreate( self, user ):
+    """
+    This will submit a job to run the create script.
+    """
+    from contractor.Foreman.lib import createJob
+    return createJob( 'create', self, user )
+
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
+  def doDestroy( self, user ):
+    """
+    This will submit a job to run the destroy script.
+    """
+    from contractor.Foreman.lib import createJob
+    return createJob( 'destroy', self, user )
+
+  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_', 'String' ]  )
+  def doJob( self, user, name ):
+    """
+    This will submit a job to run the specified script.
+    """
+    from contractor.Foreman.lib import createJob
+    if name in ( 'create', 'destroy' ):
+      raise ValueError( 'Invalid Job Name' )
+
+    return createJob( name, self, user )
+
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Foreman.models.FoundationJob' }  )
+  def getJob( self ):
+    """
+    Return the Job for this Foundation if there is one
+    """
+    try:
+      return self.foundationjob
+    except ObjectDoesNotExist:
+      pass
+
+    return None
 
   @cinp.action( { 'type': 'String', 'is_array': True } )
   @staticmethod
@@ -349,6 +350,21 @@ class Foundation( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, Foundation ):
+      return False
+
+    if verb == 'CALL':
+      if action == 'setIdMap':
+        return user.username == 'bootstrap'
+
+      if action in ( 'getConfig', 'getInterfaceList' ):  # TODO: when 'view' permission becomes optional, tie getConfig, getInterfaceList to it
+        return True
+
+      if action in ( 'doCreate', 'doDestroy', 'doJob' ):
+        return user.has_perm( 'Building.can_create_foundation_job' )
+
+      return False
+
     return True
 
   def clean( self, *args, **kwargs ):
@@ -374,6 +390,12 @@ class Foundation( models.Model ):
       super().delete()
     else:
       subclass.delete()
+
+  class Meta:
+    default_permissions = ()  # 'view' )
+    permissions = (
+                    ( 'can_create_foundation_job', 'Can Create Foundation Jobs' ),
+                  )
 
   def __str__( self ):
     return 'Foundation #{0}({1}) in "{2}"'.format( self.pk, self.locator, self.site.pk )
@@ -455,7 +477,7 @@ class Structure( Networked ):
 
   @property
   def can_delete( self ):
-    return self.state != 'build'
+    return ( self.state == 'planned' ) and ( self.structurejob_set.all().count == 0 )
 
   @property
   def description( self ):
@@ -524,6 +546,21 @@ class Structure( Networked ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, Structure ):
+      return False
+
+    if verb == 'CALL':
+      if action == 'getConfig':
+        return True
+
+      if action in ( 'doCreate', 'doDestroy', 'doJob' ):
+        return user.has_perm( 'Building.can_create_structure_job' )
+
+      if action == 'updateConfig':
+        return user.has_perm( 'Building.can_config_structure' )
+
+      return False
+
     return True
 
   def clean( self, *args, **kwargs ):
@@ -547,6 +584,13 @@ class Structure( Networked ):
       raise models.ProtectedError( 'Structure not Deleteable', self )
 
     super().delete()
+
+  class Meta:
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
+    permissions = (
+                    ( 'can_create_structure_job', 'Can Create Structure Jobs' ),
+                    ( 'can_config_structure', 'Can Update Structure Config Values' )
+                  )
 
   def __str__( self ):
     return 'Structure #{0}({1}) in "{2}"'.format( self.pk, self.hostname, self.site.pk )
@@ -627,6 +671,12 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, Complex ):
+      return False
+
+    if verb == 'CALL':
+      return action == 'createFoundation' and user.has_perm( 'Complex.can_create_foundation' )
+
     return True
 
   def clean( self, *args, **kwargs ):
@@ -637,6 +687,12 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    default_permissions = ()  # 'view' )
+    permissions = (
+                    ( 'can_create_foundation', 'Can Create Foundations' ),
+                  )
 
   def __str__( self ):
     return 'Complex "{0}"({1})'.format( self.description, self.name )
@@ -717,6 +773,12 @@ class ComplexStructure( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, ComplexStructure ):
+      return False
+
+    if verb == 'CALL':
+      return action == 'getConfig'
+
     return True
 
   # TODO: need to make sure a Structure is in only one complex
@@ -726,6 +788,10 @@ class ComplexStructure( models.Model ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'ComplexStructure for "{0}" to "{1}"'.format( self.complex, self.structure )
@@ -783,7 +849,7 @@ class Dependency( models.Model ):
 
   @property
   def can_delete( self ):
-    return self.state != 'build'
+    return ( self.state == 'planned' ) and ( self.dependancyjob_set.all().count == 0 )
 
   @property
   def site( self ):
@@ -856,6 +922,12 @@ class Dependency( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, Dependency ):
+      return False
+
+    if verb == 'CALL':
+      return action in ( 'doCreate', 'doDestroy', 'doJob' ) and user.has_perm( 'Building.can_create_dependency_job' )
+
     return True
 
   def clean( self, *args, **kwargs ):
@@ -883,6 +955,12 @@ class Dependency( models.Model ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
+    permissions = (
+                    ( 'can_create_dependency_job', 'Can Create Dependency Jobs' ),
+                  )
 
   def __str__( self ):
     structure = None

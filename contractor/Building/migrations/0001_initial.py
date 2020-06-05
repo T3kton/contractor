@@ -20,6 +20,7 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
+            options={'default_permissions': (), 'permissions': (('can_create_foundation', 'Can Create Foundations'),)},
         ),
         migrations.CreateModel(
             name='ComplexStructure',
@@ -40,6 +41,7 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
+            options={'permissions': (('can_create_dependency_job', 'Can Create Dependency Jobs'),)},
         ),
         migrations.CreateModel(
             name='Foundation',
@@ -51,5 +53,6 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
+            options={'default_permissions': (), 'permissions': (('can_create_foundation_job', 'Can Create Foundation Jobs'),)},
         ),
     ]

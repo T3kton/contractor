@@ -228,13 +228,13 @@ class BaseJob( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if verb == 'DESCRIBE':
-      return True
+    if not cinp.basic_auth_check( user, verb, BaseJob ):
+      return False
 
     if verb == 'CALL':
-      return True
+      return user.has_perm( 'Foreman.can_base_job' )
 
-    return False
+    return True
 
   def clean( self, *args, **kwargs ):  # TODO: also need to make sure a Structure is in only one complex
     super().clean( *args, **kwargs )
@@ -245,6 +245,12 @@ class BaseJob( models.Model ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    default_permissions = ()  # only CALL
+    permissions = (
+                    ( 'can_base_job', 'Can Work With Base Jobs' ),
+                  )
 
   def __str__( self ):
     return 'BaseJob #{0} in "{1}"'.format( self.pk, self.site.pk )
@@ -353,7 +359,19 @@ class FoundationJob( BaseJob ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, FoundationJob ):
+      return False
+
+    if verb == 'CALL':
+      return user.has_perm( 'Foreman.can_foundation_job' )
+
     return True
+
+  class Meta:
+    default_permissions = ()  # 'view' )
+    permissions = (
+                    ( 'can_foundation_job', 'Can Work With Foundation Jobs' ),
+                  )
 
   def __str__( self ):
     return 'FoundationJob #{0} for "{1}" in "{2}"'.format( self.pk, self.foundation.pk, self.foundation.site.pk )
@@ -461,7 +479,19 @@ class StructureJob( BaseJob ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, StructureJob ):
+      return False
+
+    if verb == 'CALL':
+      return user.has_perm( 'Foreman.can_structure_job' )
+
     return True
+
+  class Meta:
+    default_permissions = ()  # 'view' )
+    permissions = (
+                    ( 'can_structure_job', 'Can Work With Structure Jobs' ),
+                  )
 
   def __str__( self ):
     return 'StructureJob #{0} for "{1}" in "{2}"'.format( self.pk, self.structure.pk, self.structure.site.pk )
@@ -577,13 +607,25 @@ class DependencyJob( BaseJob ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, DependencyJob ):
+      return False
+
+    if verb == 'CALL':
+      return user.has_perm( 'Foreman.can_dependency_job' )
+
     return True
+
+  class Meta:
+    default_permissions = ()  # 'view' )
+    permissions = (
+                    ( 'can_dependency_job', 'Can Work With Dependency Jobs' ),
+                  )
 
   def __str__( self ):
     return 'DependencyJob #{0} for "{1}" in "{2}"'.format( self.pk, self.dependency.pk, self.dependency.site.pk )
 
 
-@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
+@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class JobLog( models.Model ):
   site = models.ForeignKey( Site, on_delete=models.CASCADE )
   job_id = models.IntegerField()
@@ -681,10 +723,13 @@ class JobLog( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, JobLog )
 
   def delete( self ):
     raise models.ProtectedError( 'Can not delete JobLog entries', self )
+
+  class Meta:
+    default_permissions = ()  # 'view' )
 
   def __str__( self ):
     return 'JobLog for Job #{0} for "{1}"({2}) at "{3}"'.format( self.job_id, self.target_id, self.target_class, self.at )

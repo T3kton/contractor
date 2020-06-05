@@ -35,7 +35,7 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Survey/Plot' );
   };
 
-  getNetworkList = () =>
+  getNetworkList = ( site ) =>
   {
     return this.cinp.getFilteredObjects( '/api/v1/Utilities/Network', 'site', { 'site': site }  );
   };

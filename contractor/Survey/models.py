@@ -35,7 +35,7 @@ class Plot( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, Plot )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -46,6 +46,10 @@ class Plot( models.Model ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'Plot "{0}"({1})'.format( self.description, self.name )
@@ -108,7 +112,16 @@ class Cartographer( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
+    if not cinp.basic_auth_check( user, verb, Cartographer ):
+      return False
+
+    if verb == 'CALL':
+      return user.username == 'bootstrap'
+
     return True
+
+  class Meta:
+    default_permissions = ( 'delete', )  # 'view' )
 
   def __str__( self ):
     return 'Cartographer "{0}"'.format( self.identifier )
