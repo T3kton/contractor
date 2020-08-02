@@ -354,7 +354,7 @@ class FoundationJob( BaseJob ):
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
-    return FoundationJob.objects.filter( foundation__site=site )
+    return FoundationJob.objects.filter( site=site )
 
   @cinp.check_auth()
   @staticmethod
@@ -474,7 +474,7 @@ class StructureJob( BaseJob ):
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
-    return StructureJob.objects.filter( structure__site=site )
+    return StructureJob.objects.filter( site=site )
 
   @cinp.check_auth()
   @staticmethod
@@ -602,7 +602,7 @@ class DependencyJob( BaseJob ):
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
-    return DependencyJob.objects.filter( dependency__foundation__site=site )
+    return DependencyJob.objects.filter( site=site )
 
   @cinp.check_auth()
   @staticmethod

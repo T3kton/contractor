@@ -646,11 +646,11 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   def newFoundation( self, hostname ):
     raise ValueError( 'Root Complex dose not support Foundations' )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, paramater_type_list=[ { 'type': 'String' }, { 'type': 'String', 'is_array': True } ] )
-  def createFoundation( self, hostname, interface_name_list ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
+  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, paramater_type_list=[ { 'type': 'String' }, { 'type': 'Model', 'model': Site }, { 'type': 'String', 'is_array': True } ] )
+  def createFoundation( self, hostname, site, interface_name_list ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     self = self.subclass
 
-    foundation = self.newFoundation( hostname )
+    foundation = self.newFoundation( hostname, site )
 
     counter = 0
     for name in interface_name_list:
