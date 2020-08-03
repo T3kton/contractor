@@ -37,7 +37,7 @@ class BuildingException( ValueError ):
     return 'BuildingException ({0}): {1}'.format( self.code, self.message )
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list', { 'name': 'structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
+@cinp.model( property_list=( 'state', 'type', 'class_list', { 'name': 'structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE' ] )  # CREATE should be done with the subclasses
 class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )  # if this changes make sure to update architect - instance - foundation_id
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
@@ -208,13 +208,16 @@ class Foundation( models.Model ):
 
   @property
   def can_delete( self ):
-    try:
-      self.structure
+    if self.state not in ( 'located', 'planned' ):
       return False
-    except AttributeError:
-      pass
 
-    return self.state in ( 'located', 'planned' ) and ( self.foundationjob_set.all().count == 0 )
+    if self.structure is not None:
+      return False
+
+    if self.getJob() is not None:
+      return False
+
+    return True
 
   @property
   def structure( self ):
@@ -382,7 +385,7 @@ class Foundation( models.Model ):
 
   def delete( self ):
     if not self.can_delete:
-      raise models.ProtectedError( 'Structure not Deleatable', self )
+      raise models.ProtectedError( 'Foundation not Deleatable', self )
 
     subclass = self.subclass
 
@@ -477,7 +480,13 @@ class Structure( Networked ):
 
   @property
   def can_delete( self ):
-    return ( self.state == 'planned' ) and ( self.structurejob_set.all().count == 0 )
+    if self.state != 'planned':
+      return False
+
+    if self.getJob() is not None:
+      return False
+
+    return True
 
   @property
   def description( self ):
@@ -675,7 +684,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
       return False
 
     if verb == 'CALL':
-      return action == 'createFoundation' and user.has_perm( 'Complex.can_create_foundation' )
+      return action == 'createFoundation' and user.has_perm( 'Building.can_create_foundation' )
 
     return True
 
@@ -849,7 +858,13 @@ class Dependency( models.Model ):
 
   @property
   def can_delete( self ):
-    return ( self.state == 'planned' ) and ( self.dependancyjob_set.all().count == 0 )
+    if self.state != 'planned':
+      return False
+
+    if self.getJob() is not None:
+      return False
+
+    return True
 
   @property
   def site( self ):

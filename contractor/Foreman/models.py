@@ -232,6 +232,9 @@ class BaseJob( models.Model ):
       return False
 
     if verb == 'CALL':
+      if action == 'jobStats':
+        return True
+
       return user.has_perm( 'Foreman.can_base_job' )
 
     return True

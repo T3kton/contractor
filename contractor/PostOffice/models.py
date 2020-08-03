@@ -48,7 +48,7 @@ class FoundationPost( Post ):
     default_permissions = ()  # 'view' )
 
   def __str__( self ):
-    return 'FoundationPost for "{0}" on "{1}"'.format( self.foundation, self.name )
+    return 'FoundationPost for "{0}" on "{1}"'.format( self.foundation_id, self.name )
 
 
 @cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
@@ -64,7 +64,7 @@ class StructurePost( Post ):
     default_permissions = ()  # 'view' )
 
   def __str__( self ):
-    return 'StructurePost for "{0}" on "{1}"'.format( self.structure, self.name )
+    return 'StructurePost for "{0}" on "{1}"'.format( self.structure_id, self.name )
 
 
 class Box( models.Model ):
@@ -129,7 +129,7 @@ class FoundationBox( Box ):
     # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
-    return 'FoundationBox for "{0}"'.format( self.foundation )
+    return 'FoundationBox for "{0}"'.format( self.foundation_id )
 
 
 @cinp.model()
@@ -156,4 +156,4 @@ class StructureBox( Box ):
     # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
-    return 'StructureBox for "{0}"'.format( self.structure )
+    return 'StructureBox for "{0}"'.format( self.structure_id )
