@@ -89,7 +89,7 @@ class BluePrint( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
     if not name_regex.match( self.name ):  # if this regex changes, make sure to update tcalc parser in archetect
-      errors[ 'name' ] = 'BluePrint Script name "{0}" is invalid'.format( self.name )
+      errors[ 'name' ] = 'invalid'
 
     if self.config_values is not None:
       for name in self.config_values:
@@ -223,11 +223,11 @@ class Script( models.Model ):
     errors = {}
 
     if not name_regex.match( self.name ):
-      errors[ 'name' ] = 'BluePrint name "{0}" is invalid'.format( self.name )
+      errors[ 'name' ] = 'invalid'
 
     results = parser.lint( self.script )
     if results is not None:
-      errors[ 'script' ] = 'Script is invalid: {0}'.format( results )
+      errors[ 'script' ] = 'invalid'
 
     if errors:
       raise ValidationError( errors )
@@ -262,7 +262,7 @@ class BluePrintScript( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
     if not name_regex.match( self.name ):
-      errors[ 'name' ] = 'BluePrint Script name "{0}" is invalid'.format( self.name )
+      errors[ 'name' ] = 'invalid'
 
     if errors:
       raise ValidationError( errors )

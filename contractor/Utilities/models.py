@@ -13,6 +13,8 @@ from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRN
 
 cinp = CInP( 'Utilities', '0.1' )
 
+network_name_regex = re.compile( '^[a-zA-Z0-9][a-zA-Z0-9_\-]*(\.[0-9]{1,4})$' )  # the ".[0-9]" is for networks that are vlans of other networks, some things like proxmox treat these as un-named special networks
+
 
 class UtilitiesException( ValueError ):
   def __init__( self, code, message ):
@@ -125,7 +127,7 @@ class Networked( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
     if not hostname_regex.match( self.hostname ):
-      errors[ 'hostname' ] = 'Structure hostname "{0}" is invalid'.format( self.hostname )
+      errors[ 'hostname' ] = 'invalid'
 
     try:
       zone = self.site.zone
@@ -325,6 +327,9 @@ class Network( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
 
+    if not name_regex.match( self.network_name_regex ):
+      errors[ 'name' ] = 'invalid'
+
     if self.mtu is not None and ( self.mtu > 9022 or self.mtu < 512 ):
       errors[ 'mtu' ] = 'must be between 512 and 9022'
 
@@ -438,7 +443,7 @@ class NetworkInterface( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
     if not name_regex.match( self.name ):
-      errors[ 'name' ] = '"{0}" is invalid'.format( self.name[ 0:50 ] )
+      errors[ 'name' ] = 'invalid'
 
     if self.is_provisioning:
       if self.pk is not None:
@@ -835,7 +840,7 @@ class Address( BaseAddress ):
     super().clean( *args, **kwargs )
     errors = {}
     if not name_regex.match( self.interface_name ):
-      errors[ 'interface_name' ] = '"{0}" is invalid'.format( self.interface_name[ 0:50 ] )
+      errors[ 'interface_name' ] = 'invalid'
 
     try:  # TODO: Do we realy care about this.... I think the only think that might care is the DNS, the host CNAME and all
       if self.is_primary and self.address_block and self.networked and self.address_block.site != self.networked.site:

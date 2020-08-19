@@ -692,7 +692,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
     super().clean( *args, **kwargs )
     errors = {}
     if not name_regex.match( self.name ):
-      errors[ 'name' ] = '"{0}" is invalid'.format( self.name[ 0:50 ] )
+      errors[ 'name' ] = 'invalid'
 
     if errors:
       raise ValidationError( errors )
