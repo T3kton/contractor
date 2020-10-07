@@ -542,15 +542,18 @@ class Structure( Networked ):
 
     return mergeValues( getConfig( self ) )
 
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.Structure' }, paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
+  @staticmethod
+  def getWithHostnameSite( self, site, hostname ):
+    try:
+      return Structure.objects.get( site=site, hostname=hostname )
+    except Structure.DoesNotExist:
+      return None
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Structure.objects.filter( site=site )
-
-  @cinp.list_filter( name='complex', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Complex' } ] )
-  @staticmethod
-  def filter_complex( complex ):
-    return complex.members.all()
 
   @cinp.check_auth()
   @staticmethod

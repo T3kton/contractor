@@ -7,7 +7,7 @@ from setuptools import find_packages
 
 
 class build( build_py ):
-  def run( self ):
+  def build_packages( self ):
     # get all the .py files, unless they end in _test.py
     # we don't need testing files in our published product
     for package in self.packages:
@@ -18,6 +18,7 @@ class build( build_py ):
         if os.path.basename( module_file ).endswith( '_test.py' ) or os.path.basename( module_file ) == 'tests.py':
           continue
         self.build_module( module, module_file, package )
+
 
 setup(
        name='contractor',

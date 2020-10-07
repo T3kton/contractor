@@ -146,7 +146,7 @@ def _siteConfigInternal( site, class_list, config ):
   if site.parent is not None:
     last_modified = max( last_modified, _siteConfigInternal( site.parent, class_list, config ) )
 
-  _updateConfig( site.config_values, class_list, config )
+  _updateConfig( copy.deepcopy( site.config_values ), class_list, config )
 
   return last_modified
 
@@ -165,7 +165,7 @@ def _bluePrintConfigInternal( blueprint, class_list, config ):
   for parent in blueprint.parent_list.all():
     last_modified = max( last_modified, _bluePrintConfigInternal( parent, class_list, config ) )
 
-  _updateConfig( blueprint.config_values, class_list, config )
+  _updateConfig( copy.deepcopy( blueprint.config_values ), class_list, config )  # we are deepcopying b/c sometimes something will tweek the values (ie: resords/lib.py stripping passwords) and we don't want that to modify the origional values
   return last_modified
 
 
@@ -188,7 +188,7 @@ def _foundationConfig( foundation, class_list, config ):
 
 
 def _structureConfig( structure, class_list, config ):
-  _updateConfig( structure.config_values, class_list, config )
+  _updateConfig( copy.deepcopy( structure.config_values ), class_list, config )
 
   config.update( structure.configAttributes() )
   return structure.updated
