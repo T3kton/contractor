@@ -187,7 +187,8 @@ def processJobs( site, module_list, max_jobs=10 ):
     foundation = foundation.subclass
     complex = foundation.complex
     if complex is not None and complex.state == 'built':
-      foundation.setLocated()
+      if foundation._canSetState():
+        foundation.setLocated()
 
   # start waiting jobs
   for job in BaseJob.objects.select_for_update().filter( site=site, state='waiting' ):
