@@ -127,7 +127,7 @@ class Foundation( models.Model ):
     except AttributeError:
       pass
 
-    for iface in RealNetworkInterface.objects.filter( foundation=self ):
+    for iface in self.networkinterface_set.all():
       iface.mac = None
       iface.full_clean()
       iface.save()
@@ -542,9 +542,9 @@ class Structure( Networked ):
 
     return mergeValues( getConfig( self ) )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.Structure' }, paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
   @staticmethod
-  def getWithHostnameSite( self, site, hostname ):
+  def getWithHostnameSite( site, hostname ):
     try:
       return Structure.objects.get( site=site, hostname=hostname )
     except Structure.DoesNotExist:

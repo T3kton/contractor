@@ -5,6 +5,7 @@ from cinp.orm_django import DjangoCInP as CInP
 
 from contractor.fields import name_regex
 from contractor.Building.models import Foundation
+from contractor.BluePrint.models import PXE
 from contractor.Survey.lib import foundationLookup
 
 cinp = CInP( 'Survey', '0.1' )
@@ -63,6 +64,17 @@ class Cartographer( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
+  def _setFoundationPXE( self, done=False ):
+    if done is True:
+      pxe = None
+    else:
+      pxe = PXE.objects.get( name='bootstrap' )
+
+    for iface in self.foundation.networkinterface_set.all():
+      iface.pxe = pxe
+      iface.full_clean()
+      iface.save()
+
   @cinp.action( paramater_type_list=[ 'String' ] )
   @staticmethod
   def register( identifier ):
@@ -84,9 +96,14 @@ class Cartographer( models.Model ):
 
   @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ 'Map' ] )
   def lookup( self, info_map=None ):
+    if self.foundation:
+      self._setFoundationPXE()
+      return { 'matched_by': 'Pre-Set', 'locator': self.foundation.locator }
+
     ( matched_by, foundation ) = foundationLookup( info_map )
     if foundation is not None:
       self.foundation = foundation
+      self._setFoundationPXE()
       self.message = 'Matched by "{0}" as "{1}"'.format( matched_by, foundation.locator )
       self.full_clean()
       self.save()
@@ -103,6 +120,7 @@ class Cartographer( models.Model ):
 
   @cinp.action()
   def done( self ):
+    self._setFoundationPXE( done=True )
     foundation = self.foundation
     self.delete()
     foundation.cartographer = None  # the Cartographer instance is gone, but the object cache still has it, a little tweeking to help it get located

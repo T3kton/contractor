@@ -293,6 +293,7 @@ User.objects.create_superuser( username='root', password=root_password, email='r
 
 print( 'Create bootstrap user...' )
 User.objects.create_user( username='bootstrap', password='bootstrap', email='bootstrap@contractor' )
+#user.user_permissions.add( lookup_permission_list( [ ] ) )
 
 print( 'Create subcontractor user...' )
 User.objects.create_user( username='subcontractor', password='subcontractor', email='subcontractor@contractor' )
