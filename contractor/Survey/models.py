@@ -139,7 +139,7 @@ class Cartographer( models.Model ):
     return True
 
   class Meta:
-    default_permissions = ( 'delete', )  # 'view' )
+    default_permissions = ( 'delete', 'view' )
 
   def __str__( self ):
     return 'Cartographer "{0}"'.format( self.identifier )

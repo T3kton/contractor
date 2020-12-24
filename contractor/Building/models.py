@@ -71,8 +71,6 @@ class Foundation( models.Model ):
   def setLocated( self ):
     """
     Sets the Foundation to 'located' state.  This will not create/destroy any jobs.
-
-    NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
     try:
       job = self.foundationjob
@@ -360,8 +358,8 @@ class Foundation( models.Model ):
       if action == 'setIdMap':
         return user.username == 'bootstrap'
 
-      if action in ( 'getConfig', 'getInterfaceList' ):  # TODO: when 'view' permission becomes optional, tie getConfig, getInterfaceList to it
-        return True
+      if action in ( 'getConfig', 'getInterfaceList' ):
+        return user.has_perm( 'Building.view_foundation' )
 
       if action in ( 'doCreate', 'doDestroy', 'doJob' ):
         return user.has_perm( 'Building.can_create_foundation_job' )
@@ -395,7 +393,7 @@ class Foundation( models.Model ):
       subclass.delete()
 
   class Meta:
-    default_permissions = ()  # 'view' )
+    default_permissions = ( 'view', )
     permissions = (
                     ( 'can_create_foundation_job', 'Can Create Foundation Jobs' ),
                   )
@@ -563,7 +561,7 @@ class Structure( Networked ):
 
     if verb == 'CALL':
       if action == 'getConfig':
-        return True
+        return user.has_perm( 'Building.view_structure' )
 
       if action in ( 'doCreate', 'doDestroy', 'doJob' ):
         return user.has_perm( 'Building.can_create_structure_job' )
@@ -701,7 +699,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
       raise ValidationError( errors )
 
   class Meta:
-    default_permissions = ()  # 'view' )
+    default_permissions = ( 'view', )
     permissions = (
                     ( 'can_create_foundation', 'Can Create Foundations' ),
                   )
@@ -789,7 +787,7 @@ class ComplexStructure( models.Model ):
       return False
 
     if verb == 'CALL':
-      return action == 'getConfig'
+      return action == 'getConfig' and user.has_perm( 'Building.view_complexstructure' )
 
     return True
 
@@ -931,10 +929,10 @@ class Dependency( models.Model ):
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
-    return Dependency.objects.filter( Q( foundation__site=site ) |
-                                      Q( foundation__isnull=True, script_structure__site=site ) |
-                                      Q( foundation__isnull=True, script_structure__isnull=True, dependency__structure__site=site ) |
-                                      Q( foundation__isnull=True, script_structure__isnull=True, structure__site=site )
+    return Dependency.objects.filter( Q( foundation__site=site )
+                                      | Q( foundation__isnull=True, script_structure__site=site )
+                                      | Q( foundation__isnull=True, script_structure__isnull=True, dependency__structure__site=site )
+                                      | Q( foundation__isnull=True, script_structure__isnull=True, structure__site=site )
                                       )
 
   @cinp.check_auth()

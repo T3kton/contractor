@@ -3,7 +3,7 @@ from datetime import timedelta
 from parsimonious import Grammar, ParseError, IncompleteParseError
 
 
-tscript_grammar = """
+tscript_grammar = r"""
 script              = lines
 lines               = line*
 line                = ( expression / ws_s ) comment? nl_p

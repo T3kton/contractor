@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='FoundationBluePrint',
             fields=[
-                ('blueprint_ptr', models.OneToOneField(to='BluePrint.BluePrint', primary_key=True, parent_link=True, serialize=False, auto_created=True)),
+                ('blueprint_ptr', models.OneToOneField(to='BluePrint.BluePrint', primary_key=True, parent_link=True, serialize=False, auto_created=True,on_delete=models.CASCADE)),
                 ('foundation_type_list', contractor.fields.StringListField(default=list, max_length=200)),
                 ('template', contractor.fields.MapField(default=contractor.fields.defaultdict, null=True, blank=True)),
                 ('physical_interface_names', contractor.fields.StringListField(blank=True, default=list, max_length=200)),
@@ -65,7 +65,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='StructureBluePrint',
             fields=[
-                ('blueprint_ptr', models.OneToOneField(to='BluePrint.BluePrint', primary_key=True, parent_link=True, serialize=False, auto_created=True)),
+                ('blueprint_ptr', models.OneToOneField(to='BluePrint.BluePrint', primary_key=True, parent_link=True, serialize=False, auto_created=True,on_delete=models.CASCADE)),
                 ('foundation_blueprint_list', models.ManyToManyField(to='BluePrint.FoundationBluePrint')),
                 ('parent_list', models.ManyToManyField(blank=True, to='BluePrint.StructureBluePrint')),
             ],
@@ -74,12 +74,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='blueprintscript',
             name='blueprint',
-            field=models.ForeignKey(to='BluePrint.BluePrint'),
+            field=models.ForeignKey(to='BluePrint.BluePrint',on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='blueprintscript',
             name='script',
-            field=models.ForeignKey(to='BluePrint.Script'),
+            field=models.ForeignKey(to='BluePrint.Script',on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='blueprint',

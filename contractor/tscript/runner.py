@@ -89,8 +89,8 @@ class NoRollback( Exception ):
 # communicatoin routnds, keep in mind that it is possible for multiple subcontractors to be taking requests, so subcontractor must store all state
 # with contractor
 
-"""
 
+"""
 execution flow:
 
 first execution:
@@ -873,7 +873,7 @@ class Runner( object ):
               handler = module[ op_data[ 'name' ] ]()
             except KeyError:
               raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
-            except TypeError as e:  # hm.... this is bad
+            except TypeError:  # hm.... this is bad
               raise UnrecoverableError( 'Handler init function failed "{0}" on line {1}, possibly trying to call the function directly?'.format( op_data[ 'name' ], self.cur_line ) )
 
             module = op_data[ 'module' ]
@@ -1018,7 +1018,7 @@ class Runner( object ):
     else:
       self.state = self.state[ :state_index + 1 ]  # remove everything after this one, save this one's return value on the stack
 
-    logging.debug( 'runner: _evaluate level: "{0}" final state: '.format( state_index, self.state ) )
+    logging.debug( 'runner: _evaluate level: "{0}" final state: {1}'.format( state_index, self.state ) )
     if self.state == []:
       self.state = 'DONE'
       self.cur_line = None

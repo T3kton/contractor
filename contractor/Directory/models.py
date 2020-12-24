@@ -6,9 +6,9 @@ from cinp.orm_django import DjangoCInP as CInP
 
 cinp = CInP( 'Directory', '0.1' )
 
-zone_name_regex = re.compile( '^[a-z][a-z0-9]+$' )  # NOTE: do not allow '.', it can cause problems with sub zones, also these can be used for filename, so must be filesystem safe
-entry_name_regex = re.compile( '^[a-z][a-z0-9]+$')  # NOTE: do not allow '.', it can cause problems with sub zones
-absolute_name_regex = re.compile( '^([a-z][a-z0-9]+\.)+[a-z][a-z0-9]+\.$' )
+zone_name_regex = re.compile( r'^[a-z][a-z0-9]+$' )  # NOTE: do not allow '.', it can cause problems with sub zones, also these can be used for filename, so must be filesystem safe
+entry_name_regex = re.compile( r'^[a-z][a-z0-9]+$')  # NOTE: do not allow '.', it can cause problems with sub zones
+absolute_name_regex = re.compile( r'^([a-z][a-z0-9]+\.)+[a-z][a-z0-9]+\.$' )
 
 
 class DirectoryException( ValueError ):

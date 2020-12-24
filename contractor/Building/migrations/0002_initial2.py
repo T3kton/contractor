@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Structure',
             fields=[
-                ('networked_ptr', models.OneToOneField(to='Utilities.Networked', primary_key=True, parent_link=True, serialize=False, auto_created=True)),
+                ('networked_ptr', models.OneToOneField(to='Utilities.Networked', primary_key=True, parent_link=True, serialize=False, auto_created=True,on_delete=models.CASCADE)),
                 ('config_uuid', models.CharField(default=contractor.Building.models.getUUID, max_length=36, unique=True)),
                 ('config_values', contractor.fields.MapField(null=True, default=contractor.fields.defaultdict, blank=True)),
                 ('built_at', models.DateTimeField(null=True, editable=False, blank=True)),
@@ -45,32 +45,32 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dependency',
             name='dependency',
-            field=models.ForeignKey(null=True, blank=True, to='Building.Dependency', related_name='+'),
+            field=models.ForeignKey(null=True, blank=True, to='Building.Dependency', related_name='+',on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='dependency',
             name='foundation',
-            field=models.OneToOneField(related_name='+', null=True, to='Building.Foundation', blank=True),
+            field=models.OneToOneField(related_name='+', null=True, to='Building.Foundation', blank=True,on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='dependency',
             name='script_structure',
-            field=models.ForeignKey(null=True, blank=True, to='Building.Structure', related_name='+'),
+            field=models.ForeignKey(null=True, blank=True, to='Building.Structure', related_name='+',on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='dependency',
             name='structure',
-            field=models.ForeignKey(related_name='+', null=True, blank=True, to='Building.Structure'),
+            field=models.ForeignKey(related_name='+', null=True, blank=True, to='Building.Structure',on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='complexstructure',
             name='complex',
-            field=models.ForeignKey(to='Building.Complex'),
+            field=models.ForeignKey(to='Building.Complex',on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='complexstructure',
             name='structure',
-            field=models.OneToOneField(to='Building.Structure'),
+            field=models.OneToOneField(to='Building.Structure',on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='complex',
@@ -80,6 +80,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='complex',
             name='site',
-            field=models.ForeignKey(to='Site.Site'),
+            field=models.ForeignKey(to='Site.Site',on_delete=models.CASCADE),
         ),
     ]

@@ -76,10 +76,10 @@ class Site( models.Model ):
 
       result[ foundation.dependencyId ] = { 'description': foundation.description, 'type': 'Foundation', 'state': foundation.state, 'dependency_list': dependency_list, 'has_job': ( foundation.pk in foundation_job_list ), 'external': False }
 
-    for dependency in Dependency.objects.filter( Q( foundation__site=self ) |
-                                                 Q( foundation__isnull=True, script_structure__site=self ) |
-                                                 Q( foundation__isnull=True, script_structure__isnull=True, dependency__structure__site=self ) |
-                                                 Q( foundation__isnull=True, script_structure__isnull=True, structure__site=self )
+    for dependency in Dependency.objects.filter( Q( foundation__site=self )
+                                                 | Q( foundation__isnull=True, script_structure__site=self )
+                                                 | Q( foundation__isnull=True, script_structure__isnull=True, dependency__structure__site=self )
+                                                 | Q( foundation__isnull=True, script_structure__isnull=True, structure__site=self )
                                                  ).order_by( 'pk' ):
 
       if dependency.dependency is not None:
@@ -111,7 +111,13 @@ class Site( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, Site )  # TODO: when 'view' permission becomes optional, tie getConfig to it
+    if not cinp.basic_auth_check( user, verb, Site ):
+      return False
+
+    if verb == 'CALL':
+      return action == 'getConfig' and user.has_perm( 'Site.view_site' )
+
+    return True
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )

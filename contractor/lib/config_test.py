@@ -560,6 +560,7 @@ def test_foundation():
                   '_provisioning_interface': None,
                   '_provisioning_interface_mac': None,
                   '_blueprint': 'fdnb1',
+                  '_console': 'console',
                   '_site': 'site1'
                 }
 
@@ -574,6 +575,7 @@ def test_foundation():
                                             '_provisioning_interface': None,
                                             '_provisioning_interface_mac': None,
                                             '_blueprint': 'fdnb1',
+                                            '_console': 'console',
                                             '_site': 'site1'
                                            }
 
@@ -592,6 +594,7 @@ def test_foundation():
                                             '_provisioning_interface': None,
                                             '_provisioning_interface_mac': None,
                                             '_blueprint': 'fdnb1',
+                                            '_console': 'console',
                                             '_site': 'site1',
                                             'lucky': 'blueprint'
                                            }
@@ -611,6 +614,7 @@ def test_foundation():
                                             '_provisioning_interface': None,
                                             '_provisioning_interface_mac': None,
                                             '_blueprint': 'fdnb1',
+                                            '_console': 'console',
                                             '_site': 'site1',
                                             'lucky': 'site'
                                            }
@@ -673,6 +677,7 @@ def test_structure():
                   '_domain_name': None,
                   '_interface_map': {},
                   '_blueprint': 'strb1',
+                  '_console': 'console',
                   '_site': 'site1'
                 }
 
@@ -697,6 +702,7 @@ def test_structure():
                                               '_domain_name': None,
                                               '_interface_map': {},
                                               '_blueprint': 'strb1',
+                                              '_console': 'console',
                                               '_site': 'site1'
                                              }
 
@@ -725,6 +731,7 @@ def test_structure():
                                               '_domain_name': None,
                                               '_interface_map': {},
                                               '_blueprint': 'strb1',
+                                              '_console': 'console',
                                               '_site': 'site1'
                                              }
 
@@ -753,6 +760,7 @@ def test_structure():
                                              '_domain_name': None,
                                              '_interface_map': {},
                                              '_blueprint': 'strb1',
+                                             '_console': 'console',
                                              '_site': 'site1',
                                              'bob': 'structure blueprint'
                                             }
@@ -782,6 +790,7 @@ def test_structure():
                                              '_domain_name': None,
                                              '_interface_map': {},
                                              '_blueprint': 'strb1',
+                                             '_console': 'console',
                                              '_site': 'site1',
                                              'bob': 'structure'
                                             }

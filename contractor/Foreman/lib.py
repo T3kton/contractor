@@ -103,7 +103,7 @@ def createJob( script_name, target, creator ):
         except ObjectDoesNotExist:
           pass
 
-        if target_dependency.state != 'built':  # this one should not happen, but just in case
+        if target_dependency.state != 'built':  # we should not mess with the dependency if the target is not built
           raise ForemanException( 'NOT_BUILT', 'the supporting target to the target is not built' )
 
   else:

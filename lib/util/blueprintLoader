@@ -113,7 +113,7 @@ def loadStructureBlueprint( name, target, mode ):
       print( 'Unable to find Foundation BluePrint "{0}"'.format( name ) )
 
   if blueprint.foundation_blueprint_list != foundation_blueprint_list:  # TODO: should we think of a way to perserve links made in other blueprint files?
-    blueprint.foundation_blueprint_list = foundation_blueprint_list
+    blueprint.foundation_blueprint_list.set( foundation_blueprint_list )
     blueprint.full_clean()
     blueprint.save()
 
@@ -127,7 +127,7 @@ def loadStructureBlueprint( name, target, mode ):
       sys.exit( 1 )
 
   if blueprint.parent_list != parent_list:
-    blueprint.parent_list = parent_list
+    blueprint.parent_list.set( parent_list )
     blueprint.full_clean()
     blueprint.save()
 
@@ -167,7 +167,7 @@ def loadFoundationBlueprint( name, target, mode ):
       sys.exit( 1 )
 
   if blueprint.parent_list != parent_list:
-    blueprint.parent_list = parent_list
+    blueprint.parent_list.set( parent_list )
     blueprint.full_clean()
     blueprint.save()
 

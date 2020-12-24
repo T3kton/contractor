@@ -371,7 +371,7 @@ class FoundationJob( BaseJob ):
     return True
 
   class Meta:
-    default_permissions = ()  # 'view' )
+    default_permissions = ( 'view', )
     permissions = (
                     ( 'can_foundation_job', 'Can Work With Foundation Jobs' ),
                   )
@@ -491,7 +491,7 @@ class StructureJob( BaseJob ):
     return True
 
   class Meta:
-    default_permissions = ()  # 'view' )
+    default_permissions = ( 'view', )
     permissions = (
                     ( 'can_structure_job', 'Can Work With Structure Jobs' ),
                   )
@@ -619,7 +619,7 @@ class DependencyJob( BaseJob ):
     return True
 
   class Meta:
-    default_permissions = ()  # 'view' )
+    default_permissions = ( 'view', )
     permissions = (
                     ( 'can_dependency_job', 'Can Work With Dependency Jobs' ),
                   )
@@ -664,7 +664,7 @@ class JobLog( models.Model ):
 
     elif isinstance( job, DependencyJob ):
       log.target_class = 'Dependency'
-      log.target_id = job.dependency.name
+      log.target_id = job.dependency.pk
       log.site = job.dependency.site
       log.target_description = job.dependency.description
 
@@ -721,7 +721,7 @@ class JobLog( models.Model ):
   @cinp.list_filter( name='dependency', paramater_type_list=[ { 'type': 'Model', 'model': Dependency } ] )
   @staticmethod
   def filter_dependency( dependency ):
-    return JobLog.objects.filter( site=dependency.site, target_class='Dependency', target_id=dependency.name )
+    return JobLog.objects.filter( site=dependency.site, target_class='Dependency', target_id=dependency.pk )
 
   @cinp.check_auth()
   @staticmethod
@@ -732,7 +732,7 @@ class JobLog( models.Model ):
     raise models.ProtectedError( 'Can not delete JobLog entries', self )
 
   class Meta:
-    default_permissions = ()  # 'view' )
+    default_permissions = ( 'view', )
 
   def __str__( self ):
     return 'JobLog for Job #{0} for "{1}"({2}) at "{3}"'.format( self.job_id, self.target_id, self.target_class, self.at )

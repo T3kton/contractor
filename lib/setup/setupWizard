@@ -20,7 +20,7 @@ from contractor.Site.models import Site
 from contractor.Survey.models import Plot
 from contractor.Directory.models import Zone, Entry
 from contractor.Utilities.models import Network, RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress, NetworkAddressBlock
-from contractor.plugins.Manual.models import ManualFoundation  # TODO: should Manual plugin be internal?  kind of a pain to have to have that plugin enabled before setup wizzard is run, lots of work arrounds in pluginctl to compensate
+from contractor.plugins.Manual.models import ManualFoundation  # TODO: should Manual plugin be internal?  kind of a pain to have to have that plugin enabled before setup wizard is run, lots of work arrounds in pluginctl to compensate
 
 
 def lookup_permission_list( permission_list ):
@@ -36,7 +36,19 @@ def lookup_permission_list( permission_list ):
   return result
 
 
-parser = argparse.ArgumentParser( description='Contractor SetupWizzard, must be run as root' )
+bind_configured = False
+if os.path.exists( '/etc/bind/named.conf.local' ):
+  for line in open( '/etc/bind/named.conf.local', 'r' ).readlines():
+    if line.strip() == 'include "/etc/bind/contractor/dns.master";':
+      bind_configured = True
+      break
+
+if not bind_configured and os.getuid() != 0:
+  print( 'WARNING!!! setupWizard was not run as root, will not be able to configure bind.' )
+  print( 'press <enter> to continue, or ctl-c to abort' )
+  sys.stdin.readline()
+
+parser = argparse.ArgumentParser( description='Contractor Setup Wizard, must be run as root' )
 parser.add_argument( '--root-password', help='password to use for the root user, if not specified it will be prompted for' )
 parser.add_argument( '--no-ip-reservation', help='do not reserve static and dynamic ips', action='store_true' )
 parser.add_argument( '--site-name', help='name of the initial site to create, default: site1', metavar='SITE', default='site1' )
@@ -48,13 +60,9 @@ parser.add_argument( '--primary-interface', help='which interface to use as the 
 
 args = parser.parse_args()
 
-if os.getuid() != 0:
-  print( 'This must be run as root' )
-  sys.exit( 1 )
-
 if Plot.objects.all().count() > 0:
   print( 'Setup has allready run, Aborting.' )
-  sys.exit( 0 )
+  sys.exit( 2 )
 
 if args.root_password:
   root_password = args.root_password
@@ -252,51 +260,50 @@ if not args.no_ip_reservation:
       continue
     addr.save()
 
-print( 'Generating Bind files...' )
-subprocess.check_call( [ '/usr/lib/contractor/cron/genDNS' ] )
+if os.getuid() == 0:
+  print( 'Generating Bind files...' )
+  subprocess.check_call( [ '/usr/lib/contractor/cron/genDNS' ] )
 
 print( 'Configuring Bind...' )
-configured = False
-for line in open( '/etc/bind/named.conf.local', 'r' ).readlines():
-  if line.strip() == 'include "/etc/bind/contractor/dns.master";':
-    configured = True
-    break
+if not bind_configured:
+  if os.getuid() == 0:
+    fp = open( '/etc/bind/named.conf.local', 'w' )
+    fp.write( """//
+  // Do any local configuration here
+  //
 
-if not configured:
-  fp = open( '/etc/bind/named.conf.local', 'w' )
-  fp.write( """//
-// Do any local configuration here
-//
+  include "/etc/bind/contractor/dns.master";
+  """ )
+    fp.close()
 
-include "/etc/bind/contractor/dns.master";
-""" )
-  fp.close()
+    fp = open( '/etc/bind/named.conf.options', 'w' )
+    fp.write( """options {{
+    directory "/var/cache/bind";
 
-  fp = open( '/etc/bind/named.conf.options', 'w' )
-  fp.write( """options {{
-  directory "/var/cache/bind";
+    forwarders {{
+      {0};
+    }};
 
-  forwarders {{
-    {0};
+    dnssec-validation no;
+
+    auth-nxdomain no;    # conform to RFC1035
+    listen-on-v6 {{ any; }};
   }};
-
-  dnssec-validation no;
-
-  auth-nxdomain no;    # conform to RFC1035
-  listen-on-v6 {{ any; }};
-}};
-""".format( contractor_dns ) )
-  fp.close()
+  """.format( contractor_dns ) )
+    fp.close()
 
 print( 'Creating root user...' )
 User.objects.create_superuser( username='root', password=root_password, email='root@{0}'.format( args.site_domain ) )
 
 print( 'Create bootstrap user...' )
 User.objects.create_user( username='bootstrap', password='bootstrap', email='bootstrap@contractor' )
-#user.user_permissions.add( lookup_permission_list( [ ] ) )
+# user.user_permissions.add( lookup_permission_list( [ ] ) )
 
 print( 'Create subcontractor user...' )
-User.objects.create_user( username='subcontractor', password='subcontractor', email='subcontractor@contractor' )
+user = User.objects.create_user( username='subcontractor', password='subcontractor', email='subcontractor@contractor' )
+user.user_permissions.set( lookup_permission_list( [ 'Site.view_site'
+                                                     ] ) )
+
 
 print( 'Creating groups...' )
 group = Group( name='worker' )
@@ -317,82 +324,104 @@ group.full_clean()
 group.save()
 group.permissions.set( lookup_permission_list( [ 'Building.can_config_structure',
                                                  'Building.can_create_foundation',
-                                                 'Building.add_complexstructure',
-                                                 'Building.add_dependency',
+                                                 'Building.view_structure',
                                                  'Building.add_structure',
-                                                 'Building.change_complexstructure',
-                                                 'Building.change_dependency',
                                                  'Building.change_structure',
-                                                 'Building.delete_complexstructure',
-                                                 'Building.delete_dependency',
                                                  'Building.delete_structure',
-                                                 'Utilities.add_abstractnetworkinterface',
+                                                 'Building.view_complexstructure',
+                                                 'Building.add_complexstructure',
+                                                 'Building.change_complexstructure',
+                                                 'Building.delete_complexstructure',
+                                                 'Building.view_dependency',
+                                                 'Building.add_dependency',
+                                                 'Building.change_dependency',
+                                                 'Building.delete_dependency',
+                                                 'Utilities.view_address',
                                                  'Utilities.add_address',
-                                                 'Utilities.add_aggregatednetworkinterface',
-                                                 'Utilities.add_networked',
-                                                 'Utilities.add_realnetworkinterface',
-                                                 'Utilities.change_abstractnetworkinterface',
                                                  'Utilities.change_address',
-                                                 'Utilities.change_aggregatednetworkinterface',
-                                                 'Utilities.change_networked',
-                                                 'Utilities.change_realnetworkinterface',
-                                                 'Utilities.delete_abstractnetworkinterface',
                                                  'Utilities.delete_address',
+                                                 'Utilities.view_abstractnetworkinterface',
+                                                 'Utilities.add_abstractnetworkinterface',
+                                                 'Utilities.change_abstractnetworkinterface',
+                                                 'Utilities.delete_abstractnetworkinterface',
+                                                 'Utilities.view_aggregatednetworkinterface',
+                                                 'Utilities.add_aggregatednetworkinterface',
+                                                 'Utilities.change_aggregatednetworkinterface',
                                                  'Utilities.delete_aggregatednetworkinterface',
-                                                 'Utilities.delete_networked',
+                                                 'Utilities.view_realnetworkinterface',
+                                                 'Utilities.add_realnetworkinterface',
+                                                 'Utilities.change_realnetworkinterface',
                                                  'Utilities.delete_realnetworkinterface',
+                                                 'Utilities.view_networked',
+                                                 'Utilities.add_networked',
+                                                 'Utilities.change_networked',
+                                                 'Utilities.delete_networked',
                                                  ] ) )
 
 group = Group( name='infrastructure' )
 group.full_clean()
 group.save()
-group.permissions.set( lookup_permission_list( [ 'Site.add_site',
+group.permissions.set( lookup_permission_list( [ 'Site.view_site',
+                                                 'Site.add_site',
                                                  'Site.change_site',
                                                  'Site.delete_site',
+                                                 'Directory.view_entry',
                                                  'Directory.add_entry',
-                                                 'Directory.add_zone',
                                                  'Directory.change_entry',
-                                                 'Directory.change_zone',
                                                  'Directory.delete_entry',
+                                                 'Directory.view_zone',
+                                                 'Directory.add_zone',
+                                                 'Directory.change_zone',
                                                  'Directory.delete_zone',
+                                                 'Survey.view_plot',
                                                  'Survey.add_plot',
                                                  'Survey.change_plot',
                                                  'Survey.delete_plot',
+                                                 'Utilities.view_addressblock',
                                                  'Utilities.add_addressblock',
-                                                 'Utilities.add_network',
-                                                 'Utilities.add_networkaddressblock',
-                                                 'Utilities.add_dynamicaddress',
-                                                 'Utilities.add_reservedaddress',
                                                  'Utilities.change_addressblock',
-                                                 'Utilities.change_dynamicaddress',
-                                                 'Utilities.change_network',
-                                                 'Utilities.change_networkaddressblock',
-                                                 'Utilities.change_reservedaddress',
                                                  'Utilities.delete_addressblock',
+                                                 'Utilities.view_dynamicaddress',
+                                                 'Utilities.add_dynamicaddress',
+                                                 'Utilities.change_dynamicaddress',
                                                  'Utilities.delete_dynamicaddress',
-                                                 'Utilities.delete_network',
-                                                 'Utilities.delete_networkaddressblock',
+                                                 'Utilities.view_reservedaddress',
+                                                 'Utilities.add_reservedaddress',
+                                                 'Utilities.change_reservedaddress',
                                                  'Utilities.delete_reservedaddress',
+                                                 'Utilities.view_network',
+                                                 'Utilities.add_network',
+                                                 'Utilities.change_network',
+                                                 'Utilities.delete_network',
+                                                 'Utilities.view_networkaddressblock',
+                                                 'Utilities.add_networkaddressblock',
+                                                 'Utilities.change_networkaddressblock',
+                                                 'Utilities.delete_networkaddressblock',
                                                  ] ) )
 
 group = Group( name='designer' )
 group.full_clean()
 group.save()
-group.permissions.set( lookup_permission_list( [ 'BluePrint.add_blueprintscript',
-                                                 'BluePrint.add_foundationblueprint',
-                                                 'BluePrint.add_pxe',
-                                                 'BluePrint.add_script',
-                                                 'BluePrint.add_structureblueprint',
+group.permissions.set( lookup_permission_list( [ 'BluePrint.view_blueprintscript',
+                                                 'BluePrint.add_blueprintscript',
                                                  'BluePrint.change_blueprintscript',
-                                                 'BluePrint.change_foundationblueprint',
-                                                 'BluePrint.change_pxe',
-                                                 'BluePrint.change_script',
-                                                 'BluePrint.change_structureblueprint',
                                                  'BluePrint.delete_blueprintscript',
+                                                 'BluePrint.view_foundationblueprint',
+                                                 'BluePrint.add_foundationblueprint',
+                                                 'BluePrint.change_foundationblueprint',
                                                  'BluePrint.delete_foundationblueprint',
-                                                 'BluePrint.delete_pxe',
-                                                 'BluePrint.delete_script',
+                                                 'BluePrint.view_structureblueprint',
+                                                 'BluePrint.add_structureblueprint',
+                                                 'BluePrint.change_structureblueprint',
                                                  'BluePrint.delete_structureblueprint',
+                                                 'BluePrint.view_script',
+                                                 'BluePrint.add_script',
+                                                 'BluePrint.change_script',
+                                                 'BluePrint.delete_script',
+                                                 'BluePrint.view_pxe',
+                                                 'BluePrint.add_pxe',
+                                                 'BluePrint.change_pxe',
+                                                 'BluePrint.delete_pxe',
                                                  ] ) )
 
 print( 'Done!' )

@@ -45,7 +45,7 @@ class FoundationPost( Post ):
     return cinp.basic_auth_check( user, verb, FoundationPost )
 
   class Meta:
-    default_permissions = ()  # 'view' )
+    default_permissions = ( 'view', )
 
   def __str__( self ):
     return 'FoundationPost for "{0}" on "{1}"'.format( self.foundation_id, self.name )
@@ -61,7 +61,7 @@ class StructurePost( Post ):
     return cinp.basic_auth_check( user, verb, StructurePost )
 
   class Meta:
-    default_permissions = ()  # 'view' )
+    default_permissions = ( 'view', )
 
   def __str__( self ):
     return 'StructurePost for "{0}" on "{1}"'.format( self.structure_id, self.name )

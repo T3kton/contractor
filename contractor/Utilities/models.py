@@ -13,7 +13,7 @@ from contractor.lib.ip import IpIsV4, CIDRNetworkBounds, StrToIp, IpToStr, CIDRN
 
 cinp = CInP( 'Utilities', '0.1' )
 
-network_name_regex = re.compile( '^[a-zA-Z0-9][a-zA-Z0-9_\-]*(\.[0-9]{1,4})$' )  # the ".[0-9]" is for networks that are vlans of other networks, some things like proxmox treat these as un-named special networks
+network_name_regex = re.compile( r'^[a-zA-Z0-9][a-zA-Z0-9_\-]*(\.[0-9]{1,4})?$' )  # the ".[0-9]" is for networks that are vlans of other networks, some things like proxmox treat these as un-named special networks
 
 
 class UtilitiesException( ValueError ):
@@ -327,7 +327,7 @@ class Network( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
 
-    if not name_regex.match( self.network_name_regex ):
+    if not network_name_regex.match( self.name ):
       errors[ 'name' ] = 'invalid'
 
     if self.mtu is not None and ( self.mtu > 9022 or self.mtu < 512 ):

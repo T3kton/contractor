@@ -36,13 +36,13 @@ class Migration(migrations.Migration):
                 ('minimum', models.IntegerField(default=172800)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('parent', models.ForeignKey(null=True, blank=True, to='Directory.Zone')),
+                ('parent', models.ForeignKey(null=True, blank=True, to='Directory.Zone', on_delete=models.CASCADE)),
             ],
         ),
         migrations.AddField(
             model_name='entry',
             name='zone',
-            field=models.ForeignKey(blank=True, null=True, to='Directory.Zone'),
+            field=models.ForeignKey(blank=True, null=True, to='Directory.Zone', on_delete=models.CASCADE),
         ),
         migrations.AlterUniqueTogether(
             name='zone',
