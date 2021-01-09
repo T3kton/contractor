@@ -16,9 +16,21 @@ class SiteSelector extends React.Component
     this.props.onSiteChange( value );
   }
 
+  componentWillReceiveProps( newProps )
+  {
+    if( newProps.curSite === null ){
+      this.componentDidMount()
+    }
+  }
+
   componentDidMount()
   {
-    this.props.siteListGetter()
+    if( !this.props.contractor.authenticated )
+    {
+      return;
+    }
+
+    this.props.contractor.getSiteList()
       .then( ( result ) =>
       {
         var site_list = [];
