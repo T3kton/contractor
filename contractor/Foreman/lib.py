@@ -187,7 +187,12 @@ def processJobs( site, module_list, max_jobs=10 ):
     foundation = foundation.subclass
     complex = foundation.complex
     if complex is not None and complex.state == 'built':
-      if foundation._canSetState():
+      try:
+        job = foundation.foundationjob
+      except ObjectDoesNotExist:
+        job = None
+
+      if foundation._canSetState( job ):
         foundation.setLocated()
 
   # start waiting jobs

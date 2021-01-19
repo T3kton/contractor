@@ -218,6 +218,14 @@ class AddressBlock( models.Model ):
 
     return result
 
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' }, paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
+  @staticmethod
+  def getWithNameSite( site, name ):
+    try:
+      return AddressBlock.objects.get( site=site, name=name )
+    except AddressBlock.DoesNotExist:
+      return None
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
@@ -312,6 +320,14 @@ class Network( models.Model ):
   address_block_list = models.ManyToManyField( AddressBlock, through='NetworkAddressBlock' )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
+
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.Network' }, paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
+  @staticmethod
+  def getWithNameSite( site, name ):
+    try:
+      return Network.objects.get( site=site, name=name )
+    except Network.DoesNotExist:
+      return None
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod

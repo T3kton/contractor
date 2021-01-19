@@ -343,17 +343,6 @@ class FoundationJob( BaseJob ):
     """
     return super().jobRunnerState()
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Foreman.models.FoundationJob' }, paramater_type_list=[ { 'type': 'Model', 'model': Foundation } ] )
-  @staticmethod
-  def getFoundationJob( foundation ):
-    """
-
-    """
-    try:
-      return FoundationJob.objects.get( foundation=foundation )
-    except FoundationJob.DoesNotExist:
-      return None
-
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
@@ -462,17 +451,6 @@ class StructureJob( BaseJob ):
     See BaseJob.jobRunnerState
     """
     return super().jobRunnerState()
-
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Foreman.models.StructureJob' }, paramater_type_list=[ { 'type': 'Model', 'model': Structure } ] )
-  @staticmethod
-  def getStructureJob( structure ):
-    """
-
-    """
-    try:
-      return StructureJob.objects.get( structure=structure )
-    except StructureJob.DoesNotExist:
-      return None
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
@@ -590,17 +568,6 @@ class DependencyJob( BaseJob ):
     See BaseJob.jobRunnerState
     """
     return super().jobRunnerState()
-
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Foreman.models.DependencyJob' }, paramater_type_list=[ { 'type': 'Model', 'model': Dependency } ] )
-  @staticmethod
-  def getDependencyJob( dependency ):
-    """
-
-    """
-    try:
-      return DependencyJob.objects.get( dependency=dependency )
-    except DependencyJob.DoesNotExist:
-      return None
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod

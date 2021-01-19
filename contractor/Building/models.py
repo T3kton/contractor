@@ -11,7 +11,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, JSONField, name_regex, config_name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
-from contractor.Utilities.models import Networked, RealNetworkInterface
+from contractor.Utilities.models import Network, Networked, RealNetworkInterface
 from contractor.lib.config import getConfig, mergeValues
 from contractor.Records.lib import post_save_callback, post_delete_callback
 
@@ -656,17 +656,27 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   def newFoundation( self, hostname ):
     raise ValueError( 'Root Complex dose not support Foundations' )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, paramater_type_list=[ { 'type': 'String' }, { 'type': 'Model', 'model': Site }, { 'type': 'String', 'is_array': True } ] )
-  def createFoundation( self, hostname, site, interface_name_list ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
+  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, paramater_type_list=[ { 'type': 'String' }, { 'type': 'Model', 'model': Site }, { 'type': 'Map', 'is_array': True } ] )
+  def createFoundation( self, hostname, site, interface_map_list ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     self = self.subclass
 
     foundation = self.newFoundation( hostname, site )
 
     counter = 0
-    for name in interface_name_list:
-      iface = RealNetworkInterface( name=name, is_provisioning=bool( counter == 0 ) )
+    for interface_map in interface_map_list:
+      try:
+        network = Network.objects.get( pk=interface_map.get( 'network_id', 1 ) )
+      except Network.DoesNotExist:
+        raise ValueError( 'Network "{0}" not found'.format( interface_map.get( 'network_id', 1 ) ) )
+
+      iface = RealNetworkInterface()
       iface.foundation = foundation
-      iface.physical_location = 'eth{0}'.format( counter )
+      iface.physical_location = interface_map.get( 'physical_location', 'eth{0}'.format( counter ) )
+      iface.name = interface_map.get( 'name', iface.physical_location )
+      iface.mac = interface_map.get( 'mac', None )
+      iface.link_name = interface_map.get( 'link_name', None )
+      iface.is_provisioning = interface_map.get( 'is_provisioning', bool( counter == 0 ) )
+      iface.network = network
       iface.full_clean()
       iface.save()
       counter += 1
