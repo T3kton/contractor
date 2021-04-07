@@ -8,6 +8,7 @@ cinp = CInP( 'Directory', '0.1' )
 
 zone_name_regex = re.compile( r'^[a-z][a-z0-9]+$' )  # NOTE: do not allow '.', it can cause problems with sub zones, also these can be used for filename, so must be filesystem safe
 entry_name_regex = re.compile( r'^[a-z][a-z0-9]+$')  # NOTE: do not allow '.', it can cause problems with sub zones
+entry_name_srv_regex = re.compile( r'^[a-z0-9_\.]+$')  # NOTE: hopfully people are carefull with '.', SRV records can be all sorts of things
 absolute_name_regex = re.compile( r'^([a-z][a-z0-9]+\.)+[a-z][a-z0-9]+\.$' )
 
 
@@ -96,10 +97,14 @@ class Entry( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
 
-    if not entry_name_regex.match( self.name ):
-      errors[ 'name' ] = 'Invalid'
+    if self.type == 'SRV':
+      if not entry_name_srv_regex.match( self.name ):
+        errors[ 'name' ] = 'Invalid'
+    else:
+      if not entry_name_regex.match( self.name ):
+        errors[ 'name' ] = 'Invalid'
 
-    if self.weight is not None and ( self.weight < 1 or self.weight > 4096 ):
+    if self.weight is not None and ( self.weight < 0 or self.weight > 4096 ):
       errors[ 'weight' ] = 'Invalid'
 
     if self.port is not None and ( self.port < 1 or self.port > 65535 ):

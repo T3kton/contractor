@@ -24,7 +24,7 @@ TEMPLATES[ 'PTR' ] = '{value:<50} IN PTR   {target}'
 TEMPLATES[ 'CNAME' ] = '{name:<50} IN CNAME {target}'
 TEMPLATES[ 'TXT' ] = '{name:<50} IN TXT   {target}'
 TEMPLATES[ 'RTXT' ] = '{value:<50} IN TXT   {target}'
-TEMPLATES[ 'SRV' ] = '{name:<50} IN SRV   {priority:>4} {weight:>4} {name:<50} {port:>5} {target}'
+TEMPLATES[ 'SRV' ] = '{name:<50} IN SRV   {priority:>4} {weight:>4} {port:>5} {target}'
 TEMPLATES[ 'SIG' ] = '{name:<50} IN SIG   {sig}'
 
 MASTER_NS_NETWORKED = Networked.objects.get( pk=settings.BIND_NS_NETWORKED_LIST[0] )
