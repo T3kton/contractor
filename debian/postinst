@@ -36,6 +36,7 @@ case "$1" in
 
         a2ensite contractor.conf
         a2enmod	wsgi
+        a2enmod	rewrite
 
         systemctl restart apache2
     ;;

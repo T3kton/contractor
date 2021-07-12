@@ -304,7 +304,6 @@ user = User.objects.create_user( username='subcontractor', password='subcontract
 user.user_permissions.set( lookup_permission_list( [ 'Site.view_site'
                                                      ] ) )
 
-
 print( 'Creating groups...' )
 group = Group( name='worker' )
 group.full_clean()

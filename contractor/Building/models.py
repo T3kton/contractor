@@ -660,7 +660,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   def createFoundation( self, hostname, site, interface_map_list ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     self = self.subclass
 
-    foundation = self.newFoundation( hostname, site )
+    foundation = self.newFoundation( hostname, site )  # this should really be locator not hostname
 
     counter = 0
     for interface_map in interface_map_list:

@@ -61,6 +61,8 @@ def _getNetworkedEntries( networked, site_list ):
       continue
 
     iface = address.interface
+    if not iface:
+      continue
     nab = address_block.networkaddressblock_set.get( network=iface.network )
     ip_addr = networked.primary_address.ip_address
 
