@@ -717,6 +717,14 @@ def test_delay():
   assert runner.run() == 'Waiting for 7197 more seconds'
 
 
+def test_message():
+  runner = Runner( parse( 'message( msg="Hello World" )' ) )
+  assert runner.run() == 'Hello World'
+  assert not runner.done
+  assert runner.run() == ''
+  assert runner.done
+
+
 def test_object_functions():  # TODO: this and pickleing too
   pass
 

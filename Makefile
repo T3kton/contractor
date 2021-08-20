@@ -29,6 +29,8 @@ clean: clean-ui
 	$(RM) dpkg
 	$(RM) -r htmlcov
 	dh_clean || true
+	find -name *.pyc -delete
+	find -name __pycache__ -delete
 
 dist-clean: clean
 

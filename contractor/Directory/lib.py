@@ -2,6 +2,7 @@ import os
 
 from django.conf import settings
 
+from contractor.lib.ip import IpIsV4
 from contractor.Utilities.models import Networked
 from contractor.Directory.models import Entry
 
@@ -22,8 +23,8 @@ TEMPLATES[ 'A' ] = '{name:<50} IN A     {address}'
 TEMPLATES[ 'AAAA' ] = '{name:<50} IN AAAA  {address}'
 TEMPLATES[ 'PTR' ] = '{value:<50} IN PTR   {target}'
 TEMPLATES[ 'CNAME' ] = '{name:<50} IN CNAME {target}'
-TEMPLATES[ 'TXT' ] = '{name:<50} IN TXT   {target}'
-TEMPLATES[ 'RTXT' ] = '{value:<50} IN TXT   {target}'
+TEMPLATES[ 'TXT' ] = '{name:<50} IN TXT   "{target}"'
+TEMPLATES[ 'RTXT' ] = '{value:<50} IN TXT   "{target}"'
 TEMPLATES[ 'SRV' ] = '{name:<50} IN SRV   {priority:>4} {weight:>4} {port:>5} {target}'
 TEMPLATES[ 'SIG' ] = '{name:<50} IN SIG   {sig}'
 
@@ -74,10 +75,13 @@ def _getNetworkedEntries( networked, site_list ):
     if nab.vlan:
       full_name = 'v{0}.{1}'.format( nab.vlan, full_name )
 
-    result[ 'RTXT' ].append( { 'target': '{0}.{1}'.format( full_name, networked.fqdn ), 'value': ip_addr } )
-    result[ 'PTR' ].append( { 'target': networked.fqdn, 'value': ip_addr } )
-    # result[ 'TXT' ] = []
-    result[ 'A' ].append( { 'name': '{0}.{1}'.format( full_name, networked.hostname ), 'address': ip_addr } )
+    result[ 'RTXT' ].append( { 'value': ip_addr, 'target': '{0}.{1}'.format( full_name, networked.fqdn ) } )
+    result[ 'PTR' ].append( { 'value': ip_addr, 'target': networked.fqdn } )
+    result[ 'TXT' ].append( { 'name': '{0}.{1}'.format( full_name, networked.hostname ), 'target': networked.foundation.locator } )
+    if IpIsV4( ip_addr ):
+      result[ 'A' ].append( { 'name': '{0}.{1}'.format( full_name, networked.hostname ), 'address': ip_addr } )
+    else:
+      result[ 'AAAA' ].append( { 'name': '{0}.{1}'.format( full_name, networked.hostname ), 'address': ip_addr } )
     if address.is_primary:
       result[ 'CNAME' ].append( { 'name': networked.hostname, 'target': '{0}.{1}'.format( full_name, networked.hostname ) } )
 
@@ -171,9 +175,9 @@ def genPtrZones( ptr_list, rtext_list, zone_file_list ):
     parts = rtext[ 'value' ].split( '.' )
     zone = '.'.join( reversed( parts[ :3 ] ) ) + '.in-addr.arpa'
     try:
-      zone_rtxt_map[ zone ].append( { 'value': parts[3], 'target': rtext[ 'target' ] + '.' } )
+      zone_rtxt_map[ zone ].append( { 'value': parts[3], 'target': rtext[ 'target' ] } )
     except KeyError:
-      zone_rtxt_map[ zone ] = [ { 'value': parts[3], 'target': rtext[ 'target' ] + '.' } ]
+      zone_rtxt_map[ zone ] = [ { 'value': parts[3], 'target': rtext[ 'target' ] } ]
 
   for zone in set( list( zone_ptr_map.keys() ) + list( zone_rtxt_map.keys() ) ):
     record_map = { 'NS': [] }

@@ -284,7 +284,8 @@ builtin_function_map = {
                           'pause': lambda msg: Pause( msg ),
                           'error': lambda msg: ExecutionError( msg ),
                           'fatal_error': lambda msg: UnrecoverableError( msg ),
-                          'delay': Delay()
+                          'delay': Delay(),
+                          'message': lambda msg: Interrupt( msg )
                         }
 
 
