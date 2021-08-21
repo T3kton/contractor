@@ -28,7 +28,7 @@ def foundationLookup( info_map ):  # TODO: do we bail when what we come to faile
       except ( RealNetworkInterface.MultipleObjectsReturned, RealNetworkInterface.DoesNotExist ):
         pass
 
-  if 'ip_address' in info_map:
+  if 'ip_address' in info_map:  # NOTE: BaseAddress returns None if ip_address is duplicate
     address = BaseAddress.lookup( info_map[ 'ip_address' ] ).subclass
     if address.type == 'Address':
       return ( 'ip_address: "{0}"'.format( info_map[ 'ip_address' ] ), address.structure.foundation )

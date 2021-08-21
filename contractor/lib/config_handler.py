@@ -42,7 +42,7 @@ def handler( request ):
       address = BaseAddress.lookup( request.remote_addr )
 
     if address is None:
-      return Response( 404, data='Address Not Found', content_type='text' )
+      return Response( 404, data='Address Not Found or is Duplicate', content_type='text' )
 
     address = address.subclass
     if address.type == 'Address':

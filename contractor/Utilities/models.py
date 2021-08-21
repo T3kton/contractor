@@ -571,7 +571,7 @@ class AbstractNetworkInterface( NetworkInterface ):
 class AggregatedNetworkInterface( AbstractNetworkInterface ):
   master_interface = models.ForeignKey( NetworkInterface, related_name='+', on_delete=models.CASCADE )
   slaves = models.ManyToManyField( NetworkInterface, related_name='+' )
-  paramaters = MapField()
+  paramaters = MapField( blank=True, null=True )
 
   @property
   def subclass( self ):
@@ -690,25 +690,30 @@ class BaseAddress( models.Model ):
 
     return real.type
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.BaseAddress' }, paramater_type_list=[ 'String' ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.BaseAddress' }, paramater_type_list=[ 'String', { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
-  def lookup( ip_address ):
+  def lookup( ip_address, site=None ):
     try:
       ip_address_ip = StrToIp( ip_address )
     except ValueError:
       return None
 
+    located_list = []
     ip_address = IpToStr( ip_address_ip )  # so it is in a consistant format
-    try:
-      address_block = AddressBlock.objects.get( subnet__lte=ip_address, _max_address__gte=ip_address )
-    except AddressBlock.DoesNotExist:
-      return None
+    if site is not None:
+      query_set = AddressBlock.objects.filter( site=site )
+    else:
+      query_set = AddressBlock.objects.all()
 
-    offset = ip_address_ip - StrToIp( address_block.subnet )
-    try:
-      return BaseAddress.objects.get( address_block=address_block, offset=offset )
-    except BaseAddress.DoesNotExist:
-      return None
+    for address_block in query_set.filter( subnet__lte=ip_address, _max_address__gte=ip_address ):
+      offset = ip_address_ip - StrToIp( address_block.subnet )
+      try:
+        located_list.append( BaseAddress.objects.get( address_block=address_block, offset=offset ) )
+      except BaseAddress.DoesNotExist:
+        pass
+
+    if len( located_list ) == 1:
+      return located_list[0]
 
     return None
 
@@ -759,6 +764,23 @@ class Address( BaseAddress ):
   alias_index = models.IntegerField( default=None, blank=True, null=True )  # use None for one/first ip on that interface, leave blank, NOTE: gateway/is_primary/dhcp is taken from index "None"
   pointer = models.ForeignKey( 'self', blank=True, null=True, on_delete=models.PROTECT )
   is_primary = models.BooleanField( default=False )
+
+  @staticmethod
+  def fromIPAddress( site, ip_address ):
+    try:
+      ip_address_ip = StrToIp( ip_address )
+    except ValueError:
+      return None
+
+    ip_address = IpToStr( ip_address_ip )  # so it is in a consistant format
+    try:
+      address_block = AddressBlock.objects.get( site=site, subnet__lte=ip_address, _max_address__gte=ip_address )
+    except AddressBlock.DoesNotExist:
+      return None
+
+    offset = ip_address_ip - StrToIp( address_block.subnet )
+
+    return Address( address_block=address_block, offset=offset )
 
   @property
   def console( self ):

@@ -390,6 +390,89 @@ def test_baseaddress():
 
 
 @pytest.mark.django_db
+def test_baseaddress_lookup():
+  s1 = Site( name='tsite1', description='test site1' )
+  s1.full_clean()
+  s1.save()
+
+  s2 = Site( name='tsite2', description='test site2' )
+  s2.full_clean()
+  s2.save()
+
+  ab11 = AddressBlock( site=s1, subnet=StrToIp( '10.0.0.0' ), prefix=12, name='test11' )
+  ab11.full_clean()
+  ab11.save()
+
+  ab12 = AddressBlock( site=s1, subnet=StrToIp( '192.168.0.0' ), prefix=24, name='test12' )
+  ab12.full_clean()
+  ab12.save()
+
+  ab13 = AddressBlock( site=s1, subnet=StrToIp( '1.2.3.0' ), prefix=24, name='test13' )
+  ab13.full_clean()
+  ab13.save()
+
+  ab21 = AddressBlock( site=s2, subnet=StrToIp( '10.0.0.0' ), prefix=24, name='test21' )
+  ab21.full_clean()
+  ab21.save()
+
+  ab22 = AddressBlock( site=s2, subnet=StrToIp( '192.168.0.0' ), prefix=24, name='test22' )
+  ab22.full_clean()
+  ab22.save()
+
+  ab23 = AddressBlock( site=s2, subnet=StrToIp( '10.0.1.0' ), prefix=24, name='test23' )
+  ab23.full_clean()
+  ab23.save()
+
+  for ab, offset in [ ( ab11, 10 ), ( ab12, 10 ), ( ab13, 10 ), ( ab21, 10 ), ( ab22, 10 ), ( ab12, 42 ), ( ab12, 22 ), ( ab11, 266 ), ( ab23, 10 ) ]:
+    ba = BaseAddress( address_block=ab, offset=offset )
+    print( ba.ip_address )
+    ba.full_clean()
+    ba.save()
+
+  assert BaseAddress.lookup( '1.1.1' ) is None
+  assert BaseAddress.lookup( 'asdf' ) is None
+
+  assert BaseAddress.lookup( '1.1.1.1' ) is None
+  assert BaseAddress.lookup( '10.1.1.1' ) is None
+  assert BaseAddress.lookup( '10.0.1.1' ) is None
+  assert BaseAddress.lookup( '10.0.0.1' ) is None
+
+  assert BaseAddress.lookup( '1.1.1.10' ) is None
+  assert BaseAddress.lookup( '10.1.1.10' ) is None
+  assert BaseAddress.lookup( '10.0.1.10' ) is None
+
+  assert BaseAddress.lookup( '10.0.0.10' ) is None
+
+  ba = BaseAddress.lookup( '10.0.0.10', site=s1 )
+  assert ba.address_block == ab11
+  assert ba.offset == 10
+
+  ba = BaseAddress.lookup( '10.0.0.10', site=s2 )
+  assert ba.address_block == ab21
+  assert ba.offset == 10
+
+  ba = BaseAddress.lookup( '1.2.3.10' )
+  assert ba.address_block == ab13
+  assert ba.offset == 10
+
+  ba = BaseAddress.lookup( '1.2.3.10', site=s1 )
+  assert ba.address_block == ab13
+  assert ba.offset == 10
+
+  assert BaseAddress.lookup( '1.2.3.10', site=s2 ) is None
+
+  assert BaseAddress.lookup( '10.0.1.10' ) is None
+
+  ba = BaseAddress.lookup( '10.0.1.10', site=s1 )
+  assert ba.address_block == ab11
+  assert ba.offset == 266
+
+  ba = BaseAddress.lookup( '10.0.1.10', site=s2 )
+  assert ba.address_block == ab23
+  assert ba.offset == 10
+
+
+@pytest.mark.django_db
 def test_address():
   s1 = Site( name='tsite1', description='test site1' )
   s1.full_clean()
@@ -532,6 +615,57 @@ def test_address():
   assert ba.subclass.ip_address == '1.0.0.5'
   assert ba.as_dict == { 'address': None, 'netmask': None, 'prefix': None, 'subnet': None, 'gateway': None, 'auto': True }
   assert ba.subclass.as_dict == { 'address': '1.0.0.5', 'netmask': '255.255.255.254', 'prefix': 31, 'subnet': '1.0.0.0', 'gateway': None, 'alias_index': None, 'primary': False, 'auto': True }
+
+
+@pytest.mark.django_db
+def test_address_fromIpAddress():
+  s1 = Site( name='tsite1', description='test site1' )
+  s1.full_clean()
+  s1.save()
+
+  s2 = Site( name='tsite2', description='test site2' )
+  s2.full_clean()
+  s2.save()
+
+  ab1 = AddressBlock( site=s1, subnet=StrToIp( '10.0.0.0' ), prefix=20, name='test1' )
+  ab1.full_clean()
+  ab1.save()
+
+  ab2 = AddressBlock( site=s1, subnet=StrToIp( '192.168.0.0' ), prefix=24, name='test2' )
+  ab2.full_clean()
+  ab2.save()
+
+  ab3 = AddressBlock( site=s2, subnet=StrToIp( '10.0.0.0' ), prefix=20, name='test3' )
+  ab3.full_clean()
+  ab3.save()
+
+  assert Address.fromIPAddress( s1, '1.1.1' ) is None
+  assert Address.fromIPAddress( s1, 'asdf' ) is None
+
+  a = Address.fromIPAddress( s1, '10.0.0.10' )
+  assert a.address_block == ab1
+  assert a.offset == 10
+
+  a = Address.fromIPAddress( s1, '10.0.1.10' )
+  assert a.address_block == ab1
+  assert a.offset == 266
+
+  a = Address.fromIPAddress( s2, '10.0.0.10' )
+  assert a.address_block == ab3
+  assert a.offset == 10
+
+  a = Address.fromIPAddress( s2, '10.0.1.10' )
+  assert a.address_block == ab3
+  assert a.offset == 266
+
+  assert Address.fromIPAddress( s1, '10.3.0.10' ) is None
+  assert Address.fromIPAddress( s1, '1.2.3.4' ) is None
+
+  a = Address.fromIPAddress( s1, '192.168.0.5' )
+  assert a.address_block == ab2
+  assert a.offset == 5
+
+  assert Address.fromIPAddress( s1, '192.168.1.5' ) is None
 
 
 @pytest.mark.django_db
