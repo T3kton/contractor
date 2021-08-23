@@ -372,7 +372,7 @@ class Runner( object ):
 
     # scan for all the jump points
     for i in range( 0, len( ast[1][ '_children' ] ) ):
-      child = ast[1][ '_children' ][i][1]  # jump into the  line
+      child = ast[1][ '_children' ][i][1]  # jump into the line
       if child[0] == Types.JUMP_POINT:
         self.jump_point_map[ child[1] ] = i
 

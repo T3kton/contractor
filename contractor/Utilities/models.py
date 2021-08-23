@@ -414,7 +414,7 @@ class NetworkInterface( models.Model ):
       pass
 
     try:
-      return self.abstractnetworkinterface
+      return self.aggregatednetworkinterface
     except AttributeError:
       pass
 

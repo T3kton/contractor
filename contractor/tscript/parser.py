@@ -25,7 +25,7 @@ ifelse              = "if" value_expression "then" em_p expression ( em_s "elif"
 not_                = ~"[Nn]ot" value_expression
 
 time                = ~"([0-9]{1,2}:){1,3}[0-9]{1,2}"
-number_float        = ~"[-+]?[0-9]+\.[0-9]+"
+number_float        = ~"[-+]?[0-9]+\\.[0-9]+"
 number_int          = ~"[-+]?[0-9]+"
 text                = ( "'" ~"[^']*" "'" ) / ( '"' ~'[^"]*' '"' )
 boolean             = ~"[Tt]rue" / ~"[Ff]alse"
@@ -111,16 +111,21 @@ class Parser( object ):
     script += '\n'  # just incase the end of the script lacks a \n otherwise the *line* will not match
     self.line_endings = [ i for i, c in enumerate( script ) if c == '\n' ]
     try:
-      ast = self.grammar.parse( script )
+      root_node = self.grammar.parse( script )
     except IncompleteParseError as e:
       return 'Incomplete Parsing on line: {0} column: {1}'.format( e.line(), e.column() )
     except ParseError as e:
       return 'Error Parsing on line: {0} column: {1}'.format( e.line(), e.column() )
 
     try:
-      self._eval( ast )
+      ast = self._eval( root_node )
     except Exception as e:
       return 'Exception Parsing "{0}"'.format( e )
+
+    try:
+      self._check( ast )
+    except ParserError as e:
+      return 'Invalid Script "{0}", line: {1} column: {2}'.format( e.msg, e.line, e.column )
 
     return None
 
@@ -128,13 +133,16 @@ class Parser( object ):
     script += '\n'  # just incase the end of the script lacks a \n otherwise the *line* will not match
     self.line_endings = [ i for i, c in enumerate( script ) if c == '\n' ]
     try:
-      ast = self.grammar.parse( script )
+      root_node = self.grammar.parse( script )
     except IncompleteParseError as e:
       raise ParserError( e.line(), e.column(), 'Incomplete Parse' )
     except ParseError as e:
       raise ParserError( e.line(), e.column(), 'Error Parsing' )
 
-    return ( Types.SCOPE, { '_children': self._eval( ast ) } )
+    ast = self._eval( root_node )
+    self._check( ast )
+
+    return ( Types.SCOPE, { '_children': ast } )
 
   def _eval( self, node ):
     if node.expr_name[ 0:3 ] in ( 'ws_', 'nl_', 'em_' ):  # ignore wite space
@@ -324,3 +332,17 @@ class Parser( object ):
     target = self._eval( node.children[0] )
 
     return ( Types.ASSIGNMENT, { 'target': target, 'value': self._eval( node.children[3] ) } )
+
+  def _check( self, ast ):
+    node_stack = [ ( ast, 0 ) ]
+
+    while node_stack:
+      node_list, stack_depth = node_stack.pop( 0 )
+      for i in range( 0, len( node_list ) ):
+        line_no = node_list[i][2]
+        node = node_list[i][1]
+        if node[0] == Types.JUMP_POINT and stack_depth > 0:
+          raise ParserError( line_no, 0, 'Jump points can not be inside begin/end blocks, jump point name: "{0}"'.format( node[1] ) )
+
+        elif node[0] == Types.SCOPE:
+          node_stack.append( ( node[1][ '_children' ], stack_depth + 1 ) )

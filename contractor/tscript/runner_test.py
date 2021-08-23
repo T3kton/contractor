@@ -1102,6 +1102,13 @@ def test_jumppoint():
   assert runner.done
   assert runner.variable_map == { 'dce': 2 }
 
+  runner = Runner( parse( 'goto jump_a\nabc = 1\n:jump_a\ndce = 2' ) )
+  assert runner.status[0][0] == 0.0
+  runner.run()
+  assert runner.status[0][0] == 100.0
+  assert runner.done
+  assert runner.variable_map == { 'dce': 2 }
+
   runner = Runner( parse( 'goto jump_b\nabc = 1\n:jump_a\ndce = 2' ) )
   assert runner.status[0][0] == 0.0
   with pytest.raises( NotDefinedError ):
@@ -1122,7 +1129,27 @@ def test_jumppoint():
   assert runner.done
   assert runner.variable_map == { 'dce': 2 }
 
-# test jumping over a blocking function
+  runner = Runner( parse( 'goto jump_b\nabc = 1\ndelay( seconds=1 )\n:jump_b\ndce = 2' ) )
+  assert runner.status[0][0] == 0.0
+  runner.run()
+  assert runner.status[0][0] == 100.0
+  assert runner.done
+  assert runner.variable_map == { 'dce': 2 }
+
+  runner = Runner( parse( 'goto jump_b\nbegin()\nabc = 1\nend\n:jump_b\ndce = 2' ) )
+  assert runner.status[0][0] == 0.0
+  runner.run()
+  assert runner.status[0][0] == 100.0
+  assert runner.done
+  assert runner.variable_map == { 'dce': 2 }
+
+  runner = Runner( parse( 'begin()\ngoto jump_b\nabc = 1\nend\n:jump_b\ndce = 2' ) )
+  assert runner.status[0][0] == 0.0
+  runner.run()
+  assert runner.status[0][0] == 100.0
+  assert runner.done
+  assert runner.variable_map == { 'dce': 2 }
+
 # test jumping over one function to another, making sure that the function returns are not crossed, and the jumped over function dosen't get it's return value accepted
 # test the contractor_cookie is getting rolled over correctly
 # try something with a better progress

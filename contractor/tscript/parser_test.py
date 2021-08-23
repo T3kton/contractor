@@ -64,7 +64,7 @@ def test_begin():
                    ] } )
 
   with pytest.raises( ParserError ) as e:
-    node = parse( 'begin()' )
+    parse( 'begin()' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
@@ -388,20 +388,20 @@ def test_variables():
 
   # all invalid names
   with pytest.raises( ParserError ):
-    node = parse( 'a' )
+    parse( 'a' )
 
   with pytest.raises( ParserError ):
-    node = parse( 'a.b' )
+    parse( 'a.b' )
 
   with pytest.raises( ParserError ):
-    node = parse( '2a' )
+    parse( '2a' )
 
   with pytest.raises( ParserError ):
-    node = parse( 'adsf.2a' )
+    parse( 'adsf.2a' )
 
   # prefixed reserved
   with pytest.raises( ParserError ):
-    node = parse( 'do' )
+    parse( 'do' )
 
   node = parse( 'docker' )
   assert node == ( 'S', { '_children':
@@ -416,7 +416,7 @@ def test_variables():
                           ] } )
 
   with pytest.raises( ParserError ):
-    node = parse( 'goto' )
+    parse( 'goto' )
 
   node = parse( 'gotoing' )
   assert node == ( 'S', { '_children':
@@ -572,10 +572,31 @@ def test_jumppoint():
                               ( 'L', ( 'G', 'there' ), 1 )
                           ] } )
 
+  with pytest.raises( ParserError ) as e:
+    parse( 'begin()\n:there\nend' )
+
+  assert str( e.value ) == 'ParseError, line: 2, column: 0, "Jump points can not be inside begin/end blocks, jump point name: "there""'
+
+  assert lint( 'begin()\n:there\nend' ) == 'Invalid Script "Jump points can not be inside begin/end blocks, jump point name: "there"", line: 2 column: 0'
+
+  with pytest.raises( ParserError ) as e:
+    parse( '1\nbegin()\n:other\nend' )
+
+  assert str( e.value ) == 'ParseError, line: 3, column: 0, "Jump points can not be inside begin/end blocks, jump point name: "other""'
+
+  assert lint( '1\nbegin()\n:other\nend' ) == 'Invalid Script "Jump points can not be inside begin/end blocks, jump point name: "other"", line: 3 column: 0'
+
+  with pytest.raises( ParserError ) as e:
+    parse( 'begin()\n1\nbegin()\n1\n:stuff\nend\nend' )
+
+  assert str( e.value ) == 'ParseError, line: 5, column: 0, "Jump points can not be inside begin/end blocks, jump point name: "stuff""'
+
+  assert lint( 'begin()\n1\nbegin()\n1\n:stuff\nend\nend' ) == 'Invalid Script "Jump points can not be inside begin/end blocks, jump point name: "stuff"", line: 5 column: 0'
+
 
 def test_while():
   with pytest.raises( ParserError ) as e:
-    node = parse( 'while True 10' )
+    parse( 'while True 10' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
@@ -669,7 +690,7 @@ def test_while():
 
 def test_ifelse():
   with pytest.raises( ParserError ) as e:
-    node = parse( 'if True 10' )
+    parse( 'if True 10' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
@@ -702,7 +723,7 @@ def test_ifelse():
                           ] } )
 
   with pytest.raises( ParserError ) as e:
-    node = parse( 'if True then 10 elif False 200 else 42' )
+    parse( 'if True then 10 elif False 200 else 42' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
@@ -867,7 +888,7 @@ def test_function():
                           ] } )
 
   with pytest.raises( ParserError ) as e:
-    node = parse( 'hello( 10 )' )
+    parse( 'hello( 10 )' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
@@ -900,14 +921,14 @@ def test_function():
 
 def test_assignment():
   with pytest.raises( ParserError ) as e:
-    node = parse( 'asdf=' )
+    parse( 'asdf=' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
   assert lint( 'asdf=' ) == 'Incomplete Parsing on line: 1 column: 1'
 
   with pytest.raises( ParserError ) as e:
-    node = parse( 'asdf =' )
+    parse( 'asdf =' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
