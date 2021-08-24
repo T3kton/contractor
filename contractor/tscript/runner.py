@@ -196,7 +196,7 @@ class ExternalFunction( object ):
     # first paramater is the function inside the plugin to call, second is the value to send to the function
     # this is called initially, then again after fromSubcontractor has returnd results until done is True
     # example: return ( 'myfunc', { 'stuff': 'for', 'myfunc': 'to use' } ) # NOTE: the paramater part can be anything that is serilizable
-    # if None is returned, contractor will not be notified to do anything
+    # if None is returned, subcontractor will not be notified to do anything
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     # subcontractor threads will be waiting on this function
     pass
@@ -1031,8 +1031,10 @@ class Runner( object ):
 
     operation = self.state[ -1 ]
 
-    # return None if the top of the stack is not a function
-    if operation[0] != Types.FUNCTION:
+    if operation[0] != Types.FUNCTION and operation[0]:  # not a function
+      return None
+
+    if operation[1] is None:  # the operation isn't setup yet
       return None
 
     if operation[1][ 'module' ] not in subcontractor_module_list:
@@ -1044,7 +1046,7 @@ class Runner( object ):
     handler = operation[1][ 'handler' ]
     handler._runner = self
     try:
-      ( function_name, paramaters ) = handler.toSubcontractor()
+      paramaters = handler.toSubcontractor()
     except Exception as e:
       _debugDump( 'Handler "{0}" in module "{1}" error during toSubcontractor on line "{2}"'.format( handler.__class__.__name__, operation[1][ 'module' ], self.cur_line ), e, self.ast, self.state )
       return None  # TODO: log something?
@@ -1054,7 +1056,7 @@ class Runner( object ):
 
     operation[1][ 'dispatched' ] = True
 
-    return { 'module': operation[1][ 'module' ], 'function': function_name, 'cookie': self.contractor_cookie, 'paramaters': paramaters }
+    return { 'module': operation[1][ 'module' ], 'function': paramaters[0], 'cookie': self.contractor_cookie, 'paramaters': paramaters[1] }
 
   def fromSubcontractor( self, cookie, data ):
     if self.done or self.aborted or self.state == []:

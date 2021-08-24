@@ -333,7 +333,7 @@ class Parser( object ):
 
     return ( Types.ASSIGNMENT, { 'target': target, 'value': self._eval( node.children[3] ) } )
 
-  def _check( self, ast ):
+  def _check( self, ast ):  # TODO: also check infix operators that they are operating against the right type of paramaters, as far as the constansts are anyway
     node_stack = [ ( ast, 0 ) ]
 
     while node_stack:
