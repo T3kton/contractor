@@ -58,7 +58,7 @@ class MapField( models.BinaryField ):
     kwargs[ 'editable' ] = self.editable
     return name, path, args, kwargs
 
-  def from_db_value( self, value, expression, connection ):
+  def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
     if value is None:
       return None
 
@@ -95,7 +95,7 @@ class JSONField( models.TextField ):
   description = 'JSON Encoded'
   empty_values = [ None ]
 
-  def from_db_value( self, value, expression, connection ):
+  def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
     if value is None:
       return None
 
@@ -146,7 +146,7 @@ class StringListField( models.CharField ):
 
     super().__init__( *args, **kwargs )
 
-  def from_db_value( self, value, expression, connection ):
+  def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
     if value is None:
       return value
 
@@ -204,7 +204,7 @@ class IpAddressField( models.BinaryField ):  # needs 128 bits of storage, the in
     kwargs[ 'editable' ] = self.editable
     return name, path, args, kwargs
 
-  def from_db_value( self, value, expression, connection ):
+  def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
     if value is None:
       return None
 
