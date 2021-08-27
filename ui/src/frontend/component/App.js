@@ -189,7 +189,7 @@ class App extends React.Component
             <Route path="/site/:id" render={ ( { match } ) => ( <Site id={ match.params.id } contractor={ this.contractor } detailGet={ this.contractor.getSite } getConfig={ this.contractor.getConfig } /> ) } />
             <Route path="/plot/:id" render={ ( { match } ) => ( <Plot id={ match.params.id } detailGet={ this.contractor.getPlot } /> ) } />
             <Route path="/blueprint/f/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getFoundationBluePrint } getConfig={ this.contractor.getConfig } getScript={ this.contractor.getScript }/> ) } />
-            <Route path="/network/:id" render={ ( { match } ) => ( <Network id={ match.params.id } detailGet={ this.contractor.getNetwork } /> ) } />
+            <Route path="/network/:id" render={ ( { match } ) => ( <Network id={ match.params.id } detailGet={ this.contractor.getNetwork } getNetworkAddressBlockList={ this.contractor.getNetworkAddressBlockList } /> ) } />
             <Route path="/blueprint/s/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } detailGet={ this.contractor.getStructureBluePrint } getConfig={ this.contractor.getConfig } getScript={ this.contractor.getScript } /> ) } />
             <Route path="/pxe/:id" render={ ( { match } ) => ( <PXE id={ match.params.id } detailGet={ this.contractor.getPXE } /> ) } />
             <Route path="/foundation/:id" render={ ( { match } ) => ( <Foundation id={ match.params.id } detailGet={ this.contractor.getFoundation } getFoundationInterfaces={ this.contractor.getFoundationInterfaces } detailGetDependancies={ this.contractor.getFoundationDependandyList } getConfig={ this.contractor.getConfig } /> ) } />

@@ -9,6 +9,7 @@ import sys
 import argparse
 import pprint
 import time
+import pickle
 
 from contractor.Building.models import Foundation, Structure, Dependency
 from contractor.Foreman.models import BaseJob, JobLog
@@ -265,6 +266,8 @@ def main():
       print( 'No Job' )
       sys.exit( 0 )
 
+    runner = pickle.loads( job.script_runner )
+
     try:
       pcnt_complete = '{0}%'.format( job.status[0][0] )
     except IndexError:
@@ -280,7 +283,9 @@ Message:       {4}
 Created:       {5}
 Updated:       {6}
 Status:
-{7}""".format( job.pk, job.script_name, job.state, pcnt_complete, job.message, job.created, job.updated, pp.pformat( job.status ) ) )
+{7}
+Vars:
+{8}""".format( job.pk, job.script_name, job.state, pcnt_complete, job.message, job.created, job.updated, pp.pformat( job.status ), pp.pformat( runner.variable_map ) ) )
     sys.exit( 0 )
 
   if args.show_config:

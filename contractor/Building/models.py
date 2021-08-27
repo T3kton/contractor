@@ -376,7 +376,7 @@ class Foundation( models.Model ):
       errors[ 'locator' ] = 'Invalid'
 
     if self.blueprint_id is not None and self.type not in self.blueprint.foundation_type_list:
-        errors[ 'blueprint' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint, self.type )
+        errors[ 'blueprint' ] = 'Blueprint "{0}" does not list this type "{1}"'.format( self.blueprint, self.type )
 
     if errors:
       raise ValidationError( errors )
@@ -399,7 +399,7 @@ class Foundation( models.Model ):
                   )
 
   def __str__( self ):
-    return 'Foundation #{0}({1}) in "{2}"'.format( self.pk, self.locator, self.site.pk )
+    return 'Foundation "{0}" in "{1}"'.format( self.locator, self.site.pk )
 
 
 def getUUID():

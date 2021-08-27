@@ -66,7 +66,6 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, primary_key=True, auto_created=True)),
                 ('name', models.CharField(max_length=20)),
-                ('is_provisioning', models.BooleanField(default=False)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
@@ -76,6 +75,7 @@ class Migration(migrations.Migration):
             name='AbstractNetworkInterface',
             fields=[
                 ('networkinterface_ptr', models.OneToOneField(to='Utilities.NetworkInterface', parent_link=True, serialize=False, primary_key=True, auto_created=True,on_delete=models.CASCADE)),
+                ('structure', models.ForeignKey(to='Building.Structure', related_name='networkinterface_set', on_delete=models.CASCADE)),
             ],
             bases=('Utilities.networkinterface',),
         ),
@@ -104,6 +104,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('networkinterface_ptr', models.OneToOneField(to='Utilities.NetworkInterface', parent_link=True, serialize=False, primary_key=True, auto_created=True,on_delete=models.CASCADE)),
                 ('mac', models.CharField(max_length=18, blank=True, null=True)),
+                ('is_provisioning', models.BooleanField(default=False)),
                 ('physical_location', models.CharField(max_length=100)),
                 ('link_name', models.CharField(max_length=100, blank=True, null=True)),
                 ('foundation', models.ForeignKey(to='Building.Foundation', related_name='networkinterface_set',on_delete=models.CASCADE)),
@@ -143,9 +144,9 @@ class Migration(migrations.Migration):
             name='AggregatedNetworkInterface',
             fields=[
                 ('abstractnetworkinterface_ptr', models.OneToOneField(to='Utilities.AbstractNetworkInterface', parent_link=True, serialize=False, primary_key=True, auto_created=True,on_delete=models.CASCADE)),
-                ('paramaters', contractor.fields.MapField(default=contractor.fields.defaultdict)),
-                ('master_interface', models.ForeignKey(to='Utilities.NetworkInterface', related_name='+',on_delete=models.CASCADE)),
-                ('slaves', models.ManyToManyField(to='Utilities.NetworkInterface', related_name='_aggregatednetworkinterface_slaves_+')),
+                ('paramaters', contractor.fields.MapField(blank=True, default=contractor.fields.defaultdict, editable=True, null=True)),
+                ('primary_interface', models.ForeignKey(to='Utilities.NetworkInterface', related_name='+',on_delete=models.CASCADE)),
+                ('secondary_interfaces', models.ManyToManyField(to='Utilities.NetworkInterface', related_name='_aggregatednetworkinterface_secondary_interfaces_+')),
             ],
             bases=('Utilities.abstractnetworkinterface',),
         ),

@@ -2,6 +2,7 @@ import re
 import random
 from django.db import models
 from django.db.models import Q
+from django.db.models.signals import m2m_changed
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
 from cinp.orm_django import DjangoCInP as CInP
@@ -256,9 +257,7 @@ class AddressBlock( models.Model ):
 
     try:
       subnet_ip = StrToIp( self.subnet )
-      ipv4 = IpIsV4( subnet_ip )
     except ValueError:
-      ipv4 = None
       errors[ 'subnet' ] = 'Invalid Ip Address'
 
     if self.prefix is None or self.prefix < 1:
@@ -267,26 +266,19 @@ class AddressBlock( models.Model ):
     if errors:  # no point in continuing
       raise ValidationError( errors )
 
-    if ipv4 is not None:
-      if ipv4:
-        if self.prefix > 32:
-          errors[ 'prefix' ] = 'Max Prefix for ipv4 is 32'
-      else:
-        if self.prefix > 128:
-          errors[ 'prefix' ] = 'Max Prefix for ipv6 is 128'
-
-      if self.gateway_offset is not None:
-        ( low, high ) = CIDRNetworkBounds( subnet_ip, self.prefix, False, True )
-        if low == high:
-          errors[ 'gateway_offset' ] = 'Gateway not possible in single host subnet'
-
-        if self.gateway_offset < low or self.gateway_offset > high:
-          errors[ 'gateway_offset' ] = 'Must be greater than {0} and less than {1}'.format( low, high )
+    if IpIsV4( subnet_ip ):
+      if self.prefix > 32:
+        errors[ 'prefix' ] = 'Max Prefix for ipv4 is 32'
+    else:
+      if self.prefix > 128:
+        errors[ 'prefix' ] = 'Max Prefix for ipv6 is 128'
 
     if errors:  # no point in continuing
       raise ValidationError( errors )
 
+    ( low_offset, high_offset ) = CIDRNetworkBounds( subnet_ip, self.prefix, False, True )
     ( subnet_ip, last_ip ) = CIDRNetworkBounds( subnet_ip, self.prefix, True )
+
     self.subnet = IpToStr( subnet_ip )
     self._max_address = IpToStr( last_ip )
 
@@ -300,6 +292,20 @@ class AddressBlock( models.Model ):
     block_count += ABobjects.filter( subnet__gte=self.subnet, subnet__lte=self._max_address ).count()
     if block_count > 0:
       errors[ 'subnet' ] = 'This subnet/prefix overlaps with an existing Address Block in the same site'
+
+    if errors:  # no point in continuing
+      raise ValidationError( errors )
+
+    if self.gateway_offset is not None:
+      if low_offset == high_offset:
+        errors[ 'gateway_offset' ] = 'Gateway not possible in single host subnet'
+
+      if self.gateway_offset < low_offset or self.gateway_offset > high_offset:
+        errors[ 'gateway_offset' ] = 'Must be greater than {0} and less than {1}'.format( low_offset, high_offset )
+
+    offset_list = self.baseaddress_set.all().values_list( 'offset', flat=True )
+    if sum( [ i > high_offset for i in offset_list ] ) > 0:
+      errors[ 'prefix' ] = 'Prefix excludes existing addresses'
 
     if errors:
       raise ValidationError( errors )
@@ -373,6 +379,11 @@ class NetworkAddressBlock( models.Model ):
   def filter_network( network ):
     return NetworkAddressBlock.objects.filter( network=network )
 
+  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
+  @staticmethod
+  def filter_address_block( address_block ):
+    return NetworkAddressBlock.objects.filter( address_block=address_block )
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
@@ -401,7 +412,6 @@ class NetworkAddressBlock( models.Model ):
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
 class NetworkInterface( models.Model ):
   name = models.CharField( max_length=20 )
-  is_provisioning = models.BooleanField( default=False )
   network = models.ForeignKey( Network, on_delete=models.PROTECT )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -461,15 +471,6 @@ class NetworkInterface( models.Model ):
     if not name_regex.match( self.name ):
       errors[ 'name' ] = 'invalid'
 
-    if self.is_provisioning:
-      if self.pk is not None:
-        RNIobjects = self.foundation.networkinterface_set.filter( ~Q( pk=self.pk ), is_provisioning=True )
-      else:
-        RNIobjects = self.foundation.networkinterface_set.filter( is_provisioning=True )
-
-      if RNIobjects.count() > 0:
-        errors[ 'is_provisioning' ] = 'This foundation allready has a provisioning interface'
-
     if errors:
       raise ValidationError( errors )
 
@@ -484,6 +485,7 @@ class NetworkInterface( models.Model ):
 class RealNetworkInterface( NetworkInterface ):
   mac = models.CharField( max_length=18, blank=True, null=True )  # in a globally unique world we would set this to unique, but these virtual days we have to many ways to use the same mac safely, so good luck.
   foundation = models.ForeignKey( 'Building.Foundation', related_name='networkinterface_set', on_delete=models.CASCADE )
+  is_provisioning = models.BooleanField( default=False )
   physical_location = models.CharField( max_length=100 )
   link_name = models.CharField( max_length=100, blank=True, null=True )  # Until NetworkInterfaces can plug to each other and better ways of storing LLDP info
   pxe = models.ForeignKey( PXE, related_name='+', blank=True, null=True, on_delete=models.PROTECT )
@@ -501,6 +503,7 @@ class RealNetworkInterface( NetworkInterface ):
     result = super().config
     result[ 'mac' ] = self.mac
     result[ 'physical_location' ] = self.physical_location
+    result[ 'link_name' ] = self.link_name
 
     return result
 
@@ -517,6 +520,18 @@ class RealNetworkInterface( NetworkInterface ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
+    if not name_regex.match( self.physical_location ):
+      errors[ 'physical_location' ] = 'invalid'
+
+    if self.is_provisioning:
+      if self.pk is not None:
+        RNIobjects = self.foundation.networkinterface_set.filter( ~Q( pk=self.pk ), is_provisioning=True )
+      else:
+        RNIobjects = self.foundation.networkinterface_set.filter( is_provisioning=True )
+
+      if RNIobjects.count() > 0:
+        errors[ 'is_provisioning' ] = 'This foundation allready has a provisioning interface'
+
     if not self.mac:
       self.mac = None
 
@@ -526,7 +541,7 @@ class RealNetworkInterface( NetworkInterface ):
       if re.match( '([0-9a-f]{4}.){2}[0-9a-f]{4}', self.mac ):
         self.mac = self.mac.replace( '.', '' )
 
-      if re.match( '[0-9a-f]{12}', self.mac ):  # this is #2, it will catch the stripped cisco notation, and the  : less notation
+      if re.match( '[0-9a-f]{12}', self.mac ):  # this is #2, it will catch the stripped cisco notation, and the : less notation
         self.mac = ':'.join( [ self.mac[ i: i + 2 ] for i in range( 0, 12, 2 ) ] )
 
       if not re.match( '([0-9a-f]{2}:){5}[0-9a-f]{2}', self.mac ):
@@ -545,9 +560,15 @@ class RealNetworkInterface( NetworkInterface ):
 
 @cinp.model( )
 class AbstractNetworkInterface( NetworkInterface ):
+  structure = models.ForeignKey( 'Building.Structure', related_name='networkinterface_set', on_delete=models.CASCADE )
 
   @property
   def subclass( self ):
+    try:
+      return self.aggregatednetworkinterface
+    except AttributeError:
+      pass
+
     return self
 
   @property
@@ -559,8 +580,25 @@ class AbstractNetworkInterface( NetworkInterface ):
   def checkAuth( user, verb, id_list, action=None ):
     return cinp.basic_auth_check( user, verb, AbstractNetworkInterface )
 
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+    try:
+      if self.pk:
+        AbstractNetworkInterface.objects.filter( ~Q( pk=self.pk ) ).get( name=self.name, structure=self.structure )
+      else:
+        AbstractNetworkInterface.objects.get( name=self.name, structure=self.structure )
+
+      errors[ 'structure' ] = 'interface name "{0}" allready in use for structure'.format( self.name )
+    except AbstractNetworkInterface.DoesNotExist:
+      pass
+
+    if errors:
+      raise ValidationError( errors )
+
   class Meta:
     pass
+    # unique_together = ( ( 'structure', 'name' ), )  would like to do this, but 'name' isn't "local" to this model, so we are doing it ourselves
     # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
@@ -569,8 +607,8 @@ class AbstractNetworkInterface( NetworkInterface ):
 
 @cinp.model( )
 class AggregatedNetworkInterface( AbstractNetworkInterface ):
-  master_interface = models.ForeignKey( NetworkInterface, related_name='+', on_delete=models.CASCADE )
-  slaves = models.ManyToManyField( NetworkInterface, related_name='+' )
+  primary_interface = models.ForeignKey( NetworkInterface, related_name='+', on_delete=models.CASCADE )
+  secondary_interfaces = models.ManyToManyField( NetworkInterface, related_name='+' )
   paramaters = MapField( blank=True, null=True )
 
   @property
@@ -584,8 +622,8 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
   @property
   def config( self ):
     result = super().config
-    result[ 'master' ] = self.master_interface.name
-    result[ 'slaves' ] = [ i.name for i in self.slaves ]
+    result[ 'primary' ] = self.primary_interface.name
+    result[ 'secondary' ] = [ i.name for i in self.secondary_interfaces.all() ]
 
     return result
 
@@ -594,12 +632,77 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
   def checkAuth( user, verb, id_list, action=None ):
     return cinp.basic_auth_check( user, verb, AggregatedNetworkInterface )
 
+  def clean( self, *args, **kwargs ):
+    super().clean( *args, **kwargs )
+    errors = {}
+
+    try:
+      foundation = self.primary_interface.foundation
+    except AttributeError:
+      foundation = None
+
+    try:
+      structure = self.primary_interface.structure
+    except AttributeError:
+      structure = None
+
+    if foundation is not None and self.structure.foundation != foundation:
+        errors[ 'primary_interface' ] = 'must belong to the same foundation/structure as this interface'
+
+    if structure is not None and self.structure != structure:
+      errors[ 'primary_interface' ] = 'must belong to the same foundation/structure as this interface'
+
+    if self.pk:
+      if self.primary_interface.pk in self.secondary_interfaces.all().values_list( 'pk', flat=True ):
+        errors[ 'primary_interface' ] = 'primary can not be one of the secondaries'
+
+    if errors:
+      raise ValidationError( errors )
+
   class Meta:
     pass
     # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'AggregatedNetworkInterface "{0}"'.format( self.name )
+
+
+def aggregated_secondary_changed( sender, instance, action, pk_set, **kwards ):
+  if action != 'pre_add':
+    return
+
+  errors = {}
+
+  iface_list = NetworkInterface.objects.filter( pk__in=pk_set )
+
+  for iface in iface_list:
+    iface = iface.subclass
+    try:
+      foundation = iface.foundation
+    except AttributeError:
+      foundation = None
+
+    try:
+      structure = iface.structure
+    except AttributeError:
+      structure = None
+
+    print( foundation, structure, instance.structure.foundation, instance.structure )
+
+    if foundation is not None and instance.structure.foundation != foundation:
+      errors[ 'secondary_interfaces' ] = 'must belong to the same foundation/structure as this interface'
+
+    if structure is not None and instance.structure != structure:
+      errors[ 'secondary_interfaces' ] = 'must belong to the same foundation/structure as this interface'
+
+  if instance.primary_interface.pk in pk_set:
+    errors[ 'primary_interface' ] = 'primary can not be one of the secondaries'
+
+  if errors:
+    raise ValidationError( errors )
+
+
+m2m_changed.connect( aggregated_secondary_changed, sender=AggregatedNetworkInterface.secondary_interfaces.through )
 
 
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], property_list=( 'type', 'ip_address', 'subnet', 'netmask', 'prefix', 'gateway' ) )

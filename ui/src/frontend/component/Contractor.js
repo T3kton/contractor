@@ -144,6 +144,12 @@ class Contractor
     return this.cinp.get( '/api/v1/Utilities/Network:' + id + ':' );
   };
 
+
+  getNetworkAddressBlockList = ( id ) =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Utilities/NetworkAddressBlock', 'network', { 'network': '/api/v1/Utilities/Network:' + id + ':' } );
+  };
+
   getFoundation = ( id ) =>
   {
     return this.cinp.get( '/api/v1/Building/Foundation:' + id + ':' );

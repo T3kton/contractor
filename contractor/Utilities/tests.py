@@ -1,10 +1,13 @@
 import pytest
 
+from django.db import transaction
 from django.core.exceptions import ValidationError
 
 from contractor.lib.ip import StrToIp
-from contractor.Utilities.models import Networked, AddressBlock, Network, NetworkAddressBlock, BaseAddress, Address, ReservedAddress, DynamicAddress, NetworkInterface
+from contractor.Utilities.models import Networked, AddressBlock, Network, NetworkAddressBlock, BaseAddress, Address, ReservedAddress, DynamicAddress, NetworkInterface, RealNetworkInterface, AbstractNetworkInterface, AggregatedNetworkInterface
 from contractor.Site.models import Site
+from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
+from contractor.Building.models import Foundation, Structure
 
 
 @pytest.mark.django_db
@@ -227,6 +230,34 @@ def test_addressblock():
 
   # TODO: test ipv6
 
+@pytest.mark.django_db
+def test_addressblock_resize():
+  s1 = Site( name='tsite1', description='test site1' )
+  s1.full_clean()
+  s1.save()
+
+  ab = AddressBlock( site=s1, name='boundless', subnet='10.0.0.0', prefix=26 )
+  ab.full_clean()
+  ab.save()
+
+  for offset in ( 2, 10, 20, 50, 61 ):
+    ba = BaseAddress( address_block=ab, offset=offset )
+    ba.full_clean()
+    ba.save()
+
+  ab.prefix = 25
+  ab.full_clean()
+  ab.save()
+
+  for offset in ( 3, 11, 21, 51, 63, 100, 120, 124 ):
+    ba = BaseAddress( address_block=ab, offset=offset )
+    ba.full_clean()
+    ba.save()
+
+  ab.prefix = 26
+  with pytest.raises( ValidationError ):
+    ab.full_clean()
+
 
 @pytest.mark.django_db
 def test_network():
@@ -292,6 +323,262 @@ def test_networkinterface():
     ni2.full_clean()
 
   assert ni1.config == { 'name': 'eth0', 'network': 'test', 'address_list': [] }
+
+
+@pytest.mark.django_db
+def test_realnetworkinterface():
+  s1 = Site( name='tsite1', description='test site1' )
+  s1.full_clean()
+  s1.save()
+
+  n1 = Network( name='test', site=s1 )
+  n1.full_clean()
+  n1.save()
+
+  fb = FoundationBluePrint( name='testing', description='testing', foundation_type_list=[ 'Unknown' ] )
+  fb.full_clean()
+  fb.save()
+
+  f1 = Foundation( locator='testf', site=s1, blueprint=fb )
+  f1.full_clean()
+  f1.save()
+
+  ri1 = RealNetworkInterface()
+  with pytest.raises( ValidationError ):
+    ri1.full_clean()
+
+  ri1 = RealNetworkInterface( name='eth0', network=n1 )
+  with pytest.raises( ValidationError ):
+    ri1.full_clean()
+
+  ri1 = RealNetworkInterface( name='ba d', network=n1, foundation=f1, physical_location='eth0' )
+  with pytest.raises( ValidationError ):
+    ri1.full_clean()
+
+  ri1 = RealNetworkInterface( name='eno1', network=n1, foundation=f1, physical_location='eth0' )
+  ri1.full_clean()
+  ri1.save()
+
+  assert ri1.config == { 'name': 'eno1', 'network': 'test', 'address_list': [], 'physical_location': 'eth0', 'mac': None, 'link_name': None }
+
+  ri2 = RealNetworkInterface( name='eno2', network=n1, foundation=f1, physical_location='eth0' )
+  with pytest.raises( ValidationError ):
+    ri2.full_clean()
+
+  ri2.physical_location = 'eth1'
+  ri2.full_clean()
+
+  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'address_list': [], 'physical_location': 'eth1', 'mac': None, 'link_name': None }
+
+  ri2.mac = '11:22:33:4D:55:66'
+  ri2.full_clean()
+
+  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'address_list': [], 'physical_location': 'eth1', 'mac': '11:22:33:4d:55:66', 'link_name': None }
+
+  ri2.mac = 'b211.1234.4433'
+  ri2.full_clean()
+
+  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'address_list': [], 'physical_location': 'eth1', 'mac': 'b2:11:12:34:44:33', 'link_name': None }
+
+  ri2.mac = '12a123123123'
+  ri2.full_clean()
+
+  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'address_list': [], 'physical_location': 'eth1', 'mac': '12:a1:23:12:31:23', 'link_name': None }
+
+  for mac in ( '12:3123123123', '11:22:33:44:55:s6', '2211.12z4.4433', 'sdf', '22:11:12:34.4433' ):
+    ri2.mac = mac
+    with pytest.raises( ValidationError ):
+      ri2.full_clean()
+
+  ri1.is_provisioning = True
+  ri1.full_clean()
+  ri1.save()
+
+  ri2.is_provisioning = True
+  with pytest.raises( ValidationError ):
+    ri2.full_clean()
+
+
+@pytest.mark.django_db
+def test_abstractnetworkinterface():
+  s1 = Site( name='tsite1', description='test site1' )
+  s1.full_clean()
+  s1.save()
+
+  n1 = Network( name='test', site=s1 )
+  n1.full_clean()
+  n1.save()
+
+  fb = FoundationBluePrint( name='testing', description='testing', foundation_type_list=[ 'Unknown' ] )
+  fb.full_clean()
+  fb.save()
+
+  sb = StructureBluePrint( name='testing2', description='testing2' )
+  sb.full_clean()
+  sb.save()
+  sb.foundation_blueprint_list.add( fb )
+
+  f1 = Foundation( locator='testf', site=s1, blueprint=fb )
+  f1.full_clean()
+  f1.save()
+
+  s1 = Structure( hostname='tests', foundation=f1, blueprint=sb, site=s1 )
+  s1.full_clean()
+  s1.save()
+
+  ai1 = AbstractNetworkInterface()
+  with pytest.raises( ValidationError ):
+    ai1.full_clean()
+
+  ai1 = AbstractNetworkInterface( structure=s1, name='dmz', network=n1 )
+  ai1.full_clean()
+  ai1.save()
+
+  assert ai1.config == { 'address_list': [], 'name': 'dmz', 'network': 'test' }
+
+  ai2 = AbstractNetworkInterface( structure=s1, name='dmz', network=n1 )
+  with pytest.raises( ValidationError ):
+    ai2.full_clean()
+
+  ai2 = AbstractNetworkInterface( structure=s1, name='external', network=n1 )
+  ai2.full_clean()
+
+
+@pytest.mark.django_db
+def test_aggergatednetworkinterface():
+  s1 = Site( name='tsite1', description='test site1' )
+  s1.full_clean()
+  s1.save()
+
+  n1 = Network( name='test', site=s1 )
+  n1.full_clean()
+  n1.save()
+
+  fb = FoundationBluePrint( name='testing', description='testing', foundation_type_list=[ 'Unknown' ] )
+  fb.full_clean()
+  fb.save()
+
+  sb = StructureBluePrint( name='testing2', description='testing2' )
+  sb.full_clean()
+  sb.save()
+  sb.foundation_blueprint_list.add( fb )
+
+  f1 = Foundation( locator='testf', site=s1, blueprint=fb )
+  f1.full_clean()
+  f1.save()
+
+  primary = RealNetworkInterface( foundation=f1, name='ens1', physical_location='eth0', network=n1 )
+  primary.full_clean()
+  primary.save()
+
+  secondary1 = RealNetworkInterface( foundation=f1, name='ens2', physical_location='eth1', network=n1 )
+  secondary1.full_clean()
+  secondary1.save()
+
+  secondary2 = RealNetworkInterface( foundation=f1, name='ens3', physical_location='eth2', network=n1 )
+  secondary2.full_clean()
+  secondary2.save()
+
+  f2 = Foundation( locator='testf2', site=s1, blueprint=fb )
+  f2.full_clean()
+  f2.save()
+
+  primary_2 = RealNetworkInterface( foundation=f2, name='ens1', physical_location='eth0', network=n1 )
+  primary_2.full_clean()
+  primary_2.save()
+
+  secondary1_2 = RealNetworkInterface( foundation=f2, name='ens2', physical_location='eth1', network=n1 )
+  secondary1_2.full_clean()
+  secondary1_2.save()
+
+  st1 = Structure( hostname='tests', foundation=f1, blueprint=sb, site=s1 )
+  st1.full_clean()
+  st1.save()
+
+  a_primary = AbstractNetworkInterface( structure=st1, name='aeth0', network=n1 )
+  a_primary.full_clean()
+  a_primary.save()
+
+  a_secondary = AbstractNetworkInterface( structure=st1, name='aeth1', network=n1 )
+  a_secondary.full_clean()
+  a_secondary.save()
+
+  st2 = Structure( hostname='tests2', foundation=f2, blueprint=sb, site=s1 )
+  st2.full_clean()
+  st2.save()
+
+  a_primary_2 = AbstractNetworkInterface( structure=st2, name='aeth0', network=n1 )
+  a_primary_2.full_clean()
+  a_primary_2.save()
+
+  a_secondary_2 = AbstractNetworkInterface( structure=st2, name='aeth1', network=n1 )
+  a_secondary_2.full_clean()
+  a_secondary_2.save()
+
+  ai1 = AggregatedNetworkInterface()
+  with pytest.raises( ValidationError ):
+    ai1.full_clean()
+
+  ai1 = AggregatedNetworkInterface( structure=st1, name='dmz', network=n1, primary_interface=primary )
+  ai1.full_clean()
+  ai1.save()
+  ai1.full_clean()  # test the self.pk part of clean
+
+  assert ai1.config == { 'address_list': [], 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [] }
+
+  ai2 = AggregatedNetworkInterface( structure=st1, name='dmz', network=n1, primary_interface=primary )
+  with pytest.raises( ValidationError ):
+    ai2.full_clean()
+
+  ai2 = AggregatedNetworkInterface( structure=st1, name='external', network=n1, primary_interface=primary )
+  ai2.full_clean()
+  ai2.save()
+
+  ai1.secondary_interfaces.add( secondary1 )
+
+  assert ai1.config == { 'address_list': [], 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2' ] }
+
+  ai1.secondary_interfaces.add( secondary2 )
+
+  assert ai1.config == { 'address_list': [], 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2', 'ens3' ] }
+
+  with transaction.atomic():  # b/c we throw an exception in m2m_change, the transaction dosen't close, we have to force this ourselves
+    with pytest.raises( ValidationError ):
+      ai1.secondary_interfaces.add( primary )
+
+  ai1.full_clean()
+
+  ai1.primary_interface = secondary1
+  with pytest.raises( ValidationError ):
+    ai1.full_clean()
+
+  ai2.primary_interface = primary
+  ai2.full_clean()
+
+  ai2.primary_interface = primary_2
+  with pytest.raises( ValidationError ):
+    ai2.full_clean()
+
+  ai2.primary_interface = a_primary_2
+  with pytest.raises( ValidationError ):
+    ai2.full_clean()
+
+  ai2.primary_interface = a_primary
+  ai2.full_clean()
+
+  ai2.secondary_interfaces.add( secondary1 )
+
+  with transaction.atomic():
+    with pytest.raises( ValidationError ):
+      ai2.secondary_interfaces.add( secondary1_2 )
+
+  ai2.full_clean()
+
+  ai2.secondary_interfaces.add( a_secondary )
+
+  with transaction.atomic():
+    with pytest.raises( ValidationError ):
+      ai2.secondary_interfaces.add( a_secondary_2 )
 
 
 @pytest.mark.django_db
