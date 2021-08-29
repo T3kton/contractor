@@ -532,6 +532,9 @@ def test_block_paramaters():
                                 ( 'L', ( 'S', { '_children': [], 'description': 'test', 'expected_time': timedelta( minutes=12, seconds=34 ), 'max_time': timedelta( hours=1 ) } ), 1 )
                           ] } )
 
+  with pytest.raises( Exception ):
+    parse( 'begin( bogus="test", expected_time=12:34 )end' )
+
 
 def test_comment():
   node = parse( '#stuff' )
@@ -660,10 +663,10 @@ def test_while():
                                } ) } ), 1 )
                           ] } )
 
-  node = parse( 'while myval do\nbegin(thep=5)\n10\nend' )
+  node = parse( 'while myval do\nbegin(description="5")\n10\nend' )
   assert node == ( 'S', { '_children':
                           [
-                               ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { 'thep': 5, '_children':
+                               ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { 'description': '5', '_children':
                                  [
                                       ( 'L', ( 'C', 10 ), 3 )
                                  ]
@@ -771,28 +774,28 @@ def test_ifelse():
                                         ] ), 1 )
                           ] } )
 
-  node = parse( 'if ( myobj.value >= "my string" ) then\nbegin( testing="this" )\n42\nend' )
+  node = parse( 'if ( myobj.value >= "my string" ) then\nbegin( description="this" )\n42\nend' )
   assert node == ( 'S', { '_children':
                           [
                                ( 'L', ( 'I', [
                                        { 'condition': ( 'X',
                                                         { 'left': ( 'V', { 'module': 'myobj', 'name': 'value' } ), 'operator': '>=', 'right': ( 'C', "my string" ) } ),
-                                        'expression': ( 'S', { 'testing': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
+                                        'expression': ( 'S', { 'description': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
                                          } ] ), 1 )
                           ] } )
 
-  node = parse( 'if ( myobj.value >= "my string" ) then\nbegin( testing="this" )\n42\nend\nelse\nbegin( more="fun" )\n56\nend' )
+  node = parse( 'if ( myobj.value >= "my string" ) then\nbegin( description="this" )\n42\nend\nelse\nbegin( max_time=1:20 )\n56\nend' )
   assert node == ( 'S', { '_children':
                           [
                                ( 'L', ( 'I', [
                                        {
                                            'condition': ( 'X',
                                                           { 'left': ( 'V', { 'module': 'myobj', 'name': 'value' } ), 'operator': '>=', 'right': ( 'C', "my string" ) } ),
-                                           'expression': ( 'S', { 'testing': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
+                                           'expression': ( 'S', { 'description': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
                                        },
                                        {
                                            'condition': None,
-                                           'expression': ( 'S', { 'more': 'fun', '_children': [ ( 'L', ( 'C', 56 ), 7 ) ] } ),
+                                           'expression': ( 'S', { 'max_time': timedelta(seconds=80), '_children': [ ( 'L', ( 'C', 56 ), 7 ) ] } ),
                                        }
                                      ] ), 1 )
                           ] } )

@@ -398,7 +398,7 @@ class Runner( object ):
 
     item_list = []  # ( scope position, scope length, scope type, scope data )
     operation = self.ast
-    for step in self.state:  # condense into on loop, last status may be a blocking function with remote  and status values
+    for step in self.state:  # condense into on loop, last status may be a blocking function with remote and status values
       step_type = step[0]
       try:
         step_data = step[1]
@@ -412,6 +412,10 @@ class Runner( object ):
             tmp[ item ] = operation[1][ item ]
           except ( KeyError, TypeError ):
             pass
+
+        if 'expected_time' in operation[1]:
+          tmp[ 'time_elapsed' ] = datetime.datetime.utcnow() - step[2]
+          tmp[ 'time_remaining' ] = operation[1][ 'expected_time' ] - tmp[ 'time_elapsed' ]
 
         if step_data is None:  # no point in continuing, we don't know where we are
           item_list.append( ( 0, len( operation[1][ '_children' ] ), 'Scope', tmp ) )
@@ -575,6 +579,20 @@ class Runner( object ):
         self.state[ state_index ][1]
       except IndexError:
         self.state[ state_index ].append( 0 )
+        self.state[ state_index ].append( datetime.datetime.utcnow() )
+        if 'max_time' in op_data:
+          self.state[ state_index ].append( op_data[ 'max_time' ] + datetime.datetime.utcnow() )
+
+      try:
+        if self.state[ state_index ][3] is None:
+          self.state[ state_index ][3] = datetime.datetime.utcnow()  # last time was a timeout, so set it so next run will timeout
+
+        elif datetime.datetime.utcnow() > self.state[ state_index ][3]:
+          self.state[ state_index ][3] = None
+          raise Pause( 'max time elapsed' )
+
+      except IndexError:  # no max time
+        pass
 
       while self.state[ state_index ][1] < len( op_data[ '_children' ] ):
         self._evaluate( op_data[ '_children' ][ self.state[ state_index ][ 1 ] ], state_index + 1 )

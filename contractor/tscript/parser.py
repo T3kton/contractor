@@ -192,6 +192,10 @@ class Parser( object ):
 
   def block( self, node ):
     options = self._eval( node.children[1] )
+    for name in options.keys():
+      if name not in ( 'description', 'expected_time', 'max_time' ):
+        raise Exception( 'Scope option "{0}" not valid'.format( name ) )  # or ParseError ?  probably need to check the other "raises Eception" too
+
     options[ '_children' ] = self._eval( node.children[3] )
 
     return ( Types.SCOPE, options )

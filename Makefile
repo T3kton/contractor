@@ -80,7 +80,7 @@ dpkg-blueprints:
 	echo ubuntu-bionic-base
 
 dpkg-requires:
-	echo dpkg-dev debhelper python3-dev python3-setuptools nodejs npm nodejs
+	echo dpkg-dev debhelper python3-dev python3-setuptools nodejs npm
 
 dpkg-setup:
 	#npm install -g npm@5
