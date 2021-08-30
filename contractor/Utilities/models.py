@@ -1,5 +1,6 @@
 import re
 import random
+
 from django.db import models
 from django.db.models import Q
 from django.db.models.signals import m2m_changed
@@ -424,7 +425,7 @@ class NetworkInterface( models.Model ):
       pass
 
     try:
-      return self.aggregatednetworkinterface
+      return self.aggregatednetworkinterface  # must come before abstract b/c aggregated is abstract
     except AttributeError:
       pass
 

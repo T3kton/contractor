@@ -65,6 +65,53 @@ def fake_canSetState( self, job=None ):
   return True
 
 
+@pytest.mark.django_db( transaction=True )
+def test_job_saving_loading( mocker ):
+  s = Site( name='test', description='test' )
+  s.full_clean()
+  s.save()
+
+  runner = Runner( parse( 'begin( expected_time=0:10, max_time=0:10 )\ndelay( seconds=1 )\ntesting.remote()\nend' ) )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
+  job = BaseJob( site=s )
+  job.state = 'queued'
+  job.script_name = 'test'
+  job.script_runner = pickle.dumps( runner )
+  job.full_clean()
+  job.save()
+
+  job = BaseJob.objects.get()
+  runner = pickle.loads( job.script_runner )
+  job.message = runner.run()
+  job.status = runner.status
+  runner.toSubcontractor( [ 'testing' ] )
+  job.script_runner = pickle.dumps( runner )
+  job.full_clean()
+  job.save()
+
+  time.sleep( 1 )
+
+  job = BaseJob.objects.get()
+  runner = pickle.loads( job.script_runner )
+  job.message = runner.run()
+  job.status = runner.status
+  runner.toSubcontractor( [ 'testing' ] )
+  job.script_runner = pickle.dumps( runner )
+  job.full_clean()
+  job.save()
+
+  time.sleep( 1 )
+
+  job = BaseJob.objects.get()
+  runner = pickle.loads( job.script_runner )
+  job.message = runner.run()
+  job.status = runner.status
+  runner.toSubcontractor( [ 'testing' ] )
+  job.script_runner = pickle.dumps( runner )
+  job.full_clean()
+  job.save()
+
+
 @pytest.mark.timeout( 20, method='thread' )
 @pytest.mark.django_db( transaction=True )
 def test_job_locking( mocker ):

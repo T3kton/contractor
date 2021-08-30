@@ -91,7 +91,7 @@ class MapField( models.BinaryField ):
     return pickle.dumps( value, protocol=4 )
 
 
-class JSONField( models.TextField ):
+class JSONField( models.TextField ):  # really should be using something other than JSON here?
   description = 'JSON Encoded'
   empty_values = [ None ]
 
@@ -102,7 +102,7 @@ class JSONField( models.TextField ):
     try:
       value = json.loads( value[ len( JSON_MAGIC ): ] )
     except ValueError:
-      raise ValidationError( '"%(value)s" is not valid JSON', params={ 'value': value[ 0:100 ] } )
+      raise ValidationError( 'DB Value is not valid JSON', code='invalid' )
 
     return value
 

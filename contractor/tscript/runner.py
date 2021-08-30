@@ -352,6 +352,18 @@ def _debugDump( message, exception, ast, state ):
     print( 'Error "{0}" when writing the debug dump'.format( e ) )
 
 
+def _delta_to_string( delta ):
+  seconds = int( delta.total_seconds() )
+  days = int( seconds / 86400 )
+  seconds %= 86400
+  hours = int( seconds / 3600 )
+  seconds %= 3600
+  if days:
+    return '{0}:{1}:{2}'.format( days, hours, seconds )
+  else:
+    return '{0:02}:{1:02}'.format( hours, seconds )
+
+
 class Runner( object ):
   def __init__( self, ast ):
     super().__init__()
@@ -414,8 +426,9 @@ class Runner( object ):
             pass
 
         if 'expected_time' in operation[1]:
-          tmp[ 'time_elapsed' ] = datetime.datetime.utcnow() - step[2]
-          tmp[ 'time_remaining' ] = operation[1][ 'expected_time' ] - tmp[ 'time_elapsed' ]
+          elapsed = datetime.datetime.utcnow() - step[2]
+          tmp[ 'time_elapsed' ] = _delta_to_string( elapsed )
+          tmp[ 'time_remaining' ] = _delta_to_string( operation[1][ 'expected_time' ] - elapsed )
 
         if step_data is None:  # no point in continuing, we don't know where we are
           item_list.append( ( 0, len( operation[1][ '_children' ] ), 'Scope', tmp ) )

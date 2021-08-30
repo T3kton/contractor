@@ -1466,24 +1466,20 @@ def test_exists():
   assert runner.variable_map == { 'aa': False, 'bb': [ 1, 2 ] }
 
 
-def _block_timing_round( state ):
-  for i in range( 0, len( state ) ):
-    for name in ( 'time_remaining', 'time_elapsed' ):
-      if name in state[i][2]:
-        state[i][2][ name ] = int( state[i][2][ name ].seconds / 2 ) * 2  # hopfully a 2 second window is big enough for even the slowest of testing machines
-
-  return state
-
-
 def test_block_timing():
   runner = Runner( parse( 'begin( expected_time=0:10 )\ndelay( seconds=4 )\nend' ) )
   assert runner.run() == 'Waiting for 3 more seconds'
-  assert _block_timing_round( runner.status ) == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': 0, 'time_remaining': 8 } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert not runner.done
+
+  runner = Runner( parse( 'begin( expected_time=0:10 )\ndelay( seconds=4 )\nend' ) )
+  assert runner.run() == 'Waiting for 3 more seconds'
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   time.sleep( 2 )
   assert runner.run() == 'Waiting for 1 more seconds'
-  assert _block_timing_round( runner.status ) == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': 2, 'time_remaining': 6 } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:02', 'time_remaining': '00:07' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert runner.done is False
 
   time.sleep( 2 )
@@ -1493,29 +1489,68 @@ def test_block_timing():
 
   runner = Runner( parse( 'begin( max_time=0:03 )\ndelay( seconds=6 )\nend' ) )
   assert runner.run() == 'Waiting for 5 more seconds'
-  assert _block_timing_round( runner.status ) == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   time.sleep( 2 )
   assert runner.run() == 'Waiting for 3 more seconds'
-  assert _block_timing_round( runner.status ) == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   time.sleep( 2 )
   with pytest.raises( Pause ):
     runner.run()
-  assert _block_timing_round( runner.status ) == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   assert runner.run() == 'Waiting for 1 more seconds'
-  assert _block_timing_round( runner.status ) == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   time.sleep( 2 )
   with pytest.raises( Pause ):
     runner.run()
-  assert _block_timing_round( runner.status ) == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   runner.run()
   assert runner.done
+
+
+def test_block_timing_with_remote():
+  runner = Runner( parse( 'begin( expected_time=0:10 )\ntesting.remote()\nend' ) )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
+  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
+  assert runner.line == 0
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Script not Running', None )
+  assert runner.run() == 'Not Initilized'
+  assert not runner.done
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Not Expecting Anything', None )
+  assert runner.toSubcontractor( [] ) is None
+  assert runner.toSubcontractor( [ 'sdf', 'were' ] ) is None
+  assert runner.toSubcontractor( [ 'rfrf', 'testing', 'sdf' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "1"' }
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.line == 2
+  assert runner.run() == 'Not Initilized'
+  assert not runner.done
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
+  assert runner.fromSubcontractor( 'Bad Cookie', True ) == ( 'Bad Cookie', None )
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Accepted', 'Current State "True"' )
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Not Expecting Anything', None )
+  assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "2"' }
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Accepted', 'Current State "True"' )
+  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.run() == ''
+  assert runner.done
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
+  assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Script not Running', None )
+  assert runner.run() == 'done'
+  assert runner.line is None
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.toSubcontractor( [ 'testing' ] ) is None
