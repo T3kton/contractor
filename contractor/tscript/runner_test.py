@@ -822,10 +822,10 @@ def test_module_functions():
   assert not runner.done
   assert runner.run() == 'at 2 of 2'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'count', 'dispatched': False } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'count', 'dispatched': False } ) ]
   assert runner.run() == 'at 1 of 1'
   assert not runner.done
-  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'count', 'dispatched': False } ) ]
+  assert runner.status == [ ( 50.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'count', 'dispatched': False } ) ]
   assert runner.run() == ''
   assert runner.status[0][0] == 100.0
   assert runner.done
@@ -841,25 +841,25 @@ def test_external_remote_functions():
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Script not Running', None )
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Not Expecting Anything', None )
   assert runner.toSubcontractor( [] ) is None
   assert runner.toSubcontractor( [ 'sdf', 'were' ] ) is None
   assert runner.toSubcontractor( [ 'rfrf', 'testing', 'sdf' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "1"' }
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
   assert runner.line == 1
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.fromSubcontractor( 'Bad Cookie', True ) == ( 'Bad Cookie', None )
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Accepted', 'Current State "True"' )
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Not Expecting Anything', None )
   assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "2"' }
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Accepted', 'Current State "True"' )
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.run() == ''
   assert runner.done
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -877,12 +877,12 @@ def test_external_remote_functions():
   assert runner.variable_map == {}
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "1"' }
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
   assert runner.variable_map == {}
   assert runner.fromSubcontractor( runner.contractor_cookie, 'the sky is falling' ) == ( 'Accepted', 'Current State "the sky is falling"' )
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.variable_map == {}
   assert runner.run() == ''
   assert runner.done
@@ -897,7 +897,7 @@ def test_external_remote_functions():
   assert runner.variable_map == {}
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "1"' }
   assert runner.variable_map == {}
   assert runner.fromSubcontractor( runner.contractor_cookie, 'Bad' ) == ( 'Accepted', 'Current State "Bad"' )
@@ -1168,7 +1168,7 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1178,7 +1178,7 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 50.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1188,15 +1188,15 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 33.333333333333336, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 33.333333333333336, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 66.66666666666667, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 66.66666666666667, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1205,7 +1205,7 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1215,7 +1215,7 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 50.0, 'Scope', { 'description': 'Overall Script' } ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1225,7 +1225,7 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 75.0, 'Scope', {} ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 75.0, 'Scope', { 'description': 'Overall Script' } ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1235,7 +1235,7 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 50.0, 'Scope', { 'description': 'Overall Script' } ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1245,40 +1245,40 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
 
   runner = Runner( parse( 'while True do begin()\n5\npause( msg="" )\nend' ) )
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'While', { 'doing': 'expression' } ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 50.0, 'Scope', { 'description': 'Overall Script' } ), ( 50.0, 'While', { 'doing': 'expression' } ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'While', { 'doing': 'expression' } ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 50.0, 'Scope', { 'description': 'Overall Script' } ), ( 50.0, 'While', { 'doing': 'expression' } ), ( 50.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
 
   runner = Runner( parse( 'while True do begin()\n5\npause( msg="" )\n6\npause( msg="" )\nend' ) )
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 25.0, 'Scope', {} ), ( 25.0, 'While', { 'doing': 'expression' } ), ( 25.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 25.0, 'Scope', { 'description': 'Overall Script' } ), ( 25.0, 'While', { 'doing': 'expression' } ), ( 25.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 75.0, 'Scope', {} ), ( 75.0, 'While', { 'doing': 'expression' } ), ( 75.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 75.0, 'Scope', { 'description': 'Overall Script' } ), ( 75.0, 'While', { 'doing': 'expression' } ), ( 75.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
 
   runner = Runner( parse( 'while pause( msg="" ) do 5' ) )
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1288,22 +1288,22 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
 
   runner = Runner( parse( '( not pause( msg="cond" ) | True )' ) )
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1313,7 +1313,7 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1323,45 +1323,45 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
 
   runner = Runner( parse( 'while not pause( msg="cond" ) do begin()\n12\npause( msg="exp" )\n34\nend' ) )
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 33.333333333333336, 'Scope', {} ), ( 33.333333333333336, 'While', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 33.333333333333336, 'Scope', { 'description': 'Overall Script' } ), ( 33.333333333333336, 'While', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 33.333333333333336, 'Scope', {} ), ( 33.333333333333336, 'While', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 33.333333333333336, 'Scope', { 'description': 'Overall Script' } ), ( 33.333333333333336, 'While', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
 
   runner = Runner( parse( 'if True then pause( msg="exp" )' ) )
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1371,7 +1371,7 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1381,7 +1381,7 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1391,7 +1391,7 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 50.0, 'Scope', { 'description': 'Overall Script' } ), ( 50.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1401,11 +1401,11 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1415,11 +1415,11 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 50.0, 'Scope', { 'description': 'Overall Script' } ), ( 50.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 50.0, 'Scope', { 'description': 'Overall Script' } ), ( 50.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1429,11 +1429,11 @@ def test_status():
   assert runner.status == [ ( 0.0, 'Scope', None ) ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', {} ), ( 50.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 50.0, 'Scope', { 'description': 'Overall Script' } ), ( 50.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 66.66666666666667, 'Scope', {} ), ( 66.66666666666667, 'IfElse', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ ( 66.66666666666667, 'Scope', { 'description': 'Overall Script' } ), ( 66.66666666666667, 'IfElse', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', {} ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
   assert not runner.done
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
@@ -1469,17 +1469,17 @@ def test_exists():
 def test_block_timing():
   runner = Runner( parse( 'begin( expected_time=0:10 )\ndelay( seconds=4 )\nend' ) )
   assert runner.run() == 'Waiting for 3 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   runner = Runner( parse( 'begin( expected_time=0:10 )\ndelay( seconds=4 )\nend' ) )
   assert runner.run() == 'Waiting for 3 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   time.sleep( 2 )
   assert runner.run() == 'Waiting for 1 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:02', 'time_remaining': '00:07' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:02', 'time_remaining': '00:07' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert runner.done is False
 
   time.sleep( 2 )
@@ -1489,28 +1489,28 @@ def test_block_timing():
 
   runner = Runner( parse( 'begin( max_time=0:03 )\ndelay( seconds=6 )\nend' ) )
   assert runner.run() == 'Waiting for 5 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   time.sleep( 2 )
   assert runner.run() == 'Waiting for 3 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   time.sleep( 2 )
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   assert runner.run() == 'Waiting for 1 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   time.sleep( 2 )
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', {} ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
   runner.run()
@@ -1526,25 +1526,25 @@ def test_block_timing_with_remote():
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Script not Running', None )
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Not Expecting Anything', None )
   assert runner.toSubcontractor( [] ) is None
   assert runner.toSubcontractor( [ 'sdf', 'were' ] ) is None
   assert runner.toSubcontractor( [ 'rfrf', 'testing', 'sdf' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "1"' }
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
   assert runner.line == 2
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.fromSubcontractor( 'Bad Cookie', True ) == ( 'Bad Cookie', None )
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Accepted', 'Current State "True"' )
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Not Expecting Anything', None )
   assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'paramaters': 'the count "2"' }
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Accepted', 'Current State "True"' )
-  assert runner.status == [ ( 0.0, 'Scope', {} ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
   assert runner.run() == ''
   assert runner.done
   assert runner.status == [ ( 100.0, 'Scope', None ) ]

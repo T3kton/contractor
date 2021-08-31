@@ -230,6 +230,7 @@ def test_addressblock():
 
   # TODO: test ipv6
 
+
 @pytest.mark.django_db
 def test_addressblock_resize():
   s1 = Site( name='tsite1', description='test site1' )

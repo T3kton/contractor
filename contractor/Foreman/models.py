@@ -30,9 +30,9 @@ class ForemanException( ValueError ):
     return 'ForemanException ({0}): {1}'.format( self.code, self.message )
 
 
-@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', 'can_start' ) )
+@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'can_start', ) )
 class BaseJob( models.Model ):
-  JOB_STATE_CHOICES = ( 'queued', 'waiting', 'done', 'paused', 'error', 'aborted' )
+  JOB_STATE_CHOICES = ( 'queued', 'waiting', 'done', 'paused', 'error', 'abortedprogress' )
   site = models.ForeignKey( Site, editable=False, on_delete=models.CASCADE )
   state = models.CharField( max_length=10, choices=[ ( i, i ) for i in JOB_STATE_CHOICES ] )
   status = JSONField( default=[], blank=True )
@@ -60,13 +60,6 @@ class BaseJob( models.Model ):
       pass
 
     return self
-
-  @property
-  def progress( self ):
-    try:
-      return self.status[0][0]
-    except IndexError:
-      return 0.0
 
   @property
   def can_start( self ):
@@ -259,7 +252,7 @@ class BaseJob( models.Model ):
     return 'BaseJob #{0} in "{1}"'.format( self.pk, self.site.pk )
 
 
-@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', 'can_start' ) )
+@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'can_start', ) )
 class FoundationJob( BaseJob ):
   foundation = models.OneToOneField( Foundation, editable=False, on_delete=models.CASCADE )
 
@@ -369,7 +362,7 @@ class FoundationJob( BaseJob ):
     return 'FoundationJob #{0} for "{1}" in "{2}"'.format( self.pk, self.foundation.pk, self.foundation.site.pk )
 
 
-@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', 'can_start' ) )
+@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'can_start', ) )
 class StructureJob( BaseJob ):
   structure = models.OneToOneField( Structure, editable=False, on_delete=models.CASCADE )
 
