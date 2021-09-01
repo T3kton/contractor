@@ -31,7 +31,7 @@ class BuildingException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'BuildingException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'BuildingException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'BuildingException ({0}): {1}'.format( self.code, self.message )

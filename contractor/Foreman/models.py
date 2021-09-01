@@ -24,7 +24,7 @@ class ForemanException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'ForemanException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'ForemanException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'ForemanException ({0}): {1}'.format( self.code, self.message )

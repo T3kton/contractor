@@ -83,8 +83,10 @@ dpkg-requires:
 	echo dpkg-dev debhelper python3-dev python3-setuptools nodejs npm
 
 dpkg-setup:
-	#npm install -g npm@5
-	#mv /usr/bin/npm  /usr/bin/npm.old
+ifeq (1, $(NULLUNIT))
+	npm install -g npm@5
+	mv /usr/bin/npm  /usr/bin/npm.old
+endif
 	cd ui && npm install
 	sed s/"export Ripple from '.\/ripple';"/"export { default as Ripple } from '.\/ripple';"/ -i ui/node_modules/react-toolbox/components/index.js
 	sed s/"export Tooltip from '.\/tooltip';"/"export { default as Tooltip } from '.\/tooltip';"/ -i ui/node_modules/react-toolbox/components/index.js

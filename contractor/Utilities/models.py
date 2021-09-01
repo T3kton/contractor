@@ -26,7 +26,7 @@ class UtilitiesException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'UtilitiesException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'UtilitiesException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'UtilitiesException ({0}): {1}'.format( self.code, self.message )

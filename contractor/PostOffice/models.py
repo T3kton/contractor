@@ -20,7 +20,7 @@ class PostOfficeException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'PostOfficeException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'PostOfficeException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'PostOfficeException ({0}): {1}'.format( self.code, self.message )

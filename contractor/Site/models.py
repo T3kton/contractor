@@ -23,7 +23,7 @@ class SiteException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'SiteException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'SiteException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'SiteException ({0}): {1}'.format( self.code, self.message )

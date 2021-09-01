@@ -22,7 +22,7 @@ class BluePrintException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'BluePrintException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'BluePrintException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'BluePrintException ({0}): {1}'.format( self.code, self.message )

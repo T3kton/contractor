@@ -12,7 +12,7 @@ class RecordsException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'RecordsException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'RecordsException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'RecordsException ({0}): {1}'.format( self.code, self.message )

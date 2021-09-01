@@ -20,7 +20,7 @@ class DirectoryException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'DirectoryException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'DirectoryException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'DirectoryException ({0}): {1}'.format( self.code, self.message )

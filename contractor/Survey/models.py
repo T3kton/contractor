@@ -19,7 +19,7 @@ class SurveyException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'SurveyException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'SurveyException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'SurveyException ({0}): {1}'.format( self.code, self.message )
