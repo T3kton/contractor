@@ -1472,17 +1472,27 @@ def test_block_timing():
   assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert not runner.done
 
-  runner = Runner( parse( 'begin( expected_time=0:10 )\ndelay( seconds=4 )\nend' ) )
-  assert runner.run() == 'Waiting for 3 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
-  assert not runner.done
-
   time.sleep( 2 )
   assert runner.run() == 'Waiting for 1 more seconds'
   assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:02', 'time_remaining': '00:07' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
   assert runner.done is False
 
   time.sleep( 2 )
+  runner.run()
+  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.done
+
+  runner = Runner( parse( 'begin( expected_time=0:02 )\ndelay( seconds=8 )\nend' ) )
+  assert runner.run() == 'Waiting for 7 more seconds'
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:01' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert not runner.done
+
+  time.sleep( 4 )
+  assert runner.run() == 'Waiting for 3 more seconds'
+  assert runner.status == [ ( 0.0, 'Scope', { 'description': 'Overall Script' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:04', 'time_remaining': '-00:02' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.done is False
+
+  time.sleep( 4 )
   runner.run()
   assert runner.status == [ ( 100.0, 'Scope', None ) ]
   assert runner.done

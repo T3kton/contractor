@@ -57,7 +57,7 @@ clean-ui:
 .PHONY:: build-ui install-ui clean-ui
 
 test-blueprints:
-	echo ubuntu-bionic-base
+	echo ubuntu-focal-base
 
 test-requires:
 	echo flake8 python3-pip python3-django python3-psycopg2 python3-pymongo python3-parsimonious python3-jinja2 python3-pytest python3-pytest-cov python3-pytest-django python3-pytest-mock python3-pytest-timeout postgresql mongodb
@@ -77,10 +77,10 @@ test:
 .PHONY:: test-blueprints test-requires lint test
 
 dpkg-blueprints:
-	echo ubuntu-bionic-base
+	echo ubuntu-focal-base
 
 dpkg-requires:
-	echo dpkg-dev debhelper python3-dev python3-setuptools nodejs npm
+	echo dpkg-dev debhelper python3-dev python3-setuptools nodejs npm dh-python
 
 dpkg-setup:
 ifeq (1, $(NULLUNIT))
@@ -96,6 +96,6 @@ dpkg:
 	touch dpkg
 
 dpkg-file:
-	echo $(shell ls ../contractor_*.deb):bionic
+	echo $(shell ls ../contractor_*.deb):focal
 
 .PHONY:: dpkg-blueprints dpkg-requires dpkg dpkg-file

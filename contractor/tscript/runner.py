@@ -353,7 +353,12 @@ def _debugDump( message, exception, ast, state ):
 
 
 def _delta_to_string( delta ):
+  sign = ''
   seconds = int( delta.total_seconds() )
+  if seconds < 0:
+    sign = '-'
+    seconds = abs( seconds )
+
   days = int( seconds / 86400 )
   seconds %= 86400
   hours = int( seconds / 3600 )
@@ -361,11 +366,11 @@ def _delta_to_string( delta ):
   minutes = int( seconds / 60 )
   seconds %= 60
   if days:
-    return '{0}:{1:02}:{2:02}:{3:02}'.format( days, hours, minutes, seconds )
+    return '{0}{1}:{2:02}:{3:02}:{4:02}'.format( sign, days, hours, minutes, seconds )
   elif hours:
-    return '{0:02}:{1:02}:{2:02}'.format( hours, minutes, seconds )
+    return '{0}{1:02}:{2:02}:{3:02}'.format( sign, hours, minutes, seconds )
   else:
-    return '{0:02}:{1:02}'.format( minutes, seconds )
+    return '{0}{1:02}:{2:02}'.format( sign, minutes, seconds )
 
 
 class Runner( object ):

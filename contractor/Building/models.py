@@ -162,7 +162,6 @@ class Foundation( models.Model ):
               '_foundation_class_list': self.class_list,
               '_foundation_locator': self.locator,
               '_foundation_id_map': self.id_map,
-              '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all().order_by( 'physical_location' ) ],
               '_console': self.console
             }
 
@@ -444,6 +443,15 @@ class Structure( Networked ):
       dependency.setDestroyed()
 
   def configAttributes( self ):
+    interface_map = {}
+    for iface in self.foundation.networkinterface_set.all():
+      interface_map[ iface.name ] = iface.subclass.config
+      interface_map[ iface.name ][ 'address_list' ] = self.getAddressList( iface )
+
+    for iface in self.networkinterface_set.all():
+      interface_map[ iface.name ] = iface.subclass.config
+      interface_map[ iface.name ][ 'address_list' ] = self.getAddressList( iface )
+
     provisioning_interface = self.provisioning_interface
     provisioning_address = self.provisioning_address
     primary_interface = self.primary_interface
@@ -455,17 +463,14 @@ class Structure( Networked ):
                '_hostname': self.hostname,
                '_domain_name': self.domain_name,
                '_fqdn': self.fqdn,
-               '_provisioning_interface': provisioning_interface.physical_location if provisioning_interface is not None else None,
+               '_provisioning_interface': provisioning_interface.name if provisioning_interface is not None else None,  # for the structure we use the name, for the foundation the physical_location
                '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None,
                '_provisioning_address': provisioning_address.as_dict if provisioning_address is not None else None,
                '_primary_interface': primary_interface.name if primary_interface is not None else None,
                '_primary_interface_mac': primary_interface.mac if primary_interface is not None else None,
                '_primary_address': primary_address.as_dict if primary_address is not None else None,
-               '_interface_map': {}
+               '_interface_map': interface_map
              }
-
-    for iface in self.foundation.networkinterface_set.all():  # mabey? mabey not?
-      result[ '_interface_map' ][ iface.name ] = iface.config
 
     return result
 

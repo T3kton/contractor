@@ -323,7 +323,7 @@ def test_networkinterface():
   with pytest.raises( ValidationError ):
     ni2.full_clean()
 
-  assert ni1.config == { 'name': 'eth0', 'network': 'test', 'address_list': [] }
+  assert ni1.config == { 'name': 'eth0', 'network': 'test' }
 
 
 @pytest.mark.django_db
@@ -360,7 +360,7 @@ def test_realnetworkinterface():
   ri1.full_clean()
   ri1.save()
 
-  assert ri1.config == { 'name': 'eno1', 'network': 'test', 'address_list': [], 'physical_location': 'eth0', 'mac': None, 'link_name': None }
+  assert ri1.config == { 'name': 'eno1', 'network': 'test', 'physical_location': 'eth0', 'mac': None, 'link_name': None }
 
   ri2 = RealNetworkInterface( name='eno2', network=n1, foundation=f1, physical_location='eth0' )
   with pytest.raises( ValidationError ):
@@ -369,22 +369,22 @@ def test_realnetworkinterface():
   ri2.physical_location = 'eth1'
   ri2.full_clean()
 
-  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'address_list': [], 'physical_location': 'eth1', 'mac': None, 'link_name': None }
+  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'physical_location': 'eth1', 'mac': None, 'link_name': None }
 
   ri2.mac = '11:22:33:4D:55:66'
   ri2.full_clean()
 
-  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'address_list': [], 'physical_location': 'eth1', 'mac': '11:22:33:4d:55:66', 'link_name': None }
+  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'physical_location': 'eth1', 'mac': '11:22:33:4d:55:66', 'link_name': None }
 
   ri2.mac = 'b211.1234.4433'
   ri2.full_clean()
 
-  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'address_list': [], 'physical_location': 'eth1', 'mac': 'b2:11:12:34:44:33', 'link_name': None }
+  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'physical_location': 'eth1', 'mac': 'b2:11:12:34:44:33', 'link_name': None }
 
   ri2.mac = '12a123123123'
   ri2.full_clean()
 
-  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'address_list': [], 'physical_location': 'eth1', 'mac': '12:a1:23:12:31:23', 'link_name': None }
+  assert ri2.config == { 'name': 'eno2', 'network': 'test', 'physical_location': 'eth1', 'mac': '12:a1:23:12:31:23', 'link_name': None }
 
   for mac in ( '12:3123123123', '11:22:33:44:55:s6', '2211.12z4.4433', 'sdf', '22:11:12:34.4433' ):
     ri2.mac = mac
@@ -435,7 +435,7 @@ def test_abstractnetworkinterface():
   ai1.full_clean()
   ai1.save()
 
-  assert ai1.config == { 'address_list': [], 'name': 'dmz', 'network': 'test' }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test' }
 
   ai2 = AbstractNetworkInterface( structure=s1, name='dmz', network=n1 )
   with pytest.raises( ValidationError ):
@@ -525,7 +525,7 @@ def test_aggergatednetworkinterface():
   ai1.save()
   ai1.full_clean()  # test the self.pk part of clean
 
-  assert ai1.config == { 'address_list': [], 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [] }
 
   ai2 = AggregatedNetworkInterface( structure=st1, name='dmz', network=n1, primary_interface=primary )
   with pytest.raises( ValidationError ):
@@ -537,11 +537,11 @@ def test_aggergatednetworkinterface():
 
   ai1.secondary_interfaces.add( secondary1 )
 
-  assert ai1.config == { 'address_list': [], 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2' ] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2' ] }
 
   ai1.secondary_interfaces.add( secondary2 )
 
-  assert ai1.config == { 'address_list': [], 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2', 'ens3' ] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2', 'ens3' ] }
 
   with transaction.atomic():  # b/c we throw an exception in m2m_change, the transaction dosen't close, we have to force this ourselves
     with pytest.raises( ValidationError ):
@@ -1082,3 +1082,107 @@ def test_dynamicaddress():
   assert ba.type == 'Unknown'
   assert ba.ip_address == '0.0.0.2'
   assert ba.as_dict == { 'address': '0.0.0.2', 'netmask': '255.255.255.0', 'prefix': 24, 'subnet': '0.0.0.0', 'gateway': None, 'auto': True }
+
+
+@pytest.mark.django_db
+def test_interface_addresses():
+  s1 = Site( name='tsite1', description='test site1' )
+  s1.full_clean()
+  s1.save()
+
+  n1 = Network( name='test', site=s1 )
+  n1.full_clean()
+  n1.save()
+
+  fb = FoundationBluePrint( name='testing', description='testing', foundation_type_list=[ 'Unknown' ] )
+  fb.full_clean()
+  fb.save()
+
+  sb = StructureBluePrint( name='testing2', description='testing2' )
+  sb.full_clean()
+  sb.save()
+  sb.foundation_blueprint_list.add( fb )
+
+  f1 = Foundation( locator='testf', site=s1, blueprint=fb )
+  f1.full_clean()
+  f1.save()
+
+  primary = RealNetworkInterface( foundation=f1, name='ens1', physical_location='eth0', network=n1, is_provisioning=True )
+  primary.full_clean()
+  primary.save()
+
+  secondary1 = RealNetworkInterface( foundation=f1, name='ens2', physical_location='eth1', network=n1 )
+  secondary1.full_clean()
+  secondary1.save()
+
+  secondary2 = RealNetworkInterface( foundation=f1, name='ens3', physical_location='eth2', network=n1 )
+  secondary2.full_clean()
+  secondary2.save()
+
+  st1 = Structure( hostname='tests', foundation=f1, blueprint=sb, site=s1 )
+  st1.full_clean()
+  st1.save()
+
+  ab = AddressBlock( site=s1, name='testing', subnet='192.168.15.0', prefix=24, gateway_offset=1 )
+  ab.full_clean()
+  ab.save()
+
+  ai1 = AggregatedNetworkInterface( structure=st1, name='dmz', network=n1, primary_interface=primary )
+  ai1.full_clean()
+  ai1.save()
+
+  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [] }
+
+  ai1.secondary_interfaces.add( secondary1 )
+
+  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2' ] }
+
+  ai1.secondary_interfaces.add( secondary2 )
+
+  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2', 'ens3' ] }
+
+  assert st1.getAddressList( primary ) == []
+  assert st1.getAddressList( secondary1 ) == []
+  assert st1.getAddressList( secondary2 ) == []
+  assert st1.getAddressList( ai1 ) == []
+
+  a = Address( address_block=ab, offset=23, is_primary=True, interface_name='ens1', networked=st1 )
+  a.full_clean()
+  a.save()
+
+  assert st1.getAddressList( primary ) == [ { 'address': '192.168.15.23', 'alias_index': None, 'auto': True, 'gateway': '192.168.15.1', 'netmask': '255.255.255.0', 'prefix': 24, 'primary': True, 'subnet': '192.168.15.0' } ]
+  assert st1.getAddressList( secondary1 ) == []
+  assert st1.getAddressList( secondary2 ) == []
+  assert st1.getAddressList( ai1 ) == []
+
+  a.interface_name = 'eth0'
+  a.full_clean()
+  a.save()
+
+  assert st1.getAddressList( primary ) == []
+  assert st1.getAddressList( secondary1 ) == []
+  assert st1.getAddressList( secondary2 ) == []
+  assert st1.getAddressList( ai1 ) == []
+
+  a.interface_name = 'ens3'
+  a.full_clean()
+  a.save()
+
+  assert st1.getAddressList( primary ) == []
+  assert st1.getAddressList( secondary1 ) == []
+  assert st1.getAddressList( secondary2 ) == [ { 'address': '192.168.15.23', 'alias_index': None, 'auto': True, 'gateway': '192.168.15.1', 'netmask': '255.255.255.0', 'prefix': 24, 'primary': True, 'subnet': '192.168.15.0' } ]
+  assert st1.getAddressList( ai1 ) == []
+
+  a.interface_name = 'dmz'
+  a.full_clean()
+  a.save()
+
+  assert st1.getAddressList( primary ) == []
+  assert st1.getAddressList( secondary1 ) == []
+  assert st1.getAddressList( secondary2 ) == []
+  assert st1.getAddressList( ai1 ) == [ { 'address': '192.168.15.23', 'alias_index': None, 'auto': True, 'gateway': '192.168.15.1', 'netmask': '255.255.255.0', 'prefix': 24, 'primary': True, 'subnet': '192.168.15.0' } ]
+
+  # TODO: add NetworkAddressBlock(s) to test vlan
+  # TODO: test provisioning interface
+  # TODO: test primary interface
+  # TODO: test alias_index and provisioning/primary interface

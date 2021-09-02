@@ -277,7 +277,7 @@ class Job extends React.Component
             <TableCell>Dates</TableCell>
           </TableHead>
           { this.state.jobF_list.map( ( item ) => (
-            <TableRow key={ item.id } style="backgroud">
+            <TableRow key={ item.id }>
               <TableCell numeric><Link to={ '/job/f/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.script }</TableCell>
               <TableCell><Link to={ '/foundation/' + item.foundation }>{ item.foundation }</Link></TableCell>

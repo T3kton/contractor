@@ -91,7 +91,7 @@ class Networked( models.Model ):
       return self.address_set.get( interface_name=interface_name, is_primary=True )
     except Address.DoesNotExist:
       try:
-        return self.address_set.filter( interface_name=interface_name )[ 0 ]
+        return self.address_set.filter( interface_name=interface_name ).order_by( 'alias_index' )[ 0 ]
       except IndexError:
         pass
       return None
@@ -119,6 +119,22 @@ class Networked( models.Model ):
       return self.hostname
 
     return '{0}.{1}'.format( self.hostname, zone.fqdn )
+
+  def getAddressList( self, interface ):
+    result = []
+
+    for address in self.address_set.filter( interface_name=interface.name ).order_by( 'alias_index' ):
+      address_config = address.as_dict
+      try:
+        nab = NetworkAddressBlock.objects.get( network=interface.network, address_block=address.address_block )
+        if nab.vlan is not None:
+          address_config[ 'vlan' ] = nab.vlan
+      except NetworkAddressBlock.DoesNotExist:
+        pass
+
+      result.append( address_config )
+
+    return result
 
   @cinp.check_auth()
   @staticmethod
@@ -442,22 +458,9 @@ class NetworkInterface( models.Model ):
 
   @property
   def config( self ):
-    result = { 'name': self.name, 'network': self.network.name, 'address_list': [] }
+    result = { 'name': self.name, 'network': self.network.name }
     if self.network.mtu is not None:
       result[ 'mtu' ] = self.network.mtu
-
-    try:
-      structure = self.foundation.structure
-    except AttributeError:
-      structure = None
-
-    if structure is not None:
-      for address in structure.address_set.filter( interface_name=self.name ).order_by( 'alias_index' ):
-        nab = NetworkAddressBlock( network=self.network, address_block=address.address_block )
-        address_config = address.as_dict
-        if nab.vlan is not None:
-          address_config[ 'vlan' ] = nab.vlan
-        result[ 'address_list' ].append( address_config )
 
     return result
 
@@ -469,7 +472,7 @@ class NetworkInterface( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not name_regex.match( self.name ):
+    if self.name and not name_regex.match( self.name ):
       errors[ 'name' ] = 'invalid'
 
     if errors:
@@ -584,15 +587,16 @@ class AbstractNetworkInterface( NetworkInterface ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    try:
-      if self.pk:
-        AbstractNetworkInterface.objects.filter( ~Q( pk=self.pk ) ).get( name=self.name, structure=self.structure )
-      else:
-        AbstractNetworkInterface.objects.get( name=self.name, structure=self.structure )
+    if self.structure_id:
+      try:
+        if self.pk:
+          AbstractNetworkInterface.objects.filter( ~Q( pk=self.pk ) ).get( name=self.name, structure=self.structure )
+        else:
+          AbstractNetworkInterface.objects.get( name=self.name, structure=self.structure )
 
-      errors[ 'structure' ] = 'interface name "{0}" allready in use for structure'.format( self.name )
-    except AbstractNetworkInterface.DoesNotExist:
-      pass
+        errors[ 'structure' ] = 'interface name "{0}" allready in use for structure'.format( self.name )
+      except AbstractNetworkInterface.DoesNotExist:
+        pass
 
     if errors:
       raise ValidationError( errors )
@@ -623,7 +627,7 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
   @property
   def config( self ):
     result = super().config
-    result[ 'primary' ] = self.primary_interface.name
+    result[ 'primary' ] = self.primary_interface.name  # name b/c this is inside the OS
     result[ 'secondary' ] = [ i.name for i in self.secondary_interfaces.all() ]
 
     return result
@@ -687,8 +691,6 @@ def aggregated_secondary_changed( sender, instance, action, pk_set, **kwards ):
       structure = iface.structure
     except AttributeError:
       structure = None
-
-    print( foundation, structure, instance.structure.foundation, instance.structure )
 
     if foundation is not None and instance.structure.foundation != foundation:
       errors[ 'secondary_interfaces' ] = 'must belong to the same foundation/structure as this interface'
