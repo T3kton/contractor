@@ -1,3 +1,10 @@
+contractor (0.10.0-1) focal; urgency=medium
+
+  * updated handeling of abstract and aggergated network interfaces
+  * ui updates
+
+ -- Peter Howe <pnhowe@gmail.com>  Thu, 02 Sep 2021 13:33:17 -0600
+
 contractor (0.9.0-1) focal; urgency=medium
 
   * tscript: goto fixes

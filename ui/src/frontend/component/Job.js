@@ -281,7 +281,7 @@ class Job extends React.Component
               <TableCell numeric><Link to={ '/job/f/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.script }</TableCell>
               <TableCell><Link to={ '/foundation/' + item.foundation }>{ item.foundation }</Link></TableCell>
-              <TableCell>{ item.status[0][0] }%&nbsp;{ item.message }<br/>{ item.status.map( this.render_status ) }</TableCell>
+              <TableCell>{ item.message }<br/>{ item.status.map( this.render_status ) }</TableCell>
               <TableCell>{ item.state }</TableCell>
               <TableCell><strong>Created:</strong>&nbsp;{ item.created }<br/><strong>Updated:</strong>&nbsp;{ item.updated }</TableCell>
             </TableRow>

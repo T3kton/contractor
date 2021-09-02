@@ -2,7 +2,7 @@ import os
 
 from django.conf import settings
 
-from contractor.lib.ip import IpIsV4
+from contractor.lib.ip import StrToIp, IpIsV4
 from contractor.Utilities.models import Networked
 from contractor.Directory.models import Entry
 
@@ -78,7 +78,7 @@ def _getNetworkedEntries( networked, site_list ):
     result[ 'RTXT' ].append( { 'value': ip_addr, 'target': '{0}.{1}'.format( full_name, networked.fqdn ) } )
     result[ 'PTR' ].append( { 'value': ip_addr, 'target': networked.fqdn } )
     result[ 'TXT' ].append( { 'name': '{0}.{1}'.format( full_name, networked.hostname ), 'target': networked.foundation.locator } )
-    if IpIsV4( ip_addr ):
+    if IpIsV4( StrToIp( ip_addr ) ):
       result[ 'A' ].append( { 'name': '{0}.{1}'.format( full_name, networked.hostname ), 'address': ip_addr } )
     else:
       result[ 'AAAA' ].append( { 'name': '{0}.{1}'.format( full_name, networked.hostname ), 'address': ip_addr } )
