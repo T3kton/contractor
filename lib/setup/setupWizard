@@ -49,7 +49,8 @@ if not bind_configured and os.getuid() != 0:
   sys.stdin.readline()
 
 parser = argparse.ArgumentParser( description='Contractor Setup Wizard, must be run as root' )
-parser.add_argument( '--root-password', help='password to use for the root user, if not specified it will be prompted for' )
+parser.add_argument( '--superuser-username', help='username for the superuser, default=root', default='root' )
+parser.add_argument( '--superuser-password', help='password to use for the superuser user, if not specified it will be prompted for' )
 parser.add_argument( '--no-ip-reservation', help='do not reserve static and dynamic ips', action='store_true' )
 parser.add_argument( '--site-name', help='name of the initial site to create, default: site1', metavar='SITE', default='site1' )
 parser.add_argument( '--site-domain', help='domain name of the initial site to create, default: site1.test', metavar='DOMAIN', default='site1.test' )
@@ -57,6 +58,7 @@ parser.add_argument( '--dns-server', help='set the dns server setting for the in
 parser.add_argument( '--ntp-server', help='set the ntp server setting for the initial site, default: ntp.ubuntu.com', metavar='HOST', default='ntp.ubuntu.com' )
 parser.add_argument( '--proxy-server', help='set the http proxy (mirror_proxy) setting for the initial site', metavar='HOST' )
 parser.add_argument( '--primary-interface', help='which interface to use as the primary interface for the contractor structure, if not specified it will be auto detected', metavar='INTERFACE' )
+parser.add_argument( '--contractor-cnames', help='comma (,) delimited list of cnames for the contractor host/ip, default="static,proxy"', default='static,proxy' )
 
 args = parser.parse_args()
 
@@ -64,11 +66,11 @@ if Plot.objects.all().count() > 0:
   print( 'Setup has allready run, Aborting.' )
   sys.exit( 2 )
 
-if args.root_password:
-  root_password = args.root_password
+if args.superuser_password:
+  superuser_password = args.superuser_password
 else:
-  print( 'Please Specify the password to use for the root user' )
-  root_password = getpass.getpass()
+  print( 'Please Specify the password to use for the superuser("{0}") user'.format( args.superuser_username) )
+  superuser_password = getpass.getpass()
 
 print( 'Getting network config...' )
 
@@ -210,7 +212,7 @@ nab = NetworkAddressBlock( network=ntwk, address_block=addr_block, vlan=contract
 nab.full_clean()
 nab.save()
 
-print( 'creating contractor host...' )
+print( '* Creating contractor host...' )
 fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator='contractor' )
 fdn.full_clean()
 fdn.save()
@@ -231,7 +233,7 @@ addr = Address( networked=strct, address_block=addr_block, interface_name=contra
 addr.full_clean()
 addr.save()
 
-for hostname in ( 'contractor', 'static', 'proxy' ):
+for hostname in [ 'contractor' ] + [ i.strip() for i in args.contractor_cnames.split() ]:
   e = Entry( type='CNAME' )
   e.name = hostname
   e.target = 'contractor.{0}.'.format( args.site_domain )
@@ -261,10 +263,10 @@ if not args.no_ip_reservation:
     addr.save()
 
 if os.getuid() == 0:
-  print( 'Generating Bind files...' )
+  print( '* Generating Bind files...' )
   subprocess.check_call( [ '/usr/lib/contractor/cron/genDNS' ] )
 
-print( 'Configuring Bind...' )
+print( '* Configuring Bind...' )
 if not bind_configured:
   if os.getuid() == 0:
     fp = open( '/etc/bind/named.conf.local', 'w' )
@@ -292,19 +294,19 @@ if not bind_configured:
   """.format( contractor_dns ) )
     fp.close()
 
-print( 'Creating root user...' )
-User.objects.create_superuser( username='root', password=root_password, email='root@{0}'.format( args.site_domain ) )
+print( '* Creating superuser("{0}") user...'.format( args.superuser_username ) )
+User.objects.create_superuser( username=args.superuser_username, password=superuser_password, email='{0}@{1}'.format( args.superuser_username, args.site_domain ) )
 
-print( 'Create bootstrap user...' )
+print( '* Create bootstrap user...' )
 User.objects.create_user( username='bootstrap', password='bootstrap', email='bootstrap@contractor' )
 # user.user_permissions.add( lookup_permission_list( [ ] ) )
 
-print( 'Create subcontractor user...' )
+print( '* Create subcontractor user...' )
 user = User.objects.create_user( username='subcontractor', password='subcontractor', email='subcontractor@contractor' )
 user.user_permissions.set( lookup_permission_list( [ 'Site.view_site'
                                                      ] ) )
 
-print( 'Creating groups...' )
+print( '* Creating groups...' )
 group = Group( name='worker' )
 group.full_clean()
 group.save()

@@ -1,3 +1,9 @@
+contractor (0.11.0-1) focal; urgency=medium
+
+  * setupwizzard improvements
+
+ -- Peter Howe <pnhowe@gmail.com>  Mon, 06 Sep 2021 15:24:22 -0600
+
 contractor (0.10.0-1) focal; urgency=medium
 
   * updated handeling of abstract and aggergated network interfaces
