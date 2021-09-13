@@ -698,6 +698,9 @@ def aggregated_secondary_changed( sender, instance, action, pk_set, **kwards ):
     if structure is not None and instance.structure != structure:
       errors[ 'secondary_interfaces' ] = 'must belong to the same foundation/structure as this interface'
 
+    if instance.primary_interface.network != iface.network:
+      errors[ 'secondary_interfaces' ] = 'must belong to the same network as the primary_interface'
+
   if instance.primary_interface.pk in pk_set:
     errors[ 'primary_interface' ] = 'primary can not be one of the secondaries'
 

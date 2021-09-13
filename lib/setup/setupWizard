@@ -199,9 +199,16 @@ ntwk.save()
 
 if contractor_gateway is not None:
   gateway_offset = StrToIp( contractor_gateway ) - StrToIp( network_subnet )
-  if gateway_offset < 1 or gateway_offset > 254:
+  if network_prefix == 31 and gateway_offset != 0:
     print( 'Bad caculated gateway offset: "{0}"'.format( gateway_offset ) )
+    sys.exit( 1 )
+
+  elif gateway_offset < 1 or gateway_offset > 254:
+    print( 'Bad caculated gateway offset: "{0}"'.format( gateway_offset ) )
+    sys.exit( 1 )
+
   addr_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=gateway_offset, prefix=network_prefix, name='main' )
+
 else:
   addr_block = AddressBlock( site=s1, subnet=network_subnet, prefix=network_prefix, name='main' )
 
@@ -233,7 +240,9 @@ addr = Address( networked=strct, address_block=addr_block, interface_name=contra
 addr.full_clean()
 addr.save()
 
-for hostname in [ 'contractor' ] + [ i.strip() for i in args.contractor_cnames.split() ]:
+for hostname in [ 'contractor' ] + [ i.strip() for i in args.contractor_cnames.split( ',' ) ]:
+  hostname = hostname.strip()
+  print( '* Creating cname "{0}"...'.format( hostname ) )
   e = Entry( type='CNAME' )
   e.name = hostname
   e.target = 'contractor.{0}.'.format( args.site_domain )
@@ -241,7 +250,7 @@ for hostname in [ 'contractor' ] + [ i.strip() for i in args.contractor_cnames.s
   e.save()
 
 if not args.no_ip_reservation:
-  print( 'reserving address offsets from 2 - 20...')
+  print( '* Reserving address offsets from 2 - 20...')
   for i in range( 2, 21 ):
     addr = ReservedAddress( address_block=addr_block, offset=i, reason='network reserved' )
     try:
@@ -252,7 +261,7 @@ if not args.no_ip_reservation:
 
     addr.save()
 
-  print( 'using offsets 21 - 29 for dynamic pool...' )
+  print( '* Using offsets 21 - 29 for dynamic pool...' )
   for i in range( 21, 30 ):
     addr = DynamicAddress( address_block=addr_block, offset=i )
     try:

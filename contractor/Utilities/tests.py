@@ -451,9 +451,13 @@ def test_aggergatednetworkinterface():
   s1.full_clean()
   s1.save()
 
-  n1 = Network( name='test', site=s1 )
+  n1 = Network( name='test1', site=s1 )
   n1.full_clean()
   n1.save()
+
+  n2 = Network( name='test2', site=s1 )
+  n2.full_clean()
+  n2.save()
 
   fb = FoundationBluePrint( name='testing', description='testing', foundation_type_list=[ 'Unknown' ] )
   fb.full_clean()
@@ -525,7 +529,7 @@ def test_aggergatednetworkinterface():
   ai1.save()
   ai1.full_clean()  # test the self.pk part of clean
 
-  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test1', 'primary': 'ens1', 'secondary': [] }
 
   ai2 = AggregatedNetworkInterface( structure=st1, name='dmz', network=n1, primary_interface=primary )
   with pytest.raises( ValidationError ):
@@ -537,11 +541,11 @@ def test_aggergatednetworkinterface():
 
   ai1.secondary_interfaces.add( secondary1 )
 
-  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2' ] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test1', 'primary': 'ens1', 'secondary': [ 'ens2' ] }
 
   ai1.secondary_interfaces.add( secondary2 )
 
-  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2', 'ens3' ] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test1', 'primary': 'ens1', 'secondary': [ 'ens2', 'ens3' ] }
 
   with transaction.atomic():  # b/c we throw an exception in m2m_change, the transaction dosen't close, we have to force this ourselves
     with pytest.raises( ValidationError ):
@@ -580,6 +584,17 @@ def test_aggergatednetworkinterface():
   with transaction.atomic():
     with pytest.raises( ValidationError ):
       ai2.secondary_interfaces.add( a_secondary_2 )
+
+  ai2.full_clean()
+  ai2.secondary_interfaces.remove( a_secondary )
+  ai2.full_clean()
+  a_secondary.network = n2
+  a_secondary.full_clean()
+  a_secondary.save()
+
+  with transaction.atomic():
+    with pytest.raises( ValidationError ):
+      ai2.secondary_interfaces.add( a_secondary )
 
 
 @pytest.mark.django_db
