@@ -1,3 +1,10 @@
+contractor (0.12.0-1) focal; urgency=medium
+
+  * setupwizzard improvements
+  * aggergated interfaces fix
+
+ -- Peter Howe <pnhowe@gmail.com>  Mon, 13 Sep 2021 12:04:33 -0600
+
 contractor (0.11.0-1) focal; urgency=medium
 
   * setupwizzard improvements
