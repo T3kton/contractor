@@ -42,6 +42,10 @@ def _wait_for_job( job_id ):
       return
 
     print( 'Curent status "{0}" at {1}%, Waiting...'.format( job.state, job.progress ) )
+    if job.state == 'error':
+      print( 'Job Failed, bailing' )
+      sys.exit( 1 )
+
     time.sleep( 10 )
 
 
@@ -321,6 +325,7 @@ Vars:
 
   print( 'unknown boss task' )
   sys.exit( 1 )
+
 
 if __name__ == '__main__':
   main()

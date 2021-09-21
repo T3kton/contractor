@@ -387,7 +387,7 @@ class Network( models.Model ):
 class NetworkAddressBlock( models.Model ):
   network = models.ForeignKey( Network, on_delete=models.CASCADE )
   address_block = models.ForeignKey( AddressBlock, on_delete=models.CASCADE )
-  vlan = models.IntegerField( blank=True, null=True )  # vlan = don't specify vlan, 0: Untagged/Native VLAN, 4095: Trunked
+  vlan = models.IntegerField( blank=True, null=True )  # 0: Untagged/Native VLAN, 4095: Trunked, None/null == 0
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 

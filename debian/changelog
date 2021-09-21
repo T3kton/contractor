@@ -1,3 +1,9 @@
+contractor (0.13.0-1) focal; urgency=medium
+
+  * setupzzard installs initial plugins now
+
+ -- Peter Howe <pnhowe@gmail.com>  Tue, 21 Sep 2021 10:41:53 -0600
+
 contractor (0.12.1-1) focal; urgency=medium
 
   * setupwizzard improvements

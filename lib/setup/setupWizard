@@ -11,8 +11,12 @@ import argparse
 import subprocess
 import getpass
 
+from collections import OrderedDict
+from django.apps import apps
+from django.conf import settings
 from django.contrib.auth.models import User, Group, Permission
 from django.core.exceptions import ValidationError
+
 from contractor.lib.ip import CIDRSubnet, StrToIp, IpToStr
 from contractor.BluePrint.models import FoundationBluePrint, StructureBluePrint
 from contractor.Building.models import Structure
@@ -20,7 +24,6 @@ from contractor.Site.models import Site
 from contractor.Survey.models import Plot
 from contractor.Directory.models import Zone, Entry
 from contractor.Utilities.models import Network, RealNetworkInterface, AddressBlock, Address, ReservedAddress, DynamicAddress, NetworkAddressBlock
-from contractor.plugins.Manual.models import ManualFoundation  # TODO: should Manual plugin be internal?  kind of a pain to have to have that plugin enabled before setup wizard is run, lots of work arrounds in pluginctl to compensate
 
 
 def lookup_permission_list( permission_list ):
@@ -36,18 +39,6 @@ def lookup_permission_list( permission_list ):
   return result
 
 
-bind_configured = False
-if os.path.exists( '/etc/bind/named.conf.local' ):
-  for line in open( '/etc/bind/named.conf.local', 'r' ).readlines():
-    if line.strip() == 'include "/etc/bind/contractor/dns.master";':
-      bind_configured = True
-      break
-
-if not bind_configured and os.getuid() != 0:
-  print( 'WARNING!!! setupWizard was not run as root, will not be able to configure bind.' )
-  print( 'press <enter> to continue, or ctl-c to abort' )
-  sys.stdin.readline()
-
 parser = argparse.ArgumentParser( description='Contractor Setup Wizard, must be run as root' )
 parser.add_argument( '--superuser-username', help='username for the superuser, default=root', default='root' )
 parser.add_argument( '--superuser-password', help='password to use for the superuser user, if not specified it will be prompted for' )
@@ -58,13 +49,39 @@ parser.add_argument( '--dns-server', help='set the dns server setting for the in
 parser.add_argument( '--ntp-server', help='set the ntp server setting for the initial site, default: ntp.ubuntu.com', metavar='HOST', default='ntp.ubuntu.com' )
 parser.add_argument( '--proxy-server', help='set the http proxy (mirror_proxy) setting for the initial site', metavar='HOST' )
 parser.add_argument( '--primary-interface', help='which interface to use as the primary interface for the contractor structure, if not specified it will be auto detected', metavar='INTERFACE' )
+parser.add_argument( '--network-name', help='name of the network that is created, default="main"', default='main' )
 parser.add_argument( '--contractor-cnames', help='comma (,) delimited list of cnames for the contractor host/ip, default="static,proxy"', default='static,proxy' )
+parser.add_argument( '--additional-plugin', help='Additional plugins to load, can be specified more than once, by default just "manual" is loaded, example:"vcenter"', action='append' )
+parser.add_argument( '--repo-name', help='name of the repo to install plugins from, default="internal"', default='internal' )
 
 args = parser.parse_args()
 
 if Plot.objects.all().count() > 0:
   print( 'Setup has allready run, Aborting.' )
   sys.exit( 2 )
+
+bind_configured = False
+if os.path.exists( '/etc/bind/named.conf.local' ):
+  for line in open( '/etc/bind/named.conf.local', 'r' ).readlines():
+    if line.strip() == 'include "/etc/bind/contractor/dns.master";':
+      bind_configured = True
+      break
+
+manual_loaded = False
+try:
+  FoundationBluePrint.objects.get( pk='manual-foundation-base' )
+  manual_loaded = True
+except FoundationBluePrint.DoesNotExist:
+  pass
+
+if not manual_loaded and os.getuid() != 0:
+  print( 'setupWizard was not run as root, and the required manual plugin not loaded.' )
+  sys.exit( 1 )
+
+if not bind_configured and os.getuid() != 0:
+  print( 'WARNING!!! setupWizard was not run as root, will not be able to configure bind.' )
+  print( 'press <enter> to continue, or ctl-c to abort' )
+  sys.stdin.readline()
 
 if args.superuser_password:
   superuser_password = args.superuser_password
@@ -144,7 +161,7 @@ if network_prefix == 31 and gateway_offset != 0:
   print( 'Bad caculated gateway offset: "{0}" for prefix of 31'.format( gateway_offset ) )
   sys.exit( 1 )
 
-if network_prefix < 30 and gateway_offset < 1 or gateway_offset > 254:
+if network_prefix < 30 and ( gateway_offset < 1 or gateway_offset > 254 ):
   print( 'Bad caculated gateway offset: "{0}"'.format( gateway_offset ) )
   sys.exit( 1 )
 
@@ -168,16 +185,35 @@ print( 'NTP Server        {0}'.format( args.ntp_server ) )
 if args.proxy_server is not None:
   print( 'Proxy Server      {0}'.format( args.proxy_server  ) )
 
+if os.getuid() == 0:
+  print( '* Installing packages...')
+  for package in [ 'contractor-os-base', 'contractor-plugins-manual' ] + [ 'contractor-plugins-{0}'.format( i ) for i in args.additional_plugin ]:
+    print( '   {0}'.format( package ) )
+    try:
+      subprocess.check_call( [ '/usr/bin/respkg', '-r', args.repo_name, package ] )
+    except subprocess.CalledProcessError:
+      print( 'Error installing' )
+      sys.exit( 1 )
+
+
+settings.INSTALLED_APPS += ( 'contractor.plugins.Manual', )
+apps.app_configs = OrderedDict()
+apps.apps_ready = apps.models_ready = apps.loading = apps.ready = False
+apps.clear_cache()
+apps.populate( settings.INSTALLED_APPS )
+
+from contractor.plugins.Manual.models import ManualFoundation
+
 fbp_manual = FoundationBluePrint.objects.get( pk='manual-foundation-base' )
 sbp_xenial = StructureBluePrint.objects.get( pk='manual-structure-base' )
 
 print()
-print( 'Creating test plot...' )
+print( '* Creating test plot...' )
 p1 = Plot( name='test', corners='Your testing area' )
 p1.full_clean()
 p1.save()
 
-print( 'Creating site "{0}" ({1})...'.format( args.site_name, args.site_domain ) )
+print( '* Creating site "{0}" ({1})...'.format( args.site_name, args.site_domain ) )
 parent = None
 for item in args.site_domain.split( '.' )[::-1]:
   zone = Zone()
@@ -202,15 +238,15 @@ if args.proxy_server is not None:
 s1.full_clean()
 s1.save()
 
-print( 'creating network...' )
-ntwk = Network( name='main', site=s1 )
+print( '* Creating network...' )
+ntwk = Network( name=args.network_name, site=s1 )
 ntwk.full_clean()
 ntwk.save()
 
 if contractor_gateway is not None:
-  addr_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=gateway_offset, prefix=network_prefix, name='main' )
+  addr_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=gateway_offset, prefix=network_prefix, name=args.network_name )
 else:
-  addr_block = AddressBlock( site=s1, subnet=network_subnet, prefix=network_prefix, name='main' )
+  addr_block = AddressBlock( site=s1, subnet=network_subnet, prefix=network_prefix, name=args.network_name )
 
 addr_block.full_clean()
 addr_block.save()
