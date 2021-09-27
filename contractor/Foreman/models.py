@@ -32,7 +32,7 @@ class ForemanException( ValueError ):
 
 @cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'can_start', ) )
 class BaseJob( models.Model ):
-  JOB_STATE_CHOICES = ( 'queued', 'waiting', 'done', 'paused', 'error', 'abortedprogress' )
+  JOB_STATE_CHOICES = ( 'queued', 'waiting', 'done', 'paused', 'error', 'aborted' )
   site = models.ForeignKey( Site, editable=False, on_delete=models.CASCADE )
   state = models.CharField( max_length=10, choices=[ ( i, i ) for i in JOB_STATE_CHOICES ] )
   status = JSONField( default=[], blank=True )

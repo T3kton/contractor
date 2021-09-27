@@ -589,7 +589,7 @@ class AbstractNetworkInterface( NetworkInterface ):
     errors = {}
     if self.structure_id:
       try:
-        if self.pk:
+        if self.pk is not None:
           AbstractNetworkInterface.objects.filter( ~Q( pk=self.pk ) ).get( name=self.name, structure=self.structure )
         else:
           AbstractNetworkInterface.objects.get( name=self.name, structure=self.structure )
@@ -657,7 +657,7 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
     if structure is not None and self.structure != structure:
       errors[ 'primary_interface' ] = 'must belong to the same foundation/structure as this interface'
 
-    if self.pk:
+    if self.pk is not None:
       if self.primary_interface.pk in self.secondary_interfaces.all().values_list( 'pk', flat=True ):
         errors[ 'primary_interface' ] = 'primary can not be one of the secondaries'
 
