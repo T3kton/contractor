@@ -1,9 +1,10 @@
+import datetime
 from django.db import models
 from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import name_regex
+from contractor.fields import name_regex, MapField
 from contractor.Building.models import Foundation
 from contractor.BluePrint.models import PXE
 from contractor.Survey.lib import foundationLookup
@@ -61,6 +62,8 @@ class Cartographer( models.Model ):
   identifier = models.CharField( max_length=64, primary_key=True )
   foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT, null=True, blank=True )
   message = models.CharField( max_length=200 )
+  info_map = MapField( null=True, blank=True )
+  last_checkin = models.DateTimeField( null=True, blank=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -74,6 +77,15 @@ class Cartographer( models.Model ):
       iface.pxe = pxe
       iface.full_clean()
       iface.save()
+
+  @cinp.action( paramater_type_list=[ { 'type': 'Model', 'model': Foundation } ] )
+  def assign( self, foundation ):
+    if foundation.state != 'planned':
+      raise SurveyException( 'FOUNDATION_INVALID_STATE', 'Foundation is not in a valid state for assigning' )
+
+    self.foundation = foundation
+    self.full_clean()
+    self.save()
 
   @cinp.action( paramater_type_list=[ 'String' ] )
   @staticmethod
@@ -96,6 +108,11 @@ class Cartographer( models.Model ):
 
   @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ 'Map' ] )
   def lookup( self, info_map=None ):
+    self.info_map = info_map
+    self.last_checkin = datetime.datetime.utcnow()
+    self.full_clean()
+    self.save()
+
     if self.foundation:
       self._setFoundationPXE()
       return { 'matched_by': 'Pre-Set', 'locator': self.foundation.locator }
@@ -134,12 +151,19 @@ class Cartographer( models.Model ):
       return False
 
     if verb == 'CALL':
-      return user.username == 'bootstrap'
+      if action in ( 'register', 'lookup', 'setMessage', 'done' ):
+        return user.username == 'bootstrap'
+
+      if action == 'assign':
+        return user.has_perm( 'Survey.can_assign_foundation' )
 
     return True
 
   class Meta:
     default_permissions = ( 'delete', 'view' )
+    permissions = (
+                    ( 'can_assign_foundation', 'Can Assign Foundation to Cartographer' ),
+                  )
 
   def __str__( self ):
     return 'Cartographer "{0}"'.format( self.identifier )

@@ -364,6 +364,7 @@ group.permissions.set( lookup_permission_list( [ 'Building.can_create_foundation
                                                  'Foreman.can_structure_job',
                                                  'Foreman.can_dependency_job',
                                                  'Survey.delete_cartographer',
+                                                 'Survey.can_assign_foundation'
                                                  ] ) )
 
 group = Group( name='builder' )
