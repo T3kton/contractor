@@ -27,21 +27,24 @@ def mapFieldConvert( value ):
   return value
 
 
-# No this isn't the full solution, for now we are punting and putting anything
-# that is a parent first, eventually we need to deal with parents with parents
-# that need to be in the right order
 def bluePrintOrder( entity_map ):
-  parent_list = []
-  entity_list = set( entity_map.keys() )
+  result = []
+  entity_set = set( entity_map.keys() )
+  todo_list = list( entity_map.keys() )
 
-  for name in entity_map:
-    parent_list += entity_map[ name ].get( 'parents', [] )
+  while todo_list:
+    done_set = set( result )
+    for name in todo_list:
+      required_set = set( entity_map[ name ].get( 'parents', [] ) ).intersection( entity_set )
+      if not required_set - done_set:
+        result.append( name )
+        del todo_list[ todo_list.index( name ) ]
+        break
 
-  parent_list = set( parent_list )
+    else:
+      raise Exception( 'Got stuck looking for parents' )
 
-  parent_list = parent_list.intersection( entity_list )
-
-  return list( parent_list ) + list( entity_list - parent_list )
+  return result
 
 
 def loadBluePrintCommon( blueprint, target ):

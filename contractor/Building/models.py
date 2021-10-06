@@ -126,6 +126,10 @@ class Foundation( models.Model ):
       pass
 
     for iface in self.networkinterface_set.all():
+      iface = iface.subclass
+      if iface.type == 'Real':
+        iface.pxe = None
+
       iface.mac = None
       iface.full_clean()
       iface.save()
