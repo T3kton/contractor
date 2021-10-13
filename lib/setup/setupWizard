@@ -43,6 +43,7 @@ parser = argparse.ArgumentParser( description='Contractor Setup Wizard, must be 
 parser.add_argument( '--superuser-username', help='username for the superuser, default=root', default='root' )
 parser.add_argument( '--superuser-password', help='password to use for the superuser user, if not specified it will be prompted for' )
 parser.add_argument( '--no-ip-reservation', help='do not reserve static and dynamic ips', action='store_true' )
+parser.add_argument( '--contractor-hostname', help='hostname to assign to the contractor host, default: contractor', metavar='HOST', default='contractor' )
 parser.add_argument( '--site-name', help='name of the initial site to create, default: site1', metavar='SITE', default='site1' )
 parser.add_argument( '--site-domain', help='domain name of the initial site to create, default: site1.test', metavar='DOMAIN', default='site1.test' )
 parser.add_argument( '--dns-server', help='set the dns server setting for the initial site, otherwise it will be set to the detected ip', metavar='IP ADDRESS' )
@@ -50,7 +51,7 @@ parser.add_argument( '--ntp-server', help='set the ntp server setting for the in
 parser.add_argument( '--proxy-server', help='set the http proxy (mirror_proxy) setting for the initial site', metavar='HOST' )
 parser.add_argument( '--primary-interface', help='which interface to use as the primary interface for the contractor structure, if not specified it will be auto detected', metavar='INTERFACE' )
 parser.add_argument( '--network-name', help='name of the network that is created, default="main"', default='main' )
-parser.add_argument( '--contractor-cnames', help='comma (,) delimited list of cnames for the contractor host/ip, default="static,proxy"', default='static,proxy' )
+parser.add_argument( '--contractor-cnames', help='comma (,) delimited list of cnames for the contractor host/ip, default="static,proxy", NOTE: "contractor" will also be created as a CNAME', default='static,proxy' )
 parser.add_argument( '--additional-plugin', help='Additional plugins to load, can be specified more than once, by default just "manual" is loaded, example:"vcenter"', action='append' )
 parser.add_argument( '--repo-name', help='name of the repo to install plugins from, default="internal"', default='internal' )
 
@@ -256,8 +257,8 @@ nab = NetworkAddressBlock( network=ntwk, address_block=addr_block, vlan=contract
 nab.full_clean()
 nab.save()
 
-print( '* Creating contractor host...' )
-fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator='contractor' )
+print( '* Creating contractor({0}) host...'.format( args.contractor_hostname ) )
+fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator=args.contractor_hostname )
 fdn.full_clean()
 fdn.save()
 fdn.setBuilt()
@@ -268,7 +269,7 @@ iface.physical_location = contractor_iface
 iface.full_clean()
 iface.save()
 
-strct = Structure( site=s1, blueprint=sbp_xenial, hostname='contractor', foundation=fdn )
+strct = Structure( site=s1, blueprint=sbp_xenial, hostname=args.contractor_hostname, foundation=fdn )
 strct.full_clean()
 strct.save()
 strct.setBuilt()
