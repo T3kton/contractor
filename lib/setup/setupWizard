@@ -283,7 +283,7 @@ for hostname in [ 'contractor' ] + [ i.strip() for i in args.contractor_cnames.s
   print( '* Creating cname "{0}"...'.format( hostname ) )
   e = Entry( type='CNAME' )
   e.name = hostname
-  e.target = 'contractor.{0}.'.format( args.site_domain )
+  e.target = '{0}.{1}.'.format( args.contractor_hostname, args.site_domain )
   e.full_clean()
   e.save()
 
