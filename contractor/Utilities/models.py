@@ -579,6 +579,11 @@ class AbstractNetworkInterface( NetworkInterface ):
   def type( self ):
     return 'Abstract'
 
+  @cinp.list_filter( name='structure', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ] )
+  @staticmethod
+  def filter_structure( structure ):
+    return AbstractNetworkInterface.objects.filter( foundation=structure )
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
@@ -631,6 +636,11 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
     result[ 'secondary' ] = [ i.name for i in self.secondary_interfaces.all() ]
 
     return result
+
+  @cinp.list_filter( name='member', paramater_type_list=[ { 'type': 'Model', 'model': NetworkInterface } ] )
+  @staticmethod
+  def filter_member( interface ):
+    return AggregatedNetworkInterface.objects.filter( Q( primary_interface=interface ) | Q( secondary_interfaces=interface ) )
 
   @cinp.check_auth()
   @staticmethod
