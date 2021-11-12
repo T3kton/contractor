@@ -112,7 +112,7 @@ def test_job_saving_loading( mocker ):
   job.save()
 
 
-@pytest.mark.timeout( 20, method='thread' )
+@pytest.mark.timeout( 30, method='thread' )
 @pytest.mark.django_db( transaction=True )
 def test_job_locking( mocker ):
   global _from_can_continue, _to_can_continue, _process_jobs_can_finish
