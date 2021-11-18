@@ -426,7 +426,7 @@ class NetworkAddressBlock( models.Model ):
     return 'NetworkAddressBlock "{0}" to "{1}"'.format( self.network, self.address_block )
 
 
-@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ] )
+@cinp.model( not_allowed_verb_list=[ 'LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE', 'CALL' ], property_list=( 'type', ) )
 class NetworkInterface( models.Model ):
   name = models.CharField( max_length=20 )
   network = models.ForeignKey( Network, on_delete=models.PROTECT )
@@ -485,7 +485,7 @@ class NetworkInterface( models.Model ):
     return 'NetworkInterface "{0}"'.format( self.name )
 
 
-@cinp.model( )
+@cinp.model( property_list=( 'type', ) )
 class RealNetworkInterface( NetworkInterface ):
   mac = models.CharField( max_length=18, blank=True, null=True )  # in a globally unique world we would set this to unique, but these virtual days we have to many ways to use the same mac safely, so good luck.
   foundation = models.ForeignKey( 'Building.Foundation', related_name='networkinterface_set', on_delete=models.CASCADE )
@@ -562,7 +562,7 @@ class RealNetworkInterface( NetworkInterface ):
     return 'RealNetworkInterface "{0}" mac "{1}"'.format( self.name, self.mac )
 
 
-@cinp.model( )
+@cinp.model( property_list=( 'type', ) )
 class AbstractNetworkInterface( NetworkInterface ):
   structure = models.ForeignKey( 'Building.Structure', related_name='networkinterface_set', on_delete=models.CASCADE )
 
@@ -615,7 +615,7 @@ class AbstractNetworkInterface( NetworkInterface ):
     return 'AbstractNetworkInterface "{0}"'.format( self.name )
 
 
-@cinp.model( )
+@cinp.model( property_list=( 'type', ) )
 class AggregatedNetworkInterface( AbstractNetworkInterface ):
   primary_interface = models.ForeignKey( NetworkInterface, related_name='+', on_delete=models.CASCADE )
   secondary_interfaces = models.ManyToManyField( NetworkInterface, related_name='+' )
