@@ -979,7 +979,7 @@ class Address( BaseAddress ):
       pass
 
     try:
-      return self.networked.structure.abstractnetworkinterface_set.get( name=self.interface_name ).subclass
+      return self.networked.structure.networkinterface_set.get( name=self.interface_name ).subclass
     except ObjectDoesNotExist:
       pass
 
