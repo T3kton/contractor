@@ -579,6 +579,10 @@ class AbstractNetworkInterface( NetworkInterface ):
   def type( self ):
     return 'Abstract'
 
+  @property
+  def mac( self ):
+    return None
+
   @cinp.list_filter( name='structure', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ] )
   @staticmethod
   def filter_structure( structure ):
@@ -628,6 +632,10 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
   @property
   def type( self ):
     return 'Aggregated'
+
+  @property
+  def mac( self ):
+    return self.primary_interface.subclass.mac
 
   @property
   def config( self ):
@@ -968,7 +976,14 @@ class Address( BaseAddress ):
     try:
       return self.networked.structure.foundation.networkinterface_set.get( name=self.interface_name )
     except ObjectDoesNotExist:
-      return None
+      pass
+
+    try:
+      return self.networked.structure.abstractnetworkinterface_set.get( name=self.interface_name ).subclass
+    except ObjectDoesNotExist:
+      pass
+
+    return None
 
   @property
   def subclass( self ):
