@@ -156,15 +156,16 @@ if contractor_vlan:
   print( '          VLAN: "{0}"'.format( contractor_vlan ) )
 print()
 
-gateway_offset = StrToIp( contractor_gateway ) - StrToIp( network_subnet )
+if contractor_gateway is not None:
+  gateway_offset = StrToIp( contractor_gateway ) - StrToIp( network_subnet )
 
-if network_prefix == 31 and gateway_offset != 0:
-  print( 'Bad caculated gateway offset: "{0}" for prefix of 31'.format( gateway_offset ) )
-  sys.exit( 1 )
+  if network_prefix == 31 and gateway_offset != 0:
+    print( 'Bad caculated gateway offset: "{0}" for prefix of 31'.format( gateway_offset ) )
+    sys.exit( 1 )
 
-if network_prefix < 30 and ( gateway_offset < 1 or gateway_offset > 254 ):
-  print( 'Bad caculated gateway offset: "{0}"'.format( gateway_offset ) )
-  sys.exit( 1 )
+  if network_prefix < 30 and ( gateway_offset < 1 or gateway_offset > 254 ):
+    print( 'Bad caculated gateway offset: "{0}"'.format( gateway_offset ) )
+    sys.exit( 1 )
 
 if args.dns_server is None:
   args.dns_server = contractor_ip_address

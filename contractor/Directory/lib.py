@@ -52,28 +52,38 @@ def _render( rec_type, parms ):
   return template.format( **parms ) + '\n'
 
 
+def _address_name( address, site_list=None ):
+  address_block = address.address_block
+  if site_list is not None and address_block.site not in site_list:
+    return None
+
+  iface = address.interface
+  if not iface:
+    return None
+
+  nab = address_block.networkaddressblock_set.get( network=iface.network )
+
+  result = iface.name
+
+  if address.alias_index is not None:
+    result = '{0}-{1}'.format( result, address.alias_index )
+
+  if nab.vlan:
+    result = 'v{0}.{1}'.format( nab.vlan, result )
+
+  return result
+
+
 def _getNetworkedEntries( networked, site_list ):
   networked = networked.subclass
   result = { 'RTXT': [], 'PTR': [], 'TXT': [], 'A': [], 'CNAME': [] }
 
   for address in networked.address_set.all():
-    address_block = address.address_block
-    if address_block.site not in site_list:
+    full_name = _address_name( address, site_list )
+    if full_name is None:
       continue
 
-    iface = address.interface
-    if not iface:
-      continue
-    nab = address_block.networkaddressblock_set.get( network=iface.network )
     ip_addr = networked.primary_address.ip_address
-
-    full_name = iface.name
-
-    if address.alias_index is not None:
-      full_name = '{0}-{1}'.format( full_name, address.alias_index )
-
-    if nab.vlan:
-      full_name = 'v{0}.{1}'.format( nab.vlan, full_name )
 
     result[ 'RTXT' ].append( { 'value': ip_addr, 'target': '{0}.{1}'.format( full_name, networked.fqdn ) } )
     result[ 'PTR' ].append( { 'value': ip_addr, 'target': networked.fqdn } )
@@ -98,7 +108,7 @@ def genZone( zone, ptr_list, rtext_list, zone_file_list ):
 
   for ns in settings.BIND_NS_NETWORKED_LIST:
     networked = Networked.objects.get( pk=ns )
-    hostname = '{0}.{1}'.format( networked.primary_interface.name, networked.fqdn )
+    hostname = '{0}.{1}'.format( _address_name( networked.primary_address ), networked.fqdn )
     record_map[ 'NS' ].append( { 'name': '@', 'server': hostname } )
     if networked.site not in site_list and hostname.endswith( zone_fqdn ):  # Add a glue record, when the server is not in this zone file AND in a parent of the zone it belonds too
       record_map[ 'A' ].append( { 'name': hostname + '.', 'address': networked.primary_address.address.ip_address } )
