@@ -446,7 +446,7 @@ def test_abstractnetworkinterface():
 
 
 @pytest.mark.django_db
-def test_aggergatednetworkinterface():
+def test_aggregatednetworkinterface():
   s1 = Site( name='tsite1', description='test site1' )
   s1.full_clean()
   s1.save()
@@ -529,7 +529,7 @@ def test_aggergatednetworkinterface():
   ai1.save()
   ai1.full_clean()  # test the self.pk part of clean
 
-  assert ai1.config == { 'name': 'dmz', 'network': 'test1', 'primary': 'ens1', 'secondary': [] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test1', 'primary': 'ens1', 'secondary': [], 'paramaters': {} }
 
   ai2 = AggregatedNetworkInterface( structure=st1, name='dmz', network=n1, primary_interface=primary )
   with pytest.raises( ValidationError ):
@@ -541,11 +541,15 @@ def test_aggergatednetworkinterface():
 
   ai1.secondary_interfaces.add( secondary1 )
 
-  assert ai1.config == { 'name': 'dmz', 'network': 'test1', 'primary': 'ens1', 'secondary': [ 'ens2' ] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test1', 'primary': 'ens1', 'secondary': [ 'ens2' ], 'paramaters': {} }
 
   ai1.secondary_interfaces.add( secondary2 )
 
-  assert ai1.config == { 'name': 'dmz', 'network': 'test1', 'primary': 'ens1', 'secondary': [ 'ens2', 'ens3' ] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test1', 'primary': 'ens1', 'secondary': [ 'ens2', 'ens3' ], 'paramaters': {} }
+
+  ai1.paramaters[ 'mode' ] = 'type4'
+
+  assert ai1.config == { 'name': 'dmz', 'network': 'test1', 'primary': 'ens1', 'secondary': [ 'ens2', 'ens3' ], 'paramaters': { 'mode': 'type4' } }
 
   with transaction.atomic():  # b/c we throw an exception in m2m_change, the transaction dosen't close, we have to force this ourselves
     with pytest.raises( ValidationError ):
@@ -1146,15 +1150,15 @@ def test_interface_addresses():
   ai1.full_clean()
   ai1.save()
 
-  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [], 'paramaters': {} }
 
   ai1.secondary_interfaces.add( secondary1 )
 
-  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2' ] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2' ], 'paramaters': {} }
 
   ai1.secondary_interfaces.add( secondary2 )
 
-  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2', 'ens3' ] }
+  assert ai1.config == { 'name': 'dmz', 'network': 'test', 'primary': 'ens1', 'secondary': [ 'ens2', 'ens3' ], 'paramaters': {} }
 
   assert st1.getAddressList( primary ) == []
   assert st1.getAddressList( secondary1 ) == []

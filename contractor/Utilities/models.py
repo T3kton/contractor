@@ -642,6 +642,7 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
     result = super().config
     result[ 'primary' ] = self.primary_interface.name  # name b/c this is inside the OS
     result[ 'secondary' ] = [ i.name for i in self.secondary_interfaces.all() ]
+    result[ 'paramaters' ] = self.paramaters
 
     return result
 
