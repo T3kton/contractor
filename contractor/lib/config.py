@@ -234,6 +234,13 @@ def getConfig( target ):
   else:
     raise ValueError( 'Don\'t know how to get config for "{0}"'.format( target ) )
 
+  try:
+    job = target.getJob()
+    if job is not None:
+      config[ '_job_id' ] = job.pk
+  except AttributeError:
+    pass
+
   # Global Attributes
   config[ '__last_modified' ] = last_modified
   config[ '__timestamp' ] = datetime.now( timezone.utc )

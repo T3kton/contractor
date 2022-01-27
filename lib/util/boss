@@ -289,7 +289,9 @@ Updated:       {6}
 Status:
 {7}
 Vars:
-{8}""".format( job.pk, job.script_name, job.state, pcnt_complete, job.message, job.created, job.updated, pp.pformat( job.status ), pp.pformat( runner.variable_map ) ) )
+{8}
+State:
+{9}""".format( job.pk, job.script_name, job.state, pcnt_complete, job.message, job.created, job.updated, pp.pformat( job.status ), pp.pformat( runner.variable_map ), pp.pformat( runner.state ) ) )
     sys.exit( 0 )
 
   if args.show_config:

@@ -1,6 +1,6 @@
 from contractor.fields import config_name_regex
 from contractor.lib.config import getConfig
-from contractor.tscript.runner import ParamaterError
+from contractor.tscript.runner import ParamaterError, Interrupt
 
 
 def getWrapper( target, key ):  # TODO: find a way to make this less expensive, mabey something that can detect if the target has changed, without calling getConfig
@@ -8,7 +8,7 @@ def getWrapper( target, key ):  # TODO: find a way to make this less expensive, 
   return config[ key ]
 
 
-class SetConfig():
+class SetConfig( object ):
   def __init__( self, structure, *args, **kwargs ):
     super().__init__( *args, **kwargs )
     self.structure = structure
@@ -190,3 +190,62 @@ class StructurePlugin( object ):  # ie: structure with some settable attributes,
 class ROStructurePlugin( StructurePlugin ):
   def __init__( self, structure, write=None ):
     super().__init__( structure, write=False  )
+
+
+class SignalingPlugin( object ):
+  TSCRIPT_NAME = 'signaling'
+
+  def __init__( self, target, job=None ):
+    super().__init__()
+    if isinstance( target, tuple ):
+      self.cookie = target[0]
+      self.complete = target[1]
+      self.pxe_name = target[2]
+
+    else:
+      if job is None:
+        raise ValueError( 'job is required' )
+
+      if target.__class__.__name__ == 'Structure':
+        uuid = target.config_uuid
+      elif target.__class__.__name__ == 'Dependency':
+        uuid = target.pk
+      else:
+        uuid = target.locator
+
+      self.cookie = '{0}_{1}'.format( job.pk, uuid )
+      self.complete = False
+      self.pxe_name = None
+
+  def getValues( self ):
+    result = {}
+
+    result[ 'complete' ] = ( lambda: self.complete, None )
+
+    return result
+
+  def getFunctions( self ):
+    result = {}
+
+    result[ 'reset' ] = lambda: self.reset
+    result[ 'wait_for_completion' ] = lambda: self.waitForCompletion
+
+    return result
+
+  def reset( self, pxe_name ):
+    self.complete = False
+    self.pxe_name = pxe_name
+
+  def waitForCompletion( self ):
+    if not self.complete:
+      raise Interrupt( 'Not complete' )
+
+  def signal( self, cookie ):
+    if cookie != '{0}({1})'.format( self.cookie, self.pxe_name ):
+      return 'Invalid Cookie'
+
+    self.complete = True
+    return 'Recieved'
+
+  def __reduce__( self ):
+    return ( self.__class__, ( ( self.cookie, self.complete, self.pxe_name ), ) )

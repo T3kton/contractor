@@ -1077,8 +1077,11 @@ class Runner( object ):
     if operation[1] is None:  # the operation isn't setup yet
       return None
 
-    if operation[1][ 'module' ] not in subcontractor_module_list:
-      return None
+    try:
+      if operation[1][ 'module' ] not in subcontractor_module_list:
+        return None
+    except KeyError:
+      return None  # function is not external
 
     if operation[1][ 'dispatched' ] is True:  # allready dispatchced, don't send anything else until something comes back
       return None

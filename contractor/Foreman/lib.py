@@ -2,7 +2,7 @@ import pickle
 from django.core.exceptions import ObjectDoesNotExist
 
 from contractor.Building.models import Foundation, Structure, Dependency
-from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin
+from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin, SignalingPlugin
 from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependencyJob, JobLog, ForemanException
 from contractor.PostOffice.lib import registerEvent
 
@@ -148,6 +148,8 @@ def createJob( script_name, target, creator ):
       # TODO: this is not done, think this out, what dependancy vaultes need to be loaded
       # obj_list.append( ConfigPlugin( dependency ) )  ConfigPlugin does not support dependancy yet
       pass
+
+  obj_list.append( SignalingPlugin( target, job ) )
 
   job.site = target.site
 

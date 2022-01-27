@@ -218,6 +218,39 @@ class BaseJob( models.Model ):
 
     return result
 
+  @cinp.action( return_type='String', paramater_type_list=[ 'String' ] )
+  def signalComplete( self, cookie ):
+    runner = pickle.loads( self.script_runner )
+
+    for entry in runner.object_list:
+      if entry.__class__.__name__ == 'SignalingPlugin':
+        result = entry.signal( cookie )
+        self.script_runner = pickle.dumps( runner, protocol=PICKLE_PROTOCOL )
+        self.full_clean()
+        self.save()
+        return result
+
+    return 'No Reciever'
+
+  @cinp.action( return_type='String', paramater_type_list=[ 'String' ] )
+  def signalAlert( self, msg ):
+    self.message = msg[ 0:1024 ]
+    if self.status in ( 'queued', 'paused' ):
+      self.status = 'error'
+
+    self.full_clean()
+    self.save()
+
+    return 'Alerted'
+
+  @cinp.action( return_type='String', paramater_type_list=[ 'String' ] )
+  def postMessage( self, msg ):
+    self.message = msg[ 0:1024 ]
+    self.full_clean()
+    self.save()
+
+    return 'Posted'
+
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
