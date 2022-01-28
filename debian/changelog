@@ -1,3 +1,9 @@
+contractor (0.18.0-1) focal; urgency=medium
+
+  * cinp 1.0 
+
+ -- Peter Howe <pnhowe@gmail.com>  Fri, 28 Jan 2022 11:54:52 -0700
+
 contractor (0.17.0-1) focal; urgency=medium
 
   * Adding signalComplete, postMessage, siglanAlert support
