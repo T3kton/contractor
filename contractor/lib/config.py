@@ -218,6 +218,18 @@ def getConfig( target ):
     last_modified = max( last_modified, _siteConfig( target.site, class_list, config ) )
     last_modified = max( last_modified, _foundationConfig( target.foundation.subclass, class_list, config ) )
     last_modified = max( last_modified, _structureConfig( target, class_list, config ) )
+    try:
+      job = target.getJob()
+      if job is not None:
+        config[ '_structure_job_id' ] = job.pk
+    except AttributeError:
+      pass
+    try:
+      job = target.foundation.getJob()
+      if job is not None:
+        config[ '_foundation_job_id' ] = job.pk
+    except AttributeError:
+      pass
 
   elif 'Foundation' in [ i.__name__ for i in target.__class__.__mro__ ]:
     last_modified = max( last_modified, _bluePrintConfig( target.blueprint, class_list, config ) )
@@ -228,18 +240,18 @@ def getConfig( target ):
     except AttributeError:
       pass
 
+    try:
+      job = target.getJob()
+      if job is not None:
+        config[ '_foundation_job_id' ] = job.pk
+    except AttributeError:
+      pass
+
   elif 'BaseAddress' in [ i.__name__ for i in target.__class__.__mro__ ]:
     last_modified = max( last_modified, _siteConfig( target.address_block.site, class_list, config ) )
 
   else:
     raise ValueError( 'Don\'t know how to get config for "{0}"'.format( target ) )
-
-  try:
-    job = target.getJob()
-    if job is not None:
-      config[ '_job_id' ] = job.pk
-  except AttributeError:
-    pass
 
   # Global Attributes
   config[ '__last_modified' ] = last_modified

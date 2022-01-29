@@ -38,7 +38,13 @@ def enable_auth( plugin_name, group_name, model_name ):
     return
 
   for name in ( 'add', 'change', 'delete' ):
-    group.permissions.add( Permission.objects.get( codename='{0}_{1}'.format( name, model_name.lower() ), content_type__app_label=plugin_name ) )
+    try:
+      permission = Permission.objects.get( codename='{0}_{1}'.format( name, model_name.lower() ) )
+    except Permission.DoesNotExist:
+      print( 'WARNING, could not find the permission "{0}"'. format( '{0}_{1}'.format( name, model_name.lower() ) ) )
+      continue
+
+    group.permissions.add( permission, content_type__app_label=plugin_name )
 
 
 def main():
