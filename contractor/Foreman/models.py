@@ -258,8 +258,11 @@ class BaseJob( models.Model ):
       return False
 
     if verb == 'CALL':
-      if action == 'jobStats':
+      if action == 'jobStats':  # TODO: this may have sensitive stuff in it, probably should auth
         return True
+
+      if action in ( 'signalComplete', 'signalAlert', 'postMessage' ):
+        return user.has_perm( 'Foreman.can_job_signal' )
 
       return user.has_perm( 'Foreman.can_base_job' )
 
@@ -279,6 +282,7 @@ class BaseJob( models.Model ):
     default_permissions = ()  # only CALL
     permissions = (
                     ( 'can_base_job', 'Can Work With Base Jobs' ),
+                    ( 'can_job_signal', 'Can call the Job Signalling Actions' )
                   )
 
   def __str__( self ):

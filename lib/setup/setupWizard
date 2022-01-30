@@ -347,7 +347,11 @@ User.objects.create_superuser( username=args.superuser_username, password=superu
 
 print( '* Create bootstrap user...' )
 User.objects.create_user( username='bootstrap', password='bootstrap', email='bootstrap@contractor' )
-# user.user_permissions.add( lookup_permission_list( [ ] ) )
+# user.user_permissions.add( lookup_permission_list( [ ] ) )  # TODO: this needs to be done
+
+print( '* Create job signaling user...' )
+user = User.objects.create_user( username='jobsig', password='jobsig', email='bootstrap@contractor' )
+user.user_permissions.add( lookup_permission_list( [ 'Foreman.can_job_signal' ] ) )
 
 print( '* Create subcontractor user...' )
 user = User.objects.create_user( username='subcontractor', password='subcontractor', email='subcontractor@contractor' )
