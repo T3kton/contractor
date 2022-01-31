@@ -206,14 +206,14 @@ class SignalingPlugin( object ):
       if job is None:
         raise ValueError( 'job is required' )
 
-      if target.__class__.__name__ == 'Structure':
-        uuid = target.config_uuid
-      elif target.__class__.__name__ == 'Dependency':
-        uuid = target.pk
-      else:
-        uuid = target.locator
+      # if target.__class__.__name__ == 'Structure':
+      #   uuid = target.config_uuid
+      # elif target.__class__.__name__ == 'Dependency':
+      #   uuid = target.pk
+      # else:
+      #   uuid = target.locator
 
-      self.cookie = '{0}_{1}'.format( job.pk, uuid )
+      self.cookie = '{0}'.format( job.pk )
       self.complete = False
       self.pxe_name = None
 
@@ -238,7 +238,7 @@ class SignalingPlugin( object ):
 
   def waitForCompletion( self ):
     if not self.complete:
-      raise Interrupt( 'Not complete' )
+      raise Interrupt( 'Not Complete' )
 
   def signal( self, cookie ):
     if cookie != '{0}({1})'.format( self.cookie, self.pxe_name ):

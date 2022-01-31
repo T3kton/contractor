@@ -149,8 +149,6 @@ def createJob( script_name, target, creator ):
       # obj_list.append( ConfigPlugin( dependency ) )  ConfigPlugin does not support dependancy yet
       pass
 
-  obj_list.append( SignalingPlugin( target, job ) )
-
   job.site = target.site
 
   script = blueprint.get_script( script_name )
@@ -169,6 +167,12 @@ def createJob( script_name, target, creator ):
 
   job.state = 'waiting'
   job.script_name = script_name
+  job.script_runner = pickle.dumps( runner )
+  job.full_clean()
+  job.save()
+
+  runner = pickle.loads( job.script_runner )
+  runner.registerObject( SignalingPlugin( target, job ) )  # this is special it needs the pk, which is after the save
   job.script_runner = pickle.dumps( runner )
   job.full_clean()
   job.save()
