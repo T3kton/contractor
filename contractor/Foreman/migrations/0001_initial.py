@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
-            options={'default_permissions': (), 'permissions': (('can_base_job', 'Can Work With Base Jobs'),)},
+            options={'default_permissions': (), 'permissions': (('can_base_job', 'Can Work With Base Jobs'), ('can_job_signal', 'Can call the Job Signalling Actions'))},
         ),
         migrations.CreateModel(
             name='JobLog',
