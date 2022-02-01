@@ -44,7 +44,7 @@ def _fake_toSubcontractor( self ):
   while not _to_can_continue:
     time.sleep( 0.1 )
 
-  return ( 'remote_func', 'the count "{0}"'.format( self.counter ) )
+  return ( 'remote_func', 'the fake count "{0}"'.format( self.counter ) )
 
 
 def _do_jobResults( job_id, cookie, data ):
@@ -153,7 +153,7 @@ def test_job_locking( mocker ):
   with transaction.atomic():
     cookie, rc = _stripcookie( processJobs( s, [ 'testing' ], 10 ) )
     job_id = rc[0][ 'job_id' ]
-    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the count "2"'}]
+    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the fake count "2"'}]
 
   with transaction.atomic():
     j = BaseJob.objects.get()
@@ -178,7 +178,7 @@ def test_job_locking( mocker ):
 
   with transaction.atomic():
     cookie, rc = _stripcookie( processJobs( s, [ 'testing' ], 10 ) )
-    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the count "4"'}]
+    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the fake count "4"'}]
 
   with transaction.atomic():
     j = BaseJob.objects.get()
@@ -214,7 +214,7 @@ def test_job_locking( mocker ):
   # now we test intrupting the job checking with results, first during a slow toSubcontractor
   with transaction.atomic():
     cookie, rc = _stripcookie( processJobs( s, [ 'testing' ], 10 ) )
-    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the count "5"'}]
+    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the fake count "5"'}]
 
   with transaction.atomic():
     j = BaseJob.objects.get()
@@ -256,7 +256,7 @@ def test_job_locking( mocker ):
   # then just before the transaction commits
   with transaction.atomic():
     cookie, rc = _stripcookie( processJobs( s, [ 'testing' ], 10 ) )
-    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the count "7"'}]
+    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the fake count "7"'}]
 
   with transaction.atomic():
     j = BaseJob.objects.get()
@@ -310,7 +310,7 @@ def test_job_locking( mocker ):
   # and finish up the job
   with transaction.atomic():
     cookie, rc = _stripcookie( processJobs( s, [ 'testing' ], 10 ) )
-    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the count "9"'}]
+    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the fake count "9"'}]
 
   with transaction.atomic():
     jobResults( job_id, cookie, 'adf' )

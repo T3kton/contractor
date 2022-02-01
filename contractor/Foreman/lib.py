@@ -244,7 +244,9 @@ def processJobs( site, module_list, max_jobs=10 ):
       continue
 
     try:
-      job.message = runner.run()
+      msg = runner.run()
+      if msg != 'Not Complete':  # TODO: this is ugly!! need a better way for the runner to say nothing, and/or the Interrupt to not have a user message, the job might post a message and the `is complete` system will stomp on  it
+        job.message = msg
 
     except Pause as e:
       job.state = 'paused'

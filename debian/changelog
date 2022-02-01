@@ -1,3 +1,9 @@
+contractor (0.19.0-1) focal; urgency=medium
+
+  * Job Signaling all working
+
+ -- Peter Howe <pnhowe@gmail.com>  Tue, 01 Feb 2022 09:21:36 -0700
+
 contractor (0.18.5-1) focal; urgency=medium
 
   * cinp 1.0 
