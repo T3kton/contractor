@@ -254,19 +254,14 @@ class BaseJob( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, BaseJob ):
-      return False
-
-    if verb == 'CALL':
-      if action == 'jobStats':  # TODO: this may have sensitive stuff in it, probably should auth
-        return True
-
-      if action in ( 'signalComplete', 'signalAlert', 'postMessage' ):
-        return user.has_perm( 'Foreman.can_job_signal' )
-
-      return user.has_perm( 'Foreman.can_base_job' )
-
-    return True
+    # TODO: action "jobStatus": this may have sensitive stuff in it, probably should auth
+    return cinp.basic_auth_check( user, verb, action, BaseJob, {
+                                                                 'jobStats': None,
+                                                                 'signalComplete': 'Foreman.can_job_signal',
+                                                                 'signalAlert': 'Foreman.can_job_signal',
+                                                                 'postMessage': 'Foreman.can_job_signal',
+                                                                 '*': 'Foreman.can_base_job'
+                                                               } )
 
   def clean( self, *args, **kwargs ):  # TODO: also need to make sure a Structure is in only one complex
     super().clean( *args, **kwargs )
@@ -381,13 +376,7 @@ class FoundationJob( BaseJob ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, FoundationJob ):
-      return False
-
-    if verb == 'CALL':
-      return user.has_perm( 'Foreman.can_foundation_job' )
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, FoundationJob, { '*': 'Foreman.can_foundation_job' } )
 
   class Meta:
     default_permissions = ( 'view', )
@@ -490,13 +479,7 @@ class StructureJob( BaseJob ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, StructureJob ):
-      return False
-
-    if verb == 'CALL':
-      return user.has_perm( 'Foreman.can_structure_job' )
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, StructureJob, { '*': 'Foreman.can_structure_job' } )
 
   class Meta:
     default_permissions = ( 'view', )
@@ -607,13 +590,7 @@ class DependencyJob( BaseJob ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, DependencyJob ):
-      return False
-
-    if verb == 'CALL':
-      return user.has_perm( 'Foreman.can_dependency_job' )
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, DependencyJob, { '*': 'Foreman.can_dependency_job' } )
 
   class Meta:
     default_permissions = ( 'view', )
@@ -723,7 +700,7 @@ class JobLog( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, JobLog )
+    return cinp.basic_auth_check( user, verb, action, JobLog )
 
   def delete( self ):
     raise models.ProtectedError( 'Can not delete JobLog entries', self )

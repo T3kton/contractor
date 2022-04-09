@@ -354,22 +354,14 @@ class Foundation( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, Foundation ):
-      return False
-
-    if verb == 'CALL':
-      if action == 'setIdMap':
-        return user.username == 'bootstrap'
-
-      if action in ( 'getConfig', 'getInterfaceList' ):
-        return user.has_perm( 'Building.view_foundation' )
-
-      if action in ( 'doCreate', 'doDestroy', 'doJob' ):
-        return user.has_perm( 'Building.can_create_foundation_job' )
-
-      return False
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, Foundation, {
+                                                                    'setIdMap': 'Building.can_bootstrap',
+                                                                    'getConfig': 'Building.view_foundation',
+                                                                    'getInterfaceList': 'Building.view_foundation',
+                                                                    'doCreate': 'Building.can_create_foundation_job',
+                                                                    'doDestroy': 'Building.can_create_foundation_job',
+                                                                    'doJob': 'Building.can_create_foundation_job'
+                                                                  } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -399,6 +391,7 @@ class Foundation( models.Model ):
     default_permissions = ( 'view', )
     permissions = (
                     ( 'can_create_foundation_job', 'Can Create Foundation Jobs' ),
+                    ( 'can_bootstrap', 'Can send bootstrap info' )
                   )
 
   def __str__( self ):
@@ -565,22 +558,13 @@ class Structure( Networked ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, Structure ):
-      return False
-
-    if verb == 'CALL':
-      if action == 'getConfig':
-        return user.has_perm( 'Building.view_structure' )
-
-      if action in ( 'doCreate', 'doDestroy', 'doJob' ):
-        return user.has_perm( 'Building.can_create_structure_job' )
-
-      if action == 'updateConfig':
-        return user.has_perm( 'Building.can_config_structure' )
-
-      return False
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, Structure, {
+                                                                   'getConfig': 'Building.view_structure',
+                                                                   'doCreate': 'Building.can_create_structure_job',
+                                                                   'doDestroy': 'Building.can_create_structure_job',
+                                                                   'doJob': 'Building.can_create_structure_job',
+                                                                   'updateConfig': 'Building.can_config_structure'
+                                                                  } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -700,13 +684,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, Complex ):
-      return False
-
-    if verb == 'CALL':
-      return action == 'createFoundation' and user.has_perm( 'Building.can_create_foundation' )
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, Complex, { 'createFoundation': 'Building.can_create_foundation' } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -802,13 +780,7 @@ class ComplexStructure( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, ComplexStructure ):
-      return False
-
-    if verb == 'CALL':
-      return action == 'getConfig' and user.has_perm( 'Building.view_complexstructure' )
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, ComplexStructure, { 'getConfig', 'Building.view_complexstructure' } )
 
   # TODO: need to make sure a Structure is in only one complex
   def clean( self, *args, **kwargs ):
@@ -957,13 +929,11 @@ class Dependency( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, Dependency ):
-      return False
-
-    if verb == 'CALL':
-      return action in ( 'doCreate', 'doDestroy', 'doJob' ) and user.has_perm( 'Building.can_create_dependency_job' )
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, Dependency, {
+                                                                    'doCreate': 'Building.can_create_dependency_job',
+                                                                    'doDestroy': 'Building.can_create_dependency_job',
+                                                                    'doJob': 'Building.can_create_dependency_job'
+                                                                  } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )

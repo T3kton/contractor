@@ -77,13 +77,7 @@ class BluePrint( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, BluePrint ):  # TODO: when 'view' permission becomes optional, tie getConfig to it
-      return False
-
-    if verb == 'CALL':
-      return action == 'getConfig'
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, BluePrint, { 'getConfig': None } )  # TODO: when 'view' permission becomes optional, tie getConfig to it
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -144,13 +138,7 @@ class FoundationBluePrint( BluePrint ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, FoundationBluePrint ):  # TODO: when 'view' permission becomes optional, tie getConfig to it
-      return False
-
-    if verb == 'CALL':
-      return action == 'getConfig'
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, FoundationBluePrint, { 'getConfig': None } )  # TODO: when 'view' permission becomes optional, tie getConfig to it
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -189,13 +177,7 @@ class StructureBluePrint( BluePrint ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, StructureBluePrint ):  # TODO: when 'view' permission becomes optional, tie getConfig to it
-      return False
-
-    if verb == 'CALL':
-      return action == 'getConfig'
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, StructureBluePrint, { 'getConfig': None } )  # TODO: when 'view' permission becomes optional, tie getConfig to it
 
   class Meta:
     pass
@@ -216,7 +198,7 @@ class Script( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, Script )
+    return cinp.basic_auth_check( user, verb, action, Script )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -256,7 +238,7 @@ class BluePrintScript( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, BluePrintScript )
+    return cinp.basic_auth_check( user, verb, action, BluePrintScript )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -286,7 +268,7 @@ class PXE( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, PXE )
+    return cinp.basic_auth_check( user, verb, action, PXE )
 
   class Meta:
     pass

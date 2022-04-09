@@ -37,7 +37,7 @@ class Plot( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, Plot )
+    return cinp.basic_auth_check( user, verb, action, Plot )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -147,17 +147,13 @@ class Cartographer( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, Cartographer ):
-      return False
-
-    if verb == 'CALL':
-      if action in ( 'register', 'lookup', 'setMessage', 'done' ):
-        return user.username == 'bootstrap'
-
-      if action == 'assign':
-        return user.has_perm( 'Survey.can_assign_foundation' )
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, Cartographer, {
+                                                                      'register': 'Building.can_bootstrap',
+                                                                      'lookup': 'Building.can_bootstrap',
+                                                                      'setMessage': 'Building.can_bootstrap',
+                                                                      'done': 'Building.can_bootstrap',
+                                                                      'assign': 'Survey.can_assign_foundation',
+                                                                    } )
 
   class Meta:
     default_permissions = ( 'delete', 'view' )

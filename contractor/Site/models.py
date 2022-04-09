@@ -111,13 +111,7 @@ class Site( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, Site ):
-      return False
-
-    if verb == 'CALL':
-      return action == 'getConfig' and user.has_perm( 'Site.view_site' )
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, Site, { 'getConfig': 'Site.view_site' } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )

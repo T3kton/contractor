@@ -72,13 +72,7 @@ class Recorder():
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, Recorder ):
-      return False
-
-    if verb == 'CALL':
-      return action in ( 'query', 'queryObjects' )
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, Recorder, { 'query': None, 'queryObjects': None } )
 
   class Meta:
     default_permissions = ()  # only CALL

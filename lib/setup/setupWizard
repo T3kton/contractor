@@ -346,8 +346,8 @@ print( '* Creating superuser("{0}") user...'.format( args.superuser_username ) )
 User.objects.create_superuser( username=args.superuser_username, password=superuser_password, email='{0}@{1}'.format( args.superuser_username, args.site_domain ) )
 
 print( '* Create bootstrap user...' )
-User.objects.create_user( username='bootstrap', password='bootstrap', email='bootstrap@contractor' )
-# user.user_permissions.add( lookup_permission_list( [ ] ) )  # TODO: this needs to be done
+user = User.objects.create_user( username='bootstrap', password='bootstrap', email='bootstrap@contractor' )
+user.user_permissions.add( lookup_permission_list( [ 'Building.can_bootstrap' ] ) )
 
 print( '* Create job signaling user...' )
 user = User.objects.create_user( username='jobsig', password='jobsig', email='bootstrap@contractor' )

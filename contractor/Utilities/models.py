@@ -139,7 +139,7 @@ class Networked( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, Networked )
+    return cinp.basic_auth_check( user, verb, action, Networked )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -252,19 +252,7 @@ class AddressBlock( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, AddressBlock ):
-      return False
-
-    if verb == 'CALL':
-      if action == 'usage':
-        return True
-
-      if action == 'nextAddress':
-        return user.has_perm( 'Utilities.add_address' )
-
-      return False
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, AddressBlock, { 'usage': None, 'nextAddress': 'Utilities.add_address' } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -360,7 +348,7 @@ class Network( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, Network )
+    return cinp.basic_auth_check( user, verb, action, Network )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -404,7 +392,7 @@ class NetworkAddressBlock( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, NetworkAddressBlock )
+    return cinp.basic_auth_check( user, verb, action, NetworkAddressBlock )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -467,7 +455,7 @@ class NetworkInterface( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, NetworkInterface )
+    return cinp.basic_auth_check( user, verb, action, NetworkInterface )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -519,7 +507,7 @@ class RealNetworkInterface( NetworkInterface ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, RealNetworkInterface )
+    return cinp.basic_auth_check( user, verb, action, RealNetworkInterface )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -591,7 +579,7 @@ class AbstractNetworkInterface( NetworkInterface ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, AbstractNetworkInterface )
+    return cinp.basic_auth_check( user, verb, action, AbstractNetworkInterface )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -654,7 +642,7 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, AggregatedNetworkInterface )
+    return cinp.basic_auth_check( user, verb, action, AggregatedNetworkInterface )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -848,13 +836,7 @@ class BaseAddress( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    if not cinp.basic_auth_check( user, verb, BaseAddress ):
-      return False
-
-    if verb == 'CALL':
-      return action == 'lookup'
-
-    return True
+    return cinp.basic_auth_check( user, verb, action, BaseAddress, { 'lookup': None } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -1007,7 +989,7 @@ class Address( BaseAddress ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, Address )
+    return cinp.basic_auth_check( user, verb, action, Address )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -1081,7 +1063,7 @@ class ReservedAddress( BaseAddress ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, ReservedAddress )
+    return cinp.basic_auth_check( user, verb, action, ReservedAddress )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -1123,7 +1105,7 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, DynamicAddress )
+    return cinp.basic_auth_check( user, verb, action, DynamicAddress )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )

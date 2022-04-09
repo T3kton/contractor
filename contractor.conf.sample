@@ -4,6 +4,9 @@ SECRET_KEY = '@(a3yjcc-d3rtt)q7n(tvdfhe4$%u2(dvkd9^cg26+4wmih7l7'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
+# set UI_HOSTNAME when the API and UI are on separate hosts
+UI_HOSTNAME = None
+
 # PXE host settings
 
 CONTRACTOR_HOST = 'http://contractor/'

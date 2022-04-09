@@ -50,7 +50,7 @@ class Zone( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, Zone )
+    return cinp.basic_auth_check( user, verb, action, Zone )
 
   def clean( self, *args, **kwargs ):  # TODO: also make sure there are no hostnames in the attached sites of the parent that have the same name as this, this logic needs to go on Networked as well
     super().clean( *args, **kwargs )
@@ -93,7 +93,7 @@ class Entry( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, Entry )
+    return cinp.basic_auth_check( user, verb, action, Entry )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
