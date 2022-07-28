@@ -9,7 +9,10 @@ from cinp.server_common import InvalidRequest
 session_engine = import_module( settings.SESSION_ENGINE )
 
 
-def getUser( auth_id, auth_token ):
+def getUser( cookie_map, header_map ):
+  auth_id = header_map.get( 'AUTH_ID', None )
+  auth_token = header_map.get( 'AUTH_TOKEN', None )
+
   if auth_id is None or auth_token is None:
     return AnonymousUser()
 
