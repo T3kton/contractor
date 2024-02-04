@@ -99,6 +99,9 @@ class Entry( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
 
+    if self.type not in Entry.TYPE_CHOICES:
+      errors[ 'type' ] = 'Invalid'
+
     if self.type == 'SRV':
       if not entry_name_srv_regex.match( self.name ):
         errors[ 'name' ] = 'Invalid'

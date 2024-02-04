@@ -1,0 +1,145 @@
+[ structure.ubuntu-base ]
+  description = 'Base Ubuntu'
+  parents = [ 'linux-base' ]
+[ structure.ubuntu-base.config_values ]
+  installer_pxe = 'ubuntu'
+  mirror_server = 'us.archive.ubuntu.com'
+  distro = 'ubuntu'
+  'vcenter_guest_id:VCenter' = 'ubuntu64Guest'
+  '>package_list:VCenter' = [ 'open-vm-tools' ]
+  'virtualbox_guest_type:VirtualBox' = 'Ubuntu_64'
+  '<postinstall_command_list' = [ 'sed "s/#PermitRootLogin.*/PermitRootLogin yes/" -i /etc/ssh/sshd_config' ]
+
+[ structure.ubuntu-trusty-base ]
+  description = 'Base Ubuntu Trusty Tahr (14.04 LTS)'
+  parents = [ 'ubuntu-base' ]
+[ structure.ubuntu-trusty-base.config_values ]
+  distro_version = 'trusty'
+  'azure_image:Azure' = { 'publisher' = 'Canonical', 'offer' = 'UbuntuServer', 'sku' = '14.04-LTS', 'version' = 'latest' }
+
+[ structure.ubuntu-xenial-base ]
+  description = 'Base Ubuntu Xenial Xerus (16.04 LTS)'
+  parents = [ 'ubuntu-base' ]
+[ structure.ubuntu-xenial-base.config_values ]
+  distro_version = 'xenial'
+  'awsec2_image_id:AWS' = 'ami-efd0428f'
+  'docker_image:Docker' = 'ubuntu:xenial'
+  'azure_image:Azure' = { 'publisher' = 'Canonical', 'offer' = 'UbuntuServer', 'sku' = '16.04-LTS', 'version' = 'latest' }
+
+[ structure.ubuntu-bionic-base ]
+  description = 'Base Ubuntu Bionic Beaver (18.04 LTS)'
+  parents = [ 'ubuntu-base' ]
+[ structure.ubuntu-bionic-base.config_values ]
+  distro_version = 'bionic'
+  'docker_image:Docker' = 'ubuntu:bionic'
+  'azure_image:Azure' = { 'publisher' = 'Canonical', 'offer' = 'UbuntuServer', 'sku' = '18.04-LTS', 'version' = 'latest' }
+
+[ pxe.ubuntu ]
+  boot_script = """echo Ubuntu Installer
+kernel {{ __pxe_location }}/ubuntu-installer/vmlinuz auto url={{ __pxe_template_location }} locale=en_US.UTF-8 keyboard-configuration/layoutcode=us netcfg/no_default_route=true domain={{ _domain_name }} hostname={{ _hostname }}
+initrd {{ __pxe_location }}/ubuntu-installer/initrd
+boot
+"""
+  template = """
+d-i debian-installer/locale string en_US
+d-i console-setup/ask_detect boolean false
+d-i keyboard-configuration/xkb-keymap select us
+
+### Network settings
+d-i netcfg/enable boolean true
+d-i netcfg/disable_autoconfig boolean true
+d-i netcfg/choose_interface select auto
+
+d-i netcfg/disable_dhcp boolean true
+
+d-i netcfg/get_ipaddress string {{ _interface_map.eth0.address_list.0.address }}
+d-i netcfg/get_netmask string {{ _interface_map.eth0.address_list.0.netmask }}
+{% if _interface_map.eth0.address_list.0.gateway %}
+d-i netcfg/get_gateway string {{ _interface_map.eth0.address_list.0.gateway }}
+{% else %}
+d-i netcfg/get_gateway string
+d-i netcfg/no_default_route boolean true
+{% endif %}
+d-i netcfg/get_nameservers string {{ dns_servers.0 }}
+d-i netcfg/confirm_static boolean true
+
+d-i netcfg/get_hostname string {{ _hostname }}
+d-i netcfg/get_domain string {{ _domain_name }}
+
+d-i netcfg/hostname string {{ _hostname }}
+
+### Mirror settings
+d-i mirror/country string manual
+d-i mirror/http/hostname string {{ mirror_server }}
+d-i mirror/http/directory string /ubuntu/
+d-i mirror/http/proxy string {{ mirror_proxy }}
+
+# Suite to install.
+d-i mirror/suite string {{ distro_version }}
+
+### Account setup
+d-i passwd/make-user boolean false
+d-i user-setup/allow-password-weak boolean true
+d-i passwd/root-login boolean true
+d-i passwd/root-password-crypted password {{ root_password_hash }}
+d-i user-setup/encrypt-home boolean false
+
+### Clock and time zone setup
+d-i clock-setup/utc boolean true
+d-i time/zone string UTC
+
+# Controls whether to use NTP to set the clock during the install
+d-i clock-setup/ntp boolean true
+d-i clock-setup/ntp-server string {{ ntp_servers.0 }}
+
+### Partitioning
+## Partitioning example
+d-i partman-auto/disk string /dev/sda
+d-i partman-auto/method string regular
+d-i partman-lvm/device_remove_lvm boolean true
+d-i partman-md/device_remove_md boolean true
+d-i partman-lvm/confirm boolean true
+d-i partman-lvm/confirm_nooverwrite boolean true
+d-i partman-auto/choose_recipe select atomic
+d-i partman-partitioning/confirm_write_new_label boolean true
+d-i partman/choose_partition select finish
+d-i partman/confirm boolean true
+d-i partman/confirm_nooverwrite boolean true
+
+d-i partman/mount_style select uuid
+
+### Base system installation
+#d-i base-installer/install-recommends boolean false
+#d-i base-installer/kernel/image string linux-generic
+
+### Package selection
+tasksel tasksel/first multiselect server
+
+d-i pkgsel/include string openssh-server {{ package_list|join( ' ' ) }}
+d-i pkgsel/upgrade select safe-upgrade
+d-i pkgsel/update-policy select none
+
+popularity-contest popularity-contest/participate boolean false
+
+### Boot loader installation
+d-i grub-installer/only_debian boolean true
+d-i grub-installer/with_other_os boolean true
+d-i grub-installer/bootdev  string /dev/sda
+
+### Finishing up the installation
+d-i finish-install/reboot_in_progress note
+d-i debian-installer/exit/poweroff boolean true
+
+### Needed to get the network config to save
+d-i preseed/early_command string kill-all-dhcp; netcfg
+
+### Post install 
+{% if postinstall_script or postinstall_command_list %}
+d-i preseed/late_command string echo -e '#!/bin/sh -xe\\necho "Start post install..."\\n\\
+{% if postinstall_script %} wget -vO /target/root/postinstall_script {{ postinstall_script }}\\n\\
+chmod +x /target/root/postinstall_script\\n\\
+chroot /target /root/postinstall_script > /target/root/postinstall_script.log 2>&1\\n\\
+{% endif %}{% for cmd in postinstall_command_list %}chroot /target {{ cmd }}\\n\\
+{% endfor %}echo "Post install complete"\\n' > /target/root/post_script ; chmod +x /target/root/post_script ; ./target/root/post_script > /target/root/post_script.log 2>&1
+{% endif %}
+"""
