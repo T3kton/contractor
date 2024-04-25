@@ -434,9 +434,9 @@ class Runner( object ):
           except ( KeyError, TypeError ):
             pass
 
+        elapsed = datetime.datetime.utcnow() - step[2]
+        tmp[ 'time_elapsed' ] = _delta_to_string( elapsed )
         if 'expected_time' in operation[1]:
-          elapsed = datetime.datetime.utcnow() - step[2]
-          tmp[ 'time_elapsed' ] = _delta_to_string( elapsed )
           tmp[ 'time_remaining' ] = _delta_to_string( operation[1][ 'expected_time' ] - elapsed )
 
         if step_data is None:  # no point in continuing, we don't know where we are
@@ -611,7 +611,7 @@ class Runner( object ):
 
         elif datetime.datetime.utcnow() > self.state[ state_index ][3]:
           self.state[ state_index ][3] = None
-          raise Pause( 'max time elapsed' )
+          raise Pause( 'Max Time Elapsed' )
 
       except IndexError:  # no max time
         pass

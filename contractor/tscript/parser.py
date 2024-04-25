@@ -141,8 +141,9 @@ class Parser( object ):
 
     ast = self._eval( root_node )
     self._check( ast )
-
+  
     return ( Types.SCOPE, { '_children': ast, 'description': 'Overall Script' } )
+      
 
   def _eval( self, node ):
     if node.expr_name[ 0:3 ] in ( 'ws_', 'nl_', 'em_' ):  # ignore wite space

@@ -221,7 +221,7 @@ class Job extends React.Component
         return <div><strong>{ item[2].description }</strong> { item[0].toLocaleString( undefined, { minimumFractionDigits:2 } ) }% Elapsed:&nbsp;{ item[2].time_elapsed } Remaning:&nbsp;{ item[2].time_remaining }</div>
       }
 
-      return <div><strong>{ item[2].description }</strong> { item[0].toLocaleString( undefined, { minimumFractionDigits:2 } ) }%</div>
+      return <div><strong>{ item[2].description }</strong> { item[0].toLocaleString( undefined, { minimumFractionDigits:2 } ) }%  Elapsed:&nbsp;{ item[2].time_elapsed }</div>
     }
   }
 

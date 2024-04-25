@@ -110,22 +110,22 @@ class BluePrint( models.Model ):
 class FoundationBluePrint( BluePrint ):
   parent_list = models.ManyToManyField( 'self', blank=True, symmetrical=False )
   foundation_type_list = StringListField( max_length=200 )  # list of the foundation types this blueprint can be used for
-  template = MapField( blank=True, null=True )
+  validation_template = MapField( blank=True, null=True )
   physical_interface_names = StringListField( max_length=200, blank=True )
 
-  def getTemplate( self ):
-    if self.template:
-      return self.template
+  def getValidationTemplate( self ):
+    if self.validation_template:
+      return self.validation_template
 
     for parent in self.parent_list.all():
-      tmp = parent.getTemplate()
+      tmp = parent.getValidationTemplate()
       if tmp is not None:
         return tmp
 
     return None
 
   def validateIdMap( self, id_map ):
-    template = self.getTemplate()
+    template = self.getValidationTemplate()
     if template is None:
       return None
 
@@ -143,8 +143,8 @@ class FoundationBluePrint( BluePrint ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not isinstance( self.template, dict ):
-      errors[ 'template' ] = 'template must be a dict'
+    if not isinstance( self.validation_template, dict ):
+      errors[ 'validation_template' ] = 'template must be a dict'
 
     if errors:
       raise ValidationError( errors )

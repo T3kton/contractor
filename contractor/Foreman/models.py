@@ -268,7 +268,7 @@ class BaseJob( models.Model ):
     errors = {}
 
     if self.state not in self.JOB_STATE_CHOICES:
-      errors[ 'state' ] = 'Invalid state "{0}"'.format( self.state )
+      errors[ 'state' ] = 'Invalid'
 
     if errors:
       raise ValidationError( errors )

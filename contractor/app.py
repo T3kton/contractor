@@ -23,7 +23,7 @@ def get_app( debug ):
   if settings.UI_HOSTNAME is not None:
     extras[ 'cors_allow_origin' ] = settings.UI_HOSTNAME
 
-  app = WerkzeugServer( root_path='/api/v1/', root_version='1.0', debug=debug, get_user=getUser, auth_header_list=[ 'auth-token' ], auth_cookie_list=[ 'SESSION' ], debug_dump_location=settings.DEBUG_DUMP_LOCATION, **extras )
+  app = WerkzeugServer( root_path='/api/v1/', root_version='1.0', debug=debug, get_user=getUser, auth_header_list=[ 'AUTH-ID', 'AUTH-TOKEN' ], auth_cookie_list=[ 'SESSION' ], debug_dump_location=settings.DEBUG_DUMP_LOCATION, **extras )
 
   app.registerNamespace( '/', 'contractor.Auth' )
   app.registerNamespace( '/', 'contractor.BluePrint' )

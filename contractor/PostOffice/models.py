@@ -92,6 +92,9 @@ class Box( models.Model ):
       self.proxy = None
 
     errors = {}
+    if self.type not in Box.BOX_TYPE:
+      errors[ 'type' ] = 'Invalid'
+
     if self.expires is not None and not self.expires > datetime.now( timezone.utc ) + timedelta( hours=MAX_BOX_LIFE ):
       errors[ 'expires' ] = 'more than "{0}" hourse in the future'.format( MAX_BOX_LIFE )
 

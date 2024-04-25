@@ -86,8 +86,7 @@ class Foundation( models.Model ):
     if self.structure is not None and self.structure.state != 'planned':
       raise Exception( 'Attached Structure must be in Planned state' )
 
-    template = self.blueprint.getTemplate()
-    if template is not None and not self.id_map:
+    if self.blueprint.getValidationTemplate() is not None and not self.id_map:
       raise Exception( 'Foundations with blueprints, which specify templates, require id_map to be set before setting to Located' )
 
     self.located_at = timezone.now()
@@ -103,7 +102,7 @@ class Foundation( models.Model ):
       raise Exception( 'All related jobs and cartographer instances must be cleared before setting Built' )
 
     if self.located_at is None:
-      if self.blueprint.getTemplate() is not None:
+      if self.blueprint.getValidationTemplate() is not None:
         raise Exception( 'Foundation with Blueprints with templates must be located first' )
       self.located_at = timezone.now()
 
