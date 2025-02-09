@@ -491,7 +491,7 @@ class StructureJob( BaseJob ):
     return 'StructureJob #{0} for "{1}" in "{2}"'.format( self.pk, self.structure.pk, self.structure.site.pk )
 
 
-@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'progress', 'can_start' ) )
+@cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ], hide_field_list=( 'script_runner', ), property_list=( 'can_start' ) )
 class DependencyJob( BaseJob ):
   dependency = models.OneToOneField( Dependency, editable=False, on_delete=models.CASCADE )
 

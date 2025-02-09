@@ -434,7 +434,10 @@ class Runner( object ):
           except ( KeyError, TypeError ):
             pass
 
-        elapsed = datetime.datetime.utcnow() - step[2]
+        try:
+          elapsed = datetime.datetime.utcnow() - step[2]
+        except IndexError:
+          elapsed = datetime.timedelta(0)
         tmp[ 'time_elapsed' ] = _delta_to_string( elapsed )
         if 'expected_time' in operation[1]:
           tmp[ 'time_remaining' ] = _delta_to_string( operation[1][ 'expected_time' ] - elapsed )

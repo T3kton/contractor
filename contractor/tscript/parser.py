@@ -141,8 +141,16 @@ class Parser( object ):
 
     ast = self._eval( root_node )
     self._check( ast )
+
+    # if there is allready one Scope over the full script use it
+    try:
+      if len( ast ) == 1 and ast[0][0] == Types.LINE and ast[0][1][0] == Types.SCOPE:
+        return ast[0][1]
+    except IndexError:
+       pass
   
-    return ( Types.SCOPE, { '_children': ast, 'description': 'Overall Script' } )
+    # otherwise create a wrapper Scope
+    return ( Types.SCOPE, { '_children': ast } )
       
 
   def _eval( self, node ):
