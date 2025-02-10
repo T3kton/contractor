@@ -1,15 +1,13 @@
+import os
 from django.conf import settings
 
 from cinp.server_werkzeug import WerkzeugServer, NoCINP
 
+from contractor import plugins
 from contractor.Auth.models import getUser
 from contractor.lib.config_handler import handler as config_handler
 
 # get plugins
-
-import os
-from contractor import plugins
-
 plugin_list = []
 plugin_dir = os.path.dirname( plugins.__file__ )
 for item in os.scandir( plugin_dir ):
