@@ -39,443 +39,446 @@ def lookup_permission_list( permission_list ):
   return result
 
 
-parser = argparse.ArgumentParser( description='Contractor Setup Wizard, must be run as root' )
-parser.add_argument( '--superuser-username', help='username for the superuser, default=root', default='root' )
-parser.add_argument( '--superuser-password', help='password to use for the superuser user, if not specified it will be prompted for' )
-parser.add_argument( '--no-ip-reservation', help='do not reserve static and dynamic ips', action='store_true' )
-parser.add_argument( '--contractor-hostname', help='hostname to assign to the contractor host, default: contractor', metavar='HOST', default='contractor' )
-parser.add_argument( '--site-name', help='name of the initial site to create, default: site1', metavar='SITE', default='site1' )
-parser.add_argument( '--site-domain', help='domain name of the initial site to create, default: site1.test', metavar='DOMAIN', default='site1.test' )
-parser.add_argument( '--dns-server', help='set the dns server setting for the initial site, otherwise it will be set to the detected ip', metavar='IP ADDRESS' )
-parser.add_argument( '--ntp-server', help='set the ntp server setting for the initial site, default: ntp.ubuntu.com', metavar='HOST', default='ntp.ubuntu.com' )
-parser.add_argument( '--proxy-server', help='set the http proxy (mirror_proxy) setting for the initial site', metavar='HOST' )
-parser.add_argument( '--primary-interface', help='which interface to use as the primary interface for the contractor structure, if not specified it will be auto detected', metavar='INTERFACE' )
-parser.add_argument( '--network-name', help='name of the network that is created, default="main"', default='main' )
-parser.add_argument( '--contractor-cnames', help='comma (,) delimited list of cnames for the contractor host/ip, default="static,proxy", NOTE: "contractor" will also be created as a CNAME', default='static,proxy' )
-parser.add_argument( '--additional-plugin', help='Additional plugins to load, can be specified more than once, by default just "manual" is loaded, example:"vcenter"', action='append' )
-parser.add_argument( '--repo-name', help='name of the repo to install plugins from, default="internal"', default='internal' )
+def main():
+  parser = argparse.ArgumentParser( description='Contractor Setup Wizard, must be run as root' )
+  parser.add_argument( '--superuser-username', help='username for the superuser, default=root', default='root' )
+  parser.add_argument( '--superuser-password', help='password to use for the superuser user, if not specified it will be prompted for' )
+  parser.add_argument( '--no-ip-reservation', help='do not reserve static and dynamic ips', action='store_true' )
+  parser.add_argument( '--contractor-hostname', help='hostname to assign to the contractor host, default: contractor', metavar='HOST', default='contractor' )
+  parser.add_argument( '--site-name', help='name of the initial site to create, default: site1', metavar='SITE', default='site1' )
+  parser.add_argument( '--site-domain', help='domain name of the initial site to create, default: site1.test', metavar='DOMAIN', default='site1.test' )
+  parser.add_argument( '--dns-server', help='set the dns server setting for the initial site, otherwise it will be set to the detected ip', metavar='IP ADDRESS' )
+  parser.add_argument( '--ntp-server', help='set the ntp server setting for the initial site, default: ntp.ubuntu.com', metavar='HOST', default='ntp.ubuntu.com' )
+  parser.add_argument( '--proxy-server', help='set the http proxy (mirror_proxy) setting for the initial site', metavar='HOST' )
+  parser.add_argument( '--primary-interface', help='which interface to use as the primary interface for the contractor structure, if not specified it will be auto detected', metavar='INTERFACE' )
+  parser.add_argument( '--network-name', help='name of the network that is created, default="main"', default='main' )
+  parser.add_argument( '--contractor-cnames', help='comma (,) delimited list of cnames for the contractor host/ip, default="static,proxy", NOTE: "contractor" will also be created as a CNAME', default='static,proxy' )
+  parser.add_argument( '--additional-plugin', help='Additional plugins to load, can be specified more than once, by default just "manual" is loaded, example:"vcenter"', action='append' )
+  parser.add_argument( '--repo-name', help='name of the repo to install plugins from, default="internal"', default='internal' )
 
-args = parser.parse_args()
+  args = parser.parse_args()
 
-if Plot.objects.all().count() > 0:
-  print( 'Setup has allready run, Aborting.' )
-  sys.exit( 2 )
+  if Plot.objects.all().count() > 0:
+    print( 'Setup has allready run, Aborting.' )
+    sys.exit( 2 )
 
-bind_configured = False
-if os.path.exists( '/etc/bind/named.conf.local' ):
-  for line in open( '/etc/bind/named.conf.local', 'r' ).readlines():
-    if line.strip() == 'include "/etc/bind/contractor/dns.master";':
-      bind_configured = True
-      break
+  bind_configured = False
+  if os.path.exists( '/etc/bind/named.conf.local' ):
+    for line in open( '/etc/bind/named.conf.local', 'r' ).readlines():
+      if line.strip() == 'include "/etc/bind/contractor/dns.master";':
+        bind_configured = True
+        break
 
-manual_loaded = False
-try:
-  FoundationBluePrint.objects.get( pk='manual-foundation-base' )
-  manual_loaded = True
-except FoundationBluePrint.DoesNotExist:
-  pass
-
-if not manual_loaded and os.getuid() != 0:
-  print( 'setupWizard was not run as root, and the required manual plugin not loaded.' )
-  sys.exit( 1 )
-
-if not bind_configured and os.getuid() != 0:
-  print( 'WARNING!!! setupWizard was not run as root, will not be able to configure bind.' )
-  print( 'press <enter> to continue, or ctl-c to abort' )
-  sys.stdin.readline()
-
-if args.superuser_password:
-  superuser_password = args.superuser_password
-else:
-  print( 'Please Specify the password to use for the superuser("{0}") user'.format( args.superuser_username) )
-  superuser_password = getpass.getpass()
-
-print( 'Getting network config...' )
-
-if args.primary_interface:
-  contractor_iface = args.primary_interface
-  contractor_gateway = None  # TODO: if this value get's used, need to do some /sbin/ip magic to find the gateway for this interface if there is one
-
-else:
-  line = subprocess.check_output( [ '/sbin/ip', 'route', 'get', '1.0.0.0' ], universal_newlines=True ).splitlines()[0]
-  parts = line.split()
-  contractor_iface = parts[4]
-  contractor_gateway = parts[2]
-
-print( 'Interface Name: "{0}"'.format( contractor_iface ) )
-
-contractor_ip_address = None
-
-for line in subprocess.check_output( [ '/sbin/ip', 'address', 'show', contractor_iface ], universal_newlines=True ).splitlines():
-  parts = line.split()
-  if parts[0] == 'inet':
-    ( contractor_ip_address, network_prefix ) = parts[1].split( '/' )
-    network_prefix = int( network_prefix )
-    break
-
-if contractor_ip_address is None:
-  print( 'Unable to discover IP Address' )
-  sys.exit( 1 )
-
-contractor_dns = None
-for line in open( '/etc/resolv.conf', 'r' ).readlines():
-  parts = line.split()
+  manual_loaded = False
   try:
-    if parts[0] == 'nameserver':
-      contractor_dns = parts[1]
+    FoundationBluePrint.objects.get( pk='manual-foundation-base' )
+    manual_loaded = True
+  except FoundationBluePrint.DoesNotExist:
+    pass
+
+  if not manual_loaded and os.getuid() != 0:
+    print( 'setupWizard was not run as root, and the required manual plugin not loaded.' )
+    sys.exit( 1 )
+
+  if not bind_configured and os.getuid() != 0:
+    print( 'WARNING!!! setupWizard was not run as root, will not be able to configure bind.' )
+    print( 'press <enter> to continue, or ctl-c to abort' )
+    sys.stdin.readline()
+
+  if args.superuser_password:
+    superuser_password = args.superuser_password
+  else:
+    print( 'Please Specify the password to use for the superuser("{0}") user'.format( args.superuser_username) )
+    superuser_password = getpass.getpass()
+
+  print( 'Getting network config...' )
+
+  if args.primary_interface:
+    contractor_iface = args.primary_interface
+    contractor_gateway = None  # TODO: if this value get's used, need to do some /sbin/ip magic to find the gateway for this interface if there is one
+
+  else:
+    line = subprocess.check_output( [ '/sbin/ip', 'route', 'get', '1.0.0.0' ], universal_newlines=True ).splitlines()[0]
+    parts = line.split()
+    contractor_iface = parts[4]
+    contractor_gateway = parts[2]
+
+  print( 'Interface Name: "{0}"'.format( contractor_iface ) )
+
+  contractor_ip_address = None
+
+  for line in subprocess.check_output( [ '/sbin/ip', 'address', 'show', contractor_iface ], universal_newlines=True ).splitlines():
+    parts = line.split()
+    if parts[0] == 'inet':
+      ( contractor_ip_address, network_prefix ) = parts[1].split( '/' )
+      network_prefix = int( network_prefix )
       break
 
-  except IndexError:
-    continue
-
-if contractor_dns is None:
-  print( 'Unable to discover DNS' )
-  sys.exit( 1 )
-
-try:
-  if args.primary_interface:
-    contractor_iface, contractor_vlan = args.primary_interface.split( '.' )
-  else:
-    contractor_iface, contractor_vlan = contractor_iface.split( '.' )
-
-except ValueError:
-  contractor_vlan = 0
-
-network_subnet = IpToStr( CIDRSubnet( StrToIp( contractor_ip_address ), network_prefix ) )
-
-contractor_ip_offset = StrToIp( contractor_ip_address ) - StrToIp( network_subnet )
-
-print( '  --- Detected Network Configuration ---')
-print( '     Interface: "{0}"'.format( contractor_iface ) )
-print( 'Network/Prefix: "{0}/{1}"'.format( network_subnet, network_prefix ) )
-print( ' Contractor Ip: "{0}", offset "{1}"'.format( contractor_ip_address, contractor_ip_offset ) )
-if contractor_gateway is not None:
-  print( '       Gateway: "{0}"'.format( contractor_gateway ) )
-print( '           DNS: "{0}"'.format( contractor_dns ) )
-if contractor_vlan:
-  print( '          VLAN: "{0}"'.format( contractor_vlan ) )
-print()
-
-if contractor_gateway is not None:
-  gateway_offset = StrToIp( contractor_gateway ) - StrToIp( network_subnet )
-
-  if network_prefix == 31 and gateway_offset != 0:
-    print( 'Bad caculated gateway offset: "{0}" for prefix of 31'.format( gateway_offset ) )
+  if contractor_ip_address is None:
+    print( 'Unable to discover IP Address' )
     sys.exit( 1 )
 
-  if network_prefix < 30 and ( gateway_offset < 1 or gateway_offset > 254 ):
-    print( 'Bad caculated gateway offset: "{0}"'.format( gateway_offset ) )
-    sys.exit( 1 )
-
-if args.dns_server is None:
-  args.dns_server = contractor_ip_address
-
-search_list = []
-tmp = args.site_domain.split( '.' )[ -1 ]
-search_list.append( tmp )
-for item in args.site_domain.split( '.' )[ -2::-1 ]:
-  tmp = item + '.' + tmp
-  search_list.append( tmp )
-search_list.reverse()
-
-print( '  === Values To Be Applied ===' )
-print( 'Site name:        {0}'.format( args.site_name ) )
-print( 'Domain:           {0}'.format( args.site_domain ) )
-print( 'DNS Search Path:  {0}'.format( search_list ) )
-print( 'DNS Server        {0}'.format( args.dns_server ) )
-print( 'NTP Server        {0}'.format( args.ntp_server ) )
-if args.proxy_server is not None:
-  print( 'Proxy Server      {0}'.format( args.proxy_server  ) )
-
-if os.getuid() == 0:
-  print( '* Installing packages...')
-  for package in [ 'contractor-os-base', 'contractor-plugins-manual' ] + [ 'contractor-plugins-{0}'.format( i ) for i in args.additional_plugin ]:
-    print( '   {0}'.format( package ) )
+  contractor_dns = None
+  for line in open( '/etc/resolv.conf', 'r' ).readlines():
+    parts = line.split()
     try:
-      subprocess.check_call( [ '/usr/bin/respkg', '-r', args.repo_name, package ] )
-    except subprocess.CalledProcessError:
-      print( 'Error installing' )
+      if parts[0] == 'nameserver':
+        contractor_dns = parts[1]
+        break
+
+    except IndexError:
+      continue
+
+  if contractor_dns is None:
+    print( 'Unable to discover DNS' )
+    sys.exit( 1 )
+
+  try:
+    if args.primary_interface:
+      contractor_iface, contractor_vlan = args.primary_interface.split( '.' )
+    else:
+      contractor_iface, contractor_vlan = contractor_iface.split( '.' )
+
+  except ValueError:
+    contractor_vlan = 0
+
+  network_subnet = IpToStr( CIDRSubnet( StrToIp( contractor_ip_address ), network_prefix ) )
+
+  contractor_ip_offset = StrToIp( contractor_ip_address ) - StrToIp( network_subnet )
+
+  print( '  --- Detected Network Configuration ---')
+  print( '     Interface: "{0}"'.format( contractor_iface ) )
+  print( 'Network/Prefix: "{0}/{1}"'.format( network_subnet, network_prefix ) )
+  print( ' Contractor Ip: "{0}", offset "{1}"'.format( contractor_ip_address, contractor_ip_offset ) )
+  if contractor_gateway is not None:
+    print( '       Gateway: "{0}"'.format( contractor_gateway ) )
+  print( '           DNS: "{0}"'.format( contractor_dns ) )
+  if contractor_vlan:
+    print( '          VLAN: "{0}"'.format( contractor_vlan ) )
+  print()
+
+  if contractor_gateway is not None:
+    gateway_offset = StrToIp( contractor_gateway ) - StrToIp( network_subnet )
+
+    if network_prefix == 31 and gateway_offset != 0:
+      print( 'Bad caculated gateway offset: "{0}" for prefix of 31'.format( gateway_offset ) )
       sys.exit( 1 )
 
+    if network_prefix < 30 and ( gateway_offset < 1 or gateway_offset > 254 ):
+      print( 'Bad caculated gateway offset: "{0}"'.format( gateway_offset ) )
+      sys.exit( 1 )
 
-if 'contractor.plugins.Manual' not in settings.INSTALLED_APPS:
-  settings.INSTALLED_APPS += ( 'contractor.plugins.Manual', )
-  apps.app_configs = OrderedDict()
-  apps.apps_ready = apps.models_ready = apps.loading = apps.ready = False
-  apps.clear_cache()
-  apps.populate( settings.INSTALLED_APPS )
+  if args.dns_server is None:
+    args.dns_server = contractor_ip_address
 
-from contractor.plugins.Manual.models import ManualFoundation
+  search_list = []
+  tmp = args.site_domain.split( '.' )[ -1 ]
+  search_list.append( tmp )
+  for item in args.site_domain.split( '.' )[ -2::-1 ]:
+    tmp = item + '.' + tmp
+    search_list.append( tmp )
+  search_list.reverse()
 
-fbp_manual = FoundationBluePrint.objects.get( pk='manual-foundation-base' )
-sbp_xenial = StructureBluePrint.objects.get( pk='manual-structure-base' )
+  print( '  === Values To Be Applied ===' )
+  print( 'Site name:        {0}'.format( args.site_name ) )
+  print( 'Domain:           {0}'.format( args.site_domain ) )
+  print( 'DNS Search Path:  {0}'.format( search_list ) )
+  print( 'DNS Server        {0}'.format( args.dns_server ) )
+  print( 'NTP Server        {0}'.format( args.ntp_server ) )
+  if args.proxy_server is not None:
+    print( 'Proxy Server      {0}'.format( args.proxy_server  ) )
 
-print()
-print( '* Creating test plot...' )
-p1 = Plot( name='test', corners='Your testing area' )
-p1.full_clean()
-p1.save()
-
-print( '* Creating site "{0}" ({1})...'.format( args.site_name, args.site_domain ) )
-parent = None
-for item in args.site_domain.split( '.' )[::-1]:
-  zone = Zone()
-  zone.name = item
-  if parent is not None:
-    zone.parent = parent
-  zone.full_clean()
-  zone.save()
-
-  parent = zone
-
-s1 = Site( name=args.site_name, description='Initial Site "{0}"'.format( args.site_name ) )
-s1.zone = zone
-s1.config_values[ 'domain_name' ] = args.site_domain
-s1.config_values[ 'dns_search' ] = search_list
-s1.config_values[ 'dns_servers' ] = [ args.dns_server ]
-s1.config_values[ 'ntp_servers' ] = [ args.ntp_server ]
-
-if args.proxy_server is not None:
-  s1.config_values[ 'mirror_proxy' ] = args.proxy_server
-
-s1.full_clean()
-s1.save()
-
-print( '* Creating network...' )
-ntwk = Network( name=args.network_name, site=s1 )
-ntwk.full_clean()
-ntwk.save()
-
-if contractor_gateway is not None:
-  addr_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=gateway_offset, prefix=network_prefix, name=args.network_name )
-else:
-  addr_block = AddressBlock( site=s1, subnet=network_subnet, prefix=network_prefix, name=args.network_name )
-
-addr_block.full_clean()
-addr_block.save()
-
-nab = NetworkAddressBlock( network=ntwk, address_block=addr_block, vlan=contractor_vlan )
-nab.full_clean()
-nab.save()
-
-print( '* Creating contractor({0}) host...'.format( args.contractor_hostname ) )
-fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator=args.contractor_hostname )
-fdn.full_clean()
-fdn.save()
-fdn.setBuilt()
-
-iface = RealNetworkInterface( name=contractor_iface, is_provisioning=True, network=ntwk )
-iface.foundation = fdn
-iface.physical_location = contractor_iface
-iface.full_clean()
-iface.save()
-
-strct = Structure( site=s1, blueprint=sbp_xenial, hostname=args.contractor_hostname, foundation=fdn )
-strct.full_clean()
-strct.save()
-strct.setBuilt()
-
-addr = Address( networked=strct, address_block=addr_block, interface_name=contractor_iface, offset=contractor_ip_offset, is_primary=True )
-addr.full_clean()
-addr.save()
-
-for hostname in [ 'contractor' ] + [ i.strip() for i in args.contractor_cnames.split( ',' ) ]:
-  hostname = hostname.strip()
-  print( '* Creating cname "{0}"...'.format( hostname ) )
-  e = Entry( type='CNAME' )
-  e.name = hostname
-  e.target = '{0}.{1}.'.format( args.contractor_hostname, args.site_domain )
-  e.full_clean()
-  e.save()
-
-if not args.no_ip_reservation:
-  print( '* Reserving address offsets from 2 - 20...')
-  for i in range( 2, 21 ):
-    addr = ReservedAddress( address_block=addr_block, offset=i, reason='network reserved' )
-    try:
-      addr.full_clean()
-    except ValidationError:
-      print( 'WARNING offset "{0}" is allready in use, skipped.'.format( i ) )
-      continue
-
-    addr.save()
-
-  print( '* Using offsets 21 - 29 for dynamic pool...' )
-  for i in range( 21, 30 ):
-    addr = DynamicAddress( address_block=addr_block, offset=i )
-    try:
-      addr.full_clean()
-    except ValidationError:
-      print( 'WARNING offset "{0}" is allready in use, skipped.'.format( i ) )
-      continue
-    addr.save()
-
-if os.getuid() == 0:
-  print( '* Generating Bind files...' )
-  subprocess.check_call( [ '/usr/lib/contractor/cron/genDNS' ] )
-
-print( '* Configuring Bind...' )
-if not bind_configured:
   if os.getuid() == 0:
-    fp = open( '/etc/bind/named.conf.local', 'w' )
-    fp.write( """//
-  // Do any local configuration here
-  //
+    print( '* Installing packages...')
+    for package in [ 'contractor-os-base', 'contractor-plugins-manual' ] + [ 'contractor-plugins-{0}'.format( i ) for i in args.additional_plugin ]:
+      print( '   {0}'.format( package ) )
+      try:
+        subprocess.check_call( [ '/usr/bin/respkg', '-r', args.repo_name, package ] )
+      except subprocess.CalledProcessError:
+        print( 'Error installing' )
+        sys.exit( 1 )
 
-  include "/etc/bind/contractor/dns.master";
-  """ )
-    fp.close()
+  if 'contractor.plugins.Manual' not in settings.INSTALLED_APPS:
+    settings.INSTALLED_APPS += ( 'contractor.plugins.Manual', )
+    apps.app_configs = OrderedDict()
+    apps.apps_ready = apps.models_ready = apps.loading = apps.ready = False
+    apps.clear_cache()
+    apps.populate( settings.INSTALLED_APPS )
 
-    fp = open( '/etc/bind/named.conf.options', 'w' )
-    fp.write( """options {{
-    directory "/var/cache/bind";
+  from contractor.plugins.Manual.models import ManualFoundation
 
-    forwarders {{
-      {0};
+  fbp_manual = FoundationBluePrint.objects.get( pk='manual-foundation-base' )
+  sbp_xenial = StructureBluePrint.objects.get( pk='manual-structure-base' )
+
+  print()
+  print( '* Creating test plot...' )
+  p1 = Plot( name='test', corners='Your testing area' )
+  p1.full_clean()
+  p1.save()
+
+  print( '* Creating site "{0}" ({1})...'.format( args.site_name, args.site_domain ) )
+  parent = None
+  for item in args.site_domain.split( '.' )[::-1]:
+    zone = Zone()
+    zone.name = item
+    if parent is not None:
+      zone.parent = parent
+    zone.full_clean()
+    zone.save()
+
+    parent = zone
+
+  s1 = Site( name=args.site_name, description='Initial Site "{0}"'.format( args.site_name ) )
+  s1.zone = zone
+  s1.config_values[ 'domain_name' ] = args.site_domain
+  s1.config_values[ 'dns_search' ] = search_list
+  s1.config_values[ 'dns_servers' ] = [ args.dns_server ]
+  s1.config_values[ 'ntp_servers' ] = [ args.ntp_server ]
+
+  if args.proxy_server is not None:
+    s1.config_values[ 'mirror_proxy' ] = args.proxy_server
+
+  s1.full_clean()
+  s1.save()
+
+  print( '* Creating network...' )
+  ntwk = Network( name=args.network_name, site=s1 )
+  ntwk.full_clean()
+  ntwk.save()
+
+  if contractor_gateway is not None:
+    addr_block = AddressBlock( site=s1, subnet=network_subnet, gateway_offset=gateway_offset, prefix=network_prefix, name=args.network_name )
+  else:
+    addr_block = AddressBlock( site=s1, subnet=network_subnet, prefix=network_prefix, name=args.network_name )
+
+  addr_block.full_clean()
+  addr_block.save()
+
+  nab = NetworkAddressBlock( network=ntwk, address_block=addr_block, vlan=contractor_vlan )
+  nab.full_clean()
+  nab.save()
+
+  print( '* Creating contractor({0}) host...'.format( args.contractor_hostname ) )
+  fdn = ManualFoundation( site=s1, blueprint=fbp_manual, locator=args.contractor_hostname )
+  fdn.full_clean()
+  fdn.save()
+  fdn.setBuilt()
+
+  iface = RealNetworkInterface( name=contractor_iface, is_provisioning=True, network=ntwk )
+  iface.foundation = fdn
+  iface.physical_location = contractor_iface
+  iface.full_clean()
+  iface.save()
+
+  strct = Structure( site=s1, blueprint=sbp_xenial, hostname=args.contractor_hostname, foundation=fdn )
+  strct.full_clean()
+  strct.save()
+  strct.setBuilt()
+
+  addr = Address( networked=strct, address_block=addr_block, interface_name=contractor_iface, offset=contractor_ip_offset, is_primary=True )
+  addr.full_clean()
+  addr.save()
+
+  for hostname in [ 'contractor' ] + [ i.strip() for i in args.contractor_cnames.split( ',' ) ]:
+    hostname = hostname.strip()
+    print( '* Creating cname "{0}"...'.format( hostname ) )
+    e = Entry( type='CNAME' )
+    e.name = hostname
+    e.target = '{0}.{1}.'.format( args.contractor_hostname, args.site_domain )
+    e.full_clean()
+    e.save()
+
+  if not args.no_ip_reservation:
+    print( '* Reserving address offsets from 2 - 20...')
+    for i in range( 2, 21 ):
+      addr = ReservedAddress( address_block=addr_block, offset=i, reason='network reserved' )
+      try:
+        addr.full_clean()
+      except ValidationError:
+        print( 'WARNING offset "{0}" is allready in use, skipped.'.format( i ) )
+        continue
+
+      addr.save()
+
+    print( '* Using offsets 21 - 29 for dynamic pool...' )
+    for i in range( 21, 30 ):
+      addr = DynamicAddress( address_block=addr_block, offset=i )
+      try:
+        addr.full_clean()
+      except ValidationError:
+        print( 'WARNING offset "{0}" is allready in use, skipped.'.format( i ) )
+        continue
+      addr.save()
+
+  if os.getuid() == 0:
+    print( '* Generating Bind files...' )
+    subprocess.check_call( [ '/usr/lib/contractor/cron/genDNS' ] )
+
+  print( '* Configuring Bind...' )
+  if not bind_configured:
+    if os.getuid() == 0:
+      fp = open( '/etc/bind/named.conf.local', 'w' )
+      fp.write( """//
+    // Do any local configuration here
+    //
+
+    include "/etc/bind/contractor/dns.master";
+    """ )
+      fp.close()
+
+      fp = open( '/etc/bind/named.conf.options', 'w' )
+      fp.write( """options {{
+      directory "/var/cache/bind";
+
+      forwarders {{
+        {0};
+      }};
+
+      dnssec-validation no;
+
+      auth-nxdomain no;    # conform to RFC1035
+      listen-on-v6 {{ any; }};
     }};
+    """.format( contractor_dns ) )
+      fp.close()
 
-    dnssec-validation no;
+  print( '* Creating superuser("{0}") user...'.format( args.superuser_username ) )
+  User.objects.create_superuser( username=args.superuser_username, password=superuser_password, email='{0}@{1}'.format( args.superuser_username, args.site_domain ) )
 
-    auth-nxdomain no;    # conform to RFC1035
-    listen-on-v6 {{ any; }};
-  }};
-  """.format( contractor_dns ) )
-    fp.close()
+  print( '* Create bootstrap user...' )
+  user = User.objects.create_user( username='bootstrap', password='bootstrap', email='bootstrap@contractor' )
+  user.user_permissions.set( lookup_permission_list( [ 'Building.can_bootstrap' ] ) )
 
-print( '* Creating superuser("{0}") user...'.format( args.superuser_username ) )
-User.objects.create_superuser( username=args.superuser_username, password=superuser_password, email='{0}@{1}'.format( args.superuser_username, args.site_domain ) )
+  print( '* Create job signaling user...' )
+  user = User.objects.create_user( username='jobsig', password='jobsig', email='bootstrap@contractor' )
+  user.user_permissions.set( lookup_permission_list( [ 'Foreman.can_job_signal' ] ) )
 
-print( '* Create bootstrap user...' )
-user = User.objects.create_user( username='bootstrap', password='bootstrap', email='bootstrap@contractor' )
-user.user_permissions.add( lookup_permission_list( [ 'Building.can_bootstrap' ] ) )
+  print( '* Create subcontractor user...' )
+  user = User.objects.create_user( username='subcontractor', password='subcontractor', email='subcontractor@contractor' )
+  user.user_permissions.set( lookup_permission_list( [ 'Site.view_site' ] ) )
 
-print( '* Create job signaling user...' )
-user = User.objects.create_user( username='jobsig', password='jobsig', email='bootstrap@contractor' )
-user.user_permissions.set( lookup_permission_list( [ 'Foreman.can_job_signal' ] ) )
+  print( '* Creating groups...' )
+  group = Group( name='worker' )
+  group.full_clean()
+  group.save()
+  group.permissions.set( lookup_permission_list( [ 'Building.can_create_foundation_job',
+                                                   'Building.can_create_structure_job',
+                                                   'Building.can_create_dependency_job',
+                                                   'Foreman.can_base_job',
+                                                   'Foreman.can_foundation_job',
+                                                   'Foreman.can_structure_job',
+                                                   'Foreman.can_dependency_job',
+                                                   'Survey.delete_cartographer',
+                                                   'Survey.can_assign_foundation'
+                                                   ] ) )
 
-print( '* Create subcontractor user...' )
-user = User.objects.create_user( username='subcontractor', password='subcontractor', email='subcontractor@contractor' )
-user.user_permissions.set( lookup_permission_list( [ 'Site.view_site'
-                                                     ] ) )
+  group = Group( name='builder' )
+  group.full_clean()
+  group.save()
+  group.permissions.set( lookup_permission_list( [ 'Building.can_config_structure',
+                                                   'Building.can_create_foundation',
+                                                   'Building.view_structure',
+                                                   'Building.add_structure',
+                                                   'Building.change_structure',
+                                                   'Building.delete_structure',
+                                                   'Building.view_complexstructure',
+                                                   'Building.add_complexstructure',
+                                                   'Building.change_complexstructure',
+                                                   'Building.delete_complexstructure',
+                                                   'Building.view_dependency',
+                                                   'Building.add_dependency',
+                                                   'Building.change_dependency',
+                                                   'Building.delete_dependency',
+                                                   'Utilities.view_address',
+                                                   'Utilities.add_address',
+                                                   'Utilities.change_address',
+                                                   'Utilities.delete_address',
+                                                   'Utilities.view_abstractnetworkinterface',
+                                                   'Utilities.add_abstractnetworkinterface',
+                                                   'Utilities.change_abstractnetworkinterface',
+                                                   'Utilities.delete_abstractnetworkinterface',
+                                                   'Utilities.view_aggregatednetworkinterface',
+                                                   'Utilities.add_aggregatednetworkinterface',
+                                                   'Utilities.change_aggregatednetworkinterface',
+                                                   'Utilities.delete_aggregatednetworkinterface',
+                                                   'Utilities.view_realnetworkinterface',
+                                                   'Utilities.add_realnetworkinterface',
+                                                   'Utilities.change_realnetworkinterface',
+                                                   'Utilities.delete_realnetworkinterface',
+                                                   'Utilities.view_networked',
+                                                   'Utilities.add_networked',
+                                                   'Utilities.change_networked',
+                                                   'Utilities.delete_networked',
+                                                   ] ) )
 
-print( '* Creating groups...' )
-group = Group( name='worker' )
-group.full_clean()
-group.save()
-group.permissions.set( lookup_permission_list( [ 'Building.can_create_foundation_job',
-                                                 'Building.can_create_structure_job',
-                                                 'Building.can_create_dependency_job',
-                                                 'Foreman.can_base_job',
-                                                 'Foreman.can_foundation_job',
-                                                 'Foreman.can_structure_job',
-                                                 'Foreman.can_dependency_job',
-                                                 'Survey.delete_cartographer',
-                                                 'Survey.can_assign_foundation'
-                                                 ] ) )
+  group = Group( name='infrastructure' )
+  group.full_clean()
+  group.save()
+  group.permissions.set( lookup_permission_list( [ 'Site.view_site',
+                                                   'Site.add_site',
+                                                   'Site.change_site',
+                                                   'Site.delete_site',
+                                                   'Directory.view_entry',
+                                                   'Directory.add_entry',
+                                                   'Directory.change_entry',
+                                                   'Directory.delete_entry',
+                                                   'Directory.view_zone',
+                                                   'Directory.add_zone',
+                                                   'Directory.change_zone',
+                                                   'Directory.delete_zone',
+                                                   'Survey.view_plot',
+                                                   'Survey.add_plot',
+                                                   'Survey.change_plot',
+                                                   'Survey.delete_plot',
+                                                   'Utilities.view_addressblock',
+                                                   'Utilities.add_addressblock',
+                                                   'Utilities.change_addressblock',
+                                                   'Utilities.delete_addressblock',
+                                                   'Utilities.view_dynamicaddress',
+                                                   'Utilities.add_dynamicaddress',
+                                                   'Utilities.change_dynamicaddress',
+                                                   'Utilities.delete_dynamicaddress',
+                                                   'Utilities.view_reservedaddress',
+                                                   'Utilities.add_reservedaddress',
+                                                   'Utilities.change_reservedaddress',
+                                                   'Utilities.delete_reservedaddress',
+                                                   'Utilities.view_network',
+                                                   'Utilities.add_network',
+                                                   'Utilities.change_network',
+                                                   'Utilities.delete_network',
+                                                   'Utilities.view_networkaddressblock',
+                                                   'Utilities.add_networkaddressblock',
+                                                   'Utilities.change_networkaddressblock',
+                                                   'Utilities.delete_networkaddressblock',
+                                                   ] ) )
 
-group = Group( name='builder' )
-group.full_clean()
-group.save()
-group.permissions.set( lookup_permission_list( [ 'Building.can_config_structure',
-                                                 'Building.can_create_foundation',
-                                                 'Building.view_structure',
-                                                 'Building.add_structure',
-                                                 'Building.change_structure',
-                                                 'Building.delete_structure',
-                                                 'Building.view_complexstructure',
-                                                 'Building.add_complexstructure',
-                                                 'Building.change_complexstructure',
-                                                 'Building.delete_complexstructure',
-                                                 'Building.view_dependency',
-                                                 'Building.add_dependency',
-                                                 'Building.change_dependency',
-                                                 'Building.delete_dependency',
-                                                 'Utilities.view_address',
-                                                 'Utilities.add_address',
-                                                 'Utilities.change_address',
-                                                 'Utilities.delete_address',
-                                                 'Utilities.view_abstractnetworkinterface',
-                                                 'Utilities.add_abstractnetworkinterface',
-                                                 'Utilities.change_abstractnetworkinterface',
-                                                 'Utilities.delete_abstractnetworkinterface',
-                                                 'Utilities.view_aggregatednetworkinterface',
-                                                 'Utilities.add_aggregatednetworkinterface',
-                                                 'Utilities.change_aggregatednetworkinterface',
-                                                 'Utilities.delete_aggregatednetworkinterface',
-                                                 'Utilities.view_realnetworkinterface',
-                                                 'Utilities.add_realnetworkinterface',
-                                                 'Utilities.change_realnetworkinterface',
-                                                 'Utilities.delete_realnetworkinterface',
-                                                 'Utilities.view_networked',
-                                                 'Utilities.add_networked',
-                                                 'Utilities.change_networked',
-                                                 'Utilities.delete_networked',
-                                                 ] ) )
+  group = Group( name='designer' )
+  group.full_clean()
+  group.save()
+  group.permissions.set( lookup_permission_list( [ 'BluePrint.view_blueprintscript',
+                                                   'BluePrint.add_blueprintscript',
+                                                   'BluePrint.change_blueprintscript',
+                                                   'BluePrint.delete_blueprintscript',
+                                                   'BluePrint.view_foundationblueprint',
+                                                   'BluePrint.add_foundationblueprint',
+                                                   'BluePrint.change_foundationblueprint',
+                                                   'BluePrint.delete_foundationblueprint',
+                                                   'BluePrint.view_structureblueprint',
+                                                   'BluePrint.add_structureblueprint',
+                                                   'BluePrint.change_structureblueprint',
+                                                   'BluePrint.delete_structureblueprint',
+                                                   'BluePrint.view_script',
+                                                   'BluePrint.add_script',
+                                                   'BluePrint.change_script',
+                                                   'BluePrint.delete_script',
+                                                   'BluePrint.view_pxe',
+                                                   'BluePrint.add_pxe',
+                                                   'BluePrint.change_pxe',
+                                                   'BluePrint.delete_pxe',
+                                                   ] ) )
 
-group = Group( name='infrastructure' )
-group.full_clean()
-group.save()
-group.permissions.set( lookup_permission_list( [ 'Site.view_site',
-                                                 'Site.add_site',
-                                                 'Site.change_site',
-                                                 'Site.delete_site',
-                                                 'Directory.view_entry',
-                                                 'Directory.add_entry',
-                                                 'Directory.change_entry',
-                                                 'Directory.delete_entry',
-                                                 'Directory.view_zone',
-                                                 'Directory.add_zone',
-                                                 'Directory.change_zone',
-                                                 'Directory.delete_zone',
-                                                 'Survey.view_plot',
-                                                 'Survey.add_plot',
-                                                 'Survey.change_plot',
-                                                 'Survey.delete_plot',
-                                                 'Utilities.view_addressblock',
-                                                 'Utilities.add_addressblock',
-                                                 'Utilities.change_addressblock',
-                                                 'Utilities.delete_addressblock',
-                                                 'Utilities.view_dynamicaddress',
-                                                 'Utilities.add_dynamicaddress',
-                                                 'Utilities.change_dynamicaddress',
-                                                 'Utilities.delete_dynamicaddress',
-                                                 'Utilities.view_reservedaddress',
-                                                 'Utilities.add_reservedaddress',
-                                                 'Utilities.change_reservedaddress',
-                                                 'Utilities.delete_reservedaddress',
-                                                 'Utilities.view_network',
-                                                 'Utilities.add_network',
-                                                 'Utilities.change_network',
-                                                 'Utilities.delete_network',
-                                                 'Utilities.view_networkaddressblock',
-                                                 'Utilities.add_networkaddressblock',
-                                                 'Utilities.change_networkaddressblock',
-                                                 'Utilities.delete_networkaddressblock',
-                                                 ] ) )
+  print( 'Done!' )
 
-group = Group( name='designer' )
-group.full_clean()
-group.save()
-group.permissions.set( lookup_permission_list( [ 'BluePrint.view_blueprintscript',
-                                                 'BluePrint.add_blueprintscript',
-                                                 'BluePrint.change_blueprintscript',
-                                                 'BluePrint.delete_blueprintscript',
-                                                 'BluePrint.view_foundationblueprint',
-                                                 'BluePrint.add_foundationblueprint',
-                                                 'BluePrint.change_foundationblueprint',
-                                                 'BluePrint.delete_foundationblueprint',
-                                                 'BluePrint.view_structureblueprint',
-                                                 'BluePrint.add_structureblueprint',
-                                                 'BluePrint.change_structureblueprint',
-                                                 'BluePrint.delete_structureblueprint',
-                                                 'BluePrint.view_script',
-                                                 'BluePrint.add_script',
-                                                 'BluePrint.change_script',
-                                                 'BluePrint.delete_script',
-                                                 'BluePrint.view_pxe',
-                                                 'BluePrint.add_pxe',
-                                                 'BluePrint.change_pxe',
-                                                 'BluePrint.delete_pxe',
-                                                 ] ) )
 
-print( 'Done!' )
+if __name__ == '__main__':
+  main()

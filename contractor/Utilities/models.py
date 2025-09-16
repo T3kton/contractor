@@ -308,9 +308,10 @@ class AddressBlock( models.Model ):
       if self.gateway_offset < low_offset or self.gateway_offset > high_offset:
         errors[ 'gateway_offset' ] = 'Must be greater than {0} and less than {1}'.format( low_offset, high_offset )
 
-    offset_list = self.baseaddress_set.all().values_list( 'offset', flat=True )
-    if sum( [ i > high_offset for i in offset_list ] ) > 0:
-      errors[ 'prefix' ] = 'Prefix excludes existing addresses'
+    if self.pk is not None:
+      offset_list = self.baseaddress_set.all().values_list( 'offset', flat=True )
+      if sum( [ i > high_offset for i in offset_list ] ) > 0:
+        errors[ 'prefix' ] = 'Prefix excludes existing addresses'
 
     if errors:
       raise ValidationError( errors )
