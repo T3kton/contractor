@@ -327,7 +327,7 @@ class Foundation( models.Model ):
     """
     returns the computed config for this foundation
     """
-    return [ { 'name': i.name, 'physical_location': i.physical_location, 'is_provisioning': i.is_provisioning, 'mac': i.mac, 'pxe': i.pxe } for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
+    return [ { 'name': i.name, 'physical_location': i.physical_location, 'is_provisioning': i.is_provisioning, 'mac': i.mac, 'pxe': i.pxe, 'network': i.network } for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod

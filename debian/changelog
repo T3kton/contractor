@@ -1,3 +1,9 @@
+contractor (0.19.1-1) noble; urgency=medium
+
+  * Packaging updates
+
+ -- Peter Howe <pnhowe@gmail.com>  Tue, 16 Sep 2025 21:21:41 -0600
+
 contractor (0.19.0-1) focal; urgency=medium
 
   * Job Signaling all working

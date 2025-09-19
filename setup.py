@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import os
-from distutils.core import setup
-from distutils.command.build_py import build_py
+from setuptools import setup
+from setuptools.command.build_py import build_py
 from setuptools import find_packages
 
 
