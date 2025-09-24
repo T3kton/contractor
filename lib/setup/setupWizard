@@ -53,8 +53,8 @@ def main():
   parser.add_argument( '--primary-interface', help='which interface to use as the primary interface for the contractor structure, if not specified it will be auto detected', metavar='INTERFACE' )
   parser.add_argument( '--network-name', help='name of the network that is created, default="main"', default='main' )
   parser.add_argument( '--contractor-cnames', help='comma (,) delimited list of cnames for the contractor host/ip, default="static,proxy", NOTE: "contractor" will also be created as a CNAME', default='static,proxy' )
-  parser.add_argument( '--additional-plugin', help='Additional plugins to load, can be specified more than once, by default just "manual" is loaded, example:"vcenter"', action='append' )
-  parser.add_argument( '--repo-name', help='name of the repo to install plugins from, default="internal"', default='internal' )
+  parser.add_argument( '--additional-plugin', help='Additional plugins to load, can be specified more than once, by default just "manual" is loaded, if repo-name is specified, example:"vcenter"', action='append', default=[] )
+  parser.add_argument( '--repo-name', help='name of the repo to install plugins from' )
 
   args = parser.parse_args()
 
@@ -188,7 +188,7 @@ def main():
   if args.proxy_server is not None:
     print( 'Proxy Server      {0}'.format( args.proxy_server  ) )
 
-  if os.getuid() == 0:
+  if os.getuid() == 0 and args.repo_name:
     print( '* Installing packages...')
     for package in [ 'contractor-os-base', 'contractor-plugins-manual' ] + [ 'contractor-plugins-{0}'.format( i ) for i in args.additional_plugin ]:
       print( '   {0}'.format( package ) )

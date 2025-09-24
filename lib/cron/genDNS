@@ -73,7 +73,7 @@ open( CACHE_FILE, 'w' ).write( json.dumps( cache ) )
 
 print( 'Checking...' )
 try:
-  subprocess.check_call( [ '/usr/sbin/named-checkconf', '-z' ] )
+  subprocess.check_call( [ '/usr/bin/named-checkconf', '-z' ] )
 except subprocess.CalledProcessError:
   print( 'Validity check failed...' )
   sys.exit( 1 )

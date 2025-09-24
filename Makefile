@@ -91,6 +91,8 @@ dpkg-requires:
 	echo dpkg-dev debhelper python3-dev python3-setuptools nodejs npm dh-python
 
 dpkg-setup:
+
+dpkg:
 	dpkg-buildpackage -b -us -uc
 	touch dpkg
 

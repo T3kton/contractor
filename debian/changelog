@@ -1,3 +1,9 @@
+contractor (0.19.2-1) noble; urgency=medium
+
+  * setupWizzard and genDNS fixes
+
+ -- Peter Howe <pnhowe@gmail.com>  Wed, 24 Sep 2025 09:26:09 -0600
+
 contractor (0.19.1-1) noble; urgency=medium
 
   * Packaging updates
