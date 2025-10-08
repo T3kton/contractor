@@ -109,7 +109,7 @@ class Cartographer( models.Model ):
   @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ 'Map' ] )
   def lookup( self, info_map=None ):
     self.info_map = info_map
-    self.last_checkin = datetime.datetime.utcnow()
+    self.last_checkin = datetime.datetime.now( datetime.UTC )
     self.full_clean()
     self.save()
 

@@ -238,7 +238,7 @@ class SignalingPlugin( object ):
 
   def waitForCompletion( self ):
     if not self.complete:
-      raise Interrupt( 'Not Complete' )
+      raise Interrupt( 'Waiting for Complete Signal' )
 
   def signal( self, cookie ):
     if cookie != '{0}({1})'.format( self.cookie, self.pxe_name ):

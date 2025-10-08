@@ -238,11 +238,11 @@ class Delay( ExternalFunction ):
 
   @property
   def done( self ):
-    return datetime.datetime.utcnow() >= self.end_at
+    return datetime.datetime.now( datetime.UTC ) >= self.end_at
 
   @property
   def message( self ):
-    return 'Waiting for {0} more seconds'.format( ( self.end_at - datetime.datetime.utcnow() ).seconds )
+    return 'Waiting for {0} more seconds'.format( ( self.end_at - datetime.datetime.now( datetime.UTC ) ).seconds )
 
   def setup( self, parms ):
     seconds = 0
@@ -266,7 +266,7 @@ class Delay( ExternalFunction ):
     if seconds == 0 and minutes == 0 and hours == 0:
       raise ParamaterError( '<unknwon>', 'specified 0 delay, set one or more of "seconds", "minutes", "hours"' )
 
-    self.end_at = datetime.datetime.utcnow() + datetime.timedelta( seconds=seconds, minutes=minutes, hours=hours )
+    self.end_at = datetime.datetime.now( datetime.UTC ) + datetime.timedelta( seconds=seconds, minutes=minutes, hours=hours )
 
   def __getstate__( self ):
     return ( self.end_at, )
@@ -328,7 +328,7 @@ def _debugDump( message, exception, ast, state ):
     if settings.DEBUG_DUMP_LOCATION == '*CONSOLE*':
       fp = sys.stdout
     else:
-      fp = open( os.path.join( settings.DEBUG_DUMP_LOCATION, datetime.utcnow().isoformat() ), 'w' )
+      fp = open( os.path.join( settings.DEBUG_DUMP_LOCATION, datetime.datetime.now( datetime.UTC ).isoformat() ), 'w' )
 
     fp.write( '** Message **\n' )
     fp.write( str( message ) )
@@ -410,7 +410,7 @@ class Runner( object ):
     return self.state == 'ABORTED'
 
   @property
-  def status( self ):  # list of ( % complete, status message )
+  def status( self ):  # list of ( % complete, operation, paramaters )
     logging.debug( 'runner: status state: {0}'.format( self.state ) )
     if self.done or self.aborted:
       return [ ( 100.0, 'Scope', None ) ]
@@ -435,7 +435,7 @@ class Runner( object ):
             pass
 
         try:
-          elapsed = datetime.datetime.utcnow() - step[2]
+          elapsed = datetime.datetime.now( datetime.UTC ) - step[2]
         except IndexError:
           elapsed = datetime.timedelta(0)
         tmp[ 'time_elapsed' ] = _delta_to_string( elapsed )
@@ -604,15 +604,15 @@ class Runner( object ):
         self.state[ state_index ][1]
       except IndexError:
         self.state[ state_index ].append( 0 )
-        self.state[ state_index ].append( datetime.datetime.utcnow() )
+        self.state[ state_index ].append( datetime.datetime.now( datetime.UTC ) )
         if 'max_time' in op_data:
-          self.state[ state_index ].append( op_data[ 'max_time' ] + datetime.datetime.utcnow() )
+          self.state[ state_index ].append( op_data[ 'max_time' ] + datetime.datetime.now( datetime.UTC )  )
 
       try:
         if self.state[ state_index ][3] is None:
-          self.state[ state_index ][3] = datetime.datetime.utcnow()  # last time was a timeout, so set it so next run will timeout
+          self.state[ state_index ][3] = datetime.datetime.now( datetime.UTC )  # last time was a timeout, so set it so next run will timeout
 
-        elif datetime.datetime.utcnow() > self.state[ state_index ][3]:
+        elif datetime.datetime.now( datetime.UTC ) > self.state[ state_index ][3]:
           self.state[ state_index ][3] = None
           raise Pause( 'Max Time Elapsed' )
 
@@ -967,7 +967,7 @@ class Runner( object ):
 
             value = handler.value
 
-          except( Pause, ExecutionError, UnrecoverableError, Interrupt ) as e:
+          except ( Pause, ExecutionError, UnrecoverableError, Interrupt ) as e:
             raise e
 
           except Exception as e:

@@ -391,7 +391,7 @@ def test_site():
   del tmp[ '__pxe_template_location' ]
 
   assert tmp == {
-                  '__contractor_host': 'http://contractor/',
+                  '__contractor_host': 'http://contractor',
                   '__pxe_location': 'http://static/pxe/',
                   '_site': 'site1'
                 }
@@ -452,7 +452,7 @@ def test_blueprint():
   del tmp[ '__pxe_template_location' ]
 
   assert tmp == {
-                  '__contractor_host': 'http://contractor/',
+                  '__contractor_host': 'http://contractor',
                   '__pxe_location': 'http://static/pxe/',
                   '_blueprint': 'fdnb1'
                 }
@@ -497,7 +497,7 @@ def test_blueprint():
   del tmp[ '__pxe_template_location' ]
 
   assert tmp == {
-                  '__contractor_host': 'http://contractor/',
+                  '__contractor_host': 'http://contractor',
                   '__pxe_location': 'http://static/pxe/',
                   '_blueprint': 'strb1'
                 }
@@ -548,7 +548,7 @@ def test_foundation():
   del tmp[ '__pxe_template_location' ]
 
   assert tmp == {
-                  '__contractor_host': 'http://contractor/',
+                  '__contractor_host': 'http://contractor',
                   '__pxe_location': 'http://static/pxe/',
                   '_foundation_class_list': [],
                   '_foundation_id': 'fdn1',
@@ -651,7 +651,7 @@ def test_structure():
   del tmp[ '__pxe_template_location' ]
 
   assert tmp == {
-                  '__contractor_host': 'http://contractor/',
+                  '__contractor_host': 'http://contractor',
                   '__pxe_location': 'http://static/pxe/',
                   '_foundation_class_list': [],
                   '_foundation_id': 'fdn1',

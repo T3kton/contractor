@@ -1,7 +1,7 @@
 import copy
 import json
 from datetime import datetime, timezone
-from jinja2 import Environment, Undefined, TemplateSyntaxError
+from jinja2 import Environment, Undefined, TemplateError, TemplateSyntaxError
 
 from django.conf import settings
 
@@ -256,11 +256,15 @@ def getConfig( target ):
   # Global Attributes
   config[ '__last_modified' ] = last_modified
   config[ '__timestamp' ] = datetime.now( timezone.utc )
-  config[ '__contractor_host' ] = settings.CONTRACTOR_HOST
+  if settings.CONTRACTOR_PORT:
+    config[ '__contractor_host' ] = '{0}:{1}'.format( settings.CONTRACTOR_HOST, settings.CONTRACTOR_PORT )
+  else:
+    config[ '__contractor_host' ] = settings.CONTRACTOR_HOST
+
   try:
-    config[ '__pxe_template_location' ] = '{0}config/pxe_template/c/{1}'.format( settings.CONTRACTOR_HOST, config[ '_structure_config_uuid' ] )
+    config[ '__pxe_template_location' ] = '{0}/config/pxe_template/c/{1}'.format( config[ '__contractor_host' ], config[ '_structure_config_uuid' ] )
   except KeyError:
-    config[ '__pxe_template_location' ] = '{0}config/pxe_template/'.format( settings.CONTRACTOR_HOST )
+    config[ '__pxe_template_location' ] = '{0}/config/pxe_template/'.format( config[ '__contractor_host' ] )
   config[ '__pxe_location' ] = settings.PXE_IMAGE_LOCATION
 
   return config
@@ -315,5 +319,8 @@ def renderTemplate( template, value_map ):
 
   except TemplateSyntaxError as e:
     raise Exception( 'Error parsing template: "{0}" on line: "{1}"'.format( e.message, e.lineno ) )
+
+  except TemplateError as e:
+    raise Exception( 'Error rendering template: "{0}"'.format( e ) )
 
   return template

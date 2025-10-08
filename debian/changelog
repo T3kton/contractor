@@ -1,3 +1,9 @@
+contractor (0.19.3-1) noble; urgency=medium
+
+  * tweeking this so the API port can be published if it isn't the default
+
+ -- Peter Howe <pnhowe@gmail.com>  Wed, 08 Oct 2025 11:06:56 -0600
+
 contractor (0.19.2-1) noble; urgency=medium
 
   * setupWizzard and genDNS fixes
