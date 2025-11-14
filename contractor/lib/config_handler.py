@@ -73,6 +73,10 @@ def handler( request ):
 
     elif request_type == 'pxe_template':
       template = pxe.template
+      try:
+        config[ '__connection_paramaters' ] = target.foundation.subclass.connection_paramaters  # TODO: this is a very very ugly hack, need a better way for firmware update and bootstrap disks to get the connection information
+      except AttributeError:
+        pass
 
     data = renderTemplate( template, config )
     return Response( 200, data=data, content_type='text' )

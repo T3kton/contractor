@@ -10,6 +10,7 @@ import re
 # can have a wild card name as a catch all
 #
 
+
 def validateTemplate( id_map, validation_template ):  # return message as a string if something does not match
   for name, pattern in validation_template.items():
     try:

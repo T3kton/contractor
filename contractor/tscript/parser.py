@@ -148,10 +148,9 @@ class Parser( object ):
         return ast[0][1]
     except IndexError:
        pass
-  
+
     # otherwise create a wrapper Scope
     return ( Types.SCOPE, { '_children': ast } )
-      
 
   def _eval( self, node ):
     if node.expr_name[ 0:3 ] in ( 'ws_', 'nl_', 'em_' ):  # ignore wite space

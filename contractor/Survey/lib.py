@@ -9,7 +9,7 @@ def foundationLookup( info_map ):
   if 'config_uuid' in info_map:
     try:
       structure = Structure.objects.get( config_uuid=info_map[ 'config_uuid' ] )
-      return ( 'configu_uuid', structure.foundation )
+      return ( 'config_uuid', structure.foundation )
     except Structure.DoesNotExist:
       return ( None, None )
 
@@ -19,14 +19,14 @@ def foundationLookup( info_map ):
       lldp_name = '{0}-{1}-{2}-{3}'.format( lldp_info[ 'mac' ], lldp_info[ 'slot' ], lldp_info[ 'port' ], lldp_info[ 'subport' ] )
       try:
         iface = RealNetworkInterface.objects.get( link_name=lldp_name )
-        return ( 'lldp by mac interface: "{0}"'.format( iface_name ), iface.foundation )
+        return ( 'lldp mac: "{0}"'.format( iface_name ), iface.foundation )
       except ( RealNetworkInterface.MultipleObjectsReturned, RealNetworkInterface.DoesNotExist ):
         pass
 
       lldp_name = '{0}-{1}-{2}-{3}'.format( lldp_info[ 'name' ], lldp_info[ 'slot' ], lldp_info[ 'port' ], lldp_info[ 'subport' ] )
       try:
         iface = RealNetworkInterface.objects.get( link_name=lldp_name )
-        return ( 'lldp by name interface: "{0}"'.format( iface_name ), iface.foundation )
+        return ( 'lldp name: "{0}"'.format( iface_name ), iface.foundation )
       except ( RealNetworkInterface.MultipleObjectsReturned, RealNetworkInterface.DoesNotExist ):
         pass
 
@@ -38,6 +38,7 @@ def foundationLookup( info_map ):
 
   # lastely DMI/Hardware information
   if 'hardware' in info_map:
+
     # look up hardware by info_map[ 'hardware' ][ 'dmi' ][ 'Base Board Information' ][ 'Product Name' or 'Serial Number' or 'Asset Tag' ]
     pass
 

@@ -36,7 +36,7 @@ class BaseJob( models.Model ):
   site = models.ForeignKey( Site, editable=False, on_delete=models.CASCADE )
   state = models.CharField( max_length=10, choices=[ ( i, i ) for i in JOB_STATE_CHOICES ] )
   status = JSONField( default=[], blank=True )
-  message = models.CharField( max_length=1024, default='', blank=True )
+  message = models.CharField( max_length=1024, default='', blank=True )  # messages can come from Script (Pause/___Error/Exception), Plugin (fromSubcontractor jobResults/jobError), PXE Image postMessage/signalAlert
   script_runner = models.BinaryField( editable=False )
   script_name = models.CharField( max_length=40, editable=False, default=False )
   updated = models.DateTimeField( editable=False, auto_now=True )

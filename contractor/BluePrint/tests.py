@@ -1,7 +1,3 @@
-import pytest
-
-from django.core.exceptions import ValidationError
-
 from contractor.BluePrint.lib import validateTemplate
 
 

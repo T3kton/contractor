@@ -117,6 +117,7 @@ class Cartographer( models.Model ):
       self._setFoundationPXE()
       return { 'matched_by': 'Pre-Set', 'locator': self.foundation.locator }
 
+    # TODO: make sure the platform that the bootstrap detected matches the foundation
     ( matched_by, foundation ) = foundationLookup( info_map )
     if foundation is not None:
       self.foundation = foundation

@@ -63,7 +63,6 @@ def test_begin():
   node = parse( 'begin( description="gogogo")\nend' )
   assert node == ( 'S', { '_children': [], 'description': 'gogogo' } )
 
-
   with pytest.raises( ParserError ) as e:
     parse( 'begin()' )
 

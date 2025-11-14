@@ -134,8 +134,8 @@ class Foundation( models.Model ):
       iface.save()
 
     self.built_at = None
-    self.located_at = None
-    self.id_map = None
+    self.located_at = None  # TODO: don't we want to go back to identified?  if so, how do we go back to planned?
+    self.id_map = None  # TODO: follow the lead with located_at
     self.full_clean()
     self.save()
 

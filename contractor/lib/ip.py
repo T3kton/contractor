@@ -99,7 +99,7 @@ def CIDRNetworkBounds( ip, prefix, include_unusable=False, as_offsets=False ):
     if not ipv6:
       net -= 0x0000000000000000000000000000ffff00000000  # take this out, otherwise it get's added in twice
       if prefix == 32:
-        return( 0, 0 )
+        return ( 0, 0 )
 
       elif prefix == 31:
         return ( 0, 1 )
@@ -112,7 +112,7 @@ def CIDRNetworkBounds( ip, prefix, include_unusable=False, as_offsets=False ):
 
     else:
       if prefix == 128:
-        return( 0, 0 )
+        return ( 0, 0 )
 
       elif prefix == 127:
         return ( 0, 1 )
@@ -127,7 +127,7 @@ def CIDRNetworkBounds( ip, prefix, include_unusable=False, as_offsets=False ):
   if not ipv6:
     net -= 0x0000000000000000000000000000ffff00000000  # take this out, otherwise it get's added in twice
     if prefix == 32:
-      return( ip, ip )
+      return ( ip, ip )
 
     elif prefix == 31:
       return ( base_ip, base_ip + 1 )
@@ -140,7 +140,7 @@ def CIDRNetworkBounds( ip, prefix, include_unusable=False, as_offsets=False ):
 
   else:
     if prefix == 128:
-      return( ip, ip )
+      return ( ip, ip )
 
     elif prefix == 127:
       return ( base_ip, base_ip + 1 )
@@ -175,7 +175,7 @@ def StrToIp( value ):
     if len( part_list ) != 4:
       raise ValueError( 'Invalid IPv4 Address' )
 
-    while( part_list ):
+    while ( part_list ):
       result <<= 8
       try:
         part = int( part_list.pop( 0 ) )

@@ -154,7 +154,7 @@ def main():
 
   if args.delete:
     if not target.can_delete:
-      print( 'Target has dependancies/structure can not delete' )
+      print( 'Target has job/dependancies/structure can not delete' )
       sys.exit( 1 )
 
     if target.state == 'built':
