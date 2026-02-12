@@ -36,7 +36,7 @@
 
 [ pxe.ubuntu ]
   boot_script = """echo Ubuntu Installer
-kernel {{ __pxe_location }}/ubuntu-installer/vmlinuz auto url={{ __pxe_template_location }} locale=en_US.UTF-8 keyboard-configuration/layoutcode=us netcfg/no_default_route=true domain={{ _domain_name }} hostname={{ _hostname }}
+kernel {{ __pxe_location }}/ubuntu-installer/vmlinuz auto url={{ __contractor_host }}/config/pxe_template/c/{{ _structure_config_uuid }} locale=en_US.UTF-8 keyboard-configuration/layoutcode=us netcfg/no_default_route=true domain={{ _domain_name }} hostname={{ _hostname }}
 initrd {{ __pxe_location }}/ubuntu-installer/initrd
 boot
 """
@@ -133,7 +133,7 @@ d-i debian-installer/exit/poweroff boolean true
 ### Needed to get the network config to save
 d-i preseed/early_command string kill-all-dhcp; netcfg
 
-### Post install 
+### Post install
 {% if postinstall_script or postinstall_command_list %}
 d-i preseed/late_command string echo -e '#!/bin/sh -xe\\necho "Start post install..."\\n\\
 {% if postinstall_script %} wget -vO /target/root/postinstall_script {{ postinstall_script }}\\n\\
