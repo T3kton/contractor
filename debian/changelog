@@ -1,3 +1,92 @@
+contractor (0.19.3-1) noble; urgency=medium
+
+  * tweeking this so the API port can be published if it isn't the default
+
+ -- Peter Howe <pnhowe@gmail.com>  Wed, 08 Oct 2025 11:06:56 -0600
+
+contractor (0.19.2-1) noble; urgency=medium
+
+  * setupWizzard and genDNS fixes
+
+ -- Peter Howe <pnhowe@gmail.com>  Wed, 24 Sep 2025 09:26:09 -0600
+
+contractor (0.19.1-1) noble; urgency=medium
+
+  * Packaging updates
+
+ -- Peter Howe <pnhowe@gmail.com>  Tue, 16 Sep 2025 21:21:41 -0600
+
+contractor (0.19.0-1) focal; urgency=medium
+
+  * Job Signaling all working
+
+ -- Peter Howe <pnhowe@gmail.com>  Tue, 01 Feb 2022 09:21:36 -0700
+
+contractor (0.18.5-1) focal; urgency=medium
+
+  * cinp 1.0
+
+ -- Peter Howe <pnhowe@gmail.com>  Fri, 28 Jan 2022 11:54:52 -0700
+
+contractor (0.17.0-1) focal; urgency=medium
+
+  * Adding signalComplete, postMessage, siglanAlert support
+
+ -- Peter Howe <pnhowe@gmail.com>  Thu, 27 Jan 2022 14:49:57 -0700
+
+contractor (0.16.6-1) focal; urgency=medium
+
+  * NetworkInterface work
+
+ -- Peter Howe <pnhowe@gmail.com>  Fri, 12 Nov 2021 13:17:05 -0700
+
+contractor (0.15.1-1) focal; urgency=medium
+
+  * SetupWizard now accepts --contractor-hostname
+
+ -- Peter Howe <pnhowe@gmail.com>  Wed, 13 Oct 2021 07:45:06 -0600
+
+contractor (0.14.0-1) focal; urgency=medium
+
+  * Cartographer work 
+
+ -- Peter Howe <pnhowe@gmail.com>  Wed, 06 Oct 2021 09:18:25 -0600
+
+contractor (0.13.0-1) focal; urgency=medium
+
+  * setupzzard installs initial plugins now
+
+ -- Peter Howe <pnhowe@gmail.com>  Tue, 21 Sep 2021 10:41:53 -0600
+
+contractor (0.12.1-1) focal; urgency=medium
+
+  * setupwizzard improvements
+  * aggergated interfaces fix
+
+ -- Peter Howe <pnhowe@gmail.com>  Mon, 13 Sep 2021 12:04:33 -0600
+
+contractor (0.11.0-1) focal; urgency=medium
+
+  * setupwizzard improvements
+
+ -- Peter Howe <pnhowe@gmail.com>  Mon, 06 Sep 2021 15:24:22 -0600
+
+contractor (0.10.0-1) focal; urgency=medium
+
+  * updated handeling of abstract and aggergated network interfaces
+  * ui updates
+
+ -- Peter Howe <pnhowe@gmail.com>  Thu, 02 Sep 2021 13:33:17 -0600
+
+contractor (0.9.0-1) focal; urgency=medium
+
+  * tscript: goto fixes
+  * tscript: toSubcontractor call fixes
+  * tscript: message function
+  * dns updates and fixes
+
+ -- Peter Howe <pnhowe@gmail.com>  Tue, 24 Aug 2021 14:37:51 -0700
+
 contractor (0.8.0-1) bionic; urgency=medium
 
   * Moved to bionic

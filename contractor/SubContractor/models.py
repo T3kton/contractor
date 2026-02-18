@@ -1,7 +1,7 @@
 from cinp.orm_django import DjangoCInP as CInP
 
 from contractor.Site.models import Site
-from contractor.Utilities.models import AddressBlock
+from contractor.Utilities.models import AddressBlock, NetworkAddressBlock
 from contractor.Foreman.lib import processJobs, jobResults, jobError
 from contractor.lib.config import getConfig
 
@@ -33,7 +33,10 @@ class Dispatch():
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    if verb == 'DESCRIBE':
+      return True
+
+    return verb == 'CALL' and user.username == 'subcontractor'
 
 
 @cinp.staticModel()  # TODO: static poller
@@ -54,23 +57,16 @@ class DHCPd():
     domain_name = site_config.get( 'domain_name', '' )
 
     # without the distinct we get an AddressBlock for each DynamicAddress
-    for addr_block in AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False ).distinct():
+    for address_block in AddressBlock.objects.filter( site=site, baseaddress__dynamicaddress__isnull=False ).distinct():
       item = {
-               'address_map': {},
-               'gateway': addr_block.gateway,
-               'name': addr_block.pk,
-               'netmask': addr_block.netmask,
+               'gateway': address_block.gateway,
+               'name': address_block.pk,
+               'netmask': address_block.netmask,
                'dns_server': dns_server,
                'domain_name': domain_name
               }
 
-      for addr in addr_block.baseaddress_set.filter( dynamicaddress__isnull=False ):
-        addr = addr.subclass
-        try:  # TODO: this needs to be retought a bit, really should be passing in the bootfile
-          addr.pxe.name
-          item[ 'address_map' ][ addr.ip_address ] = 'undionly_console.kpxe'
-        except AttributeError:
-          item[ 'address_map' ][ addr.ip_address ] = None
+      item[ 'address_list' ] = [ addr.ip_address for addr in address_block.baseaddress_set.filter( dynamicaddress__isnull=False ) ]
 
       result.append( item )
 
@@ -81,22 +77,30 @@ class DHCPd():
   def getStaticPools( site ):
     result = {}
     # without the distinct we get an AddressBlock for each Networked
-    for addr_block in AddressBlock.objects.filter( site=site, baseaddress__address__networked__isnull=False ).distinct():
-      for addr in addr_block.baseaddress_set.filter( address__networked__isnull=False ):
+    for address_block in AddressBlock.objects.filter( site=site, baseaddress__address__networked__isnull=False ).distinct():
+      for addr in address_block.baseaddress_set.filter( address__networked__isnull=False ):
         addr = addr.subclass
         iface = addr.interface
         if iface is None or iface.mac is None:
           continue
 
+        try:
+          nab = address_block.networkaddressblock_set.get( network=iface.network )
+        except NetworkAddressBlock.DoesNotExist:
+          continue
+
         result[ iface.mac ] = {
                                 'ip_address': addr.ip_address,
-                                'netmask': addr_block.netmask,
-                                'gateway': addr_block.gateway,
+                                'netmask': address_block.netmask,
+                                'gateway': address_block.gateway,
                                 'host_name': addr.structure.hostname,
-                                'boot_file': 'undionly_console.kpxe'
+                                'config_uuid': addr.structure.config_uuid,
+                                'mtu': iface.network.mtu,
+                                'vlan': nab.vlan,
+                                'console': addr.console
                               }
 
-        site_config = addr_block.site.getConfig()
+        site_config = address_block.site.getConfig()
 
         try:
           result[ iface.mac ][ 'dns_server' ] = site_config[ 'dns_servers' ][0]
@@ -113,4 +117,7 @@ class DHCPd():
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    if verb == 'DESCRIBE':
+      return True
+
+    return verb == 'CALL' and user.username == 'subcontractor'

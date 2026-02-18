@@ -89,8 +89,8 @@ class NoRollback( Exception ):
 # communicatoin routnds, keep in mind that it is possible for multiple subcontractors to be taking requests, so subcontractor must store all state
 # with contractor
 
-"""
 
+"""
 execution flow:
 
 first execution:
@@ -196,7 +196,7 @@ class ExternalFunction( object ):
     # first paramater is the function inside the plugin to call, second is the value to send to the function
     # this is called initially, then again after fromSubcontractor has returnd results until done is True
     # example: return ( 'myfunc', { 'stuff': 'for', 'myfunc': 'to use' } ) # NOTE: the paramater part can be anything that is serilizable
-    # if None is returned, contractor will not be notified to do anything
+    # if None is returned, subcontractor will not be notified to do anything
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     # subcontractor threads will be waiting on this function
     pass
@@ -238,11 +238,11 @@ class Delay( ExternalFunction ):
 
   @property
   def done( self ):
-    return datetime.datetime.utcnow() >= self.end_at
+    return datetime.datetime.now( datetime.UTC ) >= self.end_at
 
   @property
   def message( self ):
-    return 'Waiting for {0} more seconds'.format( ( self.end_at - datetime.datetime.utcnow() ).seconds )
+    return 'Waiting for {0} more seconds'.format( ( self.end_at - datetime.datetime.now( datetime.UTC ) ).seconds )
 
   def setup( self, parms ):
     seconds = 0
@@ -266,7 +266,7 @@ class Delay( ExternalFunction ):
     if seconds == 0 and minutes == 0 and hours == 0:
       raise ParamaterError( '<unknwon>', 'specified 0 delay, set one or more of "seconds", "minutes", "hours"' )
 
-    self.end_at = datetime.datetime.utcnow() + datetime.timedelta( seconds=seconds, minutes=minutes, hours=hours )
+    self.end_at = datetime.datetime.now( datetime.UTC ) + datetime.timedelta( seconds=seconds, minutes=minutes, hours=hours )
 
   def __getstate__( self ):
     return ( self.end_at, )
@@ -284,7 +284,8 @@ builtin_function_map = {
                           'pause': lambda msg: Pause( msg ),
                           'error': lambda msg: ExecutionError( msg ),
                           'fatal_error': lambda msg: UnrecoverableError( msg ),
-                          'delay': Delay()
+                          'delay': Delay(),
+                          'message': lambda msg: Interrupt( msg )
                         }
 
 
@@ -327,7 +328,7 @@ def _debugDump( message, exception, ast, state ):
     if settings.DEBUG_DUMP_LOCATION == '*CONSOLE*':
       fp = sys.stdout
     else:
-      fp = open( os.path.join( settings.DEBUG_DUMP_LOCATION, datetime.utcnow().isoformat() ), 'w' )
+      fp = open( os.path.join( settings.DEBUG_DUMP_LOCATION, datetime.datetime.now( datetime.UTC ).isoformat() ), 'w' )
 
     fp.write( '** Message **\n' )
     fp.write( str( message ) )
@@ -351,6 +352,27 @@ def _debugDump( message, exception, ast, state ):
     print( 'Error "{0}" when writing the debug dump'.format( e ) )
 
 
+def _delta_to_string( delta ):
+  sign = ''
+  seconds = int( delta.total_seconds() )
+  if seconds < 0:
+    sign = '-'
+    seconds = abs( seconds )
+
+  days = int( seconds / 86400 )
+  seconds %= 86400
+  hours = int( seconds / 3600 )
+  seconds %= 3600
+  minutes = int( seconds / 60 )
+  seconds %= 60
+  if days:
+    return '{0}{1}:{2:02}:{3:02}:{4:02}'.format( sign, days, hours, minutes, seconds )
+  elif hours:
+    return '{0}{1:02}:{2:02}:{3:02}'.format( sign, hours, minutes, seconds )
+  else:
+    return '{0}{1:02}:{2:02}'.format( sign, minutes, seconds )
+
+
 class Runner( object ):
   def __init__( self, ast ):
     super().__init__()
@@ -371,7 +393,7 @@ class Runner( object ):
 
     # scan for all the jump points
     for i in range( 0, len( ast[1][ '_children' ] ) ):
-      child = ast[1][ '_children' ][i][1]  # jump into the  line
+      child = ast[1][ '_children' ][i][1]  # jump into the line
       if child[0] == Types.JUMP_POINT:
         self.jump_point_map[ child[1] ] = i
 
@@ -388,7 +410,7 @@ class Runner( object ):
     return self.state == 'ABORTED'
 
   @property
-  def status( self ):  # list of ( % complete, status message )
+  def status( self ):  # list of ( % complete, operation, paramaters )
     logging.debug( 'runner: status state: {0}'.format( self.state ) )
     if self.done or self.aborted:
       return [ ( 100.0, 'Scope', None ) ]
@@ -397,7 +419,7 @@ class Runner( object ):
 
     item_list = []  # ( scope position, scope length, scope type, scope data )
     operation = self.ast
-    for step in self.state:  # condense into on loop, last status may be a blocking function with remote  and status values
+    for step in self.state:  # condense into on loop, last status may be a blocking function with remote and status values
       step_type = step[0]
       try:
         step_data = step[1]
@@ -411,6 +433,14 @@ class Runner( object ):
             tmp[ item ] = operation[1][ item ]
           except ( KeyError, TypeError ):
             pass
+
+        try:
+          elapsed = datetime.datetime.now( datetime.UTC ) - step[2]
+        except IndexError:
+          elapsed = datetime.timedelta(0)
+        tmp[ 'time_elapsed' ] = _delta_to_string( elapsed )
+        if 'expected_time' in operation[1]:
+          tmp[ 'time_remaining' ] = _delta_to_string( operation[1][ 'expected_time' ] - elapsed )
 
         if step_data is None:  # no point in continuing, we don't know where we are
           item_list.append( ( 0, len( operation[1][ '_children' ] ), 'Scope', tmp ) )
@@ -574,6 +604,20 @@ class Runner( object ):
         self.state[ state_index ][1]
       except IndexError:
         self.state[ state_index ].append( 0 )
+        self.state[ state_index ].append( datetime.datetime.now( datetime.UTC ) )
+        if 'max_time' in op_data:
+          self.state[ state_index ].append( op_data[ 'max_time' ] + datetime.datetime.now( datetime.UTC )  )
+
+      try:
+        if self.state[ state_index ][3] is None:
+          self.state[ state_index ][3] = datetime.datetime.now( datetime.UTC )  # last time was a timeout, so set it so next run will timeout
+
+        elif datetime.datetime.now( datetime.UTC ) > self.state[ state_index ][3]:
+          self.state[ state_index ][3] = None
+          raise Pause( 'Max Time Elapsed' )
+
+      except IndexError:  # no max time
+        pass
 
       while self.state[ state_index ][1] < len( op_data[ '_children' ] ):
         self._evaluate( op_data[ '_children' ][ self.state[ state_index ][ 1 ] ], state_index + 1 )
@@ -873,7 +917,7 @@ class Runner( object ):
               handler = module[ op_data[ 'name' ] ]()
             except KeyError:
               raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
-            except TypeError as e:  # hm.... this is bad
+            except TypeError:  # hm.... this is bad
               raise UnrecoverableError( 'Handler init function failed "{0}" on line {1}, possibly trying to call the function directly?'.format( op_data[ 'name' ], self.cur_line ) )
 
             module = op_data[ 'module' ]
@@ -923,7 +967,7 @@ class Runner( object ):
 
             value = handler.value
 
-          except( Pause, ExecutionError, UnrecoverableError, Interrupt ) as e:
+          except ( Pause, ExecutionError, UnrecoverableError, Interrupt ) as e:
             raise e
 
           except Exception as e:
@@ -1018,7 +1062,7 @@ class Runner( object ):
     else:
       self.state = self.state[ :state_index + 1 ]  # remove everything after this one, save this one's return value on the stack
 
-    logging.debug( 'runner: _evaluate level: "{0}" final state: '.format( state_index, self.state ) )
+    logging.debug( 'runner: _evaluate level: "{0}" final state: {1}'.format( state_index, self.state ) )
     if self.state == []:
       self.state = 'DONE'
       self.cur_line = None
@@ -1030,12 +1074,17 @@ class Runner( object ):
 
     operation = self.state[ -1 ]
 
-    # return None if the top of the stack is not a function
-    if operation[0] != Types.FUNCTION:
+    if operation[0] != Types.FUNCTION and operation[0]:  # not a function
       return None
 
-    if operation[1][ 'module' ] not in subcontractor_module_list:
+    if operation[1] is None:  # the operation isn't setup yet
       return None
+
+    try:
+      if operation[1][ 'module' ] not in subcontractor_module_list:
+        return None
+    except KeyError:
+      return None  # function is not external
 
     if operation[1][ 'dispatched' ] is True:  # allready dispatchced, don't send anything else until something comes back
       return None
@@ -1043,7 +1092,7 @@ class Runner( object ):
     handler = operation[1][ 'handler' ]
     handler._runner = self
     try:
-      ( function_name, paramaters ) = handler.toSubcontractor()
+      paramaters = handler.toSubcontractor()
     except Exception as e:
       _debugDump( 'Handler "{0}" in module "{1}" error during toSubcontractor on line "{2}"'.format( handler.__class__.__name__, operation[1][ 'module' ], self.cur_line ), e, self.ast, self.state )
       return None  # TODO: log something?
@@ -1053,7 +1102,7 @@ class Runner( object ):
 
     operation[1][ 'dispatched' ] = True
 
-    return { 'module': operation[1][ 'module' ], 'function': function_name, 'cookie': self.contractor_cookie, 'paramaters': paramaters }
+    return { 'module': operation[1][ 'module' ], 'function': paramaters[0], 'cookie': self.contractor_cookie, 'paramaters': paramaters[1] }
 
   def fromSubcontractor( self, cookie, data ):
     if self.done or self.aborted or self.state == []:

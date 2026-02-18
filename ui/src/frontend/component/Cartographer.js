@@ -34,6 +34,7 @@ class Cartographer extends React.Component
                             identifier: cartographer.identifier,
                             message: cartographer.message,
                             foundation: CInP.extractIds( cartographer.foundation )[0],
+                            last_checkin: cartographer.last_checkin,
                             created: cartographer.created,
                             updated: cartographer.updated
                           } );
@@ -51,6 +52,7 @@ class Cartographer extends React.Component
           <TableCell>Identifier</TableCell>
           <TableCell>Message</TableCell>
           <TableCell>Foundation</TableCell>
+          <TableCell>Last Checkin</TableCell>
           <TableCell>Created</TableCell>
           <TableCell>Updated</TableCell>
         </TableHead>
@@ -59,6 +61,7 @@ class Cartographer extends React.Component
             <TableCell>{ item.identifier }</TableCell>
             <TableCell>{ item.message }</TableCell>
             <TableCell><Link to={ '/plot/' + item.foundation }>{ item.foundation }</Link></TableCell>
+            <TableCell>{ item.last_checkin }</TableCell>
             <TableCell>{ item.created }</TableCell>
             <TableCell>{ item.updated }</TableCell>
           </TableRow>

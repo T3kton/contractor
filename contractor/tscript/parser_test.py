@@ -46,25 +46,25 @@ def test_begin():
   assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 1 ), ( 'L', ( 'C', 42 ), 2 ), ( 'L', ( 'C', 21 ), 3 ) ] } )
 
   node = parse( 'begin()end' )
-  assert node == ( 'S', { '_children':
-                   [
-                       ( 'L', ( 'S', { '_children': [] } ), 1 )
-                   ] } )
+  assert node == ( 'S', { '_children': [] } )
 
   node = parse( 'begin()\nend' )
-  assert node == ( 'S', { '_children':
-                   [
-                       ( 'L', ( 'S', { '_children': [] } ), 1 )
-                   ] } )
+  assert node == ( 'S', { '_children': [] } )
 
   node = parse( 'begin( )\nend' )
-  assert node == ( 'S', { '_children':
-                   [
-                       ( 'L', ( 'S', { '_children': [] } ), 1 )
-                   ] } )
+  assert node == ( 'S', { '_children': [] } )
+
+  node = parse( 'begin( description="test" )end' )
+  assert node == ( 'S', { '_children': [], 'description': 'test' } )
+
+  node = parse( 'begin(description="test2")\nend' )
+  assert node == ( 'S', { '_children': [], 'description': 'test2' } )
+
+  node = parse( 'begin( description="gogogo")\nend' )
+  assert node == ( 'S', { '_children': [], 'description': 'gogogo' } )
 
   with pytest.raises( ParserError ) as e:
-    node = parse( 'begin()' )
+    parse( 'begin()' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
@@ -73,34 +73,25 @@ def test_begin():
   assert lint( '' ) is None
 
   node = parse( 'begin()\n10\nend' )
-  assert node == ( 'S', { '_children':
-                   [
-                       ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ) ] } ), 1 )
-                   ] } )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ) ] } )
+
+  node = parse( 'begin()\nend\n10' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'S', { '_children': [] } ), 1 ), ( 'L', ( 'C', 10 ), 3 ) ] } )
+
+  node = parse( 'begin()\n5\nend\n10' )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 5 ), 2 ) ] } ), 1 ), ( 'L', ( 'C', 10 ), 4 ) ] } )
 
   node = parse( 'begin()\n10\nbegin()end\nend' )
-  assert node == ( 'S', { '_children':
-                   [
-                       ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ), ( 'L', ( 'S', { '_children': [] } ), 3 ) ] } ), 1 )
-                   ] } )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ), ( 'L', ( 'S', { '_children': [] } ), 3 ) ] } )
 
   node = parse( 'begin()\n10\nbegin()\n42\nend\nend' )
-  assert node == ( 'S', { '_children':
-                   [
-                       ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ), ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 42 ), 4 ) ] } ), 3 ) ] } ), 1 )
-                   ] } )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ), ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 42 ), 4 ) ] } ), 3 ) ] } )
 
   node = parse( 'begin()\n  10\nend' )
-  assert node == ( 'S', { '_children':
-                   [
-                       ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ) ] } ), 1 )
-                   ] } )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ) ] } )
 
   node = parse( 'begin()\n  10\n  begin()\n    42\n  end\nend' )
-  assert node == ( 'S', { '_children':
-                   [
-                       ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ), ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 42 ), 4 ) ] } ), 3 ) ] } ), 1 )
-                   ] } )
+  assert node == ( 'S', { '_children': [ ( 'L', ( 'C', 10 ), 2 ), ( 'L', ( 'S', { '_children': [ ( 'L', ( 'C', 42 ), 4 ) ] } ), 3 ) ] } )
 
 
 def test_constants():
@@ -388,20 +379,20 @@ def test_variables():
 
   # all invalid names
   with pytest.raises( ParserError ):
-    node = parse( 'a' )
+    parse( 'a' )
 
   with pytest.raises( ParserError ):
-    node = parse( 'a.b' )
+    parse( 'a.b' )
 
   with pytest.raises( ParserError ):
-    node = parse( '2a' )
+    parse( '2a' )
 
   with pytest.raises( ParserError ):
-    node = parse( 'adsf.2a' )
+    parse( 'adsf.2a' )
 
   # prefixed reserved
   with pytest.raises( ParserError ):
-    node = parse( 'do' )
+    parse( 'do' )
 
   node = parse( 'docker' )
   assert node == ( 'S', { '_children':
@@ -416,7 +407,7 @@ def test_variables():
                           ] } )
 
   with pytest.raises( ParserError ):
-    node = parse( 'goto' )
+    parse( 'goto' )
 
   node = parse( 'gotoing' )
   assert node == ( 'S', { '_children':
@@ -491,46 +482,28 @@ def test_infix():
 
 def test_block_paramaters():
   node = parse( 'begin( )\nend' )
-  assert node == ( 'S', { '_children':
-                          [
-                              ( 'L', ( 'S', { '_children': [] } ), 1 )
-                          ] } )
+  assert node == ( 'S', { '_children': [] } )
 
   node = parse( 'begin( )end' )
-  assert node == ( 'S', { '_children':
-                          [
-                              ( 'L', ( 'S', { '_children': [] } ), 1 )
-                          ] } )
+  assert node == ( 'S', { '_children': [] } )
 
   node = parse( 'begin( description="test" )\nend' )
-  assert node == ( 'S', { '_children':
-                          [
-                              ( 'L', ( 'S', { '_children': [], 'description': 'test' } ), 1 )
-                          ] } )
+  assert node == ( 'S', { '_children': [], 'description': 'test' } )
 
   node = parse( 'begin( description="" )\nend' )
-  assert node == ( 'S', { '_children':
-                          [
-                              ( 'L', ( 'S', { '_children': [], 'description': '' } ), 1 )
-                          ] } )
+  assert node == ( 'S', { '_children': [], 'description': '' } )
 
   node = parse( 'begin( description="test" )end' )
-  assert node == ( 'S', { '_children':
-                          [
-                              ( 'L', ( 'S', { '_children': [], 'description': 'test' } ), 1 )
-                          ] } )
+  assert node == ( 'S', { '_children': [], 'description': 'test' } )
 
   node = parse( 'begin( description="test", expected_time=12:34 )end' )
-  assert node == ( 'S', { '_children':
-                          [
-                                ( 'L', ( 'S', { '_children': [], 'description': 'test', 'expected_time': timedelta( minutes=12, seconds=34 ) } ), 1 )
-                          ] } )
+  assert node == ( 'S', { '_children': [], 'description': 'test', 'expected_time': timedelta( minutes=12, seconds=34 ) } )
 
   node = parse( 'begin( description="test", expected_time=12:34, max_time=1:00:00 )end' )
-  assert node == ( 'S', { '_children':
-                          [
-                                ( 'L', ( 'S', { '_children': [], 'description': 'test', 'expected_time': timedelta( minutes=12, seconds=34 ), 'max_time': timedelta( hours=1 ) } ), 1 )
-                          ] } )
+  assert node == ( 'S', { '_children': [], 'description': 'test', 'expected_time': timedelta( minutes=12, seconds=34 ), 'max_time': timedelta( hours=1 ) } )
+
+  with pytest.raises( Exception ):
+    parse( 'begin( bogus="test", expected_time=12:34 )end' )
 
 
 def test_comment():
@@ -572,10 +545,31 @@ def test_jumppoint():
                               ( 'L', ( 'G', 'there' ), 1 )
                           ] } )
 
+  with pytest.raises( ParserError ) as e:
+    parse( 'begin()\n:there\nend' )
+
+  assert str( e.value ) == 'ParseError, line: 2, column: 0, "Jump points can not be inside begin/end blocks, jump point name: "there""'
+
+  assert lint( 'begin()\n:there\nend' ) == 'Invalid Script "Jump points can not be inside begin/end blocks, jump point name: "there"", line: 2 column: 0'
+
+  with pytest.raises( ParserError ) as e:
+    parse( '1\nbegin()\n:other\nend' )
+
+  assert str( e.value ) == 'ParseError, line: 3, column: 0, "Jump points can not be inside begin/end blocks, jump point name: "other""'
+
+  assert lint( '1\nbegin()\n:other\nend' ) == 'Invalid Script "Jump points can not be inside begin/end blocks, jump point name: "other"", line: 3 column: 0'
+
+  with pytest.raises( ParserError ) as e:
+    parse( 'begin()\n1\nbegin()\n1\n:stuff\nend\nend' )
+
+  assert str( e.value ) == 'ParseError, line: 5, column: 0, "Jump points can not be inside begin/end blocks, jump point name: "stuff""'
+
+  assert lint( 'begin()\n1\nbegin()\n1\n:stuff\nend\nend' ) == 'Invalid Script "Jump points can not be inside begin/end blocks, jump point name: "stuff"", line: 5 column: 0'
+
 
 def test_while():
   with pytest.raises( ParserError ) as e:
-    node = parse( 'while True 10' )
+    parse( 'while True 10' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
@@ -639,10 +633,10 @@ def test_while():
                                } ) } ), 1 )
                           ] } )
 
-  node = parse( 'while myval do\nbegin(thep=5)\n10\nend' )
+  node = parse( 'while myval do\nbegin(description="5")\n10\nend' )
   assert node == ( 'S', { '_children':
                           [
-                               ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { 'thep': 5, '_children':
+                               ( 'L', ( 'W', { 'condition': ( 'V', { 'module': None, 'name': 'myval' } ), 'expression': ( 'S', { 'description': '5', '_children':
                                  [
                                       ( 'L', ( 'C', 10 ), 3 )
                                  ]
@@ -669,7 +663,7 @@ def test_while():
 
 def test_ifelse():
   with pytest.raises( ParserError ) as e:
-    node = parse( 'if True 10' )
+    parse( 'if True 10' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
@@ -702,7 +696,7 @@ def test_ifelse():
                           ] } )
 
   with pytest.raises( ParserError ) as e:
-    node = parse( 'if True then 10 elif False 200 else 42' )
+    parse( 'if True then 10 elif False 200 else 42' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
@@ -750,28 +744,28 @@ def test_ifelse():
                                         ] ), 1 )
                           ] } )
 
-  node = parse( 'if ( myobj.value >= "my string" ) then\nbegin( testing="this" )\n42\nend' )
+  node = parse( 'if ( myobj.value >= "my string" ) then\nbegin( description="this" )\n42\nend' )
   assert node == ( 'S', { '_children':
                           [
                                ( 'L', ( 'I', [
                                        { 'condition': ( 'X',
                                                         { 'left': ( 'V', { 'module': 'myobj', 'name': 'value' } ), 'operator': '>=', 'right': ( 'C', "my string" ) } ),
-                                        'expression': ( 'S', { 'testing': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
+                                        'expression': ( 'S', { 'description': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
                                          } ] ), 1 )
                           ] } )
 
-  node = parse( 'if ( myobj.value >= "my string" ) then\nbegin( testing="this" )\n42\nend\nelse\nbegin( more="fun" )\n56\nend' )
+  node = parse( 'if ( myobj.value >= "my string" ) then\nbegin( description="this" )\n42\nend\nelse\nbegin( max_time=1:20 )\n56\nend' )
   assert node == ( 'S', { '_children':
                           [
                                ( 'L', ( 'I', [
                                        {
                                            'condition': ( 'X',
                                                           { 'left': ( 'V', { 'module': 'myobj', 'name': 'value' } ), 'operator': '>=', 'right': ( 'C', "my string" ) } ),
-                                           'expression': ( 'S', { 'testing': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
+                                           'expression': ( 'S', { 'description': 'this', '_children': [ ( 'L', ( 'C', 42 ), 3 ) ] } ),
                                        },
                                        {
                                            'condition': None,
-                                           'expression': ( 'S', { 'more': 'fun', '_children': [ ( 'L', ( 'C', 56 ), 7 ) ] } ),
+                                           'expression': ( 'S', { 'max_time': timedelta(seconds=80), '_children': [ ( 'L', ( 'C', 56 ), 7 ) ] } ),
                                        }
                                      ] ), 1 )
                           ] } )
@@ -867,7 +861,7 @@ def test_function():
                           ] } )
 
   with pytest.raises( ParserError ) as e:
-    node = parse( 'hello( 10 )' )
+    parse( 'hello( 10 )' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
@@ -900,14 +894,14 @@ def test_function():
 
 def test_assignment():
   with pytest.raises( ParserError ) as e:
-    node = parse( 'asdf=' )
+    parse( 'asdf=' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 
   assert lint( 'asdf=' ) == 'Incomplete Parsing on line: 1 column: 1'
 
   with pytest.raises( ParserError ) as e:
-    node = parse( 'asdf =' )
+    parse( 'asdf =' )
 
   assert str( e.value ) == 'ParseError, line: 1, column: 1, "Incomplete Parse"'
 

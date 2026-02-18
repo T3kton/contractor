@@ -9,8 +9,8 @@ import sys
 import argparse
 import pprint
 import time
+import pickle
 
-from django.core.exceptions import ObjectDoesNotExist
 from contractor.Building.models import Foundation, Structure, Dependency
 from contractor.Foreman.models import BaseJob, JobLog
 from contractor.Foreman.lib import createJob
@@ -42,6 +42,10 @@ def _wait_for_job( job_id ):
       return
 
     print( 'Curent status "{0}" at {1}%, Waiting...'.format( job.state, job.progress ) )
+    if job.state == 'error':
+      print( 'Job Failed, bailing' )
+      sys.exit( 1 )
+
     time.sleep( 10 )
 
 
@@ -150,7 +154,7 @@ def main():
 
   if args.delete:
     if not target.can_delete:
-      print( 'Target has dependancies/structure can not delete' )
+      print( 'Target has job/dependancies/structure can not delete' )
       sys.exit( 1 )
 
     if target.state == 'built':
@@ -266,6 +270,8 @@ def main():
       print( 'No Job' )
       sys.exit( 0 )
 
+    runner = pickle.loads( job.script_runner )
+
     try:
       pcnt_complete = '{0}%'.format( job.status[0][0] )
     except IndexError:
@@ -281,7 +287,11 @@ Message:       {4}
 Created:       {5}
 Updated:       {6}
 Status:
-{7}""".format( job.pk, job.script_name, job.state, pcnt_complete, job.message, job.created, job.updated, pp.pformat( job.status ) ) )
+{7}
+Vars:
+{8}
+State:
+{9}""".format( job.pk, job.script_name, job.state, pcnt_complete, job.message, job.created, job.updated, pp.pformat( job.status ), pp.pformat( runner.variable_map ), pp.pformat( runner.state ) ) )
     sys.exit( 0 )
 
   if args.show_config:
@@ -317,6 +327,7 @@ Status:
 
   print( 'unknown boss task' )
   sys.exit( 1 )
+
 
 if __name__ == '__main__':
   main()

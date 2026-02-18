@@ -11,7 +11,7 @@ from cinp.orm_django import DjangoCInP as CInP
 from contractor.fields import MapField, JSONField, name_regex, config_name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
-from contractor.Utilities.models import Networked, RealNetworkInterface
+from contractor.Utilities.models import Network, Networked, RealNetworkInterface
 from contractor.lib.config import getConfig, mergeValues
 from contractor.Records.lib import post_save_callback, post_delete_callback
 
@@ -31,13 +31,13 @@ class BuildingException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'BuildingException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'BuildingException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'BuildingException ({0}): {1}'.format( self.code, self.message )
 
 
-@cinp.model( property_list=( 'state', 'type', 'class_list', { 'name': 'structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE', 'UPDATE' ] )
+@cinp.model( property_list=( 'state', 'type', 'class_list', { 'name': 'structure', 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ), not_allowed_verb_list=[ 'CREATE' ] )  # CREATE should be done with the subclasses
 class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )  # if this changes make sure to update architect - instance - foundation_id
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
@@ -47,24 +47,6 @@ class Foundation( models.Model ):
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
-
-  @cinp.action( return_type={ 'type': 'String' }, paramater_type_list=[ 'Map' ] )
-  def setIdMap( self, id_map ):
-    error = self.blueprint.validateIdMap( id_map )
-    if error is not None:
-      return error
-
-    self.id_map = id_map
-    self.full_clean()
-    self.save()
-
-    for iface in RealNetworkInterface.objects.filter( foundation=self ):
-      if iface.physical_location in id_map[ 'network' ]:
-        iface.mac = id_map[ 'network' ][ iface.physical_location ][ 'mac' ]
-        iface.full_clean()
-        iface.save()
-
-    return None
 
   def _canSetState( self, job=None ):  # You can't set state if there is a related job, unless that job (that is hopfully being passed in from the job that is calling this) is that related job
     try:
@@ -89,8 +71,6 @@ class Foundation( models.Model ):
   def setLocated( self ):
     """
     Sets the Foundation to 'located' state.  This will not create/destroy any jobs.
-
-    NOTE: This will set the attached structure (if there is one) to 'planned' without running a job to destroy the structure.
     """
     try:
       job = self.foundationjob
@@ -106,8 +86,7 @@ class Foundation( models.Model ):
     if self.structure is not None and self.structure.state != 'planned':
       raise Exception( 'Attached Structure must be in Planned state' )
 
-    template = self.blueprint.getTemplate()
-    if template is not None and not self.id_map:
+    if self.blueprint.getValidationTemplate() is not None and not self.id_map:
       raise Exception( 'Foundations with blueprints, which specify templates, require id_map to be set before setting to Located' )
 
     self.located_at = timezone.now()
@@ -123,7 +102,7 @@ class Foundation( models.Model ):
       raise Exception( 'All related jobs and cartographer instances must be cleared before setting Built' )
 
     if self.located_at is None:
-      if self.blueprint.getTemplate() is not None:
+      if self.blueprint.getValidationTemplate() is not None:
         raise Exception( 'Foundation with Blueprints with templates must be located first' )
       self.located_at = timezone.now()
 
@@ -145,16 +124,152 @@ class Foundation( models.Model ):
     except AttributeError:
       pass
 
-    for iface in RealNetworkInterface.objects.filter( foundation=self ):
+    for iface in self.networkinterface_set.all():
+      iface = iface.subclass
+      if iface.type == 'Real':
+        iface.pxe = None
+
       iface.mac = None
       iface.full_clean()
       iface.save()
 
     self.built_at = None
-    self.located_at = None
-    self.id_map = None
+    self.located_at = None  # TODO: don't we want to go back to identified?  if so, how do we go back to planned?
+    self.id_map = None  # TODO: follow the lead with located_at
     self.full_clean()
     self.save()
+
+  @staticmethod
+  def getTscriptValues( write_mode=False ):  # locator is handled seperatly
+    return {  # none of these base items are writeable, ignore the write_mode for now
+              'locator': ( lambda foundation: foundation.locator, None ),  # redundant?
+              'type': ( lambda foundation: foundation.subclass.type, None ),  # redudnant?
+              'site': ( lambda foundation: foundation.site.pk, None ),
+              'blueprint': ( lambda foundation: foundation.blueprint.pk, None ),
+              # 'ip_map': ( lambda foundation: foundation.ip_map, None ),
+              'interface_list': ( lambda foundation: [ i for i in foundation.networkinterface_set.all().order_by( 'physical_location' ) ], None )  # redudntant?
+            }
+
+  @staticmethod
+  def getTscriptFunctions():
+    return {}
+
+  def configAttributes( self ):
+    provisioning_interface = self.provisioning_interface
+    return {
+              '_provisioning_interface': provisioning_interface.physical_location if provisioning_interface is not None else None,  # what ever deals with the provisioning interface will have to deal with the physical_location, otherwise tools that are not the final target OS will be confused
+              '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None,
+              '_foundation_id': self.pk,
+              '_foundation_type': self.type,
+              '_foundation_state': self.state,
+              '_foundation_class_list': self.class_list,
+              '_foundation_locator': self.locator,
+              '_foundation_id_map': self.id_map,
+              '_console': self.console
+            }
+
+  @property
+  def console( self ):
+    return 'console'
+
+  @property
+  def provisioning_interface( self ):
+    try:
+      return self.networkinterface_set.get( is_provisioning=True )
+    except ObjectDoesNotExist:
+      return None
+
+  @property
+  def subclass( self ):
+    for attr in FOUNDATION_SUBCLASS_LIST:
+      try:
+        return getattr( self, attr )
+      except AttributeError:
+        pass
+
+    return self
+
+  @property
+  def type( self ):
+    real = self.subclass
+    if real != self:
+      return real.type
+
+    return 'Unknown'
+
+  @property
+  def class_list( self ):
+    # top level generic classes: Metal, VM, Container, Switch, PDU
+    return []
+
+  @property
+  def complex( self ):
+    return None
+
+  @property
+  def can_delete( self ):
+    if self.state not in ( 'located', 'planned' ):
+      return False
+
+    if self.structure is not None:
+      return False
+
+    if self.getJob() is not None:
+      return False
+
+    return True
+
+  @property
+  def structure( self ):
+    try:
+      return Structure.objects.get( foundation=self )
+    except Structure.DoesNotExist:
+      pass
+
+    return None
+
+  @property
+  def state( self ):
+    if self.located_at is not None and self.built_at is not None:
+      return 'built'
+
+    elif self.located_at is not None:
+      return 'located'
+
+    return 'planned'
+
+  @property
+  def description( self ):
+    return self.locator
+
+  @property
+  def dependency( self ):
+    try:
+      return Dependency.objects.get( foundation=self )
+    except Dependency.DoesNotExist:
+      return None
+
+  @property
+  def dependencyId( self ):
+    return 'f-{0}'.format( self.pk )
+
+  @cinp.action( return_type={ 'type': 'String' }, paramater_type_list=[ 'Map' ] )
+  def setIdMap( self, id_map ):
+    error = self.blueprint.validateIdMap( id_map )
+    if error is not None:
+      return error
+
+    self.id_map = id_map
+    self.full_clean()
+    self.save()
+
+    for iface in RealNetworkInterface.objects.filter( foundation=self ):
+      if iface.physical_location in id_map[ 'network' ]:
+        iface.mac = id_map[ 'network' ][ iface.physical_location ][ 'mac' ]
+        iface.full_clean()
+        iface.save()
+
+    return None
 
   @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
   def doCreate( self, user ):
@@ -195,112 +310,6 @@ class Foundation( models.Model ):
 
     return None
 
-  @staticmethod
-  def getTscriptValues( write_mode=False ):  # locator is handled seperatly
-    return {  # none of these base items are writeable, ignore the write_mode for now
-              'locator': ( lambda foundation: foundation.locator, None ),  # redundant?
-              'type': ( lambda foundation: foundation.subclass.type, None ),  # redudnant?
-              'site': ( lambda foundation: foundation.site.pk, None ),
-              'blueprint': ( lambda foundation: foundation.blueprint.pk, None ),
-              # 'ip_map': ( lambda foundation: foundation.ip_map, None ),
-              'interface_list': ( lambda foundation: [ i for i in foundation.networkinterface_set.all().order_by( 'physical_location' ) ], None )  # redudntant?
-            }
-
-  @staticmethod
-  def getTscriptFunctions():
-    return {}
-
-  def configAttributes( self ):
-    provisioning_interface = self.provisioning_interface
-    return {
-              '_provisioning_interface': provisioning_interface.physical_location if provisioning_interface is not None else None,  # what ever deals with the provisioning interface will have to deal with the physical_location, otherwise tools that are not the final target OS will be confused
-              '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None,
-              '_foundation_id': self.pk,
-              '_foundation_type': self.type,
-              '_foundation_state': self.state,
-              '_foundation_class_list': self.class_list,
-              '_foundation_locator': self.locator,
-              '_foundation_id_map': self.id_map,
-              '_foundation_interface_list': [ i.config for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
-            }
-
-  @property
-  def provisioning_interface( self ):
-    try:
-      return self.networkinterface_set.get( is_provisioning=True )
-    except ObjectDoesNotExist:
-      return None
-
-  @property
-  def subclass( self ):
-    for attr in FOUNDATION_SUBCLASS_LIST:
-      try:
-        return getattr( self, attr )
-      except AttributeError:
-        pass
-
-    return self
-
-  @property
-  def type( self ):
-    real = self.subclass
-    if real != self:
-      return real.type
-
-    return 'Unknown'
-
-  @property
-  def class_list( self ):
-    # top level generic classes: Metal, VM, Container, Switch, PDU
-    return []
-
-  @property
-  def complex( self ):
-    return None
-
-  @property
-  def can_delete( self ):
-    try:
-      return self.structure.state != 'build'
-    except AttributeError:
-      pass
-
-    return True
-
-  @property
-  def structure( self ):
-    try:
-      return Structure.objects.get( foundation=self )
-    except Structure.DoesNotExist:
-      pass
-
-    return None
-
-  @property
-  def state( self ):
-    if self.located_at is not None and self.built_at is not None:
-      return 'built'
-
-    elif self.located_at is not None:
-      return 'located'
-
-    return 'planned'
-
-  @property
-  def description( self ):
-    return self.locator
-
-  @property
-  def dependency( self ):
-    try:
-      return Dependency.objects.get( foundation=self )
-    except Dependency.DoesNotExist:
-      return None
-
-  @property
-  def dependencyId( self ):
-    return 'f-{0}'.format( self.pk )
-
   @cinp.action( { 'type': 'String', 'is_array': True } )
   @staticmethod
   def getFoundationTypes():
@@ -318,7 +327,7 @@ class Foundation( models.Model ):
     """
     returns the computed config for this foundation
     """
-    return [ { 'name': i.name, 'physical_location': i.physical_location, 'is_provisioning': i.is_provisioning, 'mac': i.mac, 'pxe': i.pxe } for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
+    return [ { 'name': i.name, 'physical_location': i.physical_location, 'is_provisioning': i.is_provisioning, 'mac': i.mac, 'pxe': i.pxe, 'network': i.network } for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
 
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
@@ -344,7 +353,14 @@ class Foundation( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, Foundation, {
+                                                                    'setIdMap': 'Building.can_bootstrap',
+                                                                    'getConfig': 'Building.view_foundation',
+                                                                    'getInterfaceList': 'Building.view_foundation',
+                                                                    'doCreate': 'Building.can_create_foundation_job',
+                                                                    'doDestroy': 'Building.can_create_foundation_job',
+                                                                    'doJob': 'Building.can_create_foundation_job'
+                                                                  } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -354,14 +370,14 @@ class Foundation( models.Model ):
       errors[ 'locator' ] = 'Invalid'
 
     if self.blueprint_id is not None and self.type not in self.blueprint.foundation_type_list:
-        errors[ 'name' ] = 'Blueprint "{0}" does not list this type ({1})'.format( self.blueprint, self.type )
+        errors[ 'blueprint' ] = 'Blueprint "{0}" does not list this type "{1}"'.format( self.blueprint, self.type )
 
     if errors:
       raise ValidationError( errors )
 
   def delete( self ):
     if not self.can_delete:
-      raise models.ProtectedError( 'Structure not Deleatable', self )
+      raise models.ProtectedError( 'Foundation not Deleatable', self )
 
     subclass = self.subclass
 
@@ -370,8 +386,15 @@ class Foundation( models.Model ):
     else:
       subclass.delete()
 
+  class Meta:
+    default_permissions = ( 'view', )
+    permissions = (
+                    ( 'can_create_foundation_job', 'Can Create Foundation Jobs' ),
+                    ( 'can_bootstrap', 'Can send bootstrap info' )
+                  )
+
   def __str__( self ):
-    return 'Foundation #{0}({1}) in "{2}"'.format( self.pk, self.locator, self.site.pk )
+    return 'Foundation "{0}" in "{1}"'.format( self.locator, self.site.pk )
 
 
 def getUUID():
@@ -382,7 +405,7 @@ def getUUID():
 class Structure( Networked ):
   blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT )  # ie what to bild
   foundation = models.OneToOneField( Foundation, related_name='+', on_delete=models.PROTECT )      # ie what to build it on
-  config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # unique
+  config_uuid = models.CharField( max_length=36, default=getUUID, unique=True )  # TODO: make sure the uuid isn't allready used?, it is a really big set space, not sure if it is really needed
   config_values = MapField( blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -416,6 +439,15 @@ class Structure( Networked ):
       dependency.setDestroyed()
 
   def configAttributes( self ):
+    interface_map = {}
+    for iface in self.foundation.networkinterface_set.all():
+      interface_map[ iface.name ] = iface.subclass.config
+      interface_map[ iface.name ][ 'address_list' ] = self.getAddressList( iface )
+
+    for iface in self.networkinterface_set.all():
+      interface_map[ iface.name ] = iface.subclass.config
+      interface_map[ iface.name ][ 'address_list' ] = self.getAddressList( iface )
+
     provisioning_interface = self.provisioning_interface
     provisioning_address = self.provisioning_address
     primary_interface = self.primary_interface
@@ -427,17 +459,14 @@ class Structure( Networked ):
                '_hostname': self.hostname,
                '_domain_name': self.domain_name,
                '_fqdn': self.fqdn,
-               '_provisioning_interface': provisioning_interface.physical_location if provisioning_interface is not None else None,
+               '_provisioning_interface': provisioning_interface.name if provisioning_interface is not None else None,  # for the structure we use the name, for the foundation the physical_location
                '_provisioning_interface_mac': provisioning_interface.mac if provisioning_interface is not None else None,
                '_provisioning_address': provisioning_address.as_dict if provisioning_address is not None else None,
                '_primary_interface': primary_interface.name if primary_interface is not None else None,
                '_primary_interface_mac': primary_interface.mac if primary_interface is not None else None,
                '_primary_address': primary_address.as_dict if primary_address is not None else None,
-               '_interface_map': {}
+               '_interface_map': interface_map
              }
-
-    for iface in self.foundation.networkinterface_set.all():  # mabey? mabey not?
-      result[ '_interface_map' ][ iface.name ] = iface.config
 
     return result
 
@@ -450,7 +479,13 @@ class Structure( Networked ):
 
   @property
   def can_delete( self ):
-    return self.state != 'build'
+    if self.state != 'planned':
+      return False
+
+    if self.getJob() is not None:
+      return False
+
+    return True
 
   @property
   def description( self ):
@@ -506,20 +541,29 @@ class Structure( Networked ):
 
     return mergeValues( getConfig( self ) )
 
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
+  @staticmethod
+  def getWithHostnameSite( site, hostname ):
+    try:
+      return Structure.objects.get( site=site, hostname=hostname )
+    except Structure.DoesNotExist:
+      return None
+
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Structure.objects.filter( site=site )
 
-  @cinp.list_filter( name='complex', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Complex' } ] )
-  @staticmethod
-  def filter_complex( complex ):
-    return complex.members.all()
-
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, Structure, {
+                                                                   'getConfig': 'Building.view_structure',
+                                                                   'doCreate': 'Building.can_create_structure_job',
+                                                                   'doDestroy': 'Building.can_create_structure_job',
+                                                                   'doJob': 'Building.can_create_structure_job',
+                                                                   'updateConfig': 'Building.can_config_structure'
+                                                                  } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -542,6 +586,13 @@ class Structure( Networked ):
       raise models.ProtectedError( 'Structure not Deleteable', self )
 
     super().delete()
+
+  class Meta:
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
+    permissions = (
+                    ( 'can_create_structure_job', 'Can Create Structure Jobs' ),
+                    ( 'can_config_structure', 'Can Update Structure Config Values' )
+                  )
 
   def __str__( self ):
     return 'Structure #{0}({1}) in "{2}"'.format( self.pk, self.hostname, self.site.pk )
@@ -597,17 +648,27 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   def newFoundation( self, hostname ):
     raise ValueError( 'Root Complex dose not support Foundations' )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, paramater_type_list=[ { 'type': 'String' }, { 'type': 'String', 'is_array': True } ] )
-  def createFoundation( self, hostname, interface_name_list ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
+  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, paramater_type_list=[ { 'type': 'String' }, { 'type': 'Model', 'model': Site }, { 'type': 'Map', 'is_array': True } ] )
+  def createFoundation( self, hostname, site, interface_map_list ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     self = self.subclass
 
-    foundation = self.newFoundation( hostname )
+    foundation = self.newFoundation( hostname, site )  # this should really be locator not hostname
 
     counter = 0
-    for name in interface_name_list:
-      iface = RealNetworkInterface( name=name, is_provisioning=bool( counter == 0 ) )
+    for interface_map in interface_map_list:
+      try:
+        network = Network.objects.get( pk=interface_map.get( 'network_id', 1 ) )
+      except Network.DoesNotExist:
+        raise ValueError( 'Network "{0}" not found'.format( interface_map.get( 'network_id', 1 ) ) )
+
+      iface = RealNetworkInterface()
       iface.foundation = foundation
-      iface.physical_location = 'eth{0}'.format( counter )
+      iface.physical_location = interface_map.get( 'physical_location', 'eth{0}'.format( counter ) )
+      iface.name = interface_map.get( 'name', iface.physical_location )
+      iface.mac = interface_map.get( 'mac', None )
+      iface.link_name = interface_map.get( 'link_name', None )
+      iface.is_provisioning = interface_map.get( 'is_provisioning', bool( counter == 0 ) )
+      iface.network = network
       iface.full_clean()
       iface.save()
       counter += 1
@@ -622,16 +683,22 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, Complex, { 'createFoundation': 'Building.can_create_foundation' } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
     if not name_regex.match( self.name ):
-      errors[ 'name' ] = '"{0}" is invalid'.format( self.name[ 0:50 ] )
+      errors[ 'name' ] = 'invalid'
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    default_permissions = ( 'view', )
+    permissions = (
+                    ( 'can_create_foundation', 'Can Create Foundations' ),
+                  )
 
   def __str__( self ):
     return 'Complex "{0}"({1})'.format( self.description, self.name )
@@ -712,7 +779,7 @@ class ComplexStructure( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, ComplexStructure, { 'getConfig', 'Building.view_complexstructure' } )
 
   # TODO: need to make sure a Structure is in only one complex
   def clean( self, *args, **kwargs ):
@@ -721,6 +788,10 @@ class ComplexStructure( models.Model ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
     return 'ComplexStructure for "{0}" to "{1}"'.format( self.complex, self.structure )
@@ -778,7 +849,13 @@ class Dependency( models.Model ):
 
   @property
   def can_delete( self ):
-    return self.state != 'build'
+    if self.state != 'planned':
+      return False
+
+    if self.getJob() is not None:
+      return False
+
+    return True
 
   @property
   def site( self ):
@@ -842,16 +919,20 @@ class Dependency( models.Model ):
   @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
-    return Dependency.objects.filter( Q( foundation__site=site ) |
-                                      Q( foundation__isnull=True, script_structure__site=site ) |
-                                      Q( foundation__isnull=True, script_structure__isnull=True, dependency__structure__site=site ) |
-                                      Q( foundation__isnull=True, script_structure__isnull=True, structure__site=site )
+    return Dependency.objects.filter( Q( foundation__site=site )
+                                      | Q( foundation__isnull=True, script_structure__site=site )
+                                      | Q( foundation__isnull=True, script_structure__isnull=True, dependency__structure__site=site )
+                                      | Q( foundation__isnull=True, script_structure__isnull=True, structure__site=site )
                                       )
 
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, Dependency, {
+                                                                    'doCreate': 'Building.can_create_dependency_job',
+                                                                    'doDestroy': 'Building.can_create_dependency_job',
+                                                                    'doJob': 'Building.can_create_dependency_job'
+                                                                  } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -878,6 +959,12 @@ class Dependency( models.Model ):
 
     if errors:
       raise ValidationError( errors )
+
+  class Meta:
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
+    permissions = (
+                    ( 'can_create_dependency_job', 'Can Create Dependency Jobs' ),
+                  )
 
   def __str__( self ):
     structure = None

@@ -1,0 +1,46 @@
+sflinks = [ [ 'linux-base', 'manual-foundation-base' ], [ 'manual-structure-base', 'manual-foundation-base' ]  ]
+
+[ structure.manual-structure-base ]
+  description = 'Base Manual Structure'
+  scripts = { 'create' = 'manual-structure-create', 'destroy' = 'manual-structure-destroy', 'utility' = 'manual-structure-utility' }
+
+[ foundation.manual-foundation-base ]
+  description = 'Base Manual(Non-IPMI/DRAC/Blade/etc) Server'
+  scripts = { 'create' = 'manual-foundation-create', 'destroy' = 'manual-foundation-destroy' }
+  foundation_types = [ 'Manual', 'ManualComplex' ]
+  config_values = {}
+  template = {}
+  physical_interface_names = [ 'eth0' ]
+
+
+[ script.manual-structure-create ]
+  description='Install Manual OS'
+  script = """# Install Manual OS
+pause( msg='Resume When OS is Installed' )
+pause( msg='Resume When OS has been verified to be running' )
+"""
+
+[ script.manual-structure-destroy ]
+  description='Uninstall Manual OS'
+  script = """# Uninstall Manual OS
+pause( msg='Resume When OS is Uninstalled' )
+"""
+
+[ script.manual-structure-utility ]
+  description = 'Utility Script for Manual OS'
+  script = """# Utility Script for Manual OS
+pause( msg='Do the thing, then Resume' )
+"""
+
+
+[ script.manual-foundation-create ]
+  description = 'Create Manual Server'
+  script = """# Test and Configure Manual Server
+pause( msg='Resume when Server is Powered Off' )
+"""
+
+[ script.manual-foundation-destroy ]
+  description = 'Destroy Manual Server'
+  script = """# Decommission Manual Server
+pause( msg='Resume script when Server is Off' )
+"""

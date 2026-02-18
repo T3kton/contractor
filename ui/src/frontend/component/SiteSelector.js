@@ -1,5 +1,9 @@
 import React from 'react';
 import { Dropdown } from 'react-toolbox';
+import theme from './SiteSelectorTheme.css';
+
+// there is a problem with having to click twice
+// https://github.com/react-toolbox/react-toolbox/issues/1870
 
 class SiteSelector extends React.Component
 {
@@ -12,9 +16,21 @@ class SiteSelector extends React.Component
     this.props.onSiteChange( value );
   }
 
+  componentWillReceiveProps( newProps )
+  {
+    if( newProps.curSite === null ){
+      this.componentDidMount()
+    }
+  }
+
   componentDidMount()
   {
-    this.props.siteListGetter()
+    if( !this.props.contractor.authenticated )
+    {
+      return;
+    }
+
+    this.props.contractor.getSiteList()
       .then( ( result ) =>
       {
         var site_list = [];
@@ -31,7 +47,7 @@ class SiteSelector extends React.Component
   render()
   {
     return (
-<Dropdown title='Current Site' icon='cloud' auto onChange={this.handleChange} source={this.state.site_list} value={this.props.curSite} allowBlank={false} required={true}/>
+<Dropdown title='Current Site' icon='cloud' auto onChange={this.handleChange} source={this.state.site_list} value={this.props.curSite} allowBlank={false} required={true} theme={theme}/>
 );
   }
 };

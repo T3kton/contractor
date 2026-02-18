@@ -144,10 +144,11 @@ class Job extends React.Component
             id = CInP.extractIds( id )[0];
             job_list.push( { id: id,
                              script: job.script_name,
-                             structure: job.structure,
+                             structure: CInP.extractIds( job.structure )[0],
                              message: job.message,
                              progress: job.progress,
                              state: job.state,
+                             status: JSON.parse( job.status.replaceAll( "'", "\"" ).replaceAll( "False", "false" ).replaceAll( "True", "true" ).replaceAll( "None", "null" ) ),
                              created: job.created,
                              updated: job.updated,
                             } );
@@ -165,10 +166,11 @@ class Job extends React.Component
             id = CInP.extractIds( id )[0];
             job_list.push( { id: id,
                              script: job.script_name,
-                             foundation: job.foundation,
+                             foundation: CInP.extractIds( job.foundation )[0],
                              message: job.message,
                              progress: job.progress,
                              state: job.state,
+                             status: JSON.parse( job.status.replaceAll( "'", "\"" ).replaceAll( "False", "false" ).replaceAll( "True", "true" ).replaceAll( "None", "null" ) ),
                              created: job.created,
                              updated: job.updated,
                             } );
@@ -186,9 +188,10 @@ class Job extends React.Component
             id = CInP.extractIds( id )[0];
             job_list.push( { id: id,
                              script: job.script_name,
-                             dependency: job.dependency,
+                             dependency: CInP.extractIds( job.dependency )[0],
                              message: job.message,
                              progress: job.progress,
+                             status: JSON.parse( job.status.replaceAll( "'", "\"" ).replaceAll( "False", "false" ).replaceAll( "True", "true" ).replaceAll( "None", "null" ) ),
                              state: job.state,
                              created: job.created,
                              updated: job.updated,
@@ -197,6 +200,28 @@ class Job extends React.Component
 
           this.setState( { jobD_list: job_list } );
         } );
+    }
+  }
+
+  render_status( item )
+  {
+    if ( item[1] == 'Function' && item[2].dispatched )
+      return <div><strong>Task Dispatched</strong></div>
+
+    if ( item[1] == 'Scope' )
+    {
+      if ( item[2] === null )
+        return <div>{ item[0].toLocaleString( undefined, { minimumFractionDigits:2 } ) }%</div>
+
+      if ( item[2].time_remaining )
+      {
+        if( item[2].time_remaining[0] == '-' )
+          return <div style={{ "background-color": "#ffa" }}><strong>{ item[2].description }</strong> { item[0].toLocaleString( undefined, { minimumFractionDigits:2 } ) }% Elapsed:&nbsp;{ item[2].time_elapsed } Remaning:&nbsp;{ item[2].time_remaining }</div>
+
+        return <div><strong>{ item[2].description }</strong> { item[0].toLocaleString( undefined, { minimumFractionDigits:2 } ) }% Elapsed:&nbsp;{ item[2].time_elapsed } Remaning:&nbsp;{ item[2].time_remaining }</div>
+      }
+
+      return <div><strong>{ item[2].description }</strong> { item[0].toLocaleString( undefined, { minimumFractionDigits:2 } ) }%  Elapsed:&nbsp;{ item[2].time_elapsed }</div>
     }
   }
 
@@ -248,21 +273,17 @@ class Job extends React.Component
             <TableCell>Script</TableCell>
             <TableCell>Foundation</TableCell>
             <TableCell>Message</TableCell>
-            <TableCell>Progress</TableCell>
             <TableCell>State</TableCell>
-            <TableCell>Created</TableCell>
-            <TableCell>Updated</TableCell>
+            <TableCell>Dates</TableCell>
           </TableHead>
           { this.state.jobF_list.map( ( item ) => (
             <TableRow key={ item.id }>
               <TableCell numeric><Link to={ '/job/f/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.script }</TableCell>
-              <TableCell>{ item.foundation }</TableCell>
-              <TableCell>{ item.message }</TableCell>
-              <TableCell>{ item.progress }</TableCell>
+              <TableCell><Link to={ '/foundation/' + item.foundation }>{ item.foundation }</Link></TableCell>
+              <TableCell>{ item.message }<br/>{ item.status.map( this.render_status ) }</TableCell>
               <TableCell>{ item.state }</TableCell>
-              <TableCell>{ item.created }</TableCell>
-              <TableCell>{ item.updated }</TableCell>
+              <TableCell><strong>Created:</strong>&nbsp;{ item.created }<br/><strong>Updated:</strong>&nbsp;{ item.updated }</TableCell>
             </TableRow>
           ) ) }
         </Table>
@@ -272,22 +293,18 @@ class Job extends React.Component
             <TableCell numeric>Id</TableCell>
             <TableCell>Script</TableCell>
             <TableCell>Structure</TableCell>
-            <TableCell>Message</TableCell>
-            <TableCell>Progress</TableCell>
+            <TableCell>Status</TableCell>
             <TableCell>State</TableCell>
-            <TableCell>Created</TableCell>
-            <TableCell>Updated</TableCell>
+            <TableCell>Dates</TableCell>
           </TableHead>
           { this.state.jobS_list.map( ( item ) => (
-            <TableRow>
+            <TableRow key={ item.id }>
               <TableCell numeric><Link to={ '/job/s/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.script }</TableCell>
-              <TableCell>{ item.structure }</TableCell>
-              <TableCell>{ item.message }</TableCell>
-              <TableCell>{ item.progress }</TableCell>
+              <TableCell><Link to={ '/structure/' + item.structure }>{ item.structure }</Link></TableCell>
+              <TableCell>{ item.message }<br/>{ item.status.map( this.render_status ) }</TableCell>
               <TableCell>{ item.state }</TableCell>
-              <TableCell>{ item.created }</TableCell>
-              <TableCell>{ item.updated }</TableCell>
+              <TableCell><strong>Created:</strong>&nbsp;{ item.created }<br/><strong>Updated:</strong>&nbsp;{ item.updated }</TableCell>
             </TableRow>
           ) ) }
         </Table>
@@ -298,21 +315,17 @@ class Job extends React.Component
             <TableCell>Script</TableCell>
             <TableCell>Dependency</TableCell>
             <TableCell>Message</TableCell>
-            <TableCell>Progress</TableCell>
             <TableCell>State</TableCell>
-            <TableCell>Created</TableCell>
-            <TableCell>Updated</TableCell>
+            <TableCell>Dates</TableCell>
           </TableHead>
           { this.state.jobD_list.map( ( item ) => (
-            <TableRow>
+            <TableRow key={ item.id }>
               <TableCell numeric><Link to={ '/job/d/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.script }</TableCell>
               <TableCell>{ item.dependency }</TableCell>
-              <TableCell>{ item.message }</TableCell>
-              <TableCell>{ item.progress }</TableCell>
+              <TableCell>{ item.message }<br/>{ item.status.map( this.render_status ) }</TableCell>
               <TableCell>{ item.state }</TableCell>
-              <TableCell>{ item.created }</TableCell>
-              <TableCell>{ item.updated }</TableCell>
+              <TableCell><strong>Created:</strong>&nbsp;{ item.created }<br/><strong>Updated:</strong>&nbsp;{ item.updated }</TableCell>
             </TableRow>
           ) ) }
         </Table>

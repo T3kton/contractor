@@ -44,7 +44,7 @@ class BluePrint extends React.Component
               return 'f/' + CInP.extractIds( parent )[0];
             }
           } );
-          data.scripts = data.scripts.map( ( entry ) => ( CInP.extractIds( entry )[0] ) );
+          data.script_map = Object.keys( data.script_map ).map( ( key ) => ( [ key, CInP.extractIds( data.script_map[ key ] )[0] ] ) );
           data.config_values = Object.keys( data.config_values ).map( ( key ) => ( [ key, JSON.stringify( data.config_values[ key ] ) ] ) );
           this.setState( { blueprint: data } );
         } );
@@ -106,7 +106,7 @@ class BluePrint extends React.Component
                   <tr><th>Parents</th><td><ul>{ blueprint.parent_list.map( ( parent ) => ( <li><Link to={ '/blueprint/' + parent }>{ parent }</Link></li> ) ) }</ul></td></tr>
                   <tr><th>Description</th><td>{ blueprint.description }</td></tr>
                   <tr><th>Config Values</th><td><table><thead/><tbody>{ blueprint.config_values.map( ( value ) => ( <tr key={ value[0] }><th>{ value[0] }</th><td>{ value[1] }</td></tr> ) ) }</tbody></table></td></tr>
-                  <tr><th>Scripts</th><td><ul>{ blueprint.scripts.map( ( script, index ) => ( <li key={ index } >{ script } <ScriptDialog getScript={ this.props.getScript } id={ script }/></li> ) ) }</ul></td></tr>
+                  <tr><th>Scripts</th><td><ul>{ blueprint.script_map.map( ( value ) => ( <li key={ value[0] } >{ value[0] } <ScriptDialog getScript={ this.props.getScript } id={ value[1] }/></li> ) ) }</ul></td></tr>
                   { blueprint.foundation_blueprint_list !== undefined &&
                     <tr><th >Foundation Blueprint</th><td><ul>
                     {

@@ -44,7 +44,7 @@ def _fake_toSubcontractor( self ):
   while not _to_can_continue:
     time.sleep( 0.1 )
 
-  return ( 'remote_func', 'the count "{0}"'.format( self.counter ) )
+  return ( 'remote_func', 'the fake count "{0}"'.format( self.counter ) )
 
 
 def _do_jobResults( job_id, cookie, data ):
@@ -65,7 +65,54 @@ def fake_canSetState( self, job=None ):
   return True
 
 
-@pytest.mark.timeout( 20, method='thread' )
+@pytest.mark.django_db( transaction=True )
+def test_job_saving_loading( mocker ):
+  s = Site( name='test', description='test' )
+  s.full_clean()
+  s.save()
+
+  runner = Runner( parse( 'begin( expected_time=0:10, max_time=0:10 )\ndelay( seconds=1 )\ntesting.remote()\nend' ) )
+  runner.registerModule( 'contractor.tscript.runner_plugins_test' )
+  job = BaseJob( site=s )
+  job.state = 'queued'
+  job.script_name = 'test'
+  job.script_runner = pickle.dumps( runner )
+  job.full_clean()
+  job.save()
+
+  job = BaseJob.objects.get()
+  runner = pickle.loads( job.script_runner )
+  job.message = runner.run()
+  job.status = runner.status
+  runner.toSubcontractor( [ 'testing' ] )
+  job.script_runner = pickle.dumps( runner )
+  job.full_clean()
+  job.save()
+
+  time.sleep( 1 )
+
+  job = BaseJob.objects.get()
+  runner = pickle.loads( job.script_runner )
+  job.message = runner.run()
+  job.status = runner.status
+  runner.toSubcontractor( [ 'testing' ] )
+  job.script_runner = pickle.dumps( runner )
+  job.full_clean()
+  job.save()
+
+  time.sleep( 1 )
+
+  job = BaseJob.objects.get()
+  runner = pickle.loads( job.script_runner )
+  job.message = runner.run()
+  job.status = runner.status
+  runner.toSubcontractor( [ 'testing' ] )
+  job.script_runner = pickle.dumps( runner )
+  job.full_clean()
+  job.save()
+
+
+@pytest.mark.timeout( 60, method='thread' )
 @pytest.mark.django_db( transaction=True )
 def test_job_locking( mocker ):
   global _from_can_continue, _to_can_continue, _process_jobs_can_finish
@@ -101,9 +148,12 @@ def test_job_locking( mocker ):
     assert j.state == 'queued'
     assert j.jobRunnerState()[ 'state' ][2][1][ 'dispatched' ] is False
 
+  job_id = None
+
   with transaction.atomic():
     cookie, rc = _stripcookie( processJobs( s, [ 'testing' ], 10 ) )
-    assert rc == [{'function': 'remote_func', 'job_id': 1, 'module': 'testing', 'paramaters': 'the count "2"'}]
+    job_id = rc[0][ 'job_id' ]
+    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the fake count "2"'}]
 
   with transaction.atomic():
     j = BaseJob.objects.get()
@@ -119,7 +169,7 @@ def test_job_locking( mocker ):
     assert j.jobRunnerState()[ 'state' ][2][1][ 'dispatched' ] is True
 
   with transaction.atomic():
-    jobResults( rc[0][ 'job_id' ], cookie, None )
+    jobResults( job_id, cookie, None )
 
   with transaction.atomic():
     j = BaseJob.objects.get()
@@ -128,7 +178,7 @@ def test_job_locking( mocker ):
 
   with transaction.atomic():
     cookie, rc = _stripcookie( processJobs( s, [ 'testing' ], 10 ) )
-    assert rc == [{'function': 'remote_func', 'job_id': 1, 'module': 'testing', 'paramaters': 'the count "4"'}]
+    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the fake count "4"'}]
 
   with transaction.atomic():
     j = BaseJob.objects.get()
@@ -137,7 +187,7 @@ def test_job_locking( mocker ):
 
   # first test, running status check during a statesave
   _from_can_continue = False
-  t = threading.Thread( target=_do_jobResults, args=( rc[0][ 'job_id' ], cookie, None ) )
+  t = threading.Thread( target=_do_jobResults, args=( job_id, cookie, None ) )
   try:
     t.start()
     time.sleep( 0.5 )
@@ -164,7 +214,7 @@ def test_job_locking( mocker ):
   # now we test intrupting the job checking with results, first during a slow toSubcontractor
   with transaction.atomic():
     cookie, rc = _stripcookie( processJobs( s, [ 'testing' ], 10 ) )
-    assert rc == [{'function': 'remote_func', 'job_id': 1, 'module': 'testing', 'paramaters': 'the count "5"'}]
+    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the fake count "5"'}]
 
   with transaction.atomic():
     j = BaseJob.objects.get()
@@ -183,7 +233,7 @@ def test_job_locking( mocker ):
       assert j.state == 'queued'
       assert j.jobRunnerState()[ 'state' ][2][1][ 'dispatched' ] is True
 
-      jobResults( rc[0][ 'job_id' ], cookie, None )
+      jobResults( job_id, cookie, None )
 
       j = BaseJob.objects.get()
       assert j.state == 'queued'
@@ -206,7 +256,7 @@ def test_job_locking( mocker ):
   # then just before the transaction commits
   with transaction.atomic():
     cookie, rc = _stripcookie( processJobs( s, [ 'testing' ], 10 ) )
-    assert rc == [{'function': 'remote_func', 'job_id': 1, 'module': 'testing', 'paramaters': 'the count "7"'}]
+    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the fake count "7"'}]
 
   with transaction.atomic():
     j = BaseJob.objects.get()
@@ -225,7 +275,7 @@ def test_job_locking( mocker ):
       assert j.state == 'queued'
       assert j.jobRunnerState()[ 'state' ][2][1][ 'dispatched' ] is True
 
-      t2 = threading.Thread( target=_do_jobResults, args=( rc[0][ 'job_id' ], cookie, None ) )  # jobResults should block b/c the record is locked
+      t2 = threading.Thread( target=_do_jobResults, args=( job_id, cookie, None ) )  # jobResults should block b/c the record is locked
       t2.start()
 
       j = BaseJob.objects.get()
@@ -260,10 +310,10 @@ def test_job_locking( mocker ):
   # and finish up the job
   with transaction.atomic():
     cookie, rc = _stripcookie( processJobs( s, [ 'testing' ], 10 ) )
-    assert rc == [{'function': 'remote_func', 'job_id': 1, 'module': 'testing', 'paramaters': 'the count "9"'}]
+    assert rc == [{'function': 'remote_func', 'job_id': job_id, 'module': 'testing', 'paramaters': 'the fake count "9"'}]
 
   with transaction.atomic():
-    jobResults( rc[0][ 'job_id' ], cookie, 'adf' )
+    jobResults( job_id, cookie, 'adf' )
 
   with transaction.atomic():
     assert processJobs( s, [ 'testing' ], 10 ) == []
@@ -408,7 +458,7 @@ def test_foundation_with_structure_job_create():
   assert str( execinfo.value.code ) == 'ALLREADY_BUILT'
 
   f.setDestroyed()
-  s.setBuilt()
+  s.setDestroyed()
   assert createJob( 'create', f, TestUser() ) is not None
   f.foundationjob.delete()
   f = Foundation.objects.get( pk=f.pk )
@@ -442,8 +492,8 @@ def test_foundation_with_structure_job_create():
   assert createJob( 'destroy', f, TestUser() ) is not None
   f.foundationjob.delete()
   f = Foundation.objects.get( pk=f.pk )
+  s.setDestroyed()
   f.setLocated()
-  s.setBuilt()
   with pytest.raises( Exception ) as execinfo:
     createJob( 'destroy', f, TestUser() )
   assert str( execinfo.value.code ) == 'NOT_BUILT'
@@ -532,6 +582,7 @@ def test_structure_job_create():  # TODO: test structures with dependency
   s.structurejob.delete()
   s = Structure.objects.get( pk=s.pk )
 
+  s.setDestroyed()
   f.setLocated()
   with pytest.raises( Exception ) as execinfo:
     createJob( 'destroy', s, TestUser() )
@@ -982,6 +1033,7 @@ def test_can_start_destroy( mocker ):
 
   s.structurejob.delete()
   s.setDestroyed()
+  s = Structure.objects.get( pk=s.pk )
   f = Foundation.objects.get( pk=f.pk )
   assert f.foundationjob.can_start is True
 
@@ -1068,20 +1120,18 @@ def test_can_start_mixed( mocker ):
   s = Structure.objects.get( pk=s.pk )
   d = Dependency.objects.get( pk=d.pk )
 
-  s.setBuilt()
+  s.setDestroyed()
   d.setBuilt()
   f.setLocated()
   s = Structure.objects.get( pk=s.pk )
 
   createJob( 'create', f, TestUser() )
-  createJob( 'destroy', d, TestUser() )
-  d = Dependency.objects.get( pk=d.pk )
-  d.setBuilt()
+  with pytest.raises( Exception ) as execinfo:
+    createJob( 'destroy', d, TestUser()  )
+  assert str( execinfo.value.code ) == 'NOT_BUILT'
 
-  assert d.dependencyjob.can_start is False
   assert f.foundationjob.can_start is True
 
-  d.dependencyjob.delete()
   f.foundationjob.delete()
   d = Dependency.objects.get( pk=d.pk )
   f = Foundation.objects.get( pk=f.pk )

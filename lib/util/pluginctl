@@ -3,41 +3,97 @@
 import os
 os.environ.setdefault( 'DJANGO_SETTINGS_MODULE', 'contractor.settings' )
 
+import django
 import sys
+import argparse
+from django.core.exceptions import AppRegistryNotReady, ObjectDoesNotExist
+
 from contractor import plugins
 
+Group = None
+Permission = None
 
-def main():
-  try:
-    mode = sys.argv[1]
-    plugin_dir = sys.argv[2]
-  except IndexError:
-    print( 'Usage: {0} enable <path to plugin dir>'.format( sys.argv[0] ) )
-    sys.exit( 1 )
 
-  if mode != 'enable':
-    print( 'Only "enable" mode supported at this time' )
-    sys.exit( 1 )
-
-  plugin_dir = os.path.abspath( plugin_dir )
-
-  if not os.path.exists( os.path.join( plugin_dir, 'models.py' ) ):
-    print( 'Path "{0}" must contain the models.py file'.format( plugin_dir ) )
-    sys.exit( 1 )
-
+def enable_plugin( plugin_dir ):
   contractor_plugin_dir = os.path.dirname( plugins.__file__ )
 
   target_path = os.path.join( contractor_plugin_dir, os.path.basename( plugin_dir ) )
 
   if os.path.exists( target_path ):
     print( 'Allready enabled' )
-    sys.exit( 0 )
+    return
 
   print( 'Enabling "{0}" at "{1}"...'.format( plugin_dir, target_path ) )
   os.symlink( plugin_dir, target_path )
 
   print( 'Done' )
+  return
+
+
+def enable_auth( plugin_name, group_name, model_name ):
+  try:
+    group = Group.objects.get( name=group_name )
+  except ObjectDoesNotExist:
+    print( 'WARNING, could not find the permission group "{0}", skipping auth enablement'.format( group_name ) )
+    return
+
+  for name in ( 'add', 'change', 'delete' ):
+    try:
+      permission = Permission.objects.get( codename='{0}_{1}'.format( name, model_name.lower() ) )
+    except Permission.DoesNotExist:
+      print( 'WARNING, could not find the permission "{0}"'. format( '{0}_{1}'.format( name, model_name.lower() ) ) )
+      continue
+
+    group.permissions.add( permission, content_type__app_label=plugin_name )
+
+
+def main():
+  global Group, Permission
+
+  parser = argparse.ArgumentParser( description='Contractor Plugin Control' )
+  parser.add_argument( '-w', '--worker', help='Name of model to give the worker group permissions to, can be specified more than once' )
+  parser.add_argument( '-b', '--builder', help='Name of model to give the builder group permissions to, can be specified more than once' )
+  parser.add_argument( '-i', '--infrastructure', help='Name of model to give the infrastructure group permissions to, can be specified more than once' )
+  parser.add_argument( '-s', '--designer', help='Name of model to give the designer group permissions to, can be specified more than once' )
+  group = parser.add_mutually_exclusive_group()
+  group.add_argument( '-e', '--enable', help='Add new Plugins', action='store_true' )
+  group.add_argument( '-d', '--disable', help='Disable existing Plugins', action='store_true' )
+  parser.add_argument( 'dir', help='path to plugin dir' )
+
+  args = parser.parse_args()
+
+  plugin_name = os.path.basename( args.dir )
+  plugin_dir = os.path.abspath( args.dir )
+  if not os.path.exists( os.path.join( plugin_dir, 'models.py' ) ):
+    print( 'Path "{0}" must contain the models.py file'.format( plugin_dir ) )
+    sys.exit( 1 )
+
+  if args.enable:
+    enable_plugin( plugin_dir )
+
+  if args.disable:
+    print( 'disable not supported yet' )
+    sys.exit( 1 )
+
+  django.setup()
+
+  try:
+    from django.contrib.auth.models import Group, Permission
+  except AppRegistryNotReady:
+    print( 'WARNING, django apps not loaded, skipping auth enablement' )
+    sys.exit( 0 )
+
+  if args.worker:
+    enable_auth( plugin_name, 'worker', args.worker )
+  if args.builder:
+    enable_auth( plugin_name, 'builder', args.builder )
+  if args.infrastructure:
+    enable_auth( plugin_name, 'infrastructure', args.infrastructure )
+  if args.designer:
+    enable_auth( plugin_name, 'designer', args.designer )
+
   sys.exit( 0 )
+
 
 if __name__ == '__main__':
   main()

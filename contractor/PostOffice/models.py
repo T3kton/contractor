@@ -20,7 +20,7 @@ class PostOfficeException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'PostOfficeException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'PostOfficeException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'PostOfficeException ({0}): {1}'.format( self.code, self.message )
@@ -42,10 +42,13 @@ class FoundationPost( Post ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, FoundationPost )
+
+  class Meta:
+    default_permissions = ( 'view', )
 
   def __str__( self ):
-    return 'FoundationPost for "{0}" on "{1}"'.format( self.foundation, self.name )
+    return 'FoundationPost for "{0}" on "{1}"'.format( self.foundation_id, self.name )
 
 
 @cinp.model( not_allowed_verb_list=[ 'CREATE', 'UPDATE', 'DELETE' ] )
@@ -55,10 +58,13 @@ class StructurePost( Post ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, StructurePost )
+
+  class Meta:
+    default_permissions = ( 'view', )
 
   def __str__( self ):
-    return 'StructurePost for "{0}" on "{1}"'.format( self.structure, self.name )
+    return 'StructurePost for "{0}" on "{1}"'.format( self.structure_id, self.name )
 
 
 class Box( models.Model ):
@@ -86,6 +92,9 @@ class Box( models.Model ):
       self.proxy = None
 
     errors = {}
+    if self.type not in Box.BOX_TYPE:
+      errors[ 'type' ] = 'Invalid'
+
     if self.expires is not None and not self.expires > datetime.now( timezone.utc ) + timedelta( hours=MAX_BOX_LIFE ):
       errors[ 'expires' ] = 'more than "{0}" hourse in the future'.format( MAX_BOX_LIFE )
 
@@ -110,10 +119,14 @@ class FoundationBox( Box ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, FoundationBox, { 'extend': 'PostOffice.change_foundationbox' } )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
-    return 'FoundationBox for "{0}"'.format( self.foundation )
+    return 'FoundationBox for "{0}"'.format( self.foundation_id )
 
 
 @cinp.model()
@@ -127,7 +140,11 @@ class StructureBox( Box ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, StructureBox, { 'extend': 'PostOffice.change_structurebox' } )
+
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
 
   def __str__( self ):
-    return 'StructureBox for "{0}"'.format( self.structure )
+    return 'StructureBox for "{0}"'.format( self.structure_id )

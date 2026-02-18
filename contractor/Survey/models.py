@@ -1,10 +1,12 @@
+import datetime
 from django.db import models
 from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import name_regex
+from contractor.fields import name_regex, MapField
 from contractor.Building.models import Foundation
+from contractor.BluePrint.models import PXE
 from contractor.Survey.lib import foundationLookup
 
 cinp = CInP( 'Survey', '0.1' )
@@ -18,7 +20,7 @@ class SurveyException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'SurveyException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'SurveyException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'SurveyException ({0}): {1}'.format( self.code, self.message )
@@ -35,7 +37,7 @@ class Plot( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, Plot )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -47,6 +49,10 @@ class Plot( models.Model ):
     if errors:
       raise ValidationError( errors )
 
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
+
   def __str__( self ):
     return 'Plot "{0}"({1})'.format( self.description, self.name )
 
@@ -56,8 +62,30 @@ class Cartographer( models.Model ):
   identifier = models.CharField( max_length=64, primary_key=True )
   foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT, null=True, blank=True )
   message = models.CharField( max_length=200 )
+  info_map = MapField( null=True, blank=True )
+  last_checkin = models.DateTimeField( null=True, blank=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
+
+  def _setFoundationPXE( self, done=False ):
+    if done is True:
+      pxe = None
+    else:
+      pxe = PXE.objects.get( name='bootstrap' )
+
+    for iface in self.foundation.networkinterface_set.all():
+      iface.pxe = pxe
+      iface.full_clean()
+      iface.save()
+
+  @cinp.action( paramater_type_list=[ { 'type': 'Model', 'model': Foundation } ] )
+  def assign( self, foundation ):
+    if foundation.state != 'planned':
+      raise SurveyException( 'FOUNDATION_INVALID_STATE', 'Foundation is not in a valid state for assigning' )
+
+    self.foundation = foundation
+    self.full_clean()
+    self.save()
 
   @cinp.action( paramater_type_list=[ 'String' ] )
   @staticmethod
@@ -80,9 +108,20 @@ class Cartographer( models.Model ):
 
   @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ 'Map' ] )
   def lookup( self, info_map=None ):
+    self.info_map = info_map
+    self.last_checkin = datetime.datetime.now( datetime.UTC )
+    self.full_clean()
+    self.save()
+
+    if self.foundation:
+      self._setFoundationPXE()
+      return { 'matched_by': 'Pre-Set', 'locator': self.foundation.locator }
+
+    # TODO: make sure the platform that the bootstrap detected matches the foundation
     ( matched_by, foundation ) = foundationLookup( info_map )
     if foundation is not None:
       self.foundation = foundation
+      self._setFoundationPXE()
       self.message = 'Matched by "{0}" as "{1}"'.format( matched_by, foundation.locator )
       self.full_clean()
       self.save()
@@ -99,6 +138,7 @@ class Cartographer( models.Model ):
 
   @cinp.action()
   def done( self ):
+    self._setFoundationPXE( done=True )
     foundation = self.foundation
     self.delete()
     foundation.cartographer = None  # the Cartographer instance is gone, but the object cache still has it, a little tweeking to help it get located
@@ -108,7 +148,19 @@ class Cartographer( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, Cartographer, {
+                                                                      'register': 'Building.can_bootstrap',
+                                                                      'lookup': 'Building.can_bootstrap',
+                                                                      'setMessage': 'Building.can_bootstrap',
+                                                                      'done': 'Building.can_bootstrap',
+                                                                      'assign': 'Survey.can_assign_foundation',
+                                                                    } )
+
+  class Meta:
+    default_permissions = ( 'delete', 'view' )
+    permissions = (
+                    ( 'can_assign_foundation', 'Can Assign Foundation to Cartographer' ),
+                  )
 
   def __str__( self ):
     return 'Cartographer "{0}"'.format( self.identifier )

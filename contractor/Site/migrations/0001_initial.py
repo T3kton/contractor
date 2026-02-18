@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('config_values', contractor.fields.MapField(null=True, default=contractor.fields.defaultdict, blank=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('parent', models.ForeignKey(null=True, blank=True, to='Site.Site')),
+                ('parent', models.ForeignKey(null=True, blank=True, to='Site.Site', on_delete=models.CASCADE)),
                 ('zone', models.ForeignKey(null=True, blank=True, to='Directory.Zone', on_delete=django.db.models.deletion.PROTECT)),
             ],
         ),

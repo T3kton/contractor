@@ -7,9 +7,9 @@ from django.core.exceptions import ValidationError
 
 from contractor.lib.ip import StrToIp, IpToStr
 
-name_regex = re.compile( '^[a-zA-Z0-9][a-zA-Z0-9_\-]*$' )  # if this changes, update architect, and config_handler uri regex
-hostname_regex = re.compile( '^[a-z0-9][a-z0-9\-]*[a-z0-9]$' )  # '.' is not allowed, can cause trouble with the DNS generations stuff, must also be lowercase (DNS is non case sensitive)
-config_name_regex = re.compile( '^[<>\-~]?[a-zA-Z0-9][a-zA-Z0-9_\-]*(:[a-zA-Z0-9]+)?$' )
+name_regex = re.compile( r'^[a-zA-Z0-9][a-zA-Z0-9_\-]*$' )  # if this changes, update architect, and config_handler uri regex
+hostname_regex = re.compile( r'^[a-z0-9][a-z0-9\-]*[a-z0-9]$' )  # '.' is not allowed, can cause trouble with the DNS generations stuff, must also be lowercase (DNS is non case sensitive)
+config_name_regex = re.compile( r'^[<>\-~]?[a-zA-Z0-9][a-zA-Z0-9_\-]*(:[a-zA-Z0-9]+)?$' )
 JSON_MAGIC = '\x02JSON\x03'
 
 
@@ -58,7 +58,7 @@ class MapField( models.BinaryField ):
     kwargs[ 'editable' ] = self.editable
     return name, path, args, kwargs
 
-  def from_db_value( self, value, expression, connection, context ):
+  def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
     if value is None:
       return None
 
@@ -91,18 +91,18 @@ class MapField( models.BinaryField ):
     return pickle.dumps( value, protocol=4 )
 
 
-class JSONField( models.TextField ):
+class JSONField( models.TextField ):  # really should be using something other than JSON here?
   description = 'JSON Encoded'
   empty_values = [ None ]
 
-  def from_db_value( self, value, expression, connection, context ):
+  def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
     if value is None:
       return None
 
     try:
       value = json.loads( value[ len( JSON_MAGIC ): ] )
     except ValueError:
-      raise ValidationError( '"%(value)s" is not valid JSON', params={ 'value': value[ 0:100 ] } )
+      raise ValidationError( 'DB Value is not valid JSON', code='invalid' )
 
     return value
 
@@ -146,7 +146,7 @@ class StringListField( models.CharField ):
 
     super().__init__( *args, **kwargs )
 
-  def from_db_value( self, value, expression, connection, context ):
+  def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
     if value is None:
       return value
 
@@ -204,7 +204,7 @@ class IpAddressField( models.BinaryField ):  # needs 128 bits of storage, the in
     kwargs[ 'editable' ] = self.editable
     return name, path, args, kwargs
 
-  def from_db_value( self, value, expression, connection, context ):
+  def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
     if value is None:
       return None
 
@@ -237,6 +237,9 @@ class IpAddressField( models.BinaryField ):  # needs 128 bits of storage, the in
   def get_prep_value( self, value ):
     if isinstance( value, str ):
       value = StrToIp( value )
+
+    if value is None:  # StrToIp may return None
+      return None
 
     return value.to_bytes( 16, 'big' )
 

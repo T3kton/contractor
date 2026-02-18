@@ -78,14 +78,14 @@ def updateRecord( target ):
   key = { '_id': target.pk }
 
   prepConfig( item )
-  db.update( key, item, upsert=True )
+  db.update_one( key, { '$set': item }, upsert=True )
 
 
 def removeRecord( target ):
   db = collection( target )
 
   query = { '_id': target.pk }
-  db.remove( query )
+  db.delete_one( query )
 
 
 def post_save_callback( **kwargs ):

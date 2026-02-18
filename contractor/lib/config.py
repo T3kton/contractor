@@ -1,7 +1,7 @@
 import copy
 import json
 from datetime import datetime, timezone
-from jinja2 import Environment, Undefined, TemplateSyntaxError
+from jinja2 import Environment, Undefined, TemplateError, TemplateSyntaxError
 
 from django.conf import settings
 
@@ -146,7 +146,7 @@ def _siteConfigInternal( site, class_list, config ):
   if site.parent is not None:
     last_modified = max( last_modified, _siteConfigInternal( site.parent, class_list, config ) )
 
-  _updateConfig( site.config_values, class_list, config )
+  _updateConfig( copy.deepcopy( site.config_values ), class_list, config )
 
   return last_modified
 
@@ -165,7 +165,7 @@ def _bluePrintConfigInternal( blueprint, class_list, config ):
   for parent in blueprint.parent_list.all():
     last_modified = max( last_modified, _bluePrintConfigInternal( parent, class_list, config ) )
 
-  _updateConfig( blueprint.config_values, class_list, config )
+  _updateConfig( copy.deepcopy( blueprint.config_values ), class_list, config )  # we are deepcopying b/c sometimes something will tweek the values (ie: resords/lib.py stripping passwords) and we don't want that to modify the origional values
   return last_modified
 
 
@@ -188,7 +188,7 @@ def _foundationConfig( foundation, class_list, config ):
 
 
 def _structureConfig( structure, class_list, config ):
-  _updateConfig( structure.config_values, class_list, config )
+  _updateConfig( copy.deepcopy( structure.config_values ), class_list, config )
 
   config.update( structure.configAttributes() )
   return structure.updated
@@ -218,6 +218,18 @@ def getConfig( target ):
     last_modified = max( last_modified, _siteConfig( target.site, class_list, config ) )
     last_modified = max( last_modified, _foundationConfig( target.foundation.subclass, class_list, config ) )
     last_modified = max( last_modified, _structureConfig( target, class_list, config ) )
+    try:
+      job = target.getJob()
+      if job is not None:
+        config[ '_structure_job_id' ] = job.pk
+    except AttributeError:
+      pass
+    try:
+      job = target.foundation.getJob()
+      if job is not None:
+        config[ '_foundation_job_id' ] = job.pk
+    except AttributeError:
+      pass
 
   elif 'Foundation' in [ i.__name__ for i in target.__class__.__mro__ ]:
     last_modified = max( last_modified, _bluePrintConfig( target.blueprint, class_list, config ) )
@@ -225,6 +237,13 @@ def getConfig( target ):
     last_modified = max( last_modified, _foundationConfig( target, class_list, config ) )
     try:
       config[ '_structure_id' ] = target.structure.pk
+    except AttributeError:
+      pass
+
+    try:
+      job = target.getJob()
+      if job is not None:
+        config[ '_foundation_job_id' ] = job.pk
     except AttributeError:
       pass
 
@@ -237,11 +256,15 @@ def getConfig( target ):
   # Global Attributes
   config[ '__last_modified' ] = last_modified
   config[ '__timestamp' ] = datetime.now( timezone.utc )
-  config[ '__contractor_host' ] = settings.CONTRACTOR_HOST
+  if settings.CONTRACTOR_PORT:
+    config[ '__contractor_host' ] = '{0}:{1}'.format( settings.CONTRACTOR_HOST, settings.CONTRACTOR_PORT )
+  else:
+    config[ '__contractor_host' ] = settings.CONTRACTOR_HOST
+
   try:
-    config[ '__pxe_template_location' ] = '{0}config/pxe_template/c/{1}'.format( settings.CONTRACTOR_HOST, config[ '_structure_config_uuid' ] )
+    config[ '__pxe_template_location' ] = '{0}/config/pxe_template/c/{1}'.format( config[ '__contractor_host' ], config[ '_structure_config_uuid' ] )
   except KeyError:
-    config[ '__pxe_template_location' ] = '{0}config/pxe_template/'.format( settings.CONTRACTOR_HOST )
+    config[ '__pxe_template_location' ] = '{0}/config/pxe_template/'.format( config[ '__contractor_host' ] )
   config[ '__pxe_location' ] = settings.PXE_IMAGE_LOCATION
 
   return config
@@ -290,11 +313,14 @@ def renderTemplate( template, value_map ):
   value_map = mergeValues( value_map )  # merge first, this way results are more consistant with requests that are getting just the values
 
   try:
-    while template.count( '{{' ):
+    while template.count( '{{' ) or template.count( '{%' ):
       tpl = env.from_string( template )
       template = tpl.render( **value_map )
 
   except TemplateSyntaxError as e:
     raise Exception( 'Error parsing template: "{0}" on line: "{1}"'.format( e.message, e.lineno ) )
+
+  except TemplateError as e:
+    raise Exception( 'Error rendering template: "{0}"'.format( e ) )
 
   return template

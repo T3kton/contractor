@@ -2,7 +2,7 @@ import pickle
 from django.core.exceptions import ObjectDoesNotExist
 
 from contractor.Building.models import Foundation, Structure, Dependency
-from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin
+from contractor.Foreman.runner_plugins.building import ConfigPlugin, FoundationPlugin, ROFoundationPlugin, StructurePlugin, ROStructurePlugin, SignalingPlugin
 from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, DependencyJob, JobLog, ForemanException
 from contractor.PostOffice.lib import registerEvent
 
@@ -103,7 +103,7 @@ def createJob( script_name, target, creator ):
         except ObjectDoesNotExist:
           pass
 
-        if target_dependency.state != 'built':  # this one should not happen, but just in case
+        if target_dependency.state != 'built':  # we should not mess with the dependency if the target is not built
           raise ForemanException( 'NOT_BUILT', 'the supporting target to the target is not built' )
 
   else:
@@ -171,6 +171,12 @@ def createJob( script_name, target, creator ):
   job.full_clean()
   job.save()
 
+  runner = pickle.loads( job.script_runner )
+  runner.registerObject( SignalingPlugin( target, job ) )  # this is special it needs the pk, which is after the save
+  job.script_runner = pickle.dumps( runner )
+  job.full_clean()
+  job.save()
+
   JobLog.fromJob( job, creator )
 
   return job.pk
@@ -187,7 +193,13 @@ def processJobs( site, module_list, max_jobs=10 ):
     foundation = foundation.subclass
     complex = foundation.complex
     if complex is not None and complex.state == 'built':
-      foundation.setLocated()
+      try:
+        job = foundation.foundationjob
+      except ObjectDoesNotExist:
+        job = None
+
+      if foundation._canSetState( job ):
+        foundation.setLocated()
 
   # start waiting jobs
   for job in BaseJob.objects.select_for_update().filter( site=site, state='waiting' ):
@@ -232,7 +244,9 @@ def processJobs( site, module_list, max_jobs=10 ):
       continue
 
     try:
-      job.message = runner.run()
+      msg = runner.run()
+      if msg is not None:
+        job.message = msg
 
     except Pause as e:
       job.state = 'paused'

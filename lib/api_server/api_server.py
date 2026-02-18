@@ -29,21 +29,25 @@ class GunicornApp( BaseApplication ):
   def load( self ):
     return self.application
 
+
 if __name__ == '__main__':
   logging.basicConfig()
   logger = logging.getLogger()
   if DEBUG:
     logger.setLevel( logging.DEBUG )
+    loglevel = 'debug'
   else:
     logger.setLevel( logging.INFO )
+    loglevel = 'info'
+
   logger.info( 'Starting up...' )
 
   logger.debug( 'Creating Server...' )
   app = get_app( DEBUG )
 
   logger.info( 'Starting Server...' )
-  GunicornApp( app, { 'bind': '0.0.0.0:8888', 'loglevel': 'info' } ).run()
-  # GunicornApp( app, { 'bind': '127.0.0.1:8888', 'loglevel': 'info' } ).run()
+  GunicornApp( app, { 'bind': '0.0.0.0:8888', 'loglevel': loglevel } ).run()
+  # GunicornApp( app, { 'bind': '127.0.0.1:8888', 'loglevel': loglevel } ).run()
   logger.info( 'Server Done...' )
   logger.info( 'Shutting Down...' )
   logger.info( 'Done!' )

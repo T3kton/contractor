@@ -18,10 +18,16 @@ from contractor.Directory.lib import genZone, genPtrZones, genMasterFile
 CACHE_FILE = '/var/lib/contractor/dns.cache'
 ZONE_DIR = '/etc/bind/contractor/zones/'
 MASTER_FILE = '/etc/bind/contractor/dns.master'
+_serial = None
 
 
 def serial():
-  return str( int( datetime.now().timestamp() / 60 ) )
+  global _serial
+  if _serial is not None:
+    return _serial
+
+  _serial = str( int( datetime.now().timestamp() / 60 ) )
+  return _serial
   # serial number is a unsigned 32bit number, that is monatomically increasing
   # we are taking the curent timestamp and / 60, this will give us one minute
   # resolution, and will last long past y2038, if is still in use past that,
@@ -46,16 +52,17 @@ except json.JSONDecodeError as e:
   raise ValueError( 'Error parsing cache file: {0}'.format( e ) )
 
 ptr_list = []
+rtext_list = []
 zone_file_list = []
 
 for zone in Zone.objects.all():
   print( 'Doing "{0}"...'.format( zone.fqdn ) )
 
-  filename, txt = genZone( zone, ptr_list, zone_file_list )
+  filename, txt = genZone( zone, ptr_list, rtext_list, zone_file_list )
   updateFile( filename, txt, cache )
 
 print( 'Doing PTR zones...' )
-for filename, txt in genPtrZones( ptr_list, zone_file_list ):
+for filename, txt in genPtrZones( ptr_list, rtext_list, zone_file_list ):
   updateFile( filename, txt, cache )
 
 print( 'Writing master config...' )
@@ -66,7 +73,7 @@ open( CACHE_FILE, 'w' ).write( json.dumps( cache ) )
 
 print( 'Checking...' )
 try:
-  subprocess.check_call( [ '/usr/sbin/named-checkconf', '-z' ] )
+  subprocess.check_call( [ '/usr/bin/named-checkconf', '-z' ] )
 except subprocess.CalledProcessError:
   print( 'Validity check failed...' )
   sys.exit( 1 )

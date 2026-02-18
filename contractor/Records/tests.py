@@ -30,15 +30,15 @@ class FakeCollection():
   def __init__( self, name ):
     self.name = name
 
-  def update( self, key, item, upsert ):
+  def update_one( self, key, item, upsert ):
     global fake_key
     global fake_item
 
     assert upsert is True
     fake_key = key
-    fake_item = item
+    fake_item = item[ '$set' ]
 
-  def remove( self, key ):
+  def delete_one( self, key ):
     global fake_key
     fake_key = key
 
@@ -182,7 +182,7 @@ def test_updateConfig_blueprint( mocker ):
 
   fake_key = None
   fake_item = None
-  sb.foundation_blueprint_list = [ fb ]
+  sb.foundation_blueprint_list.set( [ fb ] )
   sb.full_clean()
   sb.save()
 
@@ -238,10 +238,10 @@ def test_updateConfig_foundation( mocker ):
                         '__timestamp': '*DATETIME*',
                         '_site': 'site_test',
                         '_blueprint': 'fdnbp_test',
+                        '_console': 'console',
                         '_foundation_class_list': [],
                         '_foundation_id': 'bobmachine',
                         '_foundation_id_map': None,
-                        '_foundation_interface_list': [],
                         '_foundation_locator': 'bobmachine',
                         '_foundation_state': 'planned',
                         '_foundation_type': 'Unknown',
@@ -286,7 +286,7 @@ def test_updateConfig_structure( mocker ):
   sb.full_clean()
   sb.save()
 
-  sb.foundation_blueprint_list = [ fb ]
+  sb.foundation_blueprint_list.set( [ fb ] )
   sb.full_clean()
   sb.save()
 
@@ -308,10 +308,10 @@ def test_updateConfig_structure( mocker ):
                         '__timestamp': '*DATETIME*',
                         '_site': 'site_test',
                         '_blueprint': 'strbp_test',
+                        '_console': 'console',
                         '_foundation_class_list': [],
                         '_foundation_id': 'fdn_test',
                         '_foundation_id_map': None,
-                        '_foundation_interface_list': [],
                         '_foundation_locator': 'fdn_test',
                         '_foundation_state': 'planned',
                         '_foundation_type': 'Unknown',
@@ -342,10 +342,10 @@ def test_updateConfig_structure( mocker ):
                         '__timestamp': '*DATETIME*',
                         '_site': 'site_test',
                         '_blueprint': 'strbp_test',
+                        '_console': 'console',
                         '_foundation_class_list': [],
                         '_foundation_id': 'fdn_test',
                         '_foundation_id_map': None,
-                        '_foundation_interface_list': [],
                         '_foundation_locator': 'fdn_test',
                         '_foundation_state': 'planned',
                         '_foundation_type': 'Unknown',

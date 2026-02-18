@@ -27,7 +27,7 @@ class Site extends React.Component
   {
     if( props.id !== undefined )
     {
-      props.detailGet( props.id )
+      props.contractor.getSite( props.id )
        .then( ( result ) =>
         {
           var data = result.data;
@@ -38,7 +38,11 @@ class Site extends React.Component
     }
     else
     {
-      props.listGet()
+      if( !props.contractor.authenticated )
+      {
+        return;
+      }
+      props.contractor.getSiteList()
         .then( ( result ) =>
         {
           var site_list = [];

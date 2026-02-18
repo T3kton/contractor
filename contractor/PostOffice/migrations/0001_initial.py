@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ('expires', models.DateTimeField(null=True, blank=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('foundation', models.ForeignKey(related_name='+', to='Building.Foundation')),
+                ('foundation', models.ForeignKey(related_name='+', to='Building.Foundation',on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,
@@ -37,10 +37,11 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=40)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('foundation', models.ForeignKey(related_name='+', to='Building.Foundation')),
+                ('foundation', models.ForeignKey(related_name='+', to='Building.Foundation',on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,
+                'default_permissions': ('view',),
             },
         ),
         migrations.CreateModel(
@@ -55,7 +56,7 @@ class Migration(migrations.Migration):
                 ('expires', models.DateTimeField(null=True, blank=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('structure', models.ForeignKey(related_name='+', to='Building.Structure')),
+                ('structure', models.ForeignKey(related_name='+', to='Building.Structure',on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,
@@ -68,10 +69,11 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=40)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('structure', models.ForeignKey(related_name='+', to='Building.Structure')),
+                ('structure', models.ForeignKey(related_name='+', to='Building.Structure',on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,
+                'default_permissions': ('view',),
             },
         ),
     ]

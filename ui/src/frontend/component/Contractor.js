@@ -4,26 +4,30 @@ class Contractor
 {
   constructor( host )
   {
+    this.authenticated = false;
     this.cinp = new CInP( host );
   };
 
-  login = () =>
+  login = ( username, password ) =>
   {
-    this.cinp.call( '/api/v1/User/Session(login)', { 'username': username, 'password': password } )
-      .then(
-        function( result )
-        {
-          resolve( result.data );
-        },
-        function( reason )
-        {
-          reject( reason );
-        }
-      );
+    return this.cinp.call( '/api/v1/Auth/User(login)', { 'username': username, 'password': password } );
   };
 
   logout = () => {};
   keepalive = () => {};
+
+  setAuth = ( username, auth_token ) =>
+  {
+    if( auth_token === undefined || auth_token === '' )
+    {
+      this.authenticated = false;
+    }
+    else
+    {
+      this.cinp.setAuth( username, auth_token );
+      this.authenticated = true;
+    }
+  };
 
   getSiteList = () =>
   {
@@ -35,9 +39,9 @@ class Contractor
     return this.cinp.getFilteredObjects( '/api/v1/Survey/Plot' );
   };
 
-  getNetworkList = () =>
+  getNetworkList = ( site ) =>
   {
-    return this.cinp.getFilteredObjects( '/api/v1/Utilities/Network' );
+    return this.cinp.getFilteredObjects( '/api/v1/Utilities/Network', 'site', { 'site': site }  );
   };
 
   getFoundationList = ( site ) =>
@@ -138,6 +142,12 @@ class Contractor
   getNetwork = ( id ) =>
   {
     return this.cinp.get( '/api/v1/Utilities/Network:' + id + ':' );
+  };
+
+
+  getNetworkAddressBlockList = ( id ) =>
+  {
+    return this.cinp.getFilteredObjects( '/api/v1/Utilities/NetworkAddressBlock', 'network', { 'network': '/api/v1/Utilities/Network:' + id + ':' } );
   };
 
   getFoundation = ( id ) =>

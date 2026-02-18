@@ -59,7 +59,7 @@ class CInP
       method: method,
       headers: Object.assign( {}, header_map, {
                                                 'Accept': 'application/json',
-                                                'CInP-Version': '0.9'
+                                                'CInP-Version': '1.0'
                                               } )
     };
 

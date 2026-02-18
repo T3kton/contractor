@@ -27,21 +27,24 @@ def mapFieldConvert( value ):
   return value
 
 
-# No this isn't the full solution, for now we are punting and putting anything
-# that is a parent first, eventually we need to deal with parents with parents
-# that need to be in the right order
 def bluePrintOrder( entity_map ):
-  parent_list = []
-  entity_list = set( entity_map.keys() )
+  result = []
+  entity_set = set( entity_map.keys() )
+  todo_list = list( entity_map.keys() )
 
-  for name in entity_map:
-    parent_list += entity_map[ name ].get( 'parents', [] )
+  while todo_list:
+    done_set = set( result )
+    for name in todo_list:
+      required_set = set( entity_map[ name ].get( 'parents', [] ) ).intersection( entity_set )
+      if not required_set - done_set:
+        result.append( name )
+        del todo_list[ todo_list.index( name ) ]
+        break
 
-  parent_list = set( parent_list )
+    else:
+      raise Exception( 'Got stuck looking for parents' )
 
-  parent_list = parent_list.intersection( entity_list )
-
-  return list( parent_list ) + list( entity_list - parent_list )
+  return result
 
 
 def loadBluePrintCommon( blueprint, target ):
@@ -63,6 +66,7 @@ def setScripts( blueprint, target ):
   for name, script in target.get( 'scripts', {} ).items():
     try:
       script_map[ name ] = Script.objects.get( name=script )
+
     except Script.DoesNotExist:
       print( 'Unable to find Script "{0}", stopping.'.format( script ) )
       sys.exit( 1 )
@@ -92,6 +96,7 @@ def loadStructureBlueprint( name, target, mode ):
     if mode == 'add':
       print( 'Allready exists, skipping.' )
       return
+
   except StructureBluePrint.DoesNotExist:
     if mode == 'update':
       print( 'Does not exist, skipping.' )
@@ -111,7 +116,7 @@ def loadStructureBlueprint( name, target, mode ):
       print( 'Unable to find Foundation BluePrint "{0}"'.format( name ) )
 
   if blueprint.foundation_blueprint_list != foundation_blueprint_list:  # TODO: should we think of a way to perserve links made in other blueprint files?
-    blueprint.foundation_blueprint_list = foundation_blueprint_list
+    blueprint.foundation_blueprint_list.set( foundation_blueprint_list )
     blueprint.full_clean()
     blueprint.save()
 
@@ -119,12 +124,13 @@ def loadStructureBlueprint( name, target, mode ):
   for parent in target.get( 'parents', [] ):
     try:
       parent_list.append( StructureBluePrint.objects.get( name=parent ) )
+
     except StructureBluePrint.DoesNotExist:
       print( 'Unable to find Structure BluePrint "{0}" as parent to "{1}", stopping.'.format( parent, name ) )
       sys.exit( 1 )
 
   if blueprint.parent_list != parent_list:
-    blueprint.parent_list = parent_list
+    blueprint.parent_list.set( parent_list )
     blueprint.full_clean()
     blueprint.save()
 
@@ -138,6 +144,7 @@ def loadFoundationBlueprint( name, target, mode ):
     if mode == 'add':
       print( 'Allready exists, skipping.' )
       return
+
   except FoundationBluePrint.DoesNotExist:
     if mode == 'update':
       print( 'Does not exist, skipping.' )
@@ -157,12 +164,13 @@ def loadFoundationBlueprint( name, target, mode ):
   for parent in target.get( 'parents', [] ):
     try:
       parent_list.append( FoundationBluePrint.objects.get( parent ) )
+
     except FoundationBluePrint.DoesNotExist:
       print( 'Unable to find Foundation BluePrint "{0}" as parent to "{1}", stopping.'.format( parent, name ) )
       sys.exit( 1 )
 
   if blueprint.parent_list != parent_list:
-    blueprint.parent_list = parent_list
+    blueprint.parent_list.set( parent_list )
     blueprint.full_clean()
     blueprint.save()
 
@@ -176,6 +184,7 @@ def loadScript( name, target, mode ):
     if mode == 'add':
       print( 'Allready exists, skipping.' )
       return
+
   except Script.DoesNotExist:
     if mode == 'update':
       print( 'Does not exist, skipping.' )
@@ -199,6 +208,7 @@ def loadPXE( name, target, mode ):
     if mode == 'add':
       print( 'Allready exists, skipping.' )
       return
+
   except PXE.DoesNotExist:
     if mode == 'update':
       print( 'Does not exist, skipping.' )
@@ -210,6 +220,7 @@ def loadPXE( name, target, mode ):
   try:
     pxe.full_clean()
     pxe.save()
+
   except Exception as e:
     print( 'Exception "{0}" while loading PXE "{1}"'.format( e, pxe.name ) )
     sys.exit( 1 )
@@ -220,12 +231,14 @@ def loadSFLinks( link_list, mode ):
     print( 'Adding Foundation "{0}" to Structure "{1}"...'.format( foundationblueprint, structureblueprint ) )
     try:
       structureblueprint = StructureBluePrint.objects.get( name=structureblueprint )
+
     except StructureBluePrint.DoesNotExist:
       print( 'Unable to find Structure BluePrint "{0}", skipping...'.format( structureblueprint ) )  # we skip b/c we might be adding to structures that may not exist
       continue
 
     try:
       foundationblueprint = FoundationBluePrint.objects.get( name=foundationblueprint )
+
     except FoundationBluePrint.DoesNotExist:
       print( 'Unable to find Foundation BluePrint "{0}", skipping...'.format( foundationblueprint ) )  # we skip b/c we might be adding to foundations that may not exist
       continue
@@ -253,6 +266,7 @@ def main():
 
   try:
     item_map = toml.load( args.file )
+
   except FileNotFoundError:
     print( 'Error opening "{0}"'.format( args.file ) )
     sys.exit( 1 )
@@ -296,6 +310,7 @@ def main():
 
   print( 'Done' )
   sys.exit( 0 )
+
 
 if __name__ == '__main__':
   main()

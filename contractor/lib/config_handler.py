@@ -5,7 +5,7 @@ from contractor.Building.models import Foundation, Structure
 from contractor.Utilities.models import BaseAddress, DynamicAddress
 from contractor.lib.config import getConfig, mergeValues, renderTemplate
 
-url_regex = re.compile( '^/config/([a-z_]+)/((c/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12})|(s/[0-9]+)|(f/[a-zA-Z0-9][a-zA-Z0-9_\-]*)|(a/(([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})|([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4})))?$' )
+url_regex = re.compile( r'^/config/([a-z_]+)/((c/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12})|(s/[0-9]+)|(f/[a-zA-Z0-9][a-zA-Z0-9_\-]*)|(a/(([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})|([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4})))?$' )
 
 
 def handler( request ):
@@ -42,7 +42,7 @@ def handler( request ):
       address = BaseAddress.lookup( request.remote_addr )
 
     if address is None:
-      return Response( 404, data='Address Not Found', content_type='text' )
+      return Response( 404, data='Address Not Found or is Duplicate', content_type='text' )
 
     address = address.subclass
     if address.type == 'Address':
@@ -73,6 +73,10 @@ def handler( request ):
 
     elif request_type == 'pxe_template':
       template = pxe.template
+      try:
+        config[ '__connection_paramaters' ] = target.foundation.subclass.connection_paramaters  # TODO: this is a very very ugly hack, need a better way for firmware update and bootstrap disks to get the connection information
+      except AttributeError:
+        pass
 
     data = renderTemplate( template, config )
     return Response( 200, data=data, content_type='text' )

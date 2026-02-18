@@ -53,7 +53,7 @@ def _sendPost( data, box ):
     req.get_method = lambda: 'POST'
 
   elif box.type == 'call':
-    req.headers[ 'CInP-Version' ] = '0.9'
+    req.headers[ 'CInP-Version' ] = '1.0'
     req.get_method = lambda: 'CALL'
 
   else:

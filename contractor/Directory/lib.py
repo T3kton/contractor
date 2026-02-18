@@ -2,7 +2,9 @@ import os
 
 from django.conf import settings
 
-from contractor.Directory.models import Zone
+from contractor.lib.ip import StrToIp, IpIsV4
+from contractor.Utilities.models import Networked
+from contractor.Directory.models import Entry
 
 TEMPLATES = {}
 TEMPLATES[ 'SOA' ] = """$TTL {ttl}
@@ -21,50 +23,21 @@ TEMPLATES[ 'A' ] = '{name:<50} IN A     {address}'
 TEMPLATES[ 'AAAA' ] = '{name:<50} IN AAAA  {address}'
 TEMPLATES[ 'PTR' ] = '{value:<50} IN PTR   {target}'
 TEMPLATES[ 'CNAME' ] = '{name:<50} IN CNAME {target}'
-TEMPLATES[ 'TXT' ] = '{name:<50} IN TXT   {target}'
-TEMPLATES[ 'SRV' ] = '{name:<50} IN SRV   {priority:>4} {weight:>4} {name:<50} {port:>5} {target}'
+TEMPLATES[ 'TXT' ] = '{name:<50} IN TXT   "{target}"'
+TEMPLATES[ 'RTXT' ] = '{value:<50} IN TXT   "{target}"'
+TEMPLATES[ 'SRV' ] = '{name:<50} IN SRV   {priority:>4} {weight:>4} {port:>5} {target}'
 TEMPLATES[ 'SIG' ] = '{name:<50} IN SIG   {sig}'
 
-REVERSE_SOA = { 'ttl': 3600, 'refresh': 86400, 'retry': 7200, 'expire': 36000, 'minimum': 172800, 'master': settings.BIND_NS_LIST[0], 'email': settings.BIND_SOA_EMAIL }
-
-
-def getHostIp( fqdn ):
-  parts = fqdn.split( '.' )
-  if parts[-1] == '':
-    parts.pop()
-
-  # We are going to start at the end, work backward till the zone names stop matching, then try for hostname and possibly interface
-  zone = None
-  try:
-    name = parts.pop()
-    zone = Zone.objects.get( name=name )
-    while parts:
-      name = parts.pop()
-      zone = zone.zone_set.get( name=name )
-  except Zone.DoesNotExist:
-    pass
-
-  if zone is None:
-    raise ValueError( 'Unable to find top level zone "{0}"'.format( name ) )
-
-  hostname = name
-
-  networked = None
-  for site in zone.site_set.all():
-    for networked in site.networked_set.all():
-      if networked.hostname == hostname:
-        break
-
-  if networked is None:
-    raise ValueError( 'Unable to find hostname "{0}" in zone "{1}"'.format( hostname, zone ) )
-
-  if len( parts ) == 1:
-    return networked.address_set.get( interface_name=parts[0] ).ip_address
-
-  elif len( parts ) == 0:
-    return networked.primary_address.ip_address
-
-  raise ValueError( 'Not sure what to do with "{0}" for host "{1}" in "{2}"'.format( parts, networked, zone) )
+MASTER_NS_NETWORKED = Networked.objects.get( pk=settings.BIND_NS_NETWORKED_LIST[0] )
+MASTER_NS_HOSTNAME = '{0}.{1}'.format( MASTER_NS_NETWORKED.primary_interface.name, MASTER_NS_NETWORKED.fqdn )
+REVERSE_SOA = { 'ttl': 3600,
+                'refresh': 86400,
+                'retry': 7200,
+                'expire': 36000,
+                'minimum': 172800,
+                'master': MASTER_NS_HOSTNAME,
+                'email': settings.BIND_SOA_EMAIL
+                }
 
 
 def _render( rec_type, parms ):
@@ -79,41 +52,71 @@ def _render( rec_type, parms ):
   return template.format( **parms ) + '\n'
 
 
-def _getNetworkedEntries( networked ):
-  networked = networked.subclass
-  result = {}
+def _address_name( address, site_list=None ):
+  address_block = address.address_block
+  if site_list is not None and address_block.site not in site_list:
+    return None
 
-  if networked.primary_address is None:
-    return result
+  iface = address.interface
+  if not iface:
+    return None
 
-  ip_addr = networked.primary_address.ip_address
-  iface = networked.primary_interface
+  nab = address_block.networkaddressblock_set.get( network=iface.network )
 
-  result[ 'A' ] = [ { 'name': '{0}.{1}'.format( iface.name, networked.hostname ), 'address': ip_addr } ]
-  result[ 'CNAME' ] = [ { 'name': networked.hostname, 'target': '{0}.{1}'.format( iface.name, networked.hostname ) } ]
-  result[ 'TXT' ] = []
-  result[ 'PTR' ] = [ { 'target': networked.fqdn, 'value': ip_addr } ]
+  result = iface.name
+
+  if address.alias_index is not None:
+    result = '{0}-{1}'.format( result, address.alias_index )
+
+  if nab.vlan:
+    result = 'v{0}.{1}'.format( nab.vlan, result )
 
   return result
 
 
-def genZone( zone, ptr_list, zone_file_list ):
+def _getNetworkedEntries( networked, site_list ):
+  networked = networked.subclass
+  result = { 'RTXT': [], 'PTR': [], 'TXT': [], 'A': [], 'CNAME': [] }
+
+  for address in networked.address_set.all():
+    full_name = _address_name( address, site_list )
+    if full_name is None:
+      continue
+
+    ip_addr = networked.primary_address.ip_address
+
+    result[ 'RTXT' ].append( { 'value': ip_addr, 'target': '{0}.{1}'.format( full_name, networked.fqdn ) } )
+    result[ 'PTR' ].append( { 'value': ip_addr, 'target': networked.fqdn } )
+    result[ 'TXT' ].append( { 'name': '{0}.{1}'.format( full_name, networked.hostname ), 'target': networked.foundation.locator } )
+    if IpIsV4( StrToIp( ip_addr ) ):
+      result[ 'A' ].append( { 'name': '{0}.{1}'.format( full_name, networked.hostname ), 'address': ip_addr } )
+    else:
+      result[ 'AAAA' ].append( { 'name': '{0}.{1}'.format( full_name, networked.hostname ), 'address': ip_addr } )
+    if address.is_primary:
+      result[ 'CNAME' ].append( { 'name': networked.hostname, 'target': '{0}.{1}'.format( full_name, networked.hostname ) } )
+
+  return result
+
+
+def genZone( zone, ptr_list, rtext_list, zone_file_list ):
   record_map = {}
   for rec_type in TEMPLATES.keys():
     record_map[ rec_type ] = []
 
   zone_fqdn = zone.fqdn
+  site_list = list( zone.site_set.all() )
 
-  for ns in settings.BIND_NS_LIST:
-    record_map[ 'NS' ].append( { 'name': '@', 'server': ns } )
-    if ns.endswith( zone_fqdn ):
-      ns_ip = getHostIp( ns )
-      record_map[ 'A' ].append( { 'name': ns[ :-len( zone_fqdn ) - 1], 'address': ns_ip } )
+  for ns in settings.BIND_NS_NETWORKED_LIST:
+    networked = Networked.objects.get( pk=ns )
+    hostname = '{0}.{1}'.format( _address_name( networked.primary_address ), networked.fqdn )
+    record_map[ 'NS' ].append( { 'name': '@', 'server': hostname } )
+    if networked.site not in site_list and hostname.endswith( zone_fqdn ):  # Add a glue record, when the server is not in this zone file AND in a parent of the zone it belonds too
+      record_map[ 'A' ].append( { 'name': hostname + '.', 'address': networked.primary_address.address.ip_address } )
 
-  for site in zone.site_set.all():
+  for site in site_list:
     for networked in site.networked_set.all():
-      entry_list = _getNetworkedEntries( networked )
-      for entry_type in entry_list:
+      entry_list = _getNetworkedEntries( networked, site_list )
+      for entry_type in entry_list.keys():
         record_map[ entry_type ] += entry_list[ entry_type ]
 
   for entry in zone.entry_set.all():
@@ -125,9 +128,22 @@ def genZone( zone, ptr_list, zone_file_list ):
                                        'target': entry.target
                                      } )
 
+  existing_names = [ i[ 'name' ] for i in ( record_map[ 'A' ] + record_map[ 'AAAA' ] + record_map[ 'CNAME' ] ) ]
+  for entry in Entry.objects.filter( zone__isnull=True ):
+    if entry.type == 'CNAME' and entry.name in existing_names:
+      continue
+
+    record_map[ entry.type ].append( {
+                                       'name': entry.name,
+                                       'priority': entry.priority,
+                                       'weight': entry.weight,
+                                       'port': entry.port,
+                                       'target': entry.target
+                                     } )
+
   record_map[ 'SOA' ] = [ {
                             'zone': zone_fqdn,
-                            'master': settings.BIND_NS_LIST[ 0 ],
+                            'master': MASTER_NS_HOSTNAME,
                             'ttl': zone.ttl,
                             'email': settings.BIND_SOA_EMAIL,
                             'refresh': zone.refresh,
@@ -137,8 +153,10 @@ def genZone( zone, ptr_list, zone_file_list ):
                           } ]
 
   ptr_list += record_map[ 'PTR' ]
+  rtext_list += record_map[ 'RTXT' ]
 
   del record_map[ 'PTR' ]
+  del record_map[ 'RTXT' ]
 
   result = ''
   for rec_type in ( 'SOA', 'NS', 'SIG', 'SRV', 'A', 'AAAA', 'CNAME', 'TXT' ):
@@ -151,29 +169,39 @@ def genZone( zone, ptr_list, zone_file_list ):
   return filename, result
 
 
-def genPtrZones( ptr_list, zone_file_list ):
-  zone_list = {}
+def genPtrZones( ptr_list, rtext_list, zone_file_list ):
+  zone_ptr_map = {}
+  zone_rtxt_map = {}
 
   for ptr in ptr_list:
     parts = ptr[ 'value' ].split( '.' )
     zone = '.'.join( reversed( parts[ :3 ] ) ) + '.in-addr.arpa'
     try:
-      zone_list[ zone ].append( { 'value': parts[3], 'target': ptr[ 'target' ] + '.' } )
+      zone_ptr_map[ zone ].append( { 'value': parts[3], 'target': ptr[ 'target' ] + '.' } )
     except KeyError:
-      zone_list[ zone ] = [ { 'value': parts[3], 'target': ptr[ 'target' ] + '.' } ]
+      zone_ptr_map[ zone ] = [ { 'value': parts[3], 'target': ptr[ 'target' ] + '.' } ]
 
-  for zone in zone_list:
-    record_map = { 'NS': [], 'PTR': [], 'TXT': [] }
+  for rtext in rtext_list:
+    parts = rtext[ 'value' ].split( '.' )
+    zone = '.'.join( reversed( parts[ :3 ] ) ) + '.in-addr.arpa'
+    try:
+      zone_rtxt_map[ zone ].append( { 'value': parts[3], 'target': rtext[ 'target' ] } )
+    except KeyError:
+      zone_rtxt_map[ zone ] = [ { 'value': parts[3], 'target': rtext[ 'target' ] } ]
+
+  for zone in set( list( zone_ptr_map.keys() ) + list( zone_rtxt_map.keys() ) ):
+    record_map = { 'NS': [] }
     record_map[ 'SOA' ] = REVERSE_SOA.copy()
     record_map[ 'SOA' ][ 'zone' ] = zone
 
-    for ns in settings.BIND_NS_LIST:
-      record_map[ 'NS' ].append( { 'name': '@', 'server': ns } )
+    for ns in settings.BIND_NS_NETWORKED_LIST:
+      record_map[ 'NS' ].append( { 'name': '@', 'server': Networked.objects.get( pk=ns ).fqdn } )
 
-    record_map[ 'PTR' ] = zone_list[ zone ]
+    record_map[ 'PTR' ] = zone_ptr_map.get( zone, [] )
+    record_map[ 'RTXT' ] = zone_rtxt_map.get( zone, [] )
 
     result = ''
-    for rec_type in ( 'SOA', 'NS', 'PTR', 'TXT' ):
+    for rec_type in ( 'SOA', 'NS', 'PTR', 'RTXT' ):
       result += _render( rec_type, record_map[ rec_type ] )  # TODO: Sort record map
 
     filename = '{0}.zone'.format( zone )

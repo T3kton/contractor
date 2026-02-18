@@ -23,7 +23,7 @@ class SiteException( ValueError ):
 
   @property
   def response_data( self ):
-    return { 'class': 'SiteException', 'error': self.code, 'message': self.message }
+    return { 'exception': 'SiteException', 'error': self.code, 'message': self.message }
 
   def __str__( self ):
     return 'SiteException ({0}): {1}'.format( self.code, self.message )
@@ -31,7 +31,7 @@ class SiteException( ValueError ):
 
 @cinp.model()
 class Site( models.Model ):
-  name = models.CharField( max_length=40, primary_key=True )  # update Architect if this changes max_length
+  name = models.CharField( max_length=40, primary_key=True )  # update Architect and MCP if this changes max_length
   zone = models.ForeignKey( Zone, null=True, blank=True, on_delete=models.PROTECT )
   description = models.CharField( max_length=200 )
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
@@ -76,10 +76,10 @@ class Site( models.Model ):
 
       result[ foundation.dependencyId ] = { 'description': foundation.description, 'type': 'Foundation', 'state': foundation.state, 'dependency_list': dependency_list, 'has_job': ( foundation.pk in foundation_job_list ), 'external': False }
 
-    for dependency in Dependency.objects.filter( Q( foundation__site=self ) |
-                                                 Q( foundation__isnull=True, script_structure__site=self ) |
-                                                 Q( foundation__isnull=True, script_structure__isnull=True, dependency__structure__site=self ) |
-                                                 Q( foundation__isnull=True, script_structure__isnull=True, structure__site=self )
+    for dependency in Dependency.objects.filter( Q( foundation__site=self )
+                                                 | Q( foundation__isnull=True, script_structure__site=self )
+                                                 | Q( foundation__isnull=True, script_structure__isnull=True, dependency__structure__site=self )
+                                                 | Q( foundation__isnull=True, script_structure__isnull=True, structure__site=self )
                                                  ).order_by( 'pk' ):
 
       if dependency.dependency is not None:
@@ -111,7 +111,7 @@ class Site( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return True
+    return cinp.basic_auth_check( user, verb, action, Site, { 'getConfig': 'Site.view_site' } )
 
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
@@ -134,8 +134,13 @@ class Site( models.Model ):
     if errors:
       raise ValidationError( errors )
 
+  class Meta:
+    pass
+    # default_permissions = ( 'add', 'change', 'delete', 'view' )
+
   def __str__( self ):
     return 'Site "{0}"({1})'.format( self.description, self.name )
+
 
 post_save.connect( post_save_callback, sender=Site )
 post_delete.connect( post_delete_callback, sender=Site )
