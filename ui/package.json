@@ -39,7 +39,7 @@
     "style-loader": "^0.13.1",
     "webpack": "^2.2.0",
     "spdy": "3.4.7",
-    "webpack-dev-server": "^2.6.0"
+    "webpack-dev-server": "^5.2.3"
   },
   "scripts": {
     "start": "node_modules/.bin/cross-env NODE_ENV=development node_modules/.bin/webpack-dev-server --colors --config webpack.config.js",
