@@ -82,7 +82,7 @@ class BluePrint( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not name_regex.match( self.name ):  # if this regex changes, make sure to update tcalc parser in archetect
+    if self.name and not name_regex.match( self.name ):  # if this regex changes, make sure to update tcalc parser in archetect
       errors[ 'name' ] = 'invalid'
 
     if self.config_values is not None:
@@ -204,7 +204,7 @@ class Script( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
 
-    if not name_regex.match( self.name ):
+    if self.name and not name_regex.match( self.name ):
       errors[ 'name' ] = 'invalid'
 
     results = parser.lint( self.script )
@@ -243,7 +243,7 @@ class BluePrintScript( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not name_regex.match( self.name ):
+    if self.name and not name_regex.match( self.name ):
       errors[ 'name' ] = 'invalid'
 
     if errors:

@@ -144,7 +144,7 @@ class Networked( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not hostname_regex.match( self.hostname ):
+    if self.hostname and not hostname_regex.match( self.hostname ):
       errors[ 'hostname' ] = 'invalid'
 
     try:
@@ -257,7 +257,7 @@ class AddressBlock( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not name_regex.match( self.name ):
+    if self.name and not name_regex.match( self.name ):
       errors[ 'name' ] = 'invalid'
 
     try:
@@ -355,7 +355,7 @@ class Network( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
 
-    if not network_name_regex.match( self.name ):
+    if self.name and not network_name_regex.match( self.name ):
       errors[ 'name' ] = 'invalid'
 
     if self.mtu is not None and ( self.mtu > 9022 or self.mtu < 512 ):
@@ -513,7 +513,7 @@ class RealNetworkInterface( NetworkInterface ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not name_regex.match( self.physical_location ):
+    if self.physical_location and not name_regex.match( self.physical_location ):
       errors[ 'physical_location' ] = 'invalid'
 
     if self.is_provisioning:
@@ -995,7 +995,7 @@ class Address( BaseAddress ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not name_regex.match( self.interface_name ):
+    if self.interface_name and not name_regex.match( self.interface_name ):
       errors[ 'interface_name' ] = 'invalid'
 
     try:  # TODO: Do we realy care about this.... I think the only think that might care is the DNS, the host CNAME and all

@@ -58,7 +58,7 @@ class Zone( models.Model ):
 
     self.name = self.name.lower()
 
-    if not zone_name_regex.match( self.name ):
+    if self.name and not zone_name_regex.match( self.name ):
       errors[ 'name' ] = 'Invalid'
 
     if errors:
@@ -103,10 +103,10 @@ class Entry( models.Model ):
       errors[ 'type' ] = 'Invalid'
 
     if self.type == 'SRV':
-      if not entry_name_srv_regex.match( self.name ):
+      if self.name and not entry_name_srv_regex.match( self.name ):
         errors[ 'name' ] = 'Invalid'
     else:
-      if not hostname_regex.match( self.name ):
+      if self.name and not hostname_regex.match( self.name ):
         errors[ 'name' ] = 'Invalid'
 
     if self.weight is not None and ( self.weight < 0 or self.weight > 4096 ):

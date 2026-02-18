@@ -366,7 +366,7 @@ class Foundation( models.Model ):
     super().clean( *args, **kwargs )
     errors = {}
 
-    if not name_regex.match( self.locator ):
+    if self.locator and not name_regex.match( self.locator ):
       errors[ 'locator' ] = 'Invalid'
 
     if self.blueprint_id is not None and self.type not in self.blueprint.foundation_type_list:
@@ -688,7 +688,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
-    if not name_regex.match( self.name ):
+    if self.name and not name_regex.match( self.name ):
       errors[ 'name' ] = 'invalid'
 
     if errors:

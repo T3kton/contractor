@@ -261,10 +261,6 @@ def getConfig( target ):
   else:
     config[ '__contractor_host' ] = settings.CONTRACTOR_HOST
 
-  try:
-    config[ '__pxe_template_location' ] = '{0}/config/pxe_template/c/{1}'.format( config[ '__contractor_host' ], config[ '_structure_config_uuid' ] )
-  except KeyError:
-    config[ '__pxe_template_location' ] = '{0}/config/pxe_template/'.format( config[ '__contractor_host' ] )
   config[ '__pxe_location' ] = settings.PXE_IMAGE_LOCATION
 
   return config

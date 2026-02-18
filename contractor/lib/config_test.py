@@ -9,7 +9,7 @@ from contractor.lib.config import _updateConfig, mergeValues, getConfig, renderT
 
 
 def _strip_base( value ):
-  for i in ( '__contractor_host', '__pxe_location', '__pxe_template_location', '__last_modified', '__timestamp', '_structure_config_uuid' ):
+  for i in ( '__contractor_host', '__pxe_location', '__last_modified', '__timestamp', '_structure_config_uuid' ):
     try:
       del value[ i ]
     except KeyError:
@@ -388,7 +388,6 @@ def test_site():
 
   del tmp[ '__last_modified' ]
   del tmp[ '__timestamp' ]
-  del tmp[ '__pxe_template_location' ]
 
   assert tmp == {
                   '__contractor_host': 'http://contractor',
@@ -449,7 +448,6 @@ def test_blueprint():
 
   del tmp[ '__last_modified' ]
   del tmp[ '__timestamp' ]
-  del tmp[ '__pxe_template_location' ]
 
   assert tmp == {
                   '__contractor_host': 'http://contractor',
@@ -494,7 +492,6 @@ def test_blueprint():
 
   del tmp[ '__last_modified' ]
   del tmp[ '__timestamp' ]
-  del tmp[ '__pxe_template_location' ]
 
   assert tmp == {
                   '__contractor_host': 'http://contractor',
@@ -545,7 +542,6 @@ def test_foundation():
 
   del tmp[ '__last_modified' ]
   del tmp[ '__timestamp' ]
-  del tmp[ '__pxe_template_location' ]
 
   assert tmp == {
                   '__contractor_host': 'http://contractor',
@@ -648,7 +644,6 @@ def test_structure():
   del tmp[ '__last_modified' ]
   del tmp[ '__timestamp' ]
   del tmp[ '_structure_config_uuid' ]
-  del tmp[ '__pxe_template_location' ]
 
   assert tmp == {
                   '__contractor_host': 'http://contractor',

@@ -72,7 +72,7 @@ def updateRecord( target ):
   else:
     item = mergeValues( getConfig( target ) )
 
-  for i in ( '__contractor_host', '__pxe_template_location', '__pxe_location' ):  # these are the same everywhere
+  for i in ( '__contractor_host', '__pxe_location' ):  # these are the same everywhere
     del item[i]
 
   key = { '_id': target.pk }
