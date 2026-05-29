@@ -31,7 +31,7 @@ export const fetchPXE = createAuthThunk(
   }
 );
 
-const pxeSlice = createDetailListSlice( { name: 'pxe', fetchList: fetchPXEList, fetchOne: fetchPXE } );
+const pxeSlice = createDetailListSlice<PXEListItem, PXEDetail>( { name: 'pxe', fetchList: fetchPXEList, fetchOne: fetchPXE } );
 
 export const { invalidate: invalidatePXE } = pxeSlice.actions;
 export default pxeSlice.reducer;

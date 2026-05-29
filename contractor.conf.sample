@@ -17,6 +17,8 @@ CONTRACTOR_HOST = 'http://contractor'
 CONTRACTOR_PORT = None
 PXE_IMAGE_LOCATION = 'http://static/pxe/'
 
+BEHIND_PROXY = False
+
 # set to None to disable, or '*CONSOLE*' to output to stdout
 # NOTE: if you are running under apache under systemd, you might want to
 #       disable "PrivateTmp" in /lib/systemd/system/apache2.service, otherwise

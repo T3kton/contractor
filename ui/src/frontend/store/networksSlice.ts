@@ -41,7 +41,7 @@ export const fetchNetwork = createAuthThunk(
   }
 );
 
-const networksSlice = createDetailListSlice( { name: 'networks', fetchList: fetchNetworkList, fetchOne: fetchNetwork } );
+const networksSlice = createDetailListSlice<NetworkListItem, NetworkDetail>( { name: 'networks', fetchList: fetchNetworkList, fetchOne: fetchNetwork } );
 
 export const { invalidate: invalidateNetworks } = networksSlice.actions;
 export default networksSlice.reducer;

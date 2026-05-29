@@ -35,7 +35,7 @@ export const fetchSite = createAuthThunk(
   }
 );
 
-const sitesSlice = createDetailListSlice( { name: 'sites', fetchList: fetchSiteList, fetchOne: fetchSite } );
+const sitesSlice = createDetailListSlice<SiteListItem, SiteDetail>( { name: 'sites', fetchList: fetchSiteList, fetchOne: fetchSite } );
 
 export const { invalidate: invalidateSites } = sitesSlice.actions;
 export default sitesSlice.reducer;

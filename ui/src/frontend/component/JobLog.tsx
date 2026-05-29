@@ -1,50 +1,37 @@
-import React from 'react';
-import { connect } from 'react-redux';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import ErrorPanel from './ErrorPanel';
 import { fetchJobLogList } from '../store/jobLogSlice';
-import type { JobLogItem } from '../store/jobLogSlice';
-import { Alert, Box, CircularProgress, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
+import { Box, CircularProgress, Table, TableBody, TableCell, TableHead, TablePagination, TableRow } from '@mui/material';
 import type { RootState, AppDispatch } from '../store';
 
-interface OwnProps {
+interface Props {
   site?: string;
 }
 
-interface StateProps {
-  list: JobLogItem[] | null;
-  authenticated: boolean;
-  loading: boolean;
-  error: string | null;
-}
-
-type Props = OwnProps & StateProps & { dispatch: AppDispatch };
-
-class JobLog extends React.Component<Props>
+const JobLog: React.FC<Props> = ( { site } ) =>
 {
-  componentDidMount()
-  {
-    this.update( this.props );
-  }
+  const dispatch = useDispatch<AppDispatch>();
+  const authenticated = useSelector( ( s: RootState ) => s.app.authenticated );
+  const { list, loading, error } = useSelector( ( s: RootState ) => s.jobLog );
+  const [page, setPage] = useState( 0 );
+  const [rowsPerPage, setRowsPerPage] = useState( 25 );
 
-  componentDidUpdate( prevProps: Props )
+  const fetchData = useCallback( () =>
   {
-    if ( prevProps.site !== this.props.site ||
-         ( !prevProps.authenticated && this.props.authenticated ) ||
-         ( prevProps.list !== null && this.props.list === null ) )
-    {
-      this.update( this.props );
-    }
-  }
+    if ( !authenticated ) return;
+    dispatch( fetchJobLogList( site ?? '' ) );
+  }, [authenticated, dispatch, site] );
 
-  update( props: Props )
-  {
-    props.dispatch( fetchJobLogList( props.site ) );
-  }
+  useEffect( () => { fetchData(); }, [fetchData] );
 
-  render()
-  {
-    if ( this.props.loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
-    if ( this.props.error ) return <Alert severity="error">{ this.props.error }</Alert>;
-    return (
+  if ( loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+  if ( error ) return <ErrorPanel error={ error } onRetry={ fetchData } />;
+
+  const rows = list || [];
+
+  return (
+    <Box>
       <Table>
         <TableHead>
           <TableRow>
@@ -61,8 +48,8 @@ class JobLog extends React.Component<Props>
           </TableRow>
         </TableHead>
         <TableBody>
-          { ( this.props.list || [] ).map( ( item ) => (
-            <TableRow key={ item.id } >
+          { rows.slice( page * rowsPerPage, page * rowsPerPage + rowsPerPage ).map( ( item ) => (
+            <TableRow key={ item.id }>
               <TableCell>{ item.job_id }</TableCell>
               <TableCell>{ item.site }</TableCell>
               <TableCell>{ item.target_class }</TableCell>
@@ -77,16 +64,17 @@ class JobLog extends React.Component<Props>
           ) ) }
         </TableBody>
       </Table>
-    );
-
-  }
+      <TablePagination
+        component="div"
+        count={ rows.length }
+        page={ page }
+        rowsPerPage={ rowsPerPage }
+        rowsPerPageOptions={ [10, 25, 50, 100] }
+        onPageChange={ ( _, p ) => setPage( p ) }
+        onRowsPerPageChange={ ( e ) => { setRowsPerPage( parseInt( e.target.value, 10 ) ); setPage( 0 ); } }
+      />
+    </Box>
+  );
 };
 
-const mapStateToProps = ( state: RootState ) => ( {
-  list: state.jobLog.list,
-  authenticated: state.app.authenticated,
-  loading: state.jobLog.loading,
-  error: state.jobLog.error,
-} );
-
-export default connect( mapStateToProps )( JobLog );
+export default JobLog;

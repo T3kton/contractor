@@ -387,7 +387,7 @@ class Foundation( models.Model ):
       subclass.delete()
 
   class Meta:
-    default_permissions = ( 'view', )
+    default_permissions = ( 'view', 'change', 'delete' )
     permissions = (
                     ( 'can_create_foundation_job', 'Can Create Foundation Jobs' ),
                     ( 'can_bootstrap', 'Can send bootstrap info' )
@@ -401,7 +401,7 @@ class Foundation( models.Model ):
 class Structure( Networked ):
   blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT )  # ie what to bild
   foundation = models.OneToOneField( Foundation, related_name='+', on_delete=models.PROTECT )  # ie what to build it on
-  config_uuid = models.CharField( max_length=36, unique=True )
+  config_uuid = models.CharField( max_length=36, unique=True, default='<undefined>' )
   config_values = MapField( blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -565,7 +565,7 @@ class Structure( Networked ):
     super().clean( *args, **kwargs )
     errors = {}
 
-    if not self.config_uuid:
+    if self.config_uuid == '<undefined>':
       self.config_uuid = str( uuid.uuid4() )
 
     if self.foundation_id is not None and self.foundation.blueprint not in self.blueprint.combined_foundation_blueprint_list:
@@ -628,6 +628,10 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
       return 'built'
 
     return 'planned'
+
+  @property
+  def can_delete( self ):
+    return self.members.count() == 0
 
   @property
   def type( self ):
@@ -693,8 +697,14 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
     if errors:
       raise ValidationError( errors )
 
+  def delete( self ):
+    if not self.can_delete:
+      raise models.ProtectedError( 'Complex not Deleteable', self )
+
+    super().delete()
+
   class Meta:
-    default_permissions = ( 'view', )
+    default_permissions = ( 'view', 'change', 'delete' )
     permissions = (
                     ( 'can_create_foundation', 'Can Create Foundations' ),
                   )
@@ -936,6 +946,9 @@ class Dependency( models.Model ):
   def clean( self, *args, **kwargs ):
     super().clean( *args, **kwargs )
     errors = {}
+
+    if self.link not in Dependency.LINK_CHOICES:
+      errors[ 'link' ] = 'Invalid'
 
     if self.dependency is None and self.structure is None:
       errors[ 'structure' ] = 'Either structure or dependency is required'

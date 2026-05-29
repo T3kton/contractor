@@ -41,7 +41,7 @@ export const fetchDependency = createAuthThunk(
   }
 );
 
-const dependenciesSlice = createDetailListSlice( { name: 'dependencies', fetchList: fetchDependencyList, fetchOne: fetchDependency } );
+const dependenciesSlice = createDetailListSlice<DependencyListItem, DependencyDetail>( { name: 'dependencies', fetchList: fetchDependencyList, fetchOne: fetchDependency } );
 
 export const { invalidate: invalidateDependencies } = dependenciesSlice.actions;
 export default dependenciesSlice.reducer;

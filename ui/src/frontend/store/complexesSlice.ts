@@ -39,7 +39,7 @@ export const fetchComplex = createAuthThunk(
   }
 );
 
-const complexesSlice = createDetailListSlice( { name: 'complexes', fetchList: fetchComplexList, fetchOne: fetchComplex } );
+const complexesSlice = createDetailListSlice<ComplexListItem, ComplexDetail>( { name: 'complexes', fetchList: fetchComplexList, fetchOne: fetchComplex } );
 
 export const { invalidate: invalidateComplexes } = complexesSlice.actions;
 export default complexesSlice.reducer;

@@ -1,80 +1,54 @@
-import React from 'react';
-import { connect } from 'react-redux';
+import React, { useCallback, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import ErrorPanel from './ErrorPanel';
 import { fetchCartographerList } from '../store/cartographerSlice';
-import type { CartographerItem } from '../store/cartographerSlice';
-import { Alert, Box, CircularProgress, Link, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
+import { Box, CircularProgress, Link, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../store';
 
-interface StateProps {
-  list: CartographerItem[] | null;
-  authenticated: boolean;
-  loading: boolean;
-  error: string | null;
-}
-
-type Props = StateProps & { dispatch: AppDispatch };
-
-class Cartographer extends React.Component<Props>
+const Cartographer: React.FC = () =>
 {
-  componentDidMount()
-  {
-    this.update( this.props );
-  }
+  const dispatch = useDispatch<AppDispatch>();
+  const authenticated = useSelector( ( s: RootState ) => s.app.authenticated );
+  const { list, loading, error } = useSelector( ( s: RootState ) => s.cartographer );
 
-  componentDidUpdate( prevProps: Props )
+  const fetchData = useCallback( () =>
   {
-    if ( ( !prevProps.authenticated && this.props.authenticated ) ||
-         ( prevProps.list !== null && this.props.list === null ) )
-    {
-      this.update( this.props );
-    }
-  }
+    if ( !authenticated ) return;
+    dispatch( fetchCartographerList() );
+  }, [authenticated, dispatch] );
 
-  update( props: Props )
-  {
-    props.dispatch( fetchCartographerList() );
-  }
+  useEffect( () => { fetchData(); }, [fetchData] );
 
-  render()
-  {
-    if ( this.props.loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
-    if ( this.props.error ) return <Alert severity="error">{ this.props.error }</Alert>;
-    return (
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Identifier</TableCell>
-            <TableCell>Message</TableCell>
-            <TableCell>Foundation</TableCell>
-            <TableCell>Last Checkin</TableCell>
-            <TableCell>Created</TableCell>
-            <TableCell>Updated</TableCell>
+  if ( loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+  if ( error ) return <ErrorPanel error={ error } onRetry={ fetchData } />;
+
+  return (
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell>Identifier</TableCell>
+          <TableCell>Message</TableCell>
+          <TableCell>Foundation</TableCell>
+          <TableCell>Last Checkin</TableCell>
+          <TableCell>Created</TableCell>
+          <TableCell>Updated</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        { ( list || [] ).map( ( item ) => (
+          <TableRow key={ item.id }>
+            <TableCell>{ item.identifier }</TableCell>
+            <TableCell>{ item.message }</TableCell>
+            <TableCell><Link component={ RouterLink } to={ '/foundation/' + item.foundation }>{ item.foundation }</Link></TableCell>
+            <TableCell>{ item.last_checkin }</TableCell>
+            <TableCell>{ item.created }</TableCell>
+            <TableCell>{ item.updated }</TableCell>
           </TableRow>
-        </TableHead>
-        <TableBody>
-          { ( this.props.list || [] ).map( ( item ) => (
-            <TableRow key={ item.id } >
-              <TableCell>{ item.identifier }</TableCell>
-              <TableCell>{ item.message }</TableCell>
-              <TableCell><Link component={ RouterLink } to={ '/plot/' + item.foundation }>{ item.foundation }</Link></TableCell>
-              <TableCell>{ item.last_checkin }</TableCell>
-              <TableCell>{ item.created }</TableCell>
-              <TableCell>{ item.updated }</TableCell>
-            </TableRow>
-          ) ) }
-        </TableBody>
-      </Table>
-    );
-
-  }
+        ) ) }
+      </TableBody>
+    </Table>
+  );
 };
 
-const mapStateToProps = ( state: RootState ) => ( {
-  list: state.cartographer.list,
-  authenticated: state.app.authenticated,
-  loading: state.cartographer.loading,
-  error: state.cartographer.error,
-} );
-
-export default connect( mapStateToProps )( Cartographer );
+export default Cartographer;

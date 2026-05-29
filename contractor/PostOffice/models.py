@@ -92,7 +92,8 @@ class Box( models.Model ):
       self.proxy = None
 
     errors = {}
-    if self.type not in Box.BOX_TYPE:
+
+    if self.type not in [ i[0] for i in Box.BOX_TYPE ]:
       errors[ 'type' ] = 'Invalid'
 
     if self.expires is not None and not self.expires > datetime.now( timezone.utc ) + timedelta( hours=MAX_BOX_LIFE ):

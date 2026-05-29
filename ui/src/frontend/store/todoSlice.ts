@@ -59,7 +59,7 @@ const todoSlice = createSlice( {
       .addCase( fetchFoundationClassList.fulfilled, ( state, action ) => { state.classList = action.payload; } )
       .addCase( fetchTodoList.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchTodoList.fulfilled, ( state, action ) => { state.loading = false; state.list = action.payload; } )
-      .addCase( fetchTodoList.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } );
+      .addCase( fetchTodoList.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } );
   },
 } );
 

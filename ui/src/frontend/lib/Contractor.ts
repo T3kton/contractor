@@ -4120,7 +4120,7 @@ export class BluePrint_FoundationBluePrint
     this.validation_template = data.validation_template;
     this.physical_interface_names = data.physical_interface_names;
     if( data.parent_list !== undefined )
-      this.parent_list = data.parent_list.map( ( uri ) => { return new BluePrint_FoundationBluePrint( this._service, uri ) } );
+      this.parent_list = data.parent_list.map( ( uri: string ) => { return new BluePrint_FoundationBluePrint( this._service, uri ) } );
     this.script_map = data.script_map;
   }
 
@@ -4224,9 +4224,9 @@ export class BluePrint_StructureBluePrint
     this.updated = data.updated;
     this.created = data.created;
     if( data.parent_list !== undefined )
-      this.parent_list = data.parent_list.map( ( uri ) => { return new BluePrint_StructureBluePrint( this._service, uri ) } );
+      this.parent_list = data.parent_list.map( ( uri: string ) => { return new BluePrint_StructureBluePrint( this._service, uri ) } );
     if( data.foundation_blueprint_list !== undefined )
-      this.foundation_blueprint_list = data.foundation_blueprint_list.map( ( uri ) => { return new BluePrint_FoundationBluePrint( this._service, uri ) } );
+      this.foundation_blueprint_list = data.foundation_blueprint_list.map( ( uri: string ) => { return new BluePrint_FoundationBluePrint( this._service, uri ) } );
     this.script_map = data.script_map;
   }
 
@@ -5380,7 +5380,7 @@ export class Utilities_Network
     this.updated = data.updated;
     this.created = data.created;
     if( data.address_block_list !== undefined )
-      this.address_block_list = data.address_block_list.map( ( uri ) => { return new Utilities_AddressBlock( this._service, uri ) } );
+      this.address_block_list = data.address_block_list.map( ( uri: string ) => { return new Utilities_AddressBlock( this._service, uri ) } );
   }
 
   _as_map( is_create: boolean ): Record<string, any>
@@ -5863,7 +5863,7 @@ export class Utilities_AggregatedNetworkInterface
 {
   private _service: Contractor;
 
-  public networkinterface_ptr: Utilities_NetworkInterface = undefined as Utilities_NetworkInterface;
+  public networkinterface_ptr: Utilities_NetworkInterface = undefined as unknown as Utilities_NetworkInterface;
 
   public name: string | undefined = undefined;
   public network: Utilities_Network | undefined = undefined;
@@ -5915,7 +5915,7 @@ export class Utilities_AggregatedNetworkInterface
     this.primary_interface = data.primary_interface !== null ? new Utilities_NetworkInterface( this._service, data.primary_interface ) : undefined;
     this.paramaters = data.paramaters;
     if( data.secondary_interfaces !== undefined )
-      this.secondary_interfaces = data.secondary_interfaces.map( ( uri ) => { return new Utilities_NetworkInterface( this._service, uri ) } );
+      this.secondary_interfaces = data.secondary_interfaces.map( ( uri: string ) => { return new Utilities_NetworkInterface( this._service, uri ) } );
     this.type = data.type;
   }
 
@@ -6824,7 +6824,7 @@ export class Building_Complex
     this.updated = data.updated;
     this.created = data.created;
     if( data.members !== undefined )
-      this.members = data.members.map( ( uri ) => { return new Building_Structure( this._service, uri ) } );
+      this.members = data.members.map( ( uri: string ) => { return new Building_Structure( this._service, uri ) } );
     this.state = data.state;
     this.type = data.type;
   }
@@ -8447,7 +8447,7 @@ export class VirtualBox_VirtualBoxComplex
     this.virtualbox_username = data.virtualbox_username;
     this.virtualbox_password = data.virtualbox_password;
     if( data.members !== undefined )
-      this.members = data.members.map( ( uri ) => { return new Building_Structure( this._service, uri ) } );
+      this.members = data.members.map( ( uri: string ) => { return new Building_Structure( this._service, uri ) } );
     this.state = data.state;
     this.type = data.type;
   }
@@ -8670,7 +8670,7 @@ export class LibVirt_LibVirtComplex
     this.updated = data.updated;
     this.created = data.created;
     if( data.members !== undefined )
-      this.members = data.members.map( ( uri ) => { return new Building_Structure( this._service, uri ) } );
+      this.members = data.members.map( ( uri: string ) => { return new Building_Structure( this._service, uri ) } );
     this.state = data.state;
     this.type = data.type;
   }
@@ -8902,7 +8902,7 @@ export class VCenter_VCenterComplex
     this.vcenter_datacenter = data.vcenter_datacenter;
     this.vcenter_cluster = data.vcenter_cluster;
     if( data.members !== undefined )
-      this.members = data.members.map( ( uri ) => { return new Building_Structure( this._service, uri ) } );
+      this.members = data.members.map( ( uri: string ) => { return new Building_Structure( this._service, uri ) } );
     this.state = data.state;
     this.type = data.type;
   }
@@ -9123,7 +9123,7 @@ export class Docker_DockerComplex
     this.updated = data.updated;
     this.created = data.created;
     if( data.members !== undefined )
-      this.members = data.members.map( ( uri ) => { return new Building_Structure( this._service, uri ) } );
+      this.members = data.members.map( ( uri: string ) => { return new Building_Structure( this._service, uri ) } );
     this.state = data.state;
     this.type = data.type;
   }
@@ -9568,7 +9568,7 @@ export class Manual_ManualComplex
     this.updated = data.updated;
     this.created = data.created;
     if( data.members !== undefined )
-      this.members = data.members.map( ( uri ) => { return new Building_Structure( this._service, uri ) } );
+      this.members = data.members.map( ( uri: string ) => { return new Building_Structure( this._service, uri ) } );
     this.state = data.state;
     this.type = data.type;
   }
@@ -9909,7 +9909,7 @@ export class Proxmox_ProxmoxComplex
     this.proxmox_username = data.proxmox_username;
     this.proxmox_password = data.proxmox_password;
     if( data.members !== undefined )
-      this.members = data.members.map( ( uri ) => { return new Building_Structure( this._service, uri ) } );
+      this.members = data.members.map( ( uri: string ) => { return new Building_Structure( this._service, uri ) } );
     this.state = data.state;
     this.type = data.type;
   }
@@ -10142,7 +10142,7 @@ export class Azure_AzureComplex
     this.azure_password = data.azure_password;
     this.azure_tenant_id = data.azure_tenant_id;
     if( data.members !== undefined )
-      this.members = data.members.map( ( uri ) => { return new Building_Structure( this._service, uri ) } );
+      this.members = data.members.map( ( uri: string ) => { return new Building_Structure( this._service, uri ) } );
     this.state = data.state;
     this.type = data.type;
   }
@@ -10487,7 +10487,7 @@ export class Test_TestComplex
     this.updated = data.updated;
     this.created = data.created;
     if( data.members !== undefined )
-      this.members = data.members.map( ( uri ) => { return new Building_Structure( this._service, uri ) } );
+      this.members = data.members.map( ( uri: string ) => { return new Building_Structure( this._service, uri ) } );
     this.state = data.state;
     this.type = data.type;
   }

@@ -9,13 +9,13 @@
     "@mui/icons-material": "^5.14.0",
     "@mui/material": "^5.14.0",
     "@reduxjs/toolkit": "^2.11.2",
+    "@unovis/react": "^1.4.0",
+    "@unovis/ts": "^1.4.0",
     "cinp": "^1.1.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@unovis/react": "^1.4.0",
-    "@unovis/ts": "^1.4.0",
     "react-redux": "^9.2.0",
-    "react-router-dom": "^5.3.4"
+    "react-router-dom": "^6.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.22.0",
@@ -23,9 +23,8 @@
     "@babel/preset-env": "^7.22.0",
     "@babel/preset-react": "^7.22.0",
     "@babel/preset-typescript": "^7.28.5",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@types/react-router-dom": "^5.3.3",
+    "@types/react": "^18.3.28",
+    "@types/react-dom": "^18.3.7",
     "babel-loader": "^9.1.0",
     "cross-env": "^7.0.3",
     "css-loader": "^6.8.0",
@@ -34,6 +33,9 @@
     "webpack": "^5.88.0",
     "webpack-cli": "^5.1.0",
     "webpack-dev-server": "^5.2.3"
+  },
+  "overrides": {
+    "uuid": ">=14.0.0"
   },
   "scripts": {
     "start": "cross-env NODE_ENV=development webpack serve --config webpack.config.js",

@@ -50,7 +50,7 @@ export const fetchFoundation = createAuthThunk(
   }
 );
 
-const foundationsSlice = createDetailListSlice( { name: 'foundations', fetchList: fetchFoundationList, fetchOne: fetchFoundation } );
+const foundationsSlice = createDetailListSlice<FoundationListItem, FoundationDetail>( { name: 'foundations', fetchList: fetchFoundationList, fetchOne: fetchFoundation } );
 
 export const { invalidate: invalidateFoundations } = foundationsSlice.actions;
 export default foundationsSlice.reducer;
