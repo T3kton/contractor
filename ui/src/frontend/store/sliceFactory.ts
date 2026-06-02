@@ -61,18 +61,18 @@ export function createDetailListSlice<L, D>( config: {
     name: config.name,
     initialState: { list: null, detail: null, loading: false, error: null } as DetailListState<L, D>,
     reducers: {
-      invalidate: ( state ) => { state.list = null; state.detail = null as D | null; },
+      invalidate: ( state ) => { state.list = null; state.detail = null; },
     },
     extraReducers: ( builder ) =>
     {
       builder
         .addCase( config.fetchList.pending, ( state ) => { state.loading = true; state.error = null; } )
-        .addCase( config.fetchList.fulfilled, ( state, action ) => { state.loading = false; state.list = action.payload; } )
+        .addCase( config.fetchList.fulfilled, ( state, action ) => { state.loading = false; state.list = action.payload as any; } )
         .addCase( config.fetchList.rejected, ( state, action ) => { state.loading = false; state.error = action.payload?.msg ?? action.error?.message ?? 'Error loading data'; } )
         .addCase( config.fetchOne.pending, ( state ) => { state.loading = true; state.error = null; } )
-        .addCase( config.fetchOne.fulfilled, ( state, action ) => { state.loading = false; state.detail = action.payload; } )
+        .addCase( config.fetchOne.fulfilled, ( state, action ) => { state.loading = false; state.detail = action.payload as any; } )
         .addCase( config.fetchOne.rejected, ( state, action ) => { state.loading = false; state.error = action.payload?.msg ?? action.error?.message ?? 'Error loading data'; } )
-        .addCase( invalidateAll, ( state ) => { state.list = null; state.detail = null as D | null; state.loading = false; state.error = null; } );
+        .addCase( invalidateAll, ( state ) => { state.list = null; state.detail = null; state.loading = false; state.error = null; } );
     },
   } );
 }

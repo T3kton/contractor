@@ -36,13 +36,14 @@ root.render(
 
 if (module.hot) {
   module.hot.accept('./component/App', () => {
-    const NextApp = require('./component/App').default;
-    root.render(
-      <Provider store={ store }>
-        <ThemeProvider theme={ theme }>
-          <NextApp />
-        </ThemeProvider>
-      </Provider>
-    );
+    import('./component/App').then(({ default: NextApp }) => {
+      root.render(
+        <Provider store={ store }>
+          <ThemeProvider theme={ theme }>
+            <NextApp />
+          </ThemeProvider>
+        </Provider>
+      );
+    });
   });
 }
