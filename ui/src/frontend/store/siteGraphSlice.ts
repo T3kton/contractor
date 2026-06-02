@@ -60,7 +60,7 @@ const siteGraphSlice = createSlice( {
     builder
       .addCase( fetchSiteGraph.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchSiteGraph.fulfilled, ( state, action ) => { state.loading = false; state.graph = action.payload; } )
-      .addCase( fetchSiteGraph.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } );
+      .addCase( fetchSiteGraph.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } );
   },
 } );
 

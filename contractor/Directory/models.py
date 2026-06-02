@@ -85,7 +85,7 @@ class Entry( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
-  @cinp.list_filter( name='zone', paramater_type_list=[ { 'type': 'Model', 'model': Zone } ] )
+  @cinp.list_filter( name='zone', parameter_type_list=[ { 'type': 'Model', 'model': Zone } ] )
   @staticmethod
   def filter_zone( zone ):
     return Entry.objects.filter( zone=zone )

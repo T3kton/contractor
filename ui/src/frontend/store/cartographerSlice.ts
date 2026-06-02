@@ -48,7 +48,7 @@ const cartographerSlice = createSlice( {
     builder
       .addCase( fetchCartographerList.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchCartographerList.fulfilled, ( state, action ) => { state.loading = false; state.list = action.payload; } )
-      .addCase( fetchCartographerList.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } );
+      .addCase( fetchCartographerList.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } );
   },
 } );
 

@@ -1,17 +1,18 @@
 {
   "compilerOptions": {
     "target": "ES2021",
-    "lib": ["ES2020", "DOM"],
+    "lib": ["ES2021", "DOM"],
     "jsx": "react",
     "module": "ESNext",
-    "moduleResolution": "node",
-    "strict": false,
+    "moduleResolution": "bundler",
+    "strict": true,
     "noEmit": true,
     "allowJs": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["src"]
+  "include": ["src/frontend/**/*"],
+  "exclude": ["node_modules"]
 }

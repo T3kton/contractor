@@ -57,7 +57,7 @@ const jobLogSlice = createSlice( {
     builder
       .addCase( fetchJobLogList.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchJobLogList.fulfilled, ( state, action ) => { state.loading = false; state.list = action.payload; } )
-      .addCase( fetchJobLogList.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } );
+      .addCase( fetchJobLogList.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } );
   },
 } );
 

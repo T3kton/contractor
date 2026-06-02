@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useDispatch } from 'react-redux';
 import {
   AppBar, Box, Button, Chip, CssBaseline, Dialog, DialogActions,
   DialogContent, DialogTitle, Drawer, IconButton, List, ListItem,
@@ -24,25 +25,11 @@ import UpdateIcon from '@mui/icons-material/Update';
 import SyncIcon from '@mui/icons-material/Sync';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AnnouncementIcon from '@mui/icons-material/Announcement';
-import { BrowserRouter as Router, Route, Link as RouterLink } from 'react-router-dom';
-import { contractor, store } from '../store';
+import { BrowserRouter as Router, Routes, Route, useParams, Link as RouterLink } from 'react-router-dom';
+import { contractor } from '../store';
 import { Site_Site } from '../lib/Contractor';
-import { setAuthenticated } from '../store/appSlice';
-import { invalidateSites } from '../store/sitesSlice';
-import { invalidatePlots } from '../store/plotsSlice';
-import { invalidateNetworks } from '../store/networksSlice';
-import { invalidateBlueprints } from '../store/blueprintsSlice';
-import { invalidatePXE } from '../store/pxeSlice';
-import { invalidateFoundations } from '../store/foundationsSlice';
-import { invalidateDependencies } from '../store/dependenciesSlice';
-import { invalidateStructures } from '../store/structuresSlice';
-import { invalidateComplexes } from '../store/complexesSlice';
-import { invalidateAddressBlocks } from '../store/addressBlocksSlice';
-import { invalidateJobs } from '../store/jobsSlice';
-import { invalidateJobLog } from '../store/jobLogSlice';
-import { invalidateCartographer } from '../store/cartographerSlice';
-import { invalidateTodo } from '../store/todoSlice';
-import { invalidateSiteGraph } from '../store/siteGraphSlice';
+import { setAuthenticated, showServerError, invalidateAll } from '../store/appSlice';
+import type { AppDispatch } from '../store';
 import Home from './Home';
 import Site from './Site';
 import Plot from './Plot';
@@ -72,7 +59,7 @@ const navItems = [
   { to: '/blueprints', icon: <ImportContactsIcon />, label: 'BluePrints' },
   { to: '/pxes', icon: <ImportContactsIcon />, label: 'PXEs' },
   { to: '/foundations', icon: <StorageIcon />, label: 'Foundations' },
-  { to: '/dependancies', icon: <GroupWorkIcon />, label: 'Dependancies' },
+  { to: '/dependencies', icon: <GroupWorkIcon />, label: 'Dependencies' },
   { to: '/structures', icon: <AccountBalanceIcon />, label: 'Structures' },
   { to: '/complexes', icon: <LocationCityIcon />, label: 'Complexes' },
   { to: '/addressblocks', icon: <CompareArrowsIcon />, label: 'Address Blocks' },
@@ -83,190 +70,126 @@ const navItems = [
   { to: '/graph', icon: <TimelineIcon />, label: 'Graph' },
 ];
 
-interface AppState {
-  cur_site: string | null;
-  loginVisible: boolean;
-  username: string;
-  password: string;
-  leftDrawerVisable: boolean;
-  autoUpdate: boolean;
-  curJobs: number;
-  alerts: number;
-  loggedInUser: string | null;
-  logoutMenuAnchor: HTMLElement | null;
+function DetailRoute( { Comp, ...extraProps }: { Comp: React.ElementType; [key: string]: unknown } )
+{
+  const { id } = useParams<{ id: string }>();
+  return <Comp id={ id } { ...extraProps } />;
 }
 
-class App extends React.Component<{}, AppState>
+const App: React.FC = () =>
 {
-  state: AppState = {
-    cur_site: null,
-    loginVisible: false,
-    username: '',
-    password: '',
-    leftDrawerVisable: true,
-    autoUpdate: false,
-    curJobs: 0,
-    alerts: 0,
-    loggedInUser: null,
-    logoutMenuAnchor: null,
+  const dispatch = useDispatch<AppDispatch>();
+  const [curSite, setCurSite] = useState<string | null>( null );
+  const [loginVisible, setLoginVisible] = useState( false );
+  const [username, setUsername] = useState( '' );
+  const [password, setPassword] = useState( '' );
+  const [drawerOpen, setDrawerOpen] = useState( true );
+  const [autoUpdate, setAutoUpdate] = useState( false );
+  const [curJobs, setCurJobs] = useState( 0 );
+  const [alerts, setAlerts] = useState( 0 );
+  const [loggedInUser, setLoggedInUser] = useState<string | null>( null );
+  const [logoutMenuAnchor, setLogoutMenuAnchor] = useState<HTMLElement | null>( null );
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>( null );
+
+  const doUpdate = ( site: string | null = curSite ) =>
+  {
+    dispatch( invalidateAll() );
+    if ( site )
+    {
+      contractor.Foreman_BaseJob_call_jobStats( new Site_Site( contractor, site ) )
+        .then( ( result: any ) => { setCurJobs( result.running ?? 0 ); setAlerts( result.error ?? 0 ); } )
+        .catch( ( err: any ) => { console.error( 'doUpdate: failed to get job stats:', err?.msg ?? err ); } );
+    }
   };
 
-  timerID: any;
-  serverErrorRef: React.RefObject<ServerError>;
-
-  constructor( props: {} )
+  useEffect( () =>
   {
-    super( props );
-    this.serverErrorRef = React.createRef();
-  }
+    contractor.setServerErrorHandler( ( msg: string, trace: string ) =>
+    {
+      dispatch( showServerError( { msg, trace } ) );
+    } );
 
-  menuClick = () =>
+    const savedId = localStorage.getItem( 'auth-id' );
+    const savedToken = localStorage.getItem( 'auth-token' );
+    if ( savedId && savedToken )
+    {
+      contractor.setHeader( 'Auth-Id', savedId );
+      contractor.setHeader( 'Auth-Token', savedToken );
+      dispatch( setAuthenticated( true ) );
+      setLoggedInUser( savedId );
+    }
+
+    return () => { if ( timerRef.current ) clearInterval( timerRef.current ); };
+  }, [] );
+
+  const selectSite = ( site: string ) =>
   {
-    this.setState( { leftDrawerVisable: !this.state.leftDrawerVisable } );
+    setCurSite( site );
+    doUpdate( site );
   };
 
-  showLogin = () =>
+  const doLogin = () =>
   {
-    this.setState( { loginVisible: true } );
-  };
-
-  closeLogin = () =>
-  {
-    this.setState( { loginVisible: false } );
-  };
-
-  doLogin = () =>
-  {
-    contractor.Auth_User_call_login( this.state.username, this.state.password )
+    contractor.Auth_User_call_login( username, password )
       .then( ( token: string ) =>
-        {
-          contractor.setHeader( 'Auth-Id', this.state.username );
-          contractor.setHeader( 'Auth-Token', token );
-          localStorage.setItem( 'auth-id', this.state.username );
-          localStorage.setItem( 'auth-token', token );
-          store.dispatch( setAuthenticated( true ) );
-          this.setState( { loginVisible: false, password: '', loggedInUser: this.state.username } );
-          this.doUpdate();
-        },
-        ( err: any ) =>
-        {
-          alert( 'Error logging in: "' + ( err?.message ?? err ) + '"' );
-        } );
-  }
-
-  selectSite = ( site: string ) =>
-  {
-    this.setState( { cur_site: site }, () => { this.doUpdate(); } );
+      {
+        contractor.setHeader( 'Auth-Id', username );
+        contractor.setHeader( 'Auth-Token', token );
+        localStorage.setItem( 'auth-id', username );
+        localStorage.setItem( 'auth-token', token );
+        dispatch( setAuthenticated( true ) );
+        setLoginVisible( false );
+        setPassword( '' );
+        setLoggedInUser( username );
+        doUpdate();
+      },
+      ( err: any ) => { alert( 'Error logging in: "' + ( err?.msg ?? err ) + '"' ); } );
   };
 
-  serverError = ( msg: string, trace: string ) =>
+  const doLogout = () =>
   {
-    this.serverErrorRef.current!.show( msg, trace );
-  };
-
-  doUpdate = () =>
-  {
-    store.dispatch( invalidateSites() );
-    store.dispatch( invalidatePlots() );
-    store.dispatch( invalidateNetworks() );
-    store.dispatch( invalidateBlueprints() );
-    store.dispatch( invalidatePXE() );
-    store.dispatch( invalidateFoundations() );
-    store.dispatch( invalidateDependencies() );
-    store.dispatch( invalidateStructures() );
-    store.dispatch( invalidateComplexes() );
-    store.dispatch( invalidateAddressBlocks() );
-    store.dispatch( invalidateJobs() );
-    store.dispatch( invalidateJobLog() );
-    store.dispatch( invalidateCartographer() );
-    store.dispatch( invalidateTodo() );
-    store.dispatch( invalidateSiteGraph() );
-
-    if ( this.state.cur_site )
-    {
-      contractor.Foreman_BaseJob_call_jobStats( new Site_Site( contractor, this.state.cur_site ) )
-        .then( ( result: any ) =>
-          {
-            this.setState( { curJobs: result.running ?? 0, alerts: result.error ?? 0 } );
-          }
-       );
-    }
-  };
-
-  toggleAutoUpdate = () =>
-  {
-    var state = !this.state.autoUpdate;
-    if( state )
-    {
-      this.timerID = setInterval( () => this.doUpdate(), 10000 );
-    }
-    else
-    {
-      clearInterval( this.timerID );
-    }
-    this.setState( { autoUpdate: state } );
-  };
-
-  showLogoutMenu = ( e: React.MouseEvent<HTMLElement> ) =>
-  {
-    this.setState( { logoutMenuAnchor: e.currentTarget } );
-  };
-
-  closeLogoutMenu = () =>
-  {
-    this.setState( { logoutMenuAnchor: null } );
-  };
-
-  doLogout = () =>
-  {
-    this.setState( { autoUpdate: false } );
+    if ( timerRef.current ) { clearInterval( timerRef.current ); timerRef.current = null; }
+    setAutoUpdate( false );
     contractor.clearHeader( 'Auth-Id' );
     contractor.clearHeader( 'Auth-Token' );
     localStorage.removeItem( 'auth-id' );
     localStorage.removeItem( 'auth-token' );
-    store.dispatch( setAuthenticated( false ) );
-    this.setState( { loggedInUser: null, logoutMenuAnchor: null, cur_site: null } );
-    this.doUpdate();
+    dispatch( setAuthenticated( false ) );
+    setLoggedInUser( null );
+    setLogoutMenuAnchor( null );
+    setCurSite( null );
+    dispatch( invalidateAll() );
   };
 
-  componentDidMount()
+  const toggleAutoUpdate = () =>
   {
-    this.setState( { autoUpdate: false } );
-    clearInterval( this.timerID );
-    contractor.setServerErrorHandler( this.serverError );
-    const savedId = localStorage.getItem( 'auth-id' );
-    const savedToken = localStorage.getItem( 'auth-token' );
-    if( savedId && savedToken )
+    if ( autoUpdate )
     {
-      contractor.setHeader( 'Auth-Id', savedId );
-      contractor.setHeader( 'Auth-Token', savedToken );
-      store.dispatch( setAuthenticated( true ) );
-      this.setState( { loggedInUser: savedId } );
+      if ( timerRef.current ) { clearInterval( timerRef.current ); timerRef.current = null; }
+      setAutoUpdate( false );
     }
-  }
+    else
+    {
+      timerRef.current = setInterval( () => doUpdate(), 10000 );
+      setAutoUpdate( true );
+    }
+  };
 
-  componentWillUnmount()
-  {
-    clearInterval( this.timerID );
-  }
-
-  render()
-  {
-    return (
+  return (
 <Router>
   <Box sx={{ display: 'flex' }}>
     <CssBaseline />
-    <ServerError ref={ this.serverErrorRef } />
+    <ServerError />
 
-    <Dialog open={ this.state.loginVisible } onClose={ this.closeLogin }>
+    <Dialog open={ loginVisible } onClose={ () => setLoginVisible( false ) }>
       <DialogTitle>Login</DialogTitle>
       <DialogContent>
         <TextField
           type="text"
           label="Username"
           name="username"
-          value={ this.state.username }
-          onChange={ (e) => this.setState( { username: e.target.value } ) }
+          value={ username }
+          onChange={ (e) => setUsername( e.target.value ) }
           fullWidth
           margin="dense"
         />
@@ -274,52 +197,52 @@ class App extends React.Component<{}, AppState>
           type="password"
           label="Password"
           name="password"
-          value={ this.state.password }
-          onChange={ (e) => this.setState( { password: e.target.value } ) }
+          value={ password }
+          onChange={ (e) => setPassword( e.target.value ) }
           fullWidth
           margin="dense"
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={ this.closeLogin }>Close</Button>
-        <Button onClick={ this.doLogin } variant="contained">Login</Button>
+        <Button onClick={ () => setLoginVisible( false ) }>Close</Button>
+        <Button onClick={ doLogin } variant="contained">Login</Button>
       </DialogActions>
     </Dialog>
 
     <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
       <Toolbar>
-        <IconButton color="inherit" edge="start" onClick={ this.menuClick } sx={{ mr: 1 }}>
+        <IconButton color="inherit" edge="start" onClick={ () => setDrawerOpen( !drawerOpen ) } sx={{ mr: 1 }}>
           <MenuIcon />
         </IconButton>
         <Typography variant="h6" sx={{ mr: 2 }}>Contractor</Typography>
-        <SiteSelector key={ this.state.loggedInUser || 'none' } onSiteChange={ this.selectSite } curSite={ this.state.cur_site } />
+        <SiteSelector key={ loggedInUser || 'none' } onSiteChange={ selectSite } curSite={ curSite } />
         <Box sx={{ flexGrow: 1 }} />
-        <Chip icon={ <DvrIcon /> } label={ this.state.curJobs } title="Jobs" sx={{ mr: 1, color: 'white', borderColor: 'white' }} variant="outlined" />
-        <Chip icon={ <AnnouncementIcon /> } label={ this.state.alerts } title="Alerts" sx={{ mr: 1, color: 'white', borderColor: 'white' }} variant="outlined" />
-        <IconButton color={ this.state.autoUpdate ? 'secondary' : 'inherit' } onClick={ this.toggleAutoUpdate } title="Auto Update">
+        <Chip icon={ <DvrIcon /> } label={ curJobs } title="Jobs" sx={{ mr: 1, color: 'white', borderColor: 'white' }} variant="outlined" />
+        <Chip icon={ <AnnouncementIcon /> } label={ alerts } title="Alerts" sx={{ mr: 1, color: 'white', borderColor: 'white' }} variant="outlined" />
+        <IconButton color={ autoUpdate ? 'secondary' : 'inherit' } onClick={ toggleAutoUpdate } title="Auto Update">
           <UpdateIcon />
         </IconButton>
-        <IconButton color="inherit" onClick={ this.doUpdate } title="Refresh">
+        <IconButton color="inherit" onClick={ () => doUpdate() } title="Refresh">
           <SyncIcon />
         </IconButton>
-        { this.state.loggedInUser
+        { loggedInUser
           ? <>
               <Chip
                 icon={ <AccountCircleIcon /> }
-                label={ this.state.loggedInUser }
-                onClick={ this.showLogoutMenu }
+                label={ loggedInUser }
+                onClick={ (e) => setLogoutMenuAnchor( e.currentTarget ) }
                 sx={{ color: 'white', borderColor: 'white' }}
                 variant="outlined"
               />
               <Menu
-                anchorEl={ this.state.logoutMenuAnchor }
-                open={ Boolean( this.state.logoutMenuAnchor ) }
-                onClose={ this.closeLogoutMenu }
+                anchorEl={ logoutMenuAnchor }
+                open={ Boolean( logoutMenuAnchor ) }
+                onClose={ () => setLogoutMenuAnchor( null ) }
               >
-                <MenuItem onClick={ this.doLogout }>Logout</MenuItem>
+                <MenuItem onClick={ doLogout }>Logout</MenuItem>
               </Menu>
             </>
-          : <IconButton color="inherit" onClick={ this.showLogin } title="Login">
+          : <IconButton color="inherit" onClick={ () => setLoginVisible( true ) } title="Login">
               <AccountCircleIcon />
             </IconButton>
         }
@@ -328,9 +251,9 @@ class App extends React.Component<{}, AppState>
 
     <Drawer
       variant="persistent"
-      open={ this.state.leftDrawerVisable }
+      open={ drawerOpen }
       sx={{
-        width: this.state.leftDrawerVisable ? DRAWER_WIDTH : 0,
+        width: drawerOpen ? DRAWER_WIDTH : 0,
         flexShrink: 0,
         transition: 'width 0.2s',
         '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
@@ -349,51 +272,44 @@ class App extends React.Component<{}, AppState>
       </List>
     </Drawer>
 
-    <Box
-      component="main"
-      sx={{
-        flexGrow: 1,
-        minWidth: 0,
-        p: 2
-      }}
-    >
+    <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: 2 }}>
       <Toolbar />
-      <Route exact={true} path="/" component={ Home }/>
-      <Route path="/site/:id" render={ ( { match } ) => ( <Site id={ match.params.id } /> ) } />
-      <Route path="/plot/:id" render={ ( { match } ) => ( <Plot id={ match.params.id } /> ) } />
-      <Route path="/blueprint/f/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } blueprintType="foundation" /> ) } />
-      <Route path="/network/:id" render={ ( { match } ) => ( <Network id={ match.params.id } /> ) } />
-      <Route path="/blueprint/s/:id" render={ ( { match } ) => ( <BluePrint id={ match.params.id } blueprintType="structure" /> ) } />
-      <Route path="/pxe/:id" render={ ( { match } ) => ( <PXE id={ match.params.id } /> ) } />
-      <Route path="/foundation/:id" render={ ( { match } ) => ( <Foundation id={ match.params.id } /> ) } />
-      <Route path="/dependency/:id" render={ ( { match } ) => ( <Dependency id={ match.params.id } /> ) } />
-      <Route path="/structure/:id" render={ ( { match } ) => ( <Structure id={ match.params.id } /> ) } />
-      <Route path="/complex/:id" render={ ( { match } ) => ( <Complex id={ match.params.id } /> ) } />
-      <Route path="/addressblock/:id" render={ ( { match } ) => ( <AddressBlock id={ match.params.id } /> ) } />
-      <Route path="/job/f/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="foundation" /> ) } />
-      <Route path="/job/s/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="structure" /> ) } />
-      <Route path="/job/d/:id" render={ ( { match } ) => ( <Job id={ match.params.id } jobType="dependency" /> ) } />
-      <Route exact={true} path="/sites" render={ () => ( <Site /> ) } />
-      <Route exact={true} path="/plots" render={ () => ( <Plot /> ) } />
-      <Route exact={true} path="/networks" render={ () => ( <Network site={ this.state.cur_site! } /> ) } />
-      <Route exact={true} path="/blueprints" render={ () => ( <BluePrint /> ) } />
-      <Route exact={true} path="/pxes" render={ () => ( <PXE site={ this.state.cur_site! } /> ) } />
-      <Route exact={true} path="/foundations" render={ () => ( <Foundation site={ this.state.cur_site! } /> ) } />
-      <Route exact={true} path="/dependancies" render={ () => ( <Dependency site={ this.state.cur_site! } /> ) } />
-      <Route exact={true} path="/structures" render={ () => ( <Structure site={ this.state.cur_site! } /> ) } />
-      <Route exact={true} path="/complexes" render={ () => ( <Complex site={ this.state.cur_site! } /> ) } />
-      <Route exact={true} path="/addressblocks" render={ () => ( <AddressBlock site={ this.state.cur_site! } /> ) } />
-      <Route exact={true} path="/jobs" render={ () => ( <Job site={ this.state.cur_site! } /> ) } />
-      <Route exact={true} path="/cartographer" render={ () => ( <Cartographer /> ) } />
-      <Route exact={true} path="/joblog" render={ () => ( <JobLog site={ this.state.cur_site! } /> ) } />
-      <Route exact={true} path="/todo" render={ () => ( <Todo site={ this.state.cur_site! } /> ) } />
-      <Route exact={true} path="/graph" render={ () => ( <SiteGraph site={ this.state.cur_site! } /> ) } />
+      <Routes>
+        <Route path="/" element={ <Home /> } />
+        <Route path="/site/:id" element={ <DetailRoute Comp={ Site } /> } />
+        <Route path="/plot/:id" element={ <DetailRoute Comp={ Plot } /> } />
+        <Route path="/blueprint/f/:id" element={ <DetailRoute Comp={ BluePrint } blueprintType="foundation" /> } />
+        <Route path="/blueprint/s/:id" element={ <DetailRoute Comp={ BluePrint } blueprintType="structure" /> } />
+        <Route path="/network/:id" element={ <DetailRoute Comp={ Network } /> } />
+        <Route path="/pxe/:id" element={ <DetailRoute Comp={ PXE } /> } />
+        <Route path="/foundation/:id" element={ <DetailRoute Comp={ Foundation } /> } />
+        <Route path="/dependency/:id" element={ <DetailRoute Comp={ Dependency } /> } />
+        <Route path="/structure/:id" element={ <DetailRoute Comp={ Structure } /> } />
+        <Route path="/complex/:id" element={ <DetailRoute Comp={ Complex } /> } />
+        <Route path="/addressblock/:id" element={ <DetailRoute Comp={ AddressBlock } /> } />
+        <Route path="/job/f/:id" element={ <DetailRoute Comp={ Job } jobType="foundation" /> } />
+        <Route path="/job/s/:id" element={ <DetailRoute Comp={ Job } jobType="structure" /> } />
+        <Route path="/job/d/:id" element={ <DetailRoute Comp={ Job } jobType="dependency" /> } />
+        <Route path="/sites" element={ <Site /> } />
+        <Route path="/plots" element={ <Plot /> } />
+        <Route path="/networks" element={ <Network site={ curSite ?? undefined } /> } />
+        <Route path="/blueprints" element={ <BluePrint /> } />
+        <Route path="/pxes" element={ <PXE site={ curSite ?? undefined } /> } />
+        <Route path="/foundations" element={ <Foundation site={ curSite ?? undefined } /> } />
+        <Route path="/dependencies" element={ <Dependency site={ curSite ?? undefined } /> } />
+        <Route path="/structures" element={ <Structure site={ curSite ?? undefined } /> } />
+        <Route path="/complexes" element={ <Complex site={ curSite ?? undefined } /> } />
+        <Route path="/addressblocks" element={ <AddressBlock site={ curSite ?? undefined } /> } />
+        <Route path="/jobs" element={ <Job site={ curSite ?? undefined } /> } />
+        <Route path="/cartographer" element={ <Cartographer /> } />
+        <Route path="/joblog" element={ <JobLog site={ curSite ?? undefined } /> } />
+        <Route path="/todo" element={ <Todo site={ curSite ?? undefined } /> } />
+        <Route path="/graph" element={ <SiteGraph site={ curSite ?? undefined } /> } />
+      </Routes>
     </Box>
   </Box>
 </Router>
-    );
-  }
-
-}
+  );
+};
 
 export default App;

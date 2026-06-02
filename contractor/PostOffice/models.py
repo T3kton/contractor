@@ -92,7 +92,8 @@ class Box( models.Model ):
       self.proxy = None
 
     errors = {}
-    if self.type not in Box.BOX_TYPE:
+
+    if self.type not in [ i[0] for i in Box.BOX_TYPE ]:
       errors[ 'type' ] = 'Invalid'
 
     if self.expires is not None and not self.expires > datetime.now( timezone.utc ) + timedelta( hours=MAX_BOX_LIFE ):
@@ -112,7 +113,7 @@ class Box( models.Model ):
 class FoundationBox( Box ):
   foundation = models.ForeignKey( Foundation, on_delete=models.CASCADE, related_name='+' )
 
-  @cinp.action( paramater_type_list=[ 'Integer' ] )
+  @cinp.action( parameter_type_list=[ 'Integer' ] )
   def extend( self, additional_hours ):
     super().extend( additional_hours )
 
@@ -133,7 +134,7 @@ class FoundationBox( Box ):
 class StructureBox( Box ):
   structure = models.ForeignKey( Structure, on_delete=models.CASCADE, related_name='+' )
 
-  @cinp.action( paramater_type_list=[ 'Integer' ] )
+  @cinp.action( parameter_type_list=[ 'Integer' ] )
   def extend( self, additional_hours ):
     super().extend( additional_hours )
 

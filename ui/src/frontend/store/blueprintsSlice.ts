@@ -76,16 +76,16 @@ const blueprintsSlice = createSlice( {
     builder
       .addCase( fetchFoundationBluePrintList.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchFoundationBluePrintList.fulfilled, ( state, action ) => { state.loading = false; state.listF = action.payload; } )
-      .addCase( fetchFoundationBluePrintList.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } )
+      .addCase( fetchFoundationBluePrintList.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } )
       .addCase( fetchStructureBluePrintList.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchStructureBluePrintList.fulfilled, ( state, action ) => { state.loading = false; state.listS = action.payload; } )
-      .addCase( fetchStructureBluePrintList.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } )
+      .addCase( fetchStructureBluePrintList.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } )
       .addCase( fetchFoundationBluePrint.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchFoundationBluePrint.fulfilled, ( state, action ) => { state.loading = false; state.detail = action.payload as any; } )
-      .addCase( fetchFoundationBluePrint.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } )
+      .addCase( fetchFoundationBluePrint.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } )
       .addCase( fetchStructureBluePrint.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchStructureBluePrint.fulfilled, ( state, action ) => { state.loading = false; state.detail = action.payload as any; } )
-      .addCase( fetchStructureBluePrint.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } );
+      .addCase( fetchStructureBluePrint.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } );
   },
 } );
 

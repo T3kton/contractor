@@ -1,24 +1,15 @@
-import React from 'react';
-import { connect } from 'react-redux';
+import React, { useCallback, useEffect, useMemo } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import ErrorPanel from './ErrorPanel';
 import { fetchSiteGraph } from '../store/siteGraphSlice';
-import type { SiteGraphData } from '../store/siteGraphSlice';
 import { VisSingleContainer, VisGraph } from '@unovis/react';
 import { GraphLayoutType, GraphNodeShape, GraphLinkArrowStyle } from '@unovis/ts';
-import { Alert, Box, CircularProgress, Color } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 import type { RootState, AppDispatch } from '../store';
 
-interface OwnProps {
+interface Props {
   site?: string;
 }
-
-interface StateProps {
-  graph: SiteGraphData | null;
-  authenticated: boolean;
-  loading: boolean;
-  error: string | null;
-}
-
-type Props = OwnProps & StateProps & { dispatch: AppDispatch };
 
 const typeShape = ( n: any ): GraphNodeShape =>
 {
@@ -31,7 +22,7 @@ const typeShape = ( n: any ): GraphNodeShape =>
   }
 };
 
-const stateColor = ( n: any ): string =>
+const nodeStateColor = ( n: any ): string =>
 {
   switch ( n.state )
   {
@@ -42,59 +33,41 @@ const stateColor = ( n: any ): string =>
   }
 };
 
-class SiteGraph extends React.Component<Props>
+const SiteGraph: React.FC<Props> = ( { site } ) =>
 {
-  componentDidMount()
+  const dispatch = useDispatch<AppDispatch>();
+  const authenticated = useSelector( ( s: RootState ) => s.app.authenticated );
+  const { graph, loading, error } = useSelector( ( s: RootState ) => s.siteGraph );
+
+  const fetchData = useCallback( () =>
   {
-    this.update( this.props );
-  }
+    if ( !authenticated ) return;
+    dispatch( fetchSiteGraph( site ?? '' ) );
+  }, [authenticated, dispatch, site] );
 
-  componentDidUpdate( prevProps: Props )
-  {
-    if ( prevProps.site !== this.props.site ||
-         ( !prevProps.authenticated && this.props.authenticated ) ||
-         ( prevProps.graph !== null && this.props.graph === null ) )
-    {
-      this.update( this.props );
-    }
-  }
+  useEffect( () => { fetchData(); }, [fetchData] );
 
-  update( props: Props )
-  {
-    props.dispatch( fetchSiteGraph( props.site ) );
-  }
+  const nodes = useMemo( () => ( graph?.nodes || [] ).map( ( n: any ) => ( { ...n } ) ), [graph] );
+  const links = useMemo( () => ( graph?.edges || [] ).map( ( e: any ) => ( { source: e.from, target: e.to } ) ), [graph] );
 
-  render()
-  {
-    if ( this.props.loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
-    if ( this.props.error ) return <Alert severity="error">{ this.props.error }</Alert>;
-    const src = this.props.graph || { nodes: [], edges: [] };
-    const nodes = src.nodes.map( ( n: any ) => ( { ...n } ) );
-    const links = src.edges.map( ( e: any ) => ( { source: e.from, target: e.to } ) );
+  if ( loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+  if ( error ) return <ErrorPanel error={ error } onRetry={ fetchData } />;
 
-    return (
-      <VisSingleContainer style={{ width: '100%' }} height={ 1000 }>
-          <VisGraph
-            data={{ nodes, links }}
-            nodeLabel={ ( n: any ) => n.label }
-            nodeIcon={ () => '' }
-            nodeShape={ typeShape }
-            nodeFill={ stateColor }
-            nodeStroke={ ( n: any ) => n.external ? '#DDDDDD' : '#FF0000' }
-            nodeStrokeWidth={ ( n: any ) => n.has_job ? 3 : 1 }
-            linkArrow={ GraphLinkArrowStyle.Single }
-            layoutType={ GraphLayoutType.Dagre }
-          />
-        </VisSingleContainer>
-    );
-  }
-}
+  return (
+    <VisSingleContainer style={{ width: '100%' }} height={ 1000 }>
+      <VisGraph
+        data={{ nodes, links }}
+        nodeLabel={ ( n: any ) => n.label }
+        nodeIcon={ () => '' }
+        nodeShape={ typeShape }
+        nodeFill={ nodeStateColor }
+        nodeStroke={ ( n: any ) => n.external ? '#DDDDDD' : '#FF0000' }
+        nodeStrokeWidth={ ( n: any ) => n.has_job ? 3 : 1 }
+        linkArrow={ GraphLinkArrowStyle.Single }
+        layoutType={ GraphLayoutType.Dagre }
+      />
+    </VisSingleContainer>
+  );
+};
 
-const mapStateToProps = ( state: RootState ) => ( {
-  graph: state.siteGraph.graph,
-  authenticated: state.app.authenticated,
-  loading: state.siteGraph.loading,
-  error: state.siteGraph.error,
-} );
-
-export default connect( mapStateToProps )( SiteGraph );
+export default SiteGraph;

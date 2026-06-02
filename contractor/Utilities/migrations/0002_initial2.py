@@ -144,7 +144,7 @@ class Migration(migrations.Migration):
             name='AggregatedNetworkInterface',
             fields=[
                 ('abstractnetworkinterface_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='Utilities.abstractnetworkinterface')),
-                ('paramaters', contractor.fields.MapField(blank=True, default=contractor.fields.defaultdict, editable=True, null=True)),
+                ('parameters', contractor.fields.MapField(blank=True, default=contractor.fields.defaultdict, editable=True, null=True)),
                 ('primary_interface', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='Utilities.networkinterface')),
                 ('secondary_interfaces', models.ManyToManyField(related_name='+', to='Utilities.networkinterface')),
             ],

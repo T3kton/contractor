@@ -200,7 +200,7 @@ class AddressBlock( models.Model ):
   def isIpV4( self ):
     return IpIsV4( StrToIp( self.subnet ) )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.Address' }, paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.Networked' }, { 'type': 'String' }, { 'type': 'Boolean' } ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.Address' }, parameter_type_list=[ { 'type': 'Model', 'model': 'contractor.Utilities.models.Networked' }, { 'type': 'String' }, { 'type': 'Boolean' } ] )
   def nextAddress( self, networked, interface_name, is_primary ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     address = Address( networked=networked, interface_name=interface_name, is_primary=is_primary )
     if networked.structure.foundation.subclass.__class__.__name__ == 'DockerFoundation':
@@ -236,7 +236,7 @@ class AddressBlock( models.Model ):
 
     return result
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' }, paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.AddressBlock' }, parameter_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
   @staticmethod
   def getWithNameSite( site, name ):
     try:
@@ -244,7 +244,7 @@ class AddressBlock( models.Model ):
     except AddressBlock.DoesNotExist:
       return None
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.list_filter( name='site', parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return AddressBlock.objects.filter( site=site )
@@ -333,7 +333,7 @@ class Network( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.Network' }, paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.Network' }, parameter_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
   @staticmethod
   def getWithNameSite( site, name ):
     try:
@@ -341,7 +341,7 @@ class Network( models.Model ):
     except Network.DoesNotExist:
       return None
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.list_filter( name='site', parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Network.objects.filter( site=site )
@@ -380,12 +380,12 @@ class NetworkAddressBlock( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
-  @cinp.list_filter( name='network', paramater_type_list=[ { 'type': 'Model', 'model': Network } ] )
+  @cinp.list_filter( name='network', parameter_type_list=[ { 'type': 'Model', 'model': Network } ] )
   @staticmethod
   def filter_network( network ):
     return NetworkAddressBlock.objects.filter( network=network )
 
-  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
+  @cinp.list_filter( name='address_block', parameter_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
   @staticmethod
   def filter_address_block( address_block ):
     return NetworkAddressBlock.objects.filter( address_block=address_block )
@@ -500,7 +500,7 @@ class RealNetworkInterface( NetworkInterface ):
 
     return result
 
-  @cinp.list_filter( name='foundation', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Foundation' } ] )
+  @cinp.list_filter( name='foundation', parameter_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Foundation' } ] )
   @staticmethod
   def filter_foundation( foundation ):
     return RealNetworkInterface.objects.filter( foundation=foundation )
@@ -572,7 +572,7 @@ class AbstractNetworkInterface( NetworkInterface ):
   def mac( self ):
     return None
 
-  @cinp.list_filter( name='structure', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ] )
+  @cinp.list_filter( name='structure', parameter_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ] )
   @staticmethod
   def filter_structure( structure ):
     return AbstractNetworkInterface.objects.filter( structure=structure )
@@ -612,7 +612,7 @@ class AbstractNetworkInterface( NetworkInterface ):
 class AggregatedNetworkInterface( AbstractNetworkInterface ):
   primary_interface = models.ForeignKey( NetworkInterface, related_name='+', on_delete=models.CASCADE )
   secondary_interfaces = models.ManyToManyField( NetworkInterface, related_name='+' )
-  paramaters = MapField( blank=True, null=True )
+  parameters = MapField( blank=True, null=True )
 
   @property
   def subclass( self ):
@@ -631,11 +631,11 @@ class AggregatedNetworkInterface( AbstractNetworkInterface ):
     result = super().config
     result[ 'primary' ] = self.primary_interface.name  # name b/c this is inside the OS
     result[ 'secondary' ] = [ i.name for i in self.secondary_interfaces.all() ]
-    result[ 'paramaters' ] = self.paramaters
+    result[ 'parameters' ] = self.parameters
 
     return result
 
-  @cinp.list_filter( name='structure', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ] )
+  @cinp.list_filter( name='structure', parameter_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ] )
   @staticmethod
   def filter_structure( structure ):
     return AggregatedNetworkInterface.objects.filter( structure=structure )
@@ -807,7 +807,7 @@ class BaseAddress( models.Model ):
 
     return real.type
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.BaseAddress' }, paramater_type_list=[ 'String', { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Utilities.models.BaseAddress' }, parameter_type_list=[ 'String', { 'type': 'Model', 'model': 'contractor.Site.models.Site' } ] )
   @staticmethod
   def lookup( ip_address, site=None ):
     try:
@@ -977,12 +977,12 @@ class Address( BaseAddress ):
   def type( self ):
     return 'Address'
 
-  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
+  @cinp.list_filter( name='address_block', parameter_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
   @staticmethod
   def filter_address_block( address_block ):
     return Address.objects.filter( address_block=address_block )
 
-  @cinp.list_filter( name='structure', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ] )
+  @cinp.list_filter( name='structure', parameter_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Structure' } ] )
   @staticmethod
   def filter_structure( structure ):
     return Address.objects.filter( networked=structure )
@@ -1056,7 +1056,7 @@ class ReservedAddress( BaseAddress ):
   def type( self ):
     return 'ReservedAddress'
 
-  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
+  @cinp.list_filter( name='address_block', parameter_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
   @staticmethod
   def filter_address_block( address_block ):
     return ReservedAddress.objects.filter( address_block=address_block )
@@ -1098,7 +1098,7 @@ class DynamicAddress( BaseAddress ):  # no dynamic pools, thoes will be auto det
   def type( self ):
     return 'DynamicAddress'
 
-  @cinp.list_filter( name='address_block', paramater_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
+  @cinp.list_filter( name='address_block', parameter_type_list=[ { 'type': 'Model', 'model': AddressBlock } ] )
   @staticmethod
   def filter_address_block( address_block ):
     return DynamicAddress.objects.filter( address_block=address_block )

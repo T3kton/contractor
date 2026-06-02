@@ -286,7 +286,7 @@ def test_arrays():
   node = parse( '[ 1, 2, "asdf", myval, callme() ]' )
   assert node == ( 'S', { '_children':
                    [
-                       ( 'L', ( 'Y', [ ( 'C', 1 ), ( 'C', 2 ), ( 'C', 'asdf' ), ( 'V', { 'module': None, 'name': 'myval' } ), ( 'F', { 'module': None, 'name': 'callme', 'paramaters': {} } ) ] ), 1 )
+                       ( 'L', ( 'Y', [ ( 'C', 1 ), ( 'C', 2 ), ( 'C', 'asdf' ), ( 'V', { 'module': None, 'name': 'myval' } ), ( 'F', { 'module': None, 'name': 'callme', 'parameters': {} } ) ] ), 1 )
                    ] } )
 
 
@@ -480,7 +480,7 @@ def test_infix():
                           ] } )
 
 
-def test_block_paramaters():
+def test_block_parameters():
   node = parse( 'begin( )\nend' )
   assert node == ( 'S', { '_children': [] } )
 
@@ -845,19 +845,19 @@ def test_function():
   node = parse( 'hello()' )
   assert node == ( 'S', { '_children':
                           [
-                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': {} } ), 1 )
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'parameters': {} } ), 1 )
                           ] } )
 
   node = parse( 'hello( )' )
   assert node == ( 'S', { '_children':
                           [
-                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': {} } ), 1 )
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'parameters': {} } ), 1 )
                           ] } )
 
   node = parse( 'more.hello()' )
   assert node == ( 'S', { '_children':
                           [
-                              ( 'L', ( 'F', { 'module': 'more', 'name': 'hello', 'paramaters': {} } ), 1 )
+                              ( 'L', ( 'F', { 'module': 'more', 'name': 'hello', 'parameters': {} } ), 1 )
                           ] } )
 
   with pytest.raises( ParserError ) as e:
@@ -870,25 +870,25 @@ def test_function():
   node = parse( 'hello( asdf = 10 )' )
   assert node == ( 'S', { '_children':
                           [
-                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', 10 ) } } ), 1 )
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'parameters': { 'asdf': ( 'C', 10 ) } } ), 1 )
                           ] } )
 
   node = parse( 'hello( asdf = "" )' )
   assert node == ( 'S', { '_children':
                           [
-                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', '' ) } } ), 1 )
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'parameters': { 'asdf': ( 'C', '' ) } } ), 1 )
                           ] } )
 
   node = parse( 'hello(asdf=10)' )
   assert node == ( 'S', { '_children':
                           [
-                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', 10 ) } } ), 1 )
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'parameters': { 'asdf': ( 'C', 10 ) } } ), 1 )
                           ] } )
 
   node = parse( 'hello( asdf = 10, zxcv="hi", qwerty=123 )' )
   assert node == ( 'S', { '_children':
                           [
-                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'paramaters': { 'asdf': ( 'C', 10 ), 'zxcv': ( 'C', 'hi' ), 'qwerty': ( 'C', 123 ) } } ), 1 )
+                              ( 'L', ( 'F', { 'module': None, 'name': 'hello', 'parameters': { 'asdf': ( 'C', 10 ), 'zxcv': ( 'C', 'hi' ), 'qwerty': ( 'C', 123 ) } } ), 1 )
                           ] } )
 
 
@@ -928,7 +928,7 @@ def test_assignment():
   node = parse( 'asdf = myfunc()' )
   assert node == ( 'S', { '_children':
                           [
-                              ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'F', { 'module': None, 'name': 'myfunc', 'paramaters': {} } ) } ), 1 )
+                              ( 'L', ( 'A', { 'target': ( 'V', { 'module': None, 'name': 'asdf' } ), 'value': ( 'F', { 'module': None, 'name': 'myfunc', 'parameters': {} } ) } ), 1 )
                           ] } )
 
   node = parse( 'asdf = myval' )

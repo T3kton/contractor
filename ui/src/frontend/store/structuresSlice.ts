@@ -44,7 +44,7 @@ export const fetchStructure = createAuthThunk(
   }
 );
 
-const structuresSlice = createDetailListSlice( { name: 'structures', fetchList: fetchStructureList, fetchOne: fetchStructure } );
+const structuresSlice = createDetailListSlice<StructureListItem, StructureDetail>( { name: 'structures', fetchList: fetchStructureList, fetchOne: fetchStructure } );
 
 export const { invalidate: invalidateStructures } = structuresSlice.actions;
 export default structuresSlice.reducer;

@@ -23,7 +23,7 @@ cinp = CInP( 'Records', '0.1' )
 
 @cinp.staticModel( not_allowed_verb_list=[ 'LIST', 'GET', 'DELETE', 'CREATE', 'UPDATE' ] )
 class Recorder():
-  @cinp.action( return_type={ 'type': 'String', 'is_array': True }, paramater_type_list=[ { 'type': 'String', 'choice_list': [ 'Site', 'BluePrint', 'Structure', 'Foundation' ] }, 'String', 'String', 'Integer' ] )
+  @cinp.action( return_type={ 'type': 'String', 'is_array': True }, parameter_type_list=[ { 'type': 'String', 'choice_list': [ 'Site', 'BluePrint', 'Structure', 'Foundation' ] }, 'String', 'String', 'Integer' ] )
   @staticmethod
   def query( group, query, fields='{}', max_results=100 ):
     db = collection( group )
@@ -43,7 +43,7 @@ class Recorder():
     result = [ rec for rec in db.find( query, fields )[ :max_results ] ]  # TODO: detect if it's just ids, if so check return_objects and return the objects
     return result
 
-  @cinp.action( return_type='String', paramater_type_list=[ { 'type': 'String', 'choice_list': [ 'Site', 'BluePrint', 'Structure', 'Foundation' ] }, 'String', 'Integer' ] )
+  @cinp.action( return_type='String', parameter_type_list=[ { 'type': 'String', 'choice_list': [ 'Site', 'BluePrint', 'Structure', 'Foundation' ] }, 'String', 'Integer' ] )
   @staticmethod
   def queryObjects( group, query, max_results=100 ):
     db = collection( group )

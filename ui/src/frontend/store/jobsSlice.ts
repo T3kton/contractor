@@ -184,16 +184,16 @@ const jobsSlice = createSlice( {
     builder
       .addCase( fetchFoundationJobList.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchFoundationJobList.fulfilled, ( state, action ) => { state.loading = false; state.listFoundation = action.payload; } )
-      .addCase( fetchFoundationJobList.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } )
+      .addCase( fetchFoundationJobList.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } )
       .addCase( fetchStructureJobList.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchStructureJobList.fulfilled, ( state, action ) => { state.loading = false; state.listStructure = action.payload; } )
-      .addCase( fetchStructureJobList.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } )
+      .addCase( fetchStructureJobList.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } )
       .addCase( fetchDependencyJobList.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchDependencyJobList.fulfilled, ( state, action ) => { state.loading = false; state.listDependency = action.payload; } )
-      .addCase( fetchDependencyJobList.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } )
+      .addCase( fetchDependencyJobList.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } )
       .addCase( fetchJobDetail.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchJobDetail.fulfilled, ( state, action ) => { state.loading = false; state.detail = action.payload; } )
-      .addCase( fetchJobDetail.rejected, ( state, action ) => { state.loading = false; state.error = ( action.error as any ).message ?? 'Error loading data'; } );
+      .addCase( fetchJobDetail.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } );
   },
 } );
 

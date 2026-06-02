@@ -1,182 +1,120 @@
-import React from 'react';
-import { connect } from 'react-redux';
+import React, { useCallback, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import ErrorPanel from './ErrorPanel';
 import { fetchAddressBlockList, fetchAddressBlock } from '../store/addressBlocksSlice';
-import type { AddressBlockListItem, AddressBlockDetail } from '../store/addressBlocksSlice';
-import { Alert, Box, CircularProgress, Link, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, CircularProgress, Link, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../store';
 import { dateStr } from '../lib/utils';
 
-interface OwnProps {
+interface Props {
   id?: string;
   site?: string;
 }
 
-interface StateProps {
-  list: AddressBlockListItem[] | null;
-  detail: AddressBlockDetail | null;
-  authenticated: boolean;
-  loading: boolean;
-  error: string | null;
-}
-
-type Props = OwnProps & StateProps & { dispatch: AppDispatch };
-
-class AddressBlock extends React.Component<Props>
+const AddressBlock: React.FC<Props> = ( { id, site } ) =>
 {
-  componentDidMount()
-  {
-    this.update( this.props );
-  }
+  const dispatch = useDispatch<AppDispatch>();
+  const authenticated = useSelector( ( s: RootState ) => s.app.authenticated );
+  const { list, detail, loading, error } = useSelector( ( s: RootState ) => s.addressBlocks );
 
-  componentDidUpdate( prevProps: Props )
+  const fetchData = useCallback( () =>
   {
-    if ( prevProps.id !== this.props.id ||
-         prevProps.site !== this.props.site ||
-         ( !prevProps.authenticated && this.props.authenticated ) ||
-         ( prevProps.list !== null && this.props.list === null ) ||
-         ( prevProps.detail !== null && this.props.detail === null ) )
-    {
-      this.update( this.props );
-    }
-  }
+    if ( !authenticated ) return;
+    if ( id !== undefined ) dispatch( fetchAddressBlock( id ) );
+    else dispatch( fetchAddressBlockList( site ?? '' ) );
+  }, [authenticated, dispatch, id, site] );
 
-  update( props: Props )
-  {
-    if( props.id !== undefined )
-    {
-      props.dispatch( fetchAddressBlock( props.id ) );
-    }
-    else
-    {
-      props.dispatch( fetchAddressBlockList( props.site ) );
-    }
-  }
+  useEffect( () => { fetchData(); }, [fetchData] );
 
-  renderDetail( detail: AddressBlockDetail )
+  if ( loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+  if ( error ) return <ErrorPanel error={ error } onRetry={ fetchData } />;
+
+  if ( id !== undefined )
   {
-    const { addressBlock: ab, addresses, reserved, dynamic } = detail;
+    const ab = detail?.addressBlock;
     return (
       <Box>
-        <Table size="small" sx={{ mt: 1 }}>
-          <TableBody>
-            <TableRow><TableCell variant="head">Name</TableCell><TableCell>{ ab.name }</TableCell></TableRow>
-            <TableRow><TableCell variant="head">Site</TableCell><TableCell><Link component={ RouterLink } to={ '/site/' + ab.site?.toString() }>{ ab.site?.toString() }</Link></TableCell></TableRow>
-            <TableRow><TableCell variant="head">Subnet</TableCell><TableCell>{ ab.subnet }</TableCell></TableRow>
-            <TableRow><TableCell variant="head">Prefix</TableCell><TableCell>{ ab.prefix }</TableCell></TableRow>
-            <TableRow><TableCell variant="head">Gateway</TableCell><TableCell>{ ab.gateway }</TableCell></TableRow>
-            <TableRow><TableCell variant="head">Netmask</TableCell><TableCell>{ ab.netmask }</TableCell></TableRow>
-            <TableRow><TableCell variant="head">Size (Number of Ips)</TableCell><TableCell>{ ab.size }</TableCell></TableRow>
-            <TableRow><TableCell variant="head">IsIPv4</TableCell><TableCell>{ ab.isIpV4 }</TableCell></TableRow>
-            <TableRow><TableCell variant="head">Max Address</TableCell><TableCell>{ ab._max_address }</TableCell></TableRow>
-            <TableRow><TableCell variant="head">Created</TableCell><TableCell>{ dateStr( ab.created ) }</TableCell></TableRow>
-            <TableRow><TableCell variant="head">Updated</TableCell><TableCell>{ dateStr( ab.updated ) }</TableCell></TableRow>
-          </TableBody>
-        </Table>
-        <Typography variant="h6" sx={{ mt: 2 }}>Address List</Typography>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell align="right">Id</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Ip Address</TableCell>
-              <TableCell>Offset</TableCell>
-              <TableCell>Reason/Networked</TableCell>
-              <TableCell>Created</TableCell>
-              <TableCell>Updated</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            { ( addresses || [] ).map( ( addr ) => (
-              <TableRow key={ 'a-' + addr.id }>
-                <TableCell align="right">{ addr.id }</TableCell>
-                <TableCell>{ addr.type }</TableCell>
-                <TableCell>{ addr.ip_address }</TableCell>
-                <TableCell>{ addr.offset }</TableCell>
-                <TableCell>{ addr.networked?.toString() }</TableCell>
-                <TableCell>{ dateStr( addr.created ) }</TableCell>
-                <TableCell>{ dateStr( addr.updated ) }</TableCell>
-              </TableRow>
-            ) ) }
-            { ( reserved || [] ).map( ( addr ) => (
-              <TableRow key={ 'r-' + addr.id }>
-                <TableCell align="right">{ addr.id }</TableCell>
-                <TableCell>{ addr.type }</TableCell>
-                <TableCell>{ addr.ip_address }</TableCell>
-                <TableCell>{ addr.offset }</TableCell>
-                <TableCell>{ addr.reason }</TableCell>
-                <TableCell>{ dateStr( addr.created ) }</TableCell>
-                <TableCell>{ dateStr( addr.updated ) }</TableCell>
-              </TableRow>
-            ) ) }
-            { ( dynamic || [] ).map( ( addr ) => (
-              <TableRow key={ 'd-' + addr.id }>
-                <TableCell align="right">{ addr.id }</TableCell>
-                <TableCell>{ addr.type }</TableCell>
-                <TableCell>{ addr.ip_address }</TableCell>
-                <TableCell>{ addr.offset }</TableCell>
-                <TableCell></TableCell>
-                <TableCell>{ dateStr( addr.created ) }</TableCell>
-                <TableCell>{ dateStr( addr.updated ) }</TableCell>
-              </TableRow>
-            ) ) }
-          </TableBody>
-        </Table>
+        <Link component={ RouterLink } to="/addressblocks">&larr; Address Blocks</Link>
+        <Typography variant="h5" gutterBottom>Address Block Detail</Typography>
+        { detail !== null && ab !== undefined &&
+          <Box>
+            <Table size="small" sx={{ mt: 1 }}>
+              <TableBody>
+                <TableRow><TableCell variant="head">Name</TableCell><TableCell>{ ab.name }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">Site</TableCell><TableCell><Link component={ RouterLink } to={ '/site/' + ab.site?.toString() }>{ ab.site?.toString() }</Link></TableCell></TableRow>
+                <TableRow><TableCell variant="head">Subnet</TableCell><TableCell>{ ab.subnet }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">Prefix</TableCell><TableCell>{ ab.prefix }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">Gateway</TableCell><TableCell>{ ab.gateway }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">Netmask</TableCell><TableCell>{ ab.netmask }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">Size</TableCell><TableCell>{ ab.size }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">IsIPv4</TableCell><TableCell>{ String( ab.isIpV4 ) }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">Created</TableCell><TableCell>{ dateStr( ab.created ) }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">Updated</TableCell><TableCell>{ dateStr( ab.updated ) }</TableCell></TableRow>
+              </TableBody>
+            </Table>
+            <Typography variant="h6" sx={{ mt: 2 }}>Addresses</Typography>
+            <Table size="small">
+              <TableHead><TableRow><TableCell>Offset</TableCell><TableCell>IP</TableCell><TableCell>Structure</TableCell><TableCell>Interface</TableCell></TableRow></TableHead>
+              <TableBody>
+                { detail.addresses.map( ( addr ) => (
+                  <TableRow key={ addr.id }>
+                    <TableCell>{ addr.offset }</TableCell>
+                    <TableCell>{ addr.ip_address }</TableCell>
+                    <TableCell><Link component={ RouterLink } to={ '/structure/' + ( addr as any ).structure?.toString() }>{ ( addr as any ).structure?.toString() }</Link></TableCell>
+                    <TableCell>{ addr.interface_name }</TableCell>
+                  </TableRow>
+                ) ) }
+              </TableBody>
+            </Table>
+            <Typography variant="h6" sx={{ mt: 2 }}>Reserved</Typography>
+            <Table size="small">
+              <TableHead><TableRow><TableCell>Offset</TableCell><TableCell>IP</TableCell><TableCell>Reason</TableCell></TableRow></TableHead>
+              <TableBody>
+                { detail.reserved.map( ( r ) => (
+                  <TableRow key={ r.id }><TableCell>{ r.offset }</TableCell><TableCell>{ r.ip_address }</TableCell><TableCell>{ r.reason }</TableCell></TableRow>
+                ) ) }
+              </TableBody>
+            </Table>
+            <Typography variant="h6" sx={{ mt: 2 }}>Dynamic</Typography>
+            <Table size="small">
+              <TableHead><TableRow><TableCell>Offset</TableCell><TableCell>IP</TableCell></TableRow></TableHead>
+              <TableBody>
+                { detail.dynamic.map( ( d ) => (
+                  <TableRow key={ d.id }><TableCell>{ d.offset }</TableCell><TableCell>{ d.ip_address }</TableCell></TableRow>
+                ) ) }
+              </TableBody>
+            </Table>
+          </Box>
+        }
       </Box>
     );
   }
 
-  render()
-  {
-    if ( this.props.loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
-    if ( this.props.error ) return <Alert severity="error">{ this.props.error }</Alert>;
-    if( this.props.id !== undefined )
-    {
-      return (
-        <Box>
-          <Link component={ RouterLink } to="/addressblocks">&larr; Address Blocks</Link>
-          <Typography variant="h5" gutterBottom>Address Block Detail</Typography>
-          { this.props.detail !== null && this.renderDetail( this.props.detail! ) }
-        </Box>
-      );
-    }
-
-    return (
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell align="right">Id</TableCell>
-            <TableCell>Name</TableCell>
-            <TableCell>Subnet</TableCell>
-            <TableCell>Prefix</TableCell>
-            <TableCell>Created</TableCell>
-            <TableCell>Updated</TableCell>
+  return (
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell>Name</TableCell>
+          <TableCell>Subnet</TableCell>
+          <TableCell>Prefix</TableCell>
+          <TableCell>Created</TableCell>
+          <TableCell>Updated</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        { ( list || [] ).map( ( item ) => (
+          <TableRow key={ item.id }>
+            <TableCell><Link component={ RouterLink } to={ '/addressblock/' + item.id }>{ item.name }</Link></TableCell>
+            <TableCell>{ item.subnet }</TableCell>
+            <TableCell>{ item.prefix }</TableCell>
+            <TableCell>{ item.created }</TableCell>
+            <TableCell>{ item.updated }</TableCell>
           </TableRow>
-        </TableHead>
-        <TableBody>
-          { ( this.props.list || [] ).map( ( item ) => (
-            <TableRow key={ item.id }>
-              <TableCell align="right"><Link component={ RouterLink } to={ '/addressblock/' + item.id }>{ item.id }</Link></TableCell>
-              <TableCell>{ item.name }</TableCell>
-              <TableCell>{ item.subnet }</TableCell>
-              <TableCell>{ item.prefix }</TableCell>
-              <TableCell>{ item.created }</TableCell>
-              <TableCell>{ item.updated }</TableCell>
-            </TableRow>
-          ) ) }
-        </TableBody>
-      </Table>
-    );
-
-  }
+        ) ) }
+      </TableBody>
+    </Table>
+  );
 };
 
-const mapStateToProps = ( state: RootState ) => ( {
-  list: state.addressBlocks.list,
-  detail: state.addressBlocks.detail,
-  authenticated: state.app.authenticated,
-  loading: state.addressBlocks.loading,
-  error: state.addressBlocks.error,
-} );
-
-export default connect( mapStateToProps )( AddressBlock );
+export default AddressBlock;

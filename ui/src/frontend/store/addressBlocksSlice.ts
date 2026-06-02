@@ -51,7 +51,7 @@ export const fetchAddressBlock = createAuthThunk(
   }
 );
 
-const addressBlocksSlice = createDetailListSlice( { name: 'addressBlocks', fetchList: fetchAddressBlockList, fetchOne: fetchAddressBlock } );
+const addressBlocksSlice = createDetailListSlice<AddressBlockListItem, AddressBlockDetail>( { name: 'addressBlocks', fetchList: fetchAddressBlockList, fetchOne: fetchAddressBlock } );
 
 export const { invalidate: invalidateAddressBlocks } = addressBlocksSlice.actions;
 export default addressBlocksSlice.reducer;

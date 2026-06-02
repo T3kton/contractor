@@ -1,6 +1,6 @@
 from contractor.fields import config_name_regex
 from contractor.lib.config import getConfig
-from contractor.tscript.runner import ParamaterError, Interrupt
+from contractor.tscript.runner import ParameterError, Interrupt
 
 
 def getWrapper( target, key ):  # TODO: find a way to make this less expensive, mabey something that can detect if the target has changed, without calling getConfig
@@ -18,29 +18,29 @@ class SetConfig( object ):
     name = path.pop( 0 )
 
     if not config_name_regex.match( name ):
-      raise ParamaterError( 'name', 'invalid' )
+      raise ParameterError( 'name', 'invalid' )
 
     config_values = self.structure.config_values
 
     if name not in config_values:
-      raise ParamaterError( 'name', '"{0}" not found'.format( name ) )
+      raise ParameterError( 'name', '"{0}" not found'.format( name ) )
 
     while path:
       if not isinstance( config_values, ( dict, list ) ):
-        raise ParamaterError( 'name', '"{0}" at non indexable level'.format( name ) )
+        raise ParameterError( 'name', '"{0}" at non indexable level'.format( name ) )
 
       try:
         config_values = config_values[ name ]
       except ( KeyError, IndexError ):
-        raise ParamaterError( 'name', '"{0}" not found'.format( name ) )
+        raise ParameterError( 'name', '"{0}" not found'.format( name ) )
 
       name = path.pop( 0 )
 
     if not isinstance( config_values, ( dict, list ) ):
-      raise ParamaterError( 'name', '"{0}" at non indexable level'.format( name ) )
+      raise ParameterError( 'name', '"{0}" at non indexable level'.format( name ) )
 
     if name not in config_values:
-      raise ParamaterError( 'name', '"{0}" not found'.format( name ) )
+      raise ParameterError( 'name', '"{0}" not found'.format( name ) )
 
     config_values[ name ] = value
 

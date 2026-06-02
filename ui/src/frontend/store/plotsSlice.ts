@@ -32,7 +32,7 @@ export const fetchPlot = createAuthThunk(
   }
 );
 
-const plotsSlice = createDetailListSlice( { name: 'plots', fetchList: fetchPlotList, fetchOne: fetchPlot } );
+const plotsSlice = createDetailListSlice<PlotListItem, PlotDetail>( { name: 'plots', fetchList: fetchPlotList, fetchOne: fetchPlot } );
 
 export const { invalidate: invalidatePlots } = plotsSlice.actions;
 export default plotsSlice.reducer;
