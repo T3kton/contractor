@@ -253,7 +253,7 @@ class Foundation( models.Model ):
   def dependencyId( self ):
     return 'f-{0}'.format( self.pk )
 
-  @cinp.action( return_type={ 'type': 'String' }, paramater_type_list=[ 'Map' ] )
+  @cinp.action( return_type={ 'type': 'String' }, parameter_type_list=[ 'Map' ] )
   def setIdMap( self, id_map ):
     error = self.blueprint.validateIdMap( id_map )
     if error is not None:
@@ -271,7 +271,7 @@ class Foundation( models.Model ):
 
     return None
 
-  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
+  @cinp.action( return_type='Integer', parameter_type_list=[ '_USER_' ]  )
   def doCreate( self, user ):
     """
     This will submit a job to run the create script.
@@ -279,7 +279,7 @@ class Foundation( models.Model ):
     from contractor.Foreman.lib import createJob
     return createJob( 'create', self, user )
 
-  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ]  )
+  @cinp.action( return_type='Integer', parameter_type_list=[ '_USER_' ]  )
   def doDestroy( self, user ):
     """
     This will submit a job to run the destroy script.
@@ -287,7 +287,7 @@ class Foundation( models.Model ):
     from contractor.Foreman.lib import createJob
     return createJob( 'destroy', self, user )
 
-  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_', 'String' ]  )
+  @cinp.action( return_type='Integer', parameter_type_list=[ '_USER_', 'String' ]  )
   def doJob( self, user, name ):
     """
     This will submit a job to run the specified script.
@@ -329,12 +329,12 @@ class Foundation( models.Model ):
     """
     return [ { 'name': i.name, 'physical_location': i.physical_location, 'is_provisioning': i.is_provisioning, 'mac': i.mac, 'pxe': i.pxe, 'network': i.network } for i in self.networkinterface_set.all().order_by( 'physical_location' ) ]
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.list_filter( name='site', parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Foundation.objects.filter( site=site )
 
-  @cinp.list_filter( name='todo', paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'Boolean', 'String' ] )
+  @cinp.list_filter( name='todo', parameter_type_list=[ { 'type': 'Model', 'model': Site }, 'Boolean', 'String' ] )
   @staticmethod
   def filter_todo( site, has_dependancies, foundation_class ):
     args = {}
@@ -498,17 +498,17 @@ class Structure( Networked ):
   def dependencyId( self ):
     return 's-{0}'.format( self.pk )
 
-  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ] )
+  @cinp.action( return_type='Integer', parameter_type_list=[ '_USER_' ] )
   def doCreate( self, user ):
     from contractor.Foreman.lib import createJob
     return createJob( 'create', self, user )
 
-  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_' ] )
+  @cinp.action( return_type='Integer', parameter_type_list=[ '_USER_' ] )
   def doDestroy( self, user ):
     from contractor.Foreman.lib import createJob
     return createJob( 'destroy', self, user )
 
-  @cinp.action( return_type='Integer', paramater_type_list=[ '_USER_', 'String' ]  )
+  @cinp.action( return_type='Integer', parameter_type_list=[ '_USER_', 'String' ]  )
   def doJob( self, user, name ):
     from contractor.Foreman.lib import createJob
     if name in ( 'create', 'destroy' ):
@@ -529,7 +529,7 @@ class Structure( Networked ):
   def getConfig( self ):
     return mergeValues( getConfig( self ) )
 
-  @cinp.action( return_type='Map', paramater_type_list=[ 'Map' ] )
+  @cinp.action( return_type='Map', parameter_type_list=[ 'Map' ] )
   def updateConfig( self, config_value_map ):  # TODO: this is a bad Idea, need to figure out a better way to do this, at least restrict it to accounts that can create/updatre structures
     self.config_values.update( config_value_map )
     self.full_clean()
@@ -537,7 +537,7 @@ class Structure( Networked ):
 
     return mergeValues( getConfig( self ) )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, paramater_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': 'contractor.Building.models.Structure' }, parameter_type_list=[ { 'type': 'Model', 'model': Site }, 'String' ] )
   @staticmethod
   def getWithHostnameSite( site, hostname ):
     try:
@@ -545,7 +545,7 @@ class Structure( Networked ):
     except Structure.DoesNotExist:
       return None
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.list_filter( name='site', parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Structure.objects.filter( site=site )
@@ -651,7 +651,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
   def newFoundation( self, hostname ):
     raise ValueError( 'Root Complex dose not support Foundations' )
 
-  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, paramater_type_list=[ { 'type': 'String' }, { 'type': 'Model', 'model': Site }, { 'type': 'Map', 'is_array': True } ] )
+  @cinp.action( return_type={ 'type': 'Model', 'model': Foundation }, parameter_type_list=[ { 'type': 'String' }, { 'type': 'Model', 'model': Site }, { 'type': 'Map', 'is_array': True } ] )
   def createFoundation( self, hostname, site, interface_map_list ):  # TODO: wrap this in a transaction, or some other way to unwrap everything if it fails
     self = self.subclass
 
@@ -678,7 +678,7 @@ class Complex( models.Model ):  # group of Structures, ie a cluster
 
     return foundation
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.list_filter( name='site', parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Complex.objects.filter( site=site )
@@ -780,7 +780,7 @@ class ComplexStructure( models.Model ):
   def state( self ):
     return 'Built'
 
-  @cinp.list_filter( name='complex', paramater_type_list=[ { 'type': 'Model', 'model': Complex } ] )
+  @cinp.list_filter( name='complex', parameter_type_list=[ { 'type': 'Model', 'model': Complex } ] )
   @staticmethod
   def filter_complex( complex ):
     return ComplexStructure.objects.filter( complex=complex )
@@ -920,12 +920,12 @@ class Dependency( models.Model ):
 
     return None
 
-  @cinp.list_filter( name='foundation', paramater_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Foundation' } ] )
+  @cinp.list_filter( name='foundation', parameter_type_list=[ { 'type': 'Model', 'model': 'contractor.Building.models.Foundation' } ] )
   @staticmethod
   def filter_foundation( foundation ):
     return Dependency.objects.filter( foundation=foundation )
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.list_filter( name='site', parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return Dependency.objects.filter( Q( foundation__site=site )

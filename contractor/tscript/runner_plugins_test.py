@@ -1,4 +1,4 @@
-from contractor.tscript.runner import ExternalFunction, ParamaterError
+from contractor.tscript.runner import ExternalFunction, ParameterError
 
 
 class Constant( ExternalFunction ):
@@ -16,7 +16,7 @@ class Multiply( ExternalFunction ):
     try:
        self._value = int( parms[ 'value' ] )
     except ( KeyError, ValueError ):
-      raise ParamaterError( 'value', 'not provided or is not an int' )
+      raise ParameterError( 'value', 'not provided or is not an int' )
 
   @property
   def value( self ):
@@ -85,12 +85,12 @@ class Count( ExternalFunction ):
     try:
        self.count_by = int( parms[ 'count_by' ] )
     except ( KeyError, ValueError ):
-      raise ParamaterError( 'count_by', 'not provided or is not an int' )
+      raise ParameterError( 'count_by', 'not provided or is not an int' )
 
     try:
        self.stop_at = int( parms[ 'stop_at' ] )
     except ( KeyError, ValueError ):
-      raise ParamaterError( 'stop_at', 'not provided or is not an int' )
+      raise ParameterError( 'stop_at', 'not provided or is not an int' )
 
   def run( self ):
     self.counter += self.count_by

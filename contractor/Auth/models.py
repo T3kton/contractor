@@ -50,7 +50,7 @@ cinp = CInP( 'Auth', '2.0' )
 
 @cinp.staticModel( not_allowed_verb_list=[ 'LIST', 'GET', 'DELETE', 'CREATE', 'UPDATE' ] )
 class User():
-  @cinp.action( return_type='String', paramater_type_list=[ 'String', 'String' ] )
+  @cinp.action( return_type='String', parameter_type_list=[ 'String', 'String' ] )
   @staticmethod
   def login( username, password ):
     user = auth.authenticate( username=username, password=password )
@@ -64,18 +64,18 @@ class User():
 
     return request.session.session_key
 
-  @cinp.action( paramater_type_list=[ '_USER_' ] )
+  @cinp.action( parameter_type_list=[ '_USER_' ] )
   @staticmethod
   def logout( user ):
     request = Request( session=user._django_session, user=user )
     auth.logout( request )
 
-  @cinp.action( return_type='String', paramater_type_list=[ '_USER_' ] )
+  @cinp.action( return_type='String', parameter_type_list=[ '_USER_' ] )
   @staticmethod
   def whoami( user ):
     return str( user )
 
-  @cinp.action( paramater_type_list=[ '_USER_', 'String' ] )
+  @cinp.action( parameter_type_list=[ '_USER_', 'String' ] )
   @staticmethod
   def changePassword( user, password ):
     user.set_password( password )

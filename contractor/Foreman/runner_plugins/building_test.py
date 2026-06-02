@@ -1,7 +1,7 @@
 import pytest
 
 from contractor.Foreman.runner_plugins.building import SetConfig
-from contractor.tscript.runner import ParamaterError
+from contractor.tscript.runner import ParameterError
 
 
 class fakeStructure():
@@ -23,31 +23,31 @@ def test_setconfig():
 
   s = fakeStructure( { 'a': 2 } )
   sc = SetConfig( s )
-  with pytest.raises( ParamaterError ):
+  with pytest.raises( ParameterError ):
     sc( 'b', 4 )
   assert s.config_values == { 'a': 2 }
 
   s = fakeStructure( { 'a': 2, 'b': 10 } )
   sc = SetConfig( s )
-  with pytest.raises( ParamaterError ):
+  with pytest.raises( ParameterError ):
     sc( 'a.b', 4 )
   assert s.config_values == { 'a': 2, 'b': 10 }
 
   s = fakeStructure( { 'a': 2, 'b': 10 } )
   sc = SetConfig( s )
-  with pytest.raises( ParamaterError ):
+  with pytest.raises( ParameterError ):
     sc( 'a.b.c', 4 )
   assert s.config_values == { 'a': 2, 'b': 10 }
 
   s = fakeStructure( { 'a': { 'a': 3 }, 'b': 10 } )
   sc = SetConfig( s )
-  with pytest.raises( ParamaterError ):
+  with pytest.raises( ParameterError ):
     sc( 'a.b', 4 )
   assert s.config_values == { 'a': { 'a': 3 }, 'b': 10 }
 
   s = fakeStructure( { 'a': { 'b': 3 }, 'b': 10 } )
   sc = SetConfig( s )
-  with pytest.raises( ParamaterError ):
+  with pytest.raises( ParameterError ):
     sc( 'a.a.b', 4 )
   assert s.config_values == { 'a': { 'b': 3 }, 'b': 10 }
 
@@ -58,13 +58,13 @@ def test_setconfig():
 
   s = fakeStructure( { 'a': [], 'b': 10 } )
   sc = SetConfig( s )
-  with pytest.raises( ParamaterError ):
+  with pytest.raises( ParameterError ):
     sc( 'a.b', 4 )
   assert s.config_values == { 'a': [], 'b': 10 }
 
   s = fakeStructure( { 'a': [], 'b': 10 } )
   sc = SetConfig( s )
-  with pytest.raises( ParamaterError ):
+  with pytest.raises( ParameterError ):
     sc( 'a.1', 4 )
   assert s.config_values == { 'a': [], 'b': 10 }
 
@@ -80,7 +80,7 @@ def test_setconfig():
 
   s = fakeStructure( { 'a|d': 2, 'b': 10 } )
   sc = SetConfig( s )
-  with pytest.raises( ParamaterError ):
+  with pytest.raises( ParameterError ):
     sc( 'a|d', 4 )
   assert s.config_values == { 'a|d': 2, 'b': 10 }
 

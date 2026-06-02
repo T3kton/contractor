@@ -7,7 +7,7 @@ from contractor.Foreman.models import BaseJob, FoundationJob, StructureJob, Depe
 from contractor.PostOffice.lib import registerEvent
 
 from contractor.tscript.parser import parse
-from contractor.tscript.runner import Runner, Pause, ExecutionError, UnrecoverableError, ParamaterError, NotDefinedError, ScriptError
+from contractor.tscript.runner import Runner, Pause, ExecutionError, UnrecoverableError, ParameterError, NotDefinedError, ScriptError
 
 
 RUNNER_MODULE_LIST = []
@@ -256,7 +256,7 @@ def processJobs( site, module_list, max_jobs=10 ):
       job.state = 'error'
       job.message = str( e )[ 0:1024 ]
 
-    except ( UnrecoverableError, ParamaterError, NotDefinedError, ScriptError ) as e:
+    except ( UnrecoverableError, ParameterError, NotDefinedError, ScriptError ) as e:
       job.state = 'aborted'
       job.message = str( e )[ 0:1024 ]
 

@@ -157,7 +157,7 @@ class BaseJob( models.Model ):
     self.full_clean()
     self.save()
 
-  @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.action( return_type={ 'type': 'Map' }, parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def jobStats( site ):
     """
@@ -218,7 +218,7 @@ class BaseJob( models.Model ):
 
     return result
 
-  @cinp.action( return_type='String', paramater_type_list=[ 'String' ] )
+  @cinp.action( return_type='String', parameter_type_list=[ 'String' ] )
   def signalComplete( self, cookie ):
     runner = pickle.loads( self.script_runner )
 
@@ -232,7 +232,7 @@ class BaseJob( models.Model ):
 
     return 'No Reciever'
 
-  @cinp.action( return_type='String', paramater_type_list=[ 'String' ] )
+  @cinp.action( return_type='String', parameter_type_list=[ 'String' ] )
   def signalAlert( self, msg ):
     self.message = msg[ 0:1024 ]
     if self.status in ( 'queued', 'paused' ):
@@ -243,7 +243,7 @@ class BaseJob( models.Model ):
 
     return 'Alerted'
 
-  @cinp.action( return_type='String', paramater_type_list=[ 'String' ] )
+  @cinp.action( return_type='String', parameter_type_list=[ 'String' ] )
   def postMessage( self, msg ):
     self.message = msg[ 0:1024 ]
     self.full_clean()
@@ -368,7 +368,7 @@ class FoundationJob( BaseJob ):
     """
     return super().jobRunnerState()
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.list_filter( name='site', parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return FoundationJob.objects.filter( site=site )
@@ -471,7 +471,7 @@ class StructureJob( BaseJob ):
     """
     return super().jobRunnerState()
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.list_filter( name='site', parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return StructureJob.objects.filter( site=site )
@@ -582,7 +582,7 @@ class DependencyJob( BaseJob ):
     """
     return super().jobRunnerState()
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.list_filter( name='site', parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return DependencyJob.objects.filter( site=site )
@@ -672,27 +672,27 @@ class JobLog( models.Model ):
     log.full_clean()
     log.save()
 
-  @cinp.list_filter( name='site', paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.list_filter( name='site', parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def filter_site( site ):
     return JobLog.objects.filter( site=site )
 
-  @cinp.list_filter( name='job', paramater_type_list=[ 'Integer' ] )
+  @cinp.list_filter( name='job', parameter_type_list=[ 'Integer' ] )
   @staticmethod
   def filter_job( job_id ):
     return JobLog.objects.filter( job_id=job_id )
 
-  @cinp.list_filter( name='structure', paramater_type_list=[ { 'type': 'Model', 'model': Structure } ] )
+  @cinp.list_filter( name='structure', parameter_type_list=[ { 'type': 'Model', 'model': Structure } ] )
   @staticmethod
   def filter_structure( structure ):
     return JobLog.objects.filter( site=structure.site, target_class='Structure', target_id=structure.pk )
 
-  @cinp.list_filter( name='foundation', paramater_type_list=[ { 'type': 'Model', 'model': Foundation } ] )
+  @cinp.list_filter( name='foundation', parameter_type_list=[ { 'type': 'Model', 'model': Foundation } ] )
   @staticmethod
   def filter_foundation( foundation ):
     return JobLog.objects.filter( site=foundation.site, target_class='Foundation', target_id=foundation.locator )
 
-  @cinp.list_filter( name='dependency', paramater_type_list=[ { 'type': 'Model', 'model': Dependency } ] )
+  @cinp.list_filter( name='dependency', parameter_type_list=[ { 'type': 'Model', 'model': Dependency } ] )
   @staticmethod
   def filter_dependency( dependency ):
     return JobLog.objects.filter( site=dependency.site, target_class='Dependency', target_id=dependency.pk )

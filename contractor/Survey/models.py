@@ -78,7 +78,7 @@ class Cartographer( models.Model ):
       iface.full_clean()
       iface.save()
 
-  @cinp.action( paramater_type_list=[ { 'type': 'Model', 'model': Foundation } ] )
+  @cinp.action( parameter_type_list=[ { 'type': 'Model', 'model': Foundation } ] )
   def assign( self, foundation ):
     if foundation.state != 'planned':
       raise SurveyException( 'FOUNDATION_INVALID_STATE', 'Foundation is not in a valid state for assigning' )
@@ -87,7 +87,7 @@ class Cartographer( models.Model ):
     self.full_clean()
     self.save()
 
-  @cinp.action( paramater_type_list=[ 'String' ] )
+  @cinp.action( parameter_type_list=[ 'String' ] )
   @staticmethod
   def register( identifier ):
     try:
@@ -106,7 +106,7 @@ class Cartographer( models.Model ):
     locator.full_clean()
     locator.save()
 
-  @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ 'Map' ] )
+  @cinp.action( return_type={ 'type': 'Map' }, parameter_type_list=[ 'Map' ] )
   def lookup( self, info_map=None ):
     self.info_map = info_map
     self.last_checkin = datetime.datetime.now( datetime.UTC )
@@ -130,7 +130,7 @@ class Cartographer( models.Model ):
 
     return { 'matched_by': None }
 
-  @cinp.action( paramater_type_list=[ 'String' ] )
+  @cinp.action( parameter_type_list=[ 'String' ] )
   def setMessage( self, message ):
     self.message = message
     self.full_clean()

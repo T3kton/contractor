@@ -14,18 +14,18 @@ class Dispatch():
   def __init__( self ):
     super().__init__()
 
-  @cinp.action( return_type={ 'type': 'Map', 'is_array': True }, paramater_type_list=[ { 'type': 'Model', 'model': Site }, { 'type': 'String', 'is_array': True }, 'Integer' ] )
+  @cinp.action( return_type={ 'type': 'Map', 'is_array': True }, parameter_type_list=[ { 'type': 'Model', 'model': Site }, { 'type': 'String', 'is_array': True }, 'Integer' ] )
   @staticmethod
   def getJobs( site, module_list, max_jobs=10 ):
     result = processJobs( site, module_list, max_jobs )
     return result
 
-  @cinp.action( return_type='String', paramater_type_list=[ 'Integer', 'String', 'Map' ] )
+  @cinp.action( return_type='String', parameter_type_list=[ 'Integer', 'String', 'Map' ] )
   @staticmethod
   def jobResults( job_id, cookie, data ):
     return jobResults( job_id, cookie, data )
 
-  @cinp.action( paramater_type_list=[ 'Integer', 'String', 'String' ] )
+  @cinp.action( parameter_type_list=[ 'Integer', 'String', 'String' ] )
   @staticmethod
   def jobError( job_id, cookie, msg ):
     jobError( job_id, cookie, msg )
@@ -44,7 +44,7 @@ class DHCPd():
   def __init__( self ):
     super().__init__()
 
-  @cinp.action( return_type={ 'type': 'Map', 'is_array': True }, paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.action( return_type={ 'type': 'Map', 'is_array': True }, parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def getDynamicPools( site ):
     result = []
@@ -72,7 +72,7 @@ class DHCPd():
 
     return result
 
-  @cinp.action( return_type={ 'type': 'Map' }, paramater_type_list=[ { 'type': 'Model', 'model': Site } ] )
+  @cinp.action( return_type={ 'type': 'Map' }, parameter_type_list=[ { 'type': 'Model', 'model': Site } ] )
   @staticmethod
   def getStaticPools( site ):
     result = {}

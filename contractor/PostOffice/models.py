@@ -113,7 +113,7 @@ class Box( models.Model ):
 class FoundationBox( Box ):
   foundation = models.ForeignKey( Foundation, on_delete=models.CASCADE, related_name='+' )
 
-  @cinp.action( paramater_type_list=[ 'Integer' ] )
+  @cinp.action( parameter_type_list=[ 'Integer' ] )
   def extend( self, additional_hours ):
     super().extend( additional_hours )
 
@@ -134,7 +134,7 @@ class FoundationBox( Box ):
 class StructureBox( Box ):
   structure = models.ForeignKey( Structure, on_delete=models.CASCADE, related_name='+' )
 
-  @cinp.action( paramater_type_list=[ 'Integer' ] )
+  @cinp.action( parameter_type_list=[ 'Integer' ] )
   def extend( self, additional_hours ):
     super().extend( additional_hours )
 

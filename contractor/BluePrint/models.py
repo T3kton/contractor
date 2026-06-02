@@ -230,7 +230,7 @@ class BluePrintScript( models.Model ):
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
-  @cinp.list_filter( name='blueprint', paramater_type_list=[ { 'type': 'Model', 'model': BluePrint } ] )
+  @cinp.list_filter( name='blueprint', parameter_type_list=[ { 'type': 'Model', 'model': BluePrint } ] )
   @staticmethod
   def filter_site( blueprint ):
     return BluePrintScript.objects.filter( blueprint=blueprint )

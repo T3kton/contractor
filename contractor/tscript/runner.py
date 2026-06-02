@@ -29,12 +29,12 @@ class ScriptError( UnrecoverableError ):
   pass
 
 
-class ParamaterError( UnrecoverableError ):
+class ParameterError( UnrecoverableError ):
   def __init__( self, name, msg, line_no=None ):
     if line_no is not None:
-      msg = 'Paramater Error paramater "{0}" line {2}: {1}'.format( name, msg, line_no )
+      msg = 'Parameter Error parameter "{0}" line {2}: {1}'.format( name, msg, line_no )
     else:
-      msg = 'Paramater Error paramater "{0}": {1}'.format( name, msg )
+      msg = 'Parameter Error parameter "{0}": {1}'.format( name, msg )
 
     super().__init__( msg )
     self.name = name
@@ -168,11 +168,11 @@ class ExternalFunction( object ):
 
   def setup( self, parms ):
     # this function is only called once when the function is first called in the script.
-    # parms is a dict of the paramaters passed in from the script
-    # if the params are not what they should be, raise ParamaterError
-    # make sure to do strict saninity checks on the in bound paramaters.
+    # parms is a dict of the parameters passed in from the script
+    # if the params are not what they should be, raise ParameterError
+    # make sure to do strict saninity checks on the in bound parameters.
     # do not raise Pause, any exceptions raised will cause setup to be called again, which
-    # is desired when validating paramaters
+    # is desired when validating parameters
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     pass
 
@@ -193,9 +193,9 @@ class ExternalFunction( object ):
   def toSubcontractor( self ):
     # this is sent to the subcontractor
     # this should return a tuple
-    # first paramater is the function inside the plugin to call, second is the value to send to the function
+    # first parameter is the function inside the plugin to call, second is the value to send to the function
     # this is called initially, then again after fromSubcontractor has returnd results until done is True
-    # example: return ( 'myfunc', { 'stuff': 'for', 'myfunc': 'to use' } ) # NOTE: the paramater part can be anything that is serilizable
+    # example: return ( 'myfunc', { 'stuff': 'for', 'myfunc': 'to use' } ) # NOTE: the parameter part can be anything that is serilizable
     # if None is returned, subcontractor will not be notified to do anything
     # THIS MUST NOT HANG/PAUSE/WAIT/POLL
     # subcontractor threads will be waiting on this function
@@ -222,7 +222,7 @@ class ExternalFunction( object ):
   def getScriptValue( self, module, name ):
     try:
       return self._runner.getValue( module, name )
-    except ( NotDefinedError, ParamaterError) as e:
+    except ( NotDefinedError, ParameterError) as e:
       raise ValueError( e )
 
 
@@ -251,20 +251,20 @@ class Delay( ExternalFunction ):
     try:
       seconds = int( parms.get( 'seconds', 0 ) )
     except ( ValueError, TypeError ):
-      raise ParamaterError( 'seconds', 'must be an integer' )
+      raise ParameterError( 'seconds', 'must be an integer' )
 
     try:
       minutes = int( parms.get( 'minutes', 0 ) )
     except ( ValueError, TypeError ):
-      raise ParamaterError( 'minutes', 'must be an integer' )
+      raise ParameterError( 'minutes', 'must be an integer' )
 
     try:
       hours = int( parms.get( 'hours', 0 ) )
     except ( ValueError, TypeError ):
-      raise ParamaterError( 'hours', 'must be an integer' )
+      raise ParameterError( 'hours', 'must be an integer' )
 
     if seconds == 0 and minutes == 0 and hours == 0:
-      raise ParamaterError( '<unknwon>', 'specified 0 delay, set one or more of "seconds", "minutes", "hours"' )
+      raise ParameterError( '<unknwon>', 'specified 0 delay, set one or more of "seconds", "minutes", "hours"' )
 
     self.end_at = datetime.datetime.now( datetime.UTC ) + datetime.timedelta( seconds=seconds, minutes=minutes, hours=hours )
 
@@ -410,7 +410,7 @@ class Runner( object ):
     return self.state == 'ABORTED'
 
   @property
-  def status( self ):  # list of ( % complete, operation, paramaters )
+  def status( self ):  # list of ( % complete, operation, parameters )
     logging.debug( 'runner: status state: {0}'.format( self.state ) )
     if self.done or self.aborted:
       return [ ( 100.0, 'Scope', None ) ]
@@ -560,7 +560,7 @@ class Runner( object ):
       except ( Pause, ExecutionError ) as e:
         raise e
 
-      except ( UnrecoverableError, ParamaterError, NotDefinedError, ScriptError ) as e:
+      except ( UnrecoverableError, ParameterError, NotDefinedError, ScriptError ) as e:
         self.state = 'ABORTED'
         raise e
 
@@ -648,7 +648,7 @@ class Runner( object ):
           raise NotDefinedError( '{0}" of module "{1}'.format( op_data[ 'name' ], op_data[ 'module' ] ), self.cur_line )
 
         if getter is None:
-          raise ParamaterError( 'target', '"{0}" of module "{1}" is not gettable'.format( op_data[ 'name' ], op_data[ 'module' ] ), self.cur_line )
+          raise ParameterError( 'target', '"{0}" of module "{1}" is not gettable'.format( op_data[ 'name' ], op_data[ 'module' ] ), self.cur_line )
 
         try:
           value = getter()
@@ -734,7 +734,7 @@ class Runner( object ):
           raise NotDefinedError( '{0}" of "{1}'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
         if getter is None:
-          raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
+          raise ParameterError( 'target', '"{0}" of "{1}" is not gettable'.format( op_data[ 'module' ], op_data[ 'name' ] ), self.cur_line )
 
         try:
           value = getter()
@@ -757,7 +757,7 @@ class Runner( object ):
 
     elif op_type == Types.ASSIGNMENT:  # get the value from 'value', and assign it to the variable defined in 'target'
       if op_data[ 'target' ][0] not in ( Types.VARIABLE, Types.ARRAY_MAP_ITEM ) or ( op_data[ 'target' ][0] == Types.ARRAY_MAP_ITEM and op_data[ 'target' ][1][ 'module' ] is not None ):
-        raise ParamaterError( 'target', 'Can only assign to variables', self.cur_line )
+        raise ParameterError( 'target', 'Can only assign to variables', self.cur_line )
 
       try:
         self.state[ state_index ][1]
@@ -808,7 +808,7 @@ class Runner( object ):
           raise NotDefinedError( '{0}" of "{1}'.format( target[ 'module' ], target[ 'name' ] ), self.cur_line )
 
         if setter is None:
-          raise ParamaterError( 'target', '"{0}" of "{1}" is not settable'.format( target[ 'module' ], target[ 'name' ] ), self.cur_line )
+          raise ParameterError( 'target', '"{0}" of "{1}" is not settable'.format( target[ 'module' ], target[ 'name' ] ), self.cur_line )
 
         try:
           setter( value )
@@ -857,9 +857,9 @@ class Runner( object ):
 
       elif op_data[ 'operator' ] in infix_math_operator_map:  # the number group
         if not isinstance( left_val, ( int, float, bool ) ):
-          raise ParamaterError( 'left of operator', 'must be numeric', self.cur_line )
+          raise ParameterError( 'left of operator', 'must be numeric', self.cur_line )
         if not isinstance( right_val, ( int, float, bool ) ):
-          raise ParamaterError( 'right of operator', 'must be numeric', self.cur_line )
+          raise ParameterError( 'right of operator', 'must be numeric', self.cur_line )
 
         value = infix_math_operator_map[ op_data[ 'operator' ] ]( left_val, right_val )
 
@@ -876,24 +876,24 @@ class Runner( object ):
       try:
         self.state[ state_index ][1]
       except IndexError:
-        self.state[ state_index ].append( { 'paramaters': {} } )
+        self.state[ state_index ].append( { 'parameters': {} } )
 
       if self.state[ state_index ][1] is None:  # TODO: is there a better way to handle this?
         pass
         # function allready executed and was an Exception last time, just let things pass by us
 
       else:
-        # get the paramaters
-        for key in op_data[ 'paramaters' ]:
+        # get the parameters
+        for key in op_data[ 'parameters' ]:
           try:
-            self.state[ state_index ][1][ 'paramaters' ][ key ]
+            self.state[ state_index ][1][ 'parameters' ][ key ]
           except KeyError:
             try:
               self.state[ state_index + 1 ][2]
             except IndexError:
-              self._evaluate( op_data[ 'paramaters' ][ key ], state_index + 1 )
+              self._evaluate( op_data[ 'parameters' ][ key ], state_index + 1 )
 
-            self.state[ state_index ][1][ 'paramaters' ][ key ] = self.state[ state_index + 1 ][2]
+            self.state[ state_index ][1][ 'parameters' ][ key ] = self.state[ state_index + 1 ][2]
             self.state = self.state[ :( state_index + 1 ) ]
 
         try:
@@ -929,9 +929,9 @@ class Runner( object ):
           if isinstance( handler, ExternalFunction ):
             handler._runner = self
             try:
-              handler.setup( self.state[ state_index ][1][ 'paramaters' ] )
+              handler.setup( self.state[ state_index ][1][ 'parameters' ] )
 
-            except ( ParamaterError, Pause, ExecutionError, UnrecoverableError, Interrupt ) as e:
+            except ( ParameterError, Pause, ExecutionError, UnrecoverableError, Interrupt ) as e:
               raise e
 
             except Exception as e:
@@ -945,13 +945,13 @@ class Runner( object ):
 
           else:
             try:
-              paramaters = self.state[ state_index ][1][ 'paramaters' ]
+              parameters = self.state[ state_index ][1][ 'parameters' ]
             except TypeError as e:
-              raise ParamaterError( '<unknown>', e, self.cur_line )
+              raise ParameterError( '<unknown>', e, self.cur_line )
 
             try:
-              value = handler( **paramaters )
-            except ( ParamaterError, Pause, ExecutionError, UnrecoverableError, Interrupt ) as e:
+              value = handler( **parameters )
+            except ( ParameterError, Pause, ExecutionError, UnrecoverableError, Interrupt ) as e:
               raise e
 
             except Exception as e:
@@ -1092,17 +1092,17 @@ class Runner( object ):
     handler = operation[1][ 'handler' ]
     handler._runner = self
     try:
-      paramaters = handler.toSubcontractor()
+      parameters = handler.toSubcontractor()
     except Exception as e:
       _debugDump( 'Handler "{0}" in module "{1}" error during toSubcontractor on line "{2}"'.format( handler.__class__.__name__, operation[1][ 'module' ], self.cur_line ), e, self.ast, self.state )
       return None  # TODO: log something?
 
-    if paramaters is None:
+    if parameters is None:
       return None
 
     operation[1][ 'dispatched' ] = True
 
-    return { 'module': operation[1][ 'module' ], 'function': paramaters[0], 'cookie': self.contractor_cookie, 'paramaters': paramaters[1] }
+    return { 'module': operation[1][ 'module' ], 'function': parameters[0], 'cookie': self.contractor_cookie, 'parameters': parameters[1] }
 
   def fromSubcontractor( self, cookie, data ):
     if self.done or self.aborted or self.state == []:
@@ -1200,7 +1200,7 @@ class Runner( object ):
       raise NotDefinedError( name )
 
     if getter is None:
-      raise ParamaterError( 'target', '"{0}" of "{1}" is not gettable'.format( module, name ) )
+      raise ParameterError( 'target', '"{0}" of "{1}" is not gettable'.format( module, name ) )
 
     return getter()
 

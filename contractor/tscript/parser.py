@@ -13,9 +13,9 @@ constant_expression = ws_s ( boolean / none / time / number_float / number_int /
 comment             = "#" ~"[^\\r\\n]*"
 jump_point          = ":" label
 goto                = "goto " label
-paramater_map       = ( ( ws_s label ws_s "=" value_expression "," )* ws_s label ws_s "=" value_expression )? ws_s
-const_paramater_map = ( ( ws_s label ws_s "=" constant_expression "," )* ws_s label ws_s "=" constant_expression )? ws_s
-block               = "begin(" const_paramater_map ")" lines ws_s "end"
+parameter_map       = ( ( ws_s label ws_s "=" value_expression "," )* ws_s label ws_s "=" value_expression )? ws_s
+const_parameter_map = ( ( ws_s label ws_s "=" constant_expression "," )* ws_s label ws_s "=" constant_expression )? ws_s
+block               = "begin(" const_parameter_map ")" lines ws_s "end"
 
 whiledo             = "while" value_expression "do" em_p expression
 other               = ( "continue" / "break" / "pass" )
@@ -33,12 +33,12 @@ none                = ~"[Nn]one"
 exists              = "exists(" ws_s ( array_map_item / variable ) ws_s ")"
 
 array               = "[" ( ( value_expression "," )* value_expression )? ws_s "]"
-map                 = "{" paramater_map "}"
+map                 = "{" parameter_map "}"
 
 reserved            = ( "begin" / "end" / "while" / "do" / "goto" / "exists" / other ) !~"[a-zA-Z0-9_]"
 variable            = !reserved ( label "." )? label !"("
 
-function            = !reserved ( label "." )? label "(" paramater_map ")"
+function            = !reserved ( label "." )? label "(" parameter_map ")"
 array_map_item      = variable "[" value_expression "]"
 
 infix               = "(" value_expression ( "." / "^" / "*" / "/" / "%" / "+" / "-" / "&" / "|" / "and"/ "or" / "==" / "!=" / "<=" / ">=" / ">" / "<" ) value_expression ")"
@@ -208,7 +208,7 @@ class Parser( object ):
 
     return ( Types.SCOPE, options )
 
-  def paramater_map( self, node ):
+  def parameter_map( self, node ):
     children = node.children[0].children
     if len( children ) == 0:
       return {}
@@ -223,15 +223,15 @@ class Parser( object ):
       try:
         result[ item[1].text ] = self._eval( item[4] )
       except IsEmpty:
-        raise Exception( 'Paramater values are not allowed to be IsEmpty' )
+        raise Exception( 'Parameter values are not allowed to be IsEmpty' )
 
     return result
 
-  def const_paramater_map( self, node ):
-    result = self.paramater_map( node )
+  def const_parameter_map( self, node ):
+    result = self.parameter_map( node )
     for key in result.keys():
       if result[ key ][0] != Types.CONSTANT:
-        raise Exception( 'Expected Constant paramater, got type "{0}"'.format( result[ key ][0] ) )
+        raise Exception( 'Expected Constant parameter, got type "{0}"'.format( result[ key ][0] ) )
 
       result[ key ] = result[ key ][1]
 
@@ -338,14 +338,14 @@ class Parser( object ):
     else:
       module = None
 
-    return ( Types.FUNCTION, { 'module': module, 'name': node.children[2].text, 'paramaters': params } )
+    return ( Types.FUNCTION, { 'module': module, 'name': node.children[2].text, 'parameters': params } )
 
   def assignment( self, node ):
     target = self._eval( node.children[0] )
 
     return ( Types.ASSIGNMENT, { 'target': target, 'value': self._eval( node.children[3] ) } )
 
-  def _check( self, ast ):  # TODO: also check infix operators that they are operating against the right type of paramaters, as far as the constansts are anyway
+  def _check( self, ast ):  # TODO: also check infix operators that they are operating against the right type of parameters, as far as the constansts are anyway
     node_stack = [ ( ast, 0 ) ]
 
     while node_stack:

@@ -11,7 +11,7 @@
     "@reduxjs/toolkit": "^2.11.2",
     "@unovis/react": "^1.4.0",
     "@unovis/ts": "^1.4.0",
-    "cinp": "^1.1.7",
+    "cinp": "^2.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-redux": "^9.2.0",
@@ -35,7 +35,7 @@
     "webpack-dev-server": "^5.2.3"
   },
   "overrides": {
-    "uuid": ">=14.0.0"
+    "uuid": ">=11.1.1"
   },
   "scripts": {
     "start": "cross-env NODE_ENV=development webpack serve --config webpack.config.js",
