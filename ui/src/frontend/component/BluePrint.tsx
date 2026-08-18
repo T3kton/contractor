@@ -6,7 +6,7 @@ import ErrorPanel from './ErrorPanel';
 import { contractor } from '../store';
 import { fetchFoundationBluePrintList, fetchStructureBluePrintList, fetchFoundationBluePrint, fetchStructureBluePrint } from '../store/blueprintsSlice';
 import { DEFAULT_PAGE_SIZE } from '../store/sliceFactory';
-import type { BluePrint_FoundationBluePrint } from '../lib/Contractor';
+import type { BluePrint_FoundationBluePrint, BluePrint_StructureBluePrint } from '../lib/Contractor';
 import { Box, CircularProgress, Link, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../store';
@@ -52,6 +52,7 @@ const BluePrint: React.FC<Props> = ( { id, blueprintType } ) =>
   {
     const isFoundation = blueprintType === 'foundation';
     const fbp = isFoundation ? detail as BluePrint_FoundationBluePrint | null : null;
+    const sbp = isFoundation ? null : detail as BluePrint_StructureBluePrint | null;  // foundation_blueprint_list is a StructureBluePrint field, ie. the foundations this structure can be built on
     return (
       <Box>
         <Link component={ RouterLink } to="/blueprints">&larr; BluePrints</Link>
@@ -87,11 +88,11 @@ const BluePrint: React.FC<Props> = ( { id, blueprintType } ) =>
                   const scriptId = String( uri ).split( ':' )[ 1 ] ?? String( uri );
                   return ( <li key={ name }>{ name } <ScriptDialog getScript={ ( sid: string ) => contractor.BluePrint_Script_get( sid ) } id={ scriptId }/></li> );
                 } ) }</ul></TableCell></TableRow>
-                { ( fbp as any )?.foundation_blueprint_list !== undefined &&
+                { sbp?.foundation_blueprint_list !== undefined &&
                   <TableRow>
-                    <TableCell variant="head">Foundation Blueprint</TableCell>
+                    <TableCell variant="head">Foundation Blueprints</TableCell>
                     <TableCell><ul>
-                      { ( ( fbp as any ).foundation_blueprint_list || [] ).map( ( item: any, index: number ) => {
+                      { ( sbp.foundation_blueprint_list || [] ).map( ( item: any, index: number ) => {
                         const bpId = item.toString();
                         return ( <li key={ index }><Link component={ RouterLink } to={ '/blueprint/f/' + bpId }>{ bpId }</Link></li> );
                       } ) }

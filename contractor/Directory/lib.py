@@ -3,7 +3,7 @@ import os
 from django.conf import settings
 
 from contractor.lib.ip import StrToIp, IpIsV4
-from contractor.Utilities.models import Networked
+from contractor.Utilities.models import Networked, NetworkAddressBlock
 from contractor.Directory.models import Entry
 
 TEMPLATES = {}
@@ -61,7 +61,10 @@ def _address_name( address, site_list=None ):
   if not iface:
     return None
 
-  nab = address_block.networkaddressblock_set.get( network=iface.network )
+  try:
+    nab = address_block.networkaddressblock_set.get( network=iface.network )
+  except NetworkAddressBlock.DoesNotExist:  # the interface isn't attached right, just skip it
+    return None
 
   result = iface.name
 

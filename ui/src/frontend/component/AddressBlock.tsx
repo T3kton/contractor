@@ -66,7 +66,10 @@ const AddressBlock: React.FC<Props> = ( { id, site } ) =>
                   <TableRow key={ addr.id }>
                     <TableCell>{ addr.offset }</TableCell>
                     <TableCell>{ addr.ip_address }</TableCell>
-                    <TableCell><Link component={ RouterLink } to={ '/structure/' + ( addr as any ).structure?.toString() }>{ ( addr as any ).structure?.toString() }</Link></TableCell>
+                    <TableCell>{ addr.networked !== undefined &&
+                      // Address relates to Networked, not Structure (there is no addr.structure, which is why this was blank).  Structure is Networked's only subclass and shares its id, so the id links straight through -- the hostname lives on Networked and would need a fetch per row to show.
+                      <Link component={ RouterLink } to={ '/structure/' + addr.networked.toString() }>{ addr.networked.toString() }</Link>
+                    }</TableCell>
                     <TableCell>{ addr.interface_name }</TableCell>
                     <TableCell>{ dateStr( addr.created ) }</TableCell>
                     <TableCell>{ dateStr( addr.updated ) }</TableCell>
