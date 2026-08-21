@@ -50,7 +50,7 @@ const Dependency: React.FC<Props> = ( { id, site } ) =>
               <TableRow><TableCell variant="head">Script Structure</TableCell><TableCell><Link component={ RouterLink } to={ '/structure/' + detail.script_structure?.toString() }>{ detail.script_structure?.toString() }</Link></TableCell></TableRow>
               <TableRow><TableCell variant="head">Create Script Name</TableCell><TableCell>{ detail.create_script_name }</TableCell></TableRow>
               <TableRow><TableCell variant="head">Destroy Script Name</TableCell><TableCell>{ detail.destroy_script_name }</TableCell></TableRow>
-              <TableRow><TableCell variant="head">State</TableCell><TableCell>{ detail.state }</TableCell></TableRow>
+              <TableRow><TableCell variant="head">State</TableCell><TableCell><Chip size="small" label={ detail.state } color={ stateColor( detail.state ?? '' ) } /></TableCell></TableRow>
               <TableRow><TableCell variant="head">Link</TableCell><TableCell>{ detail.link }</TableCell></TableRow>
               <TableRow><TableCell variant="head">Created</TableCell><TableCell>{ dateStr( detail.created ) }</TableCell></TableRow>
               <TableRow><TableCell variant="head">Updated</TableCell><TableCell>{ dateStr( detail.updated ) }</TableCell></TableRow>

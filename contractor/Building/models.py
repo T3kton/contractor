@@ -22,6 +22,10 @@ cinp = CInP( 'Building', '0.1' )
 FOUNDATION_SUBCLASS_LIST = []
 COMPLEX_SUBCLASS_LIST = []
 
+# where the console of a foundation is directed to, 'console' is the local video/vga
+# NOTE: keep in sync with the ipxe binaries built by resources/ipxe/Makefile
+CONSOLE_PORT_CHOICES = ( 'console', 'ttyS0', 'ttyS1', 'ttyS2', 'ttyS3' )
+
 
 class BuildingException( ValueError ):
   def __init__( self, code, message ):
@@ -168,6 +172,7 @@ class Foundation( models.Model ):
               '_console': self.console
             }
 
+  # foundations that have console options override this, see CONSOLE_PORT_CHOICES
   @property
   def console( self ):
     return 'console'

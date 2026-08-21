@@ -52,7 +52,7 @@ const Structure: React.FC<Props> = ( { id, site } ) =>
                 <TableRow><TableCell variant="head">Site</TableCell><TableCell><Link component={ RouterLink } to={ '/site/' + d.structure.site?.toString() }>{ d.structure.site?.toString() }</Link></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Foundation</TableCell><TableCell><Link component={ RouterLink } to={ '/foundation/' + d.structure.foundation?.toString() }>{ d.structure.foundation?.toString() }</Link></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Hostname</TableCell><TableCell>{ d.structure.hostname }</TableCell></TableRow>
-                <TableRow><TableCell variant="head">State</TableCell><TableCell>{ d.structure.state }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">State</TableCell><TableCell><Chip size="small" label={ d.structure.state } color={ stateColor( d.structure.state ?? '' ) } /></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Blueprint</TableCell><TableCell><Link component={ RouterLink } to={ '/blueprint/s/' + d.structure.blueprint?.toString() }>{ d.structure.blueprint?.toString() }</Link></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Config UUID</TableCell><TableCell>{ d.structure.config_uuid }</TableCell></TableRow>
                 <TableRow>

@@ -5,7 +5,9 @@ import ErrorPanel from './ErrorPanel';
 import { contractor } from '../store';
 import { fetchFoundationList, fetchFoundation } from '../store/foundationsSlice';
 import { DEFAULT_PAGE_SIZE } from '../store/sliceFactory';
-import { Box, Chip, CircularProgress, Link, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Typography } from '@mui/material';
+import { Box, Chip, CircularProgress, IconButton, Link, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Typography } from '@mui/material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { Link as RouterLink } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../store';
 import { dateStr, stateColor } from '../lib/utils';
@@ -25,6 +27,7 @@ const Foundation: React.FC<Props> = ( { id, site } ) =>
   const { list, total, detail, loading, error } = useSelector( ( s: RootState ) => s.foundations );
   const [page, setPage] = useState( 0 );
   const [rowsPerPage, setRowsPerPage] = useState( DEFAULT_PAGE_SIZE );
+  const [revealed, setRevealed] = useState<Record<string, boolean>>( {} );
 
   const fetchData = useCallback( () =>
   {
@@ -34,6 +37,7 @@ const Foundation: React.FC<Props> = ( { id, site } ) =>
   }, [authenticated, dispatch, id, site, page, rowsPerPage, updateVersion] );
 
   useEffect( () => { setPage( 0 ); }, [site] );
+  useEffect( () => { setRevealed( {} ); }, [id] );  // don't carry a revealed secret to the next foundation
   useEffect( () => { fetchData(); }, [fetchData] );
 
   if ( loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
@@ -53,7 +57,7 @@ const Foundation: React.FC<Props> = ( { id, site } ) =>
               <TableBody>
                 <TableRow><TableCell variant="head">Site</TableCell><TableCell><Link component={ RouterLink } to={ '/site/' + d.foundation.site?.toString() }>{ d.foundation.site?.toString() }</Link></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Locator</TableCell><TableCell>{ d.foundation.locator }</TableCell></TableRow>
-                <TableRow><TableCell variant="head">State</TableCell><TableCell>{ d.foundation.state }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">State</TableCell><TableCell><Chip size="small" label={ d.foundation.state } color={ stateColor( d.foundation.state ?? '' ) } /></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Type</TableCell><TableCell>{ d.foundation.type }</TableCell></TableRow>
                 <TableRow><TableCell variant="head">Blueprint</TableCell><TableCell><Link component={ RouterLink } to={ '/blueprint/f/' + d.foundation.blueprint?.toString() }>{ d.foundation.blueprint?.toString() }</Link></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Id Map</TableCell><TableCell>{ JSON.stringify( d.foundation.id_map ) }</TableCell></TableRow>
@@ -64,6 +68,33 @@ const Foundation: React.FC<Props> = ( { id, site } ) =>
                 <TableRow><TableCell variant="head">Built At</TableCell><TableCell>{ dateStr( d.foundation.built_at ) }</TableCell></TableRow>
               </TableBody>
             </Table>
+            { d.attributes.length > 0 &&
+              <Box>
+                <Typography variant="h6" sx={{ mt: 2 }}>{ d.foundation.type } Attributes</Typography>
+                <Table size="small">
+                  <TableBody>
+                    { d.attributes.map( ( attr ) => (
+                      <TableRow key={ attr.name }>
+                        <TableCell variant="head">{ attr.name }</TableCell>
+                        <TableCell>
+                          { attr.secret && !revealed[ attr.name ] ? '••••••••' : attr.value }
+                          { attr.secret &&
+                            <IconButton
+                              size="small"
+                              sx={{ ml: 1 }}
+                              aria-label={ ( revealed[ attr.name ] ? 'Hide ' : 'Show ' ) + attr.name }
+                              onClick={ () => setRevealed( ( s ) => ( { ...s, [ attr.name ]: !s[ attr.name ] } ) ) }
+                            >
+                              { revealed[ attr.name ] ? <VisibilityOff fontSize="inherit" /> : <Visibility fontSize="inherit" /> }
+                            </IconButton>
+                          }
+                        </TableCell>
+                      </TableRow>
+                    ) ) }
+                  </TableBody>
+                </Table>
+              </Box>
+            }
             <Typography variant="h6" sx={{ mt: 2 }}>Interfaces</Typography>
             <Table size="small">
               <TableHead>

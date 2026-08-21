@@ -132,7 +132,7 @@ const Job: React.FC<Props> = ( { id, jobType, site } ) =>
                 <TableRow><TableCell variant="head">Script</TableCell><TableCell>{ detail.job.script_name }</TableCell></TableRow>
                 <TableRow><TableCell variant="head">Message</TableCell><TableCell>{ detail.job.message }</TableCell></TableRow>
                 <TableRow><TableCell variant="head">Note</TableCell><TableCell>{ detail.job.note }</TableCell></TableRow>
-                <TableRow><TableCell variant="head">State</TableCell><TableCell>{ detail.job.state }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">State</TableCell><TableCell><Chip size="small" label={ detail.job.state } color={ stateColor( detail.job.state ?? '' ) } /></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Created</TableCell><TableCell>{ dateStr( detail.job.created ) }</TableCell></TableRow>
                 <TableRow><TableCell variant="head">Updated</TableCell><TableCell>{ dateStr( detail.job.updated ) }</TableCell></TableRow>
               </TableBody>
