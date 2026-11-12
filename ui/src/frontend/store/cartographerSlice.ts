@@ -1,6 +1,6 @@
-import type { Contractor } from '../lib/Contractor';
 import { createSlice } from '@reduxjs/toolkit';
 import { createAuthThunk } from './sliceFactory';
+import type { PageParams, PagedResult } from './sliceFactory';
 import { dateStr } from '../lib/utils';
 
 export interface CartographerItem {
@@ -15,6 +15,7 @@ export interface CartographerItem {
 
 interface CartographerState {
   list: CartographerItem[] | null;
+  total: number;
   loading: boolean;
   error: string | null;
 }
@@ -22,10 +23,13 @@ interface CartographerState {
 
 export const fetchCartographerList = createAuthThunk(
   'cartographer/fetchList',
-  async ( _: void, contractor ) =>
+  async ( { position, count }: PageParams, contractor ) =>
   {
-    const result = await contractor.Survey_Cartographer_get_multi( { filter: undefined } );
-    return Object.values( result ).map( ( c: any ) => ( {
+    const [ listResult, result ] = await Promise.all( [
+      contractor.Survey_Cartographer_list( { filter: undefined, position, count } ),
+      contractor.Survey_Cartographer_get_multi( { filter: undefined, position, count } ),
+    ] );
+    const items = Object.values( result ).map( ( c: any ) => ( {
       id: c.identifier,
       identifier: c.identifier,
       message: c.message ?? '',
@@ -34,20 +38,21 @@ export const fetchCartographerList = createAuthThunk(
       created: dateStr( c.created ),
       updated: dateStr( c.updated ),
     } ) ) as CartographerItem[];
+    return { items, total: listResult.total } as PagedResult<CartographerItem>;
   }
 );
 
 const cartographerSlice = createSlice( {
   name: 'cartographer',
-  initialState: { list: null, loading: false, error: null } as CartographerState,
+  initialState: { list: null, total: 0, loading: false, error: null } as CartographerState,
   reducers: {
-    invalidate: ( state ) => { state.list = null; },
+    invalidate: ( state ) => { state.list = null; state.total = 0; },
   },
   extraReducers: ( builder ) =>
   {
     builder
       .addCase( fetchCartographerList.pending, ( state ) => { state.loading = true; state.error = null; } )
-      .addCase( fetchCartographerList.fulfilled, ( state, action ) => { state.loading = false; state.list = action.payload; } )
+      .addCase( fetchCartographerList.fulfilled, ( state, action ) => { state.loading = false; state.list = action.payload.items; state.total = action.payload.total; } )
       .addCase( fetchCartographerList.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } );
   },
 } );

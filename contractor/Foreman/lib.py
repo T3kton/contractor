@@ -321,5 +321,5 @@ def jobError( job_id, cookie, msg ):
 
   job.message = msg[ 0:1024 ]
   job.state = 'error'
-  job.full_clean
+  job.full_clean()
   job.save()

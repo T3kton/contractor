@@ -28,7 +28,7 @@ def registerEvent( target, job=None, name=None ):
     post.name = job.script_name
   elif name is not None:
     if name not in ( 'create', 'destroy' ):
-      raise PostOfficeException( 'INVALID_JOB_NAME', 'name must be "create" or "create"' )
+      raise PostOfficeException( 'INVALID_JOB_NAME', 'name must be "create" or "destroy"' )
 
     post.name = name
   else:
@@ -53,7 +53,7 @@ def _sendPost( data, box ):
     req.get_method = lambda: 'POST'
 
   elif box.type == 'call':
-    req.headers[ 'CInP-Version' ] = '1.0'
+    req.headers[ 'CInP-Version' ] = '2.0'
     req.get_method = lambda: 'CALL'
 
   else:

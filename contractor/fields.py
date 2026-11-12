@@ -1,5 +1,4 @@
 import json
-import pickle
 import re
 
 from django.db import models
@@ -29,68 +28,6 @@ def defaultdict():
   return dict()
 
 
-class MapField( models.BinaryField ):
-  description = 'Map Field'
-  cinp_type = 'Map'
-  empty_values = [ None, {} ]
-
-  def __init__( self, *args, **kwargs ):
-    if 'default' in kwargs:
-      default = kwargs[ 'default' ]
-      if kwargs.get( 'null', False ) and default is None:
-        pass
-
-      elif not callable( default ) and not isinstance( default, dict ):
-        raise ValueError( 'default value must be a dict or callable.' )
-
-    else:
-      kwargs[ 'default' ] = defaultdict
-
-    editable = kwargs.get( 'editable', True )
-    super().__init__( *args, **kwargs )  # until Django 2.1, editable for BinaryFields is not able to be made editable
-    self.editable = editable
-
-  def deconstruct( self ):
-    editable = self.editable
-    self.editable = False  # have to set this to non default so BinaryField's deconstruct works
-    name, path, args, kwargs = super( MapField, self ).deconstruct()
-    self.editable = editable
-    kwargs[ 'editable' ] = self.editable
-    return name, path, args, kwargs
-
-  def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
-    if value is None:
-      return None
-
-    try:
-      value = pickle.loads( value )
-    except ValueError:
-      raise ValidationError( 'DB Value is not a valid Pickle.', code='invalid' )
-
-    if value is not None and not isinstance( value, dict ):
-      raise ValidationError( 'DB Stored Value does not encode a dict.', code='invalid' )
-
-    return value
-
-  def to_python( self, value ):
-    if value is None and self.null:
-      return None
-
-    if isinstance( value, dict ):
-      return value
-
-    raise ValidationError( 'must be a dict.', code='invalid'  )
-
-  def get_prep_value( self, value ):
-    if value is None:
-      return None
-
-    if not isinstance( value, dict ):
-      raise ValidationError( 'value is not a dict.', code='invalid'  )
-
-    return pickle.dumps( value, protocol=4 )
-
-
 class JSONField( models.TextField ):  # really should be using something other than JSON here?
   description = 'JSON Encoded'
   empty_values = [ None ]
@@ -98,6 +35,9 @@ class JSONField( models.TextField ):  # really should be using something other t
   def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
     if value is None:
       return None
+
+    if not value.startswith( JSON_MAGIC ):
+      raise ValidationError( 'DB Value is not JSON encoded (missing marker)', code='invalid' )
 
     try:
       value = json.loads( value[ len( JSON_MAGIC ): ] )
@@ -121,6 +61,129 @@ class JSONField( models.TextField ):  # really should be using something other t
       return None
 
     return JSON_MAGIC + json.dumps( value )
+
+
+class JSONMapField( models.TextField ):  # a JSONField that is required to be a dict, and is typed 'Map' rather than 'String' to cinp
+  description = 'Map Field (JSON encoded)'
+  cinp_type = 'Map'
+  empty_values = [ None, {} ]  # an empty dict counts as empty for blank= purposes
+
+  def __init__( self, *args, **kwargs ):
+    if 'default' in kwargs:
+      default = kwargs[ 'default' ]
+      if kwargs.get( 'null', False ) and default is None:
+        pass
+
+      elif not callable( default ) and not isinstance( default, dict ):
+        raise ValueError( 'default value must be a dict or callable.' )
+
+    else:
+      kwargs[ 'default' ] = defaultdict
+
+    super().__init__( *args, **kwargs )
+
+  def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
+    if value is None:
+      return None
+
+    if not value.startswith( JSON_MAGIC ):
+      raise ValidationError( 'DB Value is not JSON encoded (missing marker)', code='invalid' )
+
+    try:
+      value = json.loads( value[ len( JSON_MAGIC ): ] )
+    except ValueError:
+      raise ValidationError( 'DB Value is not valid JSON', code='invalid' )
+
+    if value is not None and not isinstance( value, dict ):
+      raise ValidationError( 'DB Stored Value does not encode a dict.', code='invalid' )
+
+    return value
+
+  def to_python( self, value ):
+    if value is None and self.null:
+      return None
+
+    if isinstance( value, dict ):
+      return value
+
+    if isinstance( value, str ) and value.startswith( JSON_MAGIC ):  # ie. a value that has been through get_prep_value but not from_db_value, such as a fixture load
+      try:
+        value = json.loads( value[ len( JSON_MAGIC ): ] )
+      except ValueError:
+        raise ValidationError( 'not valid JSON.', code='invalid' )
+
+      if isinstance( value, dict ):
+        return value
+
+    raise ValidationError( 'must be a dict.', code='invalid' )
+
+  def get_prep_value( self, value ):
+    if value is None:
+      return None
+
+    if not isinstance( value, dict ):
+      raise ValidationError( 'value is not a dict.', code='invalid' )
+
+    return JSON_MAGIC + json.dumps( value )
+
+
+class JSONMapListField( models.TextField ):  # a list of dicts, typed to cinp as an array of 'Map' -- ie. it serializes as a real JSON array, where a plain JSONField would be typed 'String' and go out as str( value ), the python repr
+  description = 'Map List Field (JSON encoded)'
+  cinp_type = 'Map'
+  cinp_is_array = True
+  empty_values = [ None, [] ]
+
+  def __init__( self, *args, **kwargs ):
+    if 'default' in kwargs:
+      default = kwargs[ 'default' ]
+      if kwargs.get( 'null', False ) and default is None:
+        pass
+
+      elif not callable( default ) and not isinstance( default, list ):
+        raise ValueError( 'default value must be a list or callable.' )
+
+    else:
+      kwargs[ 'default' ] = list
+
+    super().__init__( *args, **kwargs )
+
+  def _check( self, value ):
+    if not isinstance( value, list ) or not all( isinstance( item, dict ) for item in value ):
+      raise ValidationError( 'must be a list of dicts.', code='invalid' )
+
+    return value
+
+  def from_db_value( self, value, expression, connection, context=None ):  # remove context when moving to Focal
+    if value is None:
+      return None
+
+    if not value.startswith( JSON_MAGIC ):
+      raise ValidationError( 'DB Value is not JSON encoded (missing marker)', code='invalid' )
+
+    try:
+      value = json.loads( value[ len( JSON_MAGIC ): ] )
+    except ValueError:
+      raise ValidationError( 'DB Value is not valid JSON', code='invalid' )
+
+    return self._check( value )
+
+  def to_python( self, value ):
+    if value is None and self.null:
+      return None
+
+    if isinstance( value, str ) and value.startswith( JSON_MAGIC ):  # ie. a value that has been through get_prep_value but not from_db_value, such as a fixture load
+      try:
+        value = json.loads( value[ len( JSON_MAGIC ): ] )
+      except ValueError:
+        raise ValidationError( 'not valid JSON.', code='invalid' )
+
+    return self._check( value )
+
+  def get_prep_value( self, value ):
+    if value is None:
+      return None
+
+    return JSON_MAGIC + json.dumps( self._check( value ) )
 
 
 class StringListField( models.CharField ):

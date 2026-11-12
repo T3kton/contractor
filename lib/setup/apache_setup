@@ -1,0 +1,131 @@
+#!/bin/sh
+# Sets up the apache sites that support a contractor install:
+#   static - serves /var/www/static, where the respkgs put the PXE images,
+#            installer profiles and scripts
+#   proxy  - (optional) caching forward proxy on port 3128 for installers
+#
+# Must be run as root, safe to re-run.
+
+set -e
+
+SITE_DOMAIN=site1.test
+UPSTREAM_PROXY="${UPSTREAM_PROXY:-}"
+CACHE_SIZE=5G
+CACHE_MAX_FILE_SIZE=5000000000
+SKIP_PROXY=0
+APACHE_DIR="${APACHE_DIR:-/etc/apache2}"
+
+usage()
+{
+  cat << USAGE_EOF
+usage: $0 [options]
+
+  --site-domain DOMAIN     domain of the site, used to exempt the static and
+                           contractor hosts from the proxy, default: $SITE_DOMAIN
+  --upstream-proxy URL     proxy the caching proxy should forward to, ie:
+                           http://myproxy:3128/, can also be set with the
+                           UPSTREAM_PROXY environment variable
+  --cache-size SIZE        max size of the proxy's disk cache, default: $CACHE_SIZE
+  --no-proxy               only set up the static site, do not set up the
+                           caching proxy
+  -h, --help               this message
+USAGE_EOF
+}
+
+while [ $# -gt 0 ]
+do
+  case "$1" in
+    --site-domain)    SITE_DOMAIN="$2"; shift 2 ;;
+    --upstream-proxy) UPSTREAM_PROXY="$2"; shift 2 ;;
+    --cache-size)     CACHE_SIZE="$2"; shift 2 ;;
+    --no-proxy)       SKIP_PROXY=1; shift ;;
+    -h|--help)        usage; exit 0 ;;
+    *)                echo "unknown option '$1'" >&2; usage >&2; exit 1 ;;
+  esac
+done
+
+if [ "$APACHE_DIR" = "/etc/apache2" ] && [ "$(id -u)" != "0" ]
+then
+  echo "must be run as root" >&2
+  exit 1
+fi
+
+set -x
+
+mkdir -p /var/www/static
+
+cat > "$APACHE_DIR/sites-available/static.conf" << STATIC_EOF
+<VirtualHost *:80>
+  ServerName static
+  ServerAlias static.*
+
+  DocumentRoot /var/www/static
+
+  LogFormat "%a %t %D \"%r\" %>s %I %O \"%{Referer}i\" \"%{User-Agent}i\" %X" static_log
+  ErrorLog \${APACHE_LOG_DIR}/static_error.log
+  CustomLog \${APACHE_LOG_DIR}/static_access.log static_log
+</VirtualHost>
+STATIC_EOF
+
+a2dissite 000-default || true
+a2ensite static
+
+if [ "$SKIP_PROXY" = "0" ]
+then
+  upstream=""
+  if [ -n "$UPSTREAM_PROXY" ]
+  then
+    upstream="  NoProxy static static.$SITE_DOMAIN
+  NoProxy contractor contractor.$SITE_DOMAIN
+
+  ProxyRemote * $UPSTREAM_PROXY"
+  fi
+
+  cat > "$APACHE_DIR/conf-available/contractor-cache.conf" << CACHE_EOF
+CacheMaxFileSize $CACHE_MAX_FILE_SIZE
+CacheDefaultExpire 1000000
+CACHE_EOF
+
+  cat > "$APACHE_DIR/sites-available/proxy.conf" << PROXY_EOF
+Listen 3128
+<VirtualHost *:3128>
+  ServerName proxy
+  ServerAlias proxy.*
+
+  DocumentRoot /var/www/static
+
+  LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cache-status}e\"" proxy_log
+  ErrorLog \${APACHE_LOG_DIR}/proxy_error.log
+  CustomLog \${APACHE_LOG_DIR}/proxy_access.log proxy_log
+
+  ProxyRequests On
+  ProxyVia Full
+
+  SetEnvIf Remote_Addr "(.*)" client_ip=\$1
+  RequestHeader add X-Forwarded-For "%{client_ip}e"
+
+  CacheEnable disk http://
+  CacheEnable disk https://
+
+  CacheDisable http://static
+  CacheDisable http://static.$SITE_DOMAIN
+  CacheDisable http://contractor
+  CacheDisable http://contractor.$SITE_DOMAIN
+
+$upstream
+</VirtualHost>
+PROXY_EOF
+
+  a2enmod proxy proxy_connect proxy_ftp proxy_http cache_disk cache headers
+  a2enconf contractor-cache
+  a2ensite proxy
+
+  sed "s/^HTCACHECLEAN_SIZE=.*/HTCACHECLEAN_SIZE=$CACHE_SIZE/" -i /etc/default/apache-htcacheclean
+fi
+
+systemctl restart apache2
+
+if [ "$SKIP_PROXY" = "0" ]
+then
+  systemctl restart apache-htcacheclean
+fi

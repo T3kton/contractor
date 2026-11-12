@@ -1,12 +1,13 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import ConfigDialog from './ConfigDialog';
 import ScriptDialog from './ScriptDialog';
 import ErrorPanel from './ErrorPanel';
 import { contractor } from '../store';
 import { fetchFoundationBluePrintList, fetchStructureBluePrintList, fetchFoundationBluePrint, fetchStructureBluePrint } from '../store/blueprintsSlice';
-import type { BluePrint_FoundationBluePrint } from '../lib/Contractor';
-import { Box, CircularProgress, Link, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { DEFAULT_PAGE_SIZE } from '../store/sliceFactory';
+import type { BluePrint_FoundationBluePrint, BluePrint_StructureBluePrint } from '../lib/Contractor';
+import { Box, CircularProgress, Link, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../store';
 import { dateStr, configValues } from '../lib/utils';
@@ -20,7 +21,12 @@ const BluePrint: React.FC<Props> = ( { id, blueprintType } ) =>
 {
   const dispatch = useDispatch<AppDispatch>();
   const authenticated = useSelector( ( s: RootState ) => s.app.authenticated );
-  const { listF, listS, detail, loading, error } = useSelector( ( s: RootState ) => s.blueprints );
+  const updateVersion = useSelector( ( s: RootState ) => s.app.updateVersion );
+  const { listF, totalF, listS, totalS, detail, loading, error } = useSelector( ( s: RootState ) => s.blueprints );
+  const [pageF, setPageF] = useState( 0 );
+  const [rowsPerPageF, setRowsPerPageF] = useState( DEFAULT_PAGE_SIZE );
+  const [pageS, setPageS] = useState( 0 );
+  const [rowsPerPageS, setRowsPerPageS] = useState( DEFAULT_PAGE_SIZE );
 
   const fetchData = useCallback( () =>
   {
@@ -32,10 +38,10 @@ const BluePrint: React.FC<Props> = ( { id, blueprintType } ) =>
     }
     else
     {
-      dispatch( fetchFoundationBluePrintList() );
-      dispatch( fetchStructureBluePrintList() );
+      dispatch( fetchFoundationBluePrintList( { position: pageF * rowsPerPageF, count: rowsPerPageF } ) );
+      dispatch( fetchStructureBluePrintList( { position: pageS * rowsPerPageS, count: rowsPerPageS } ) );
     }
-  }, [authenticated, dispatch, id, blueprintType] );
+  }, [authenticated, dispatch, id, blueprintType, pageF, rowsPerPageF, pageS, rowsPerPageS, updateVersion] );
 
   useEffect( () => { fetchData(); }, [fetchData] );
 
@@ -46,6 +52,7 @@ const BluePrint: React.FC<Props> = ( { id, blueprintType } ) =>
   {
     const isFoundation = blueprintType === 'foundation';
     const fbp = isFoundation ? detail as BluePrint_FoundationBluePrint | null : null;
+    const sbp = isFoundation ? null : detail as BluePrint_StructureBluePrint | null;  // foundation_blueprint_list is a StructureBluePrint field, ie. the foundations this structure can be built on
     return (
       <Box>
         <Link component={ RouterLink } to="/blueprints">&larr; BluePrints</Link>
@@ -81,11 +88,11 @@ const BluePrint: React.FC<Props> = ( { id, blueprintType } ) =>
                   const scriptId = String( uri ).split( ':' )[ 1 ] ?? String( uri );
                   return ( <li key={ name }>{ name } <ScriptDialog getScript={ ( sid: string ) => contractor.BluePrint_Script_get( sid ) } id={ scriptId }/></li> );
                 } ) }</ul></TableCell></TableRow>
-                { ( fbp as any )?.foundation_blueprint_list !== undefined &&
+                { sbp?.foundation_blueprint_list !== undefined &&
                   <TableRow>
-                    <TableCell variant="head">Foundation Blueprint</TableCell>
+                    <TableCell variant="head">Foundation Blueprints</TableCell>
                     <TableCell><ul>
-                      { ( ( fbp as any ).foundation_blueprint_list || [] ).map( ( item: any, index: number ) => {
+                      { ( sbp.foundation_blueprint_list || [] ).map( ( item: any, index: number ) => {
                         const bpId = item.toString();
                         return ( <li key={ index }><Link component={ RouterLink } to={ '/blueprint/f/' + bpId }>{ bpId }</Link></li> );
                       } ) }
@@ -131,6 +138,15 @@ const BluePrint: React.FC<Props> = ( { id, blueprintType } ) =>
           ) ) }
         </TableBody>
       </Table>
+      <TablePagination
+        component="div"
+        count={ totalF }
+        page={ pageF }
+        rowsPerPage={ rowsPerPageF }
+        rowsPerPageOptions={ [25, 50, 100] }
+        onPageChange={ ( _, p ) => setPageF( p ) }
+        onRowsPerPageChange={ ( e ) => { setRowsPerPageF( parseInt( e.target.value, 10 ) ); setPageF( 0 ); } }
+      />
       <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>Structure BluePrints</Typography>
       <Table>
         <TableHead>
@@ -152,6 +168,15 @@ const BluePrint: React.FC<Props> = ( { id, blueprintType } ) =>
           ) ) }
         </TableBody>
       </Table>
+      <TablePagination
+        component="div"
+        count={ totalS }
+        page={ pageS }
+        rowsPerPage={ rowsPerPageS }
+        rowsPerPageOptions={ [25, 50, 100] }
+        onPageChange={ ( _, p ) => setPageS( p ) }
+        onRowsPerPageChange={ ( e ) => { setRowsPerPageS( parseInt( e.target.value, 10 ) ); setPageS( 0 ); } }
+      />
     </Box>
   );
 };

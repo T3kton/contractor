@@ -4,6 +4,7 @@ import ConfigDialog from './ConfigDialog';
 import ErrorPanel from './ErrorPanel';
 import { contractor } from '../store';
 import { fetchStructureList, fetchStructure } from '../store/structuresSlice';
+import { DEFAULT_PAGE_SIZE } from '../store/sliceFactory';
 import { Box, Chip, CircularProgress, Link, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../store';
@@ -18,17 +19,19 @@ const Structure: React.FC<Props> = ( { id, site } ) =>
 {
   const dispatch = useDispatch<AppDispatch>();
   const authenticated = useSelector( ( s: RootState ) => s.app.authenticated );
-  const { list, detail, loading, error } = useSelector( ( s: RootState ) => s.structures );
+  const updateVersion = useSelector( ( s: RootState ) => s.app.updateVersion );
+  const { list, total, detail, loading, error } = useSelector( ( s: RootState ) => s.structures );
   const [page, setPage] = useState( 0 );
-  const [rowsPerPage, setRowsPerPage] = useState( 25 );
+  const [rowsPerPage, setRowsPerPage] = useState( DEFAULT_PAGE_SIZE );
 
   const fetchData = useCallback( () =>
   {
     if ( !authenticated ) return;
     if ( id !== undefined ) dispatch( fetchStructure( id ) );
-    else dispatch( fetchStructureList( site ?? '' ) );
-  }, [authenticated, dispatch, id, site] );
+    else dispatch( fetchStructureList( { site: site ?? '', position: page * rowsPerPage, count: rowsPerPage } ) );
+  }, [authenticated, dispatch, id, site, page, rowsPerPage, updateVersion] );
 
+  useEffect( () => { setPage( 0 ); }, [site] );
   useEffect( () => { fetchData(); }, [fetchData] );
 
   if ( loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
@@ -49,7 +52,7 @@ const Structure: React.FC<Props> = ( { id, site } ) =>
                 <TableRow><TableCell variant="head">Site</TableCell><TableCell><Link component={ RouterLink } to={ '/site/' + d.structure.site?.toString() }>{ d.structure.site?.toString() }</Link></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Foundation</TableCell><TableCell><Link component={ RouterLink } to={ '/foundation/' + d.structure.foundation?.toString() }>{ d.structure.foundation?.toString() }</Link></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Hostname</TableCell><TableCell>{ d.structure.hostname }</TableCell></TableRow>
-                <TableRow><TableCell variant="head">State</TableCell><TableCell>{ d.structure.state }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">State</TableCell><TableCell><Chip size="small" label={ d.structure.state } color={ stateColor( d.structure.state ?? '' ) } /></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Blueprint</TableCell><TableCell><Link component={ RouterLink } to={ '/blueprint/s/' + d.structure.blueprint?.toString() }>{ d.structure.blueprint?.toString() }</Link></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Config UUID</TableCell><TableCell>{ d.structure.config_uuid }</TableCell></TableRow>
                 <TableRow>
@@ -79,6 +82,7 @@ const Structure: React.FC<Props> = ( { id, site } ) =>
                   <TableCell>Offset</TableCell>
                   <TableCell>Ip Address</TableCell>
                   <TableCell>Interface</TableCell>
+                  <TableCell>Primary</TableCell>
                   <TableCell>Address Block</TableCell>
                   <TableCell>Created</TableCell>
                   <TableCell>Updated</TableCell>
@@ -90,6 +94,7 @@ const Structure: React.FC<Props> = ( { id, site } ) =>
                     <TableCell>{ addr.offset }</TableCell>
                     <TableCell>{ addr.ip_address }</TableCell>
                     <TableCell>{ addr.interface_name }</TableCell>
+                    <TableCell>{ addr.is_primary ? 'Yes' : 'No' }</TableCell>
                     <TableCell><Link component={ RouterLink } to={ '/addressblock/' + addr.address_block?.toString() }>{ addr.address_block?.toString() }</Link></TableCell>
                     <TableCell>{ dateStr( addr.created ) }</TableCell>
                     <TableCell>{ dateStr( addr.updated ) }</TableCell>
@@ -102,9 +107,6 @@ const Structure: React.FC<Props> = ( { id, site } ) =>
       </Box>
     );
   }
-
-  const rows = list || [];
-  const pageRows = rows.slice( page * rowsPerPage, page * rowsPerPage + rowsPerPage );
 
   return (
     <Box>
@@ -119,7 +121,7 @@ const Structure: React.FC<Props> = ( { id, site } ) =>
           </TableRow>
         </TableHead>
         <TableBody>
-          { pageRows.map( ( item ) => (
+          { ( list || [] ).map( ( item ) => (
             <TableRow key={ item.id }>
               <TableCell align="right"><Link component={ RouterLink } to={ '/structure/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.hostname }</TableCell>
@@ -132,10 +134,10 @@ const Structure: React.FC<Props> = ( { id, site } ) =>
       </Table>
       <TablePagination
         component="div"
-        count={ rows.length }
+        count={ total }
         page={ page }
         rowsPerPage={ rowsPerPage }
-        rowsPerPageOptions={ [10, 25, 50, 100] }
+        rowsPerPageOptions={ [25, 50, 100] }
         onPageChange={ ( _, p ) => setPage( p ) }
         onRowsPerPageChange={ ( e ) => { setRowsPerPage( parseInt( e.target.value, 10 ) ); setPage( 0 ); } }
       />

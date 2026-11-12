@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import name_regex, MapField
+from contractor.fields import name_regex, JSONMapField
 from contractor.Building.models import Foundation
 from contractor.BluePrint.models import PXE
 from contractor.Survey.lib import foundationLookup
@@ -62,7 +62,7 @@ class Cartographer( models.Model ):
   identifier = models.CharField( max_length=64, primary_key=True )
   foundation = models.OneToOneField( Foundation, on_delete=models.PROTECT, null=True, blank=True )
   message = models.CharField( max_length=200 )
-  info_map = MapField( null=True, blank=True )
+  info_map = JSONMapField( null=True, blank=True )
   last_checkin = models.DateTimeField( null=True, blank=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )

@@ -232,6 +232,46 @@ def test_addressblock():
 
 
 @pytest.mark.django_db
+def test_addressblock_overlap():
+  s1 = Site( name='tsite1', description='test site1' )
+  s1.full_clean()
+  s1.save()
+
+  s2 = Site( name='tsite2', description='test site2' )
+  s2.full_clean()
+  s2.save()
+
+  ab = AddressBlock( site=s1, subnet=StrToIp( '2.0.0.0' ), prefix=8, name='outer' )
+  ab.full_clean()
+  ab.save()
+
+  # fully contained within the existing block, must be rejected
+  ab = AddressBlock( site=s1, subnet=StrToIp( '2.1.0.0' ), prefix=24, name='inner' )
+  with pytest.raises( ValidationError ):
+    ab.full_clean()
+
+  # fully contains the existing block, must be rejected
+  ab = AddressBlock( site=s1, subnet=StrToIp( '0.0.0.0' ), prefix=6, name='wrapper' )
+  with pytest.raises( ValidationError ):
+    ab.full_clean()
+
+  # exact same range, must be rejected
+  ab = AddressBlock( site=s1, subnet=StrToIp( '2.0.0.0' ), prefix=8, name='duplicate' )
+  with pytest.raises( ValidationError ):
+    ab.full_clean()
+
+  # no overlap, allowed
+  ab = AddressBlock( site=s1, subnet=StrToIp( '3.0.0.0' ), prefix=8, name='no-overlap' )
+  ab.full_clean()
+  ab.save()
+
+  # same range in a different site is fine
+  ab = AddressBlock( site=s2, subnet=StrToIp( '2.1.0.0' ), prefix=24, name='inner' )
+  ab.full_clean()
+  ab.save()
+
+
+@pytest.mark.django_db
 def test_addressblock_resize():
   s1 = Site( name='tsite1', description='test site1' )
   s1.full_clean()

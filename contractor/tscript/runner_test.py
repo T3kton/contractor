@@ -3,7 +3,7 @@ import pickle
 import time
 
 from contractor.tscript.parser import parse
-from contractor.tscript.runner import Runner, ExecutionError, UnrecoverableError, ParameterError, NotDefinedError, Timeout, Pause
+from contractor.tscript.runner import Runner, ExecutionError, UnrecoverableError, ParameterError, NotDefinedError, ScriptError, Timeout, Pause
 
 # TODO: test the assignment deepcopy, ie: a = {}, b = a  make sure changes to b are not reflected in a
 
@@ -36,26 +36,26 @@ class testExternalObject( object ):
 def test_begin():
   runner = Runner( parse( '' ) )
   assert runner.state == []
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
   assert runner.state == 'DONE'
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   runner.run()
   assert runner.state == 'DONE'
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
 
   runner = Runner( parse( 'begin()end' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
 
   runner = Runner( parse( 'begin()end' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
 
 
 def test_values():
@@ -717,6 +717,24 @@ def test_delay():
   assert runner.run() == 'Waiting for 7197 more seconds'
 
 
+def test_delay_isolation():  # each Runner's delay() call must not share state with another Runner's
+  runner1 = Runner( parse( 'delay( seconds=5 )' ) )
+  runner1.run()
+
+  runner2 = Runner( parse( 'delay( seconds=500 )' ) )
+  runner2.run()
+
+  assert runner1.run() == 'Waiting for 4 more seconds'
+
+
+def test_delay_sequential_same_runner():  # multiple delay() calls at different points in one script must each get their own timer
+  runner = Runner( parse( 'delay( seconds=5 )\ndelay( seconds=100 )' ) )
+  assert runner.run() == 'Waiting for 4 more seconds'
+  time.sleep( 5 )
+  assert runner.run() == 'Waiting for 99 more seconds'
+  assert not runner.done
+
+
 def test_message():
   runner = Runner( parse( 'message( msg="Hello World" )' ) )
   assert runner.run() == 'Hello World'
@@ -733,9 +751,9 @@ def test_module_functions():
   runner = Runner( parse( 'var = testing.constant()' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert runner.run() == ''
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 42 }
@@ -743,9 +761,9 @@ def test_module_functions():
   runner = Runner( parse( 'var = testing.multiply( value=4321 )' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert runner.run() == ''
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 43210 }
@@ -753,9 +771,9 @@ def test_module_functions():
   runner = Runner( parse( 'var = testing.multiply( value=4321 )\nvar2 = testing.multiply( value=12 )' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert runner.run() == ''
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 43210, 'var2': 120 }
@@ -763,9 +781,9 @@ def test_module_functions():
   runner = Runner( parse( 'var = ( testing.multiply( value=2 ) + testing.multiply( value=3 ) )' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert runner.run() == ''
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 50 }
@@ -773,9 +791,9 @@ def test_module_functions():
   runner = Runner( parse( 'var = testing.multiply( value=testing.multiply( value=11 ) )' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert runner.run() == ''
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 1100 }
@@ -783,51 +801,51 @@ def test_module_functions():
   runner = Runner( parse( '321\nvar = testing.multiply( value=testing.multiply( value=11 ) )' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
   assert runner.variable_map == {}
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert runner.run() == ''
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.run() == 'done'
   assert runner.variable_map == { 'var': 1100 }
 
   runner = Runner( parse( 'testing.count( stop_at=2, count_by=1 )' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert runner.run() == 'at 1 of 2'
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert not runner.done
   assert runner.run() == 'at 2 of 2'
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert not runner.done
   assert runner.run() == ''
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.run() == 'done'
 
   runner = Runner( parse( 'testing.count( stop_at="asd", count_by=1 )' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   with pytest.raises( ParameterError ):
     runner.run()
   assert not runner.done
   assert runner.aborted
   assert runner.run() == 'aborted'
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
 
   runner = Runner( parse( 'testing.count( stop_at=2, count_by=1 )\ntesting.count( stop_at=1, count_by=1 )' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert runner.run() == 'at 1 of 2'
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert not runner.done
   assert runner.run() == 'at 2 of 2'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'count', 'dispatched': False } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'count', 'dispatched': False } } ]
   assert runner.run() == 'at 1 of 1'
   assert not runner.done
-  assert runner.status == [ ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'count', 'dispatched': False } ) ]
+  assert runner.status == [ { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'count', 'dispatched': False } } ]
   assert runner.run() == ''
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.run() == 'done'
 
@@ -835,59 +853,59 @@ def test_module_functions():
 def test_external_remote_functions():
   runner = Runner( parse( 'testing.remote()' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.line == 0
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Script not Running', None )
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': False } } ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Not Expecting Anything', None )
   assert runner.toSubcontractor( [] ) is None
   assert runner.toSubcontractor( [ 'sdf', 'were' ] ) is None
   assert runner.toSubcontractor( [ 'rfrf', 'testing', 'sdf' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'parameters': 'the count "1"' }
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': True } } ]
   assert runner.line == 1
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': True } } ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.fromSubcontractor( 'Bad Cookie', True ) == ( 'Bad Cookie', None )
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Accepted', 'Current State "True"' )
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': False } } ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Not Expecting Anything', None )
   assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'parameters': 'the count "2"' }
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': True } } ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Accepted', 'Current State "True"' )
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': False } } ]
   assert runner.run() == ''
   assert runner.done
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Script not Running', None )
   assert runner.run() == 'done'
   assert runner.line is None
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None
 
   runner = Runner( parse( 'var1 = testing.remote()' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.variable_map == {}
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': False } } ]
   assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'parameters': 'the count "1"' }
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': True } } ]
   assert runner.variable_map == {}
   assert runner.fromSubcontractor( runner.contractor_cookie, 'the sky is falling' ) == ( 'Accepted', 'Current State "the sky is falling"' )
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': False } } ]
   assert runner.variable_map == {}
   assert runner.run() == ''
   assert runner.done
   assert runner.run() == 'done'
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.variable_map == { 'var1': 'the sky is falling' }
 
@@ -897,7 +915,7 @@ def test_external_remote_functions():
   assert runner.variable_map == {}
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': False } } ]
   assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'parameters': 'the count "1"' }
   assert runner.variable_map == {}
   assert runner.fromSubcontractor( runner.contractor_cookie, 'Bad' ) == ( 'Accepted', 'Current State "Bad"' )
@@ -915,238 +933,295 @@ def test_external_remote_functions():
 def test_serilizer():
   runner = Runner( parse( 'testing.count( stop_at=2, count_by=1 )' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert not runner.done
   runner.run()
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert not runner.done
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
 
   runner = Runner( parse( 'testing.count( stop_at=2, count_by=1 )' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert not runner.done
 
   buff = pickle.dumps( runner )
   # origional sould  play out as normal
   runner.run()
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert not runner.done
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
 
   # copy should do the same thing
   runner2 = pickle.loads( buff )
   runner2.run()
-  assert runner2.status[0][0] == 0.0
+  assert runner2.status[0][ 'percent' ] == 0.0
   assert not runner2.done
   runner2.run()
-  assert runner2.status[0][0] == 100.0
+  assert runner2.status[0][ 'percent' ] == 100.0
   assert runner2.done
 
 
 def test_while():
   # first we will test the ttl
   runner = Runner( parse( 'while True do 1' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   with pytest.raises( Timeout ):
     runner.run( 0 )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert not runner.done
 
   # ok, now we can have some fun
   runner = Runner( parse( 'while True do 1' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   with pytest.raises( Timeout ):
     runner.run( 10 )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   assert not runner.done
 
   runner = Runner( parse( 'cnt = 1\nwhile ( cnt >= 1 ) do cnt = ( cnt + 1 )' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   for i in range( 0, 100 ):  # just do this infinite loop for a long time, make sure it dosen't have other problems
     with pytest.raises( Timeout ):
       runner.run( i )
     runner.status  # make sure nothing bad happens while computing status
-  assert runner.status[0][0] == 50.0
+  assert runner.status[0][ 'percent' ] == 50.0
   assert not runner.done
 
   runner = Runner( parse( 'cnt = 1\nwhile True do cnt = ( cnt + 1 )' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   with pytest.raises( Timeout ):
     runner.run( 20 )
-  assert runner.status[0][0] == 50.0
+  assert runner.status[0][ 'percent' ] == 50.0
   assert not runner.done
   assert runner.variable_map == { 'cnt': 3 }
   with pytest.raises( Timeout ):
     runner.run( 20 )
-  assert runner.status[0][0] == 50.0
+  assert runner.status[0][ 'percent' ] == 50.0
   assert not runner.done
   assert runner.variable_map == { 'cnt': 6 }
 
   runner = Runner( parse( 'while False do asdf = 5' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run( 500 )
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == {}
 
   runner = Runner( parse( 'cnt = 1\nwhile ( cnt < 10 ) do cnt = ( cnt + 1 )' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run( 500 )
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'cnt': 10 }
 
 
+def test_break_continue():
+  runner = Runner( parse( 'cnt = 0\nwhile ( cnt < 10 ) do begin()\ncnt = ( cnt + 1 )\nif ( cnt == 5 ) then break\nend' ) )
+  runner.run( 500 )
+  assert runner.done
+  assert runner.variable_map == { 'cnt': 5 }
+
+  runner = Runner( parse( 'cnt = 0\nsum = 0\nwhile ( cnt < 5 ) do begin()\ncnt = ( cnt + 1 )\nif ( cnt == 3 ) then continue\nsum = ( sum + cnt )\nend' ) )
+  runner.run( 500 )
+  assert runner.done
+  assert runner.variable_map == { 'cnt': 5, 'sum': 12 }  # 1 + 2 + 4 + 5, 3 was skipped by continue
+
+  runner = Runner( parse( 'pass' ) )
+  runner.run()
+  assert runner.done
+
+  with pytest.raises( ScriptError, match='outside of a while loop' ):
+    runner = Runner( parse( 'break' ) )
+    runner.run()
+
+  with pytest.raises( ScriptError, match='outside of a while loop' ):
+    runner = Runner( parse( 'continue' ) )
+    runner.run()
+
+  # break/continue outside of any while loop must be rejected even when nested inside other constructs
+  with pytest.raises( ScriptError, match='outside of a while loop' ):
+    runner = Runner( parse( 'if True then break' ) )
+    runner.run()
+
+  with pytest.raises( ScriptError, match='outside of a while loop' ):
+    runner = Runner( parse( 'if True then continue' ) )
+    runner.run()
+
+
+def test_break_continue_nested():  # a break/continue must only affect the nearest enclosing while loop
+  script = ( 'outer = 0\n'
+             'inner = 0\n'
+             'while ( outer < 3 ) do begin()\n'
+             'outer = ( outer + 1 )\n'
+             'inner = 0\n'
+             'while ( inner < 10 ) do begin()\n'
+             'inner = ( inner + 1 )\n'
+             'if ( inner == 2 ) then break\n'
+             'end\n'
+             'end' )
+  runner = Runner( parse( script ) )
+  runner.run( 1000 )
+  assert runner.done
+  assert runner.variable_map == { 'outer': 3, 'inner': 2 }
+
+
+def test_reserved_word_prefix_variables():  # identifiers that merely start with "break"/"continue"/"pass" must still work as ordinary variables
+  runner = Runner( parse( 'breakfast = 5\ncontinued = breakfast\npassenger = continued' ) )
+  runner.run()
+  assert runner.done
+  assert runner.variable_map == { 'breakfast': 5, 'continued': 5, 'passenger': 5 }
+
+
 def test_ifelse():
   runner = Runner( parse( 'if False then var = 1' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == {}
 
   runner = Runner( parse( 'if True then var = 1' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'var': 1 }
 
   runner = Runner( parse( 'if False then var = 1 else var = 2' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'var': 2 }
 
   runner = Runner( parse( 'asd = 1\nif ( asd == 1 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 3 ) then var = "c" else var = "d"' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 1, 'var': "a" }
 
   runner = Runner( parse( 'asd = 2\nif ( asd == 1 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 3 ) then var = "c" else var = "d"' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 2, 'var': "b" }
 
   runner = Runner( parse( 'asd = 9\nif ( asd == 1 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 3 ) then var = "c" else var = "d"' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 9, 'var': "d" }
 
   runner = Runner( parse( 'asd = 1\nif ( asd == 1 ) then var = "a" elif ( asd == 1 ) then var = "b" elif ( asd == 1 ) then var = "c" else var = "d"' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 1, 'var': "a" }
 
   runner = Runner( parse( 'asd = 1\nif ( asd == 2 ) then var = "a" elif ( asd == 1 ) then var = "b" elif ( asd == 1 ) then var = "c" else var = "d"' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 1, 'var': "b" }
 
   runner = Runner( parse( 'asd = 1\nif ( asd == 2 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 1 ) then var = "c" else var = "d"' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 1, 'var': "c" }
 
   runner = Runner( parse( 'asd = 1\nif ( asd == 2 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 2 ) then var = "c" else var = "d"' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'asd': 1, 'var': "d" }
 
   runner = Runner( parse( 'asd = 1\nif ( asd == 2 ) then var = "a" elif ( asd == 2 ) then var = "b" elif ( asd == 2 ) then var = "c" else var = "d"\nwhile True do 10' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   for i in range( 0, 10 ):  # just do this infinite loop for a long time, make sure it dosen't have other problems
     with pytest.raises( Timeout ):
       runner.run( i )
     runner.status  # make sure nothing bad happens while computing status
-  assert runner.status[0][0] == 66.66666666666667
+  assert runner.status[0][ 'percent' ] == 66.66666666666667
   assert not runner.done
 
 
 def test_jumppoint():
   runner = Runner( parse( 'abc = 1\n:jump_a\ndce = 2' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'abc': 1, 'dce': 2 }
 
   runner = Runner( parse( 'goto jump_a\nabc = 1\n:jump_a\ndce = 2' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'dce': 2 }
 
   runner = Runner( parse( 'goto jump_a\nabc = 1\n:jump_a\ndce = 2' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'dce': 2 }
 
   runner = Runner( parse( 'goto jump_b\nabc = 1\n:jump_a\ndce = 2' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   with pytest.raises( NotDefinedError ):
     runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert not runner.done
   assert runner.aborted
   assert runner.variable_map == {}
 
   runner = Runner( parse( 'goto jump_b\nabc = 1\n:jump_a\ndce = 2' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.goto( 'jump_a' )
   with pytest.raises( Timeout ):
     runner.run( 2 )
   assert runner.line == 3
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'dce': 2 }
 
   runner = Runner( parse( 'goto jump_b\nabc = 1\ndelay( seconds=1 )\n:jump_b\ndce = 2' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'dce': 2 }
 
   runner = Runner( parse( 'goto jump_b\nbegin()\nabc = 1\nend\n:jump_b\ndce = 2' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'dce': 2 }
 
   runner = Runner( parse( 'begin()\ngoto jump_b\nabc = 1\nend\n:jump_b\ndce = 2' ) )
-  assert runner.status[0][0] == 0.0
+  assert runner.status[0][ 'percent' ] == 0.0
   runner.run()
-  assert runner.status[0][0] == 100.0
+  assert runner.status[0][ 'percent' ] == 100.0
   assert runner.done
   assert runner.variable_map == { 'dce': 2 }
 
@@ -1159,284 +1234,284 @@ def test_jumppoint():
 
 def test_status():
   runner = Runner( parse( 'begin()\n42\nend' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'pause( msg="" )' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( '42\npause( msg="" )' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'pause( msg="1" )\npause( msg="2" )\npause( msg="3" )' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 33.333333333333336, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 33.333333333333336, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 66.66666666666667, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 66.66666666666667, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
   runner = Runner( parse( 'begin()\npause( msg="" )\nend' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'begin()\n42\npause( msg="" )\nend' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( '12\nbegin()\n42\npause( msg="" )\nend' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 75.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 75.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( '12\nbegin()\n42\npause( msg="" )\nend\n34' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'while True do pause( msg="" )' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'expression' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'expression' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
 
   runner = Runner( parse( 'while True do begin()\n5\npause( msg="" )\nend' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 50.0, 'While', { 'doing': 'expression' } ), ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 50.0, 'operation': 'While', 'parameters': { 'doing': 'expression' } }, { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 50.0, 'While', { 'doing': 'expression' } ), ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 50.0, 'operation': 'While', 'parameters': { 'doing': 'expression' } }, { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
 
   runner = Runner( parse( 'while True do begin()\n5\npause( msg="" )\n6\npause( msg="" )\nend' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 25.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 25.0, 'While', { 'doing': 'expression' } ), ( 25.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 25.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 25.0, 'operation': 'While', 'parameters': { 'doing': 'expression' } }, { 'percent': 25.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 75.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 75.0, 'While', { 'doing': 'expression' } ), ( 75.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 75.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 75.0, 'operation': 'While', 'parameters': { 'doing': 'expression' } }, { 'percent': 75.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
 
   runner = Runner( parse( 'while pause( msg="" ) do 5' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'while not pause( msg="" ) do 5' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
 
   runner = Runner( parse( '( not pause( msg="cond" ) | True )' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( '( True | not pause( msg="cond" ) )' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'while not pause( msg="cond" ) do begin()\npause( msg="exp" )\nend' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'expression' } }, { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'expression' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'expression' } }, { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
 
   runner = Runner( parse( 'while not pause( msg="cond" ) do begin()\n12\npause( msg="exp" )\n34\nend' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 33.333333333333336, 'Scope', { 'time_elapsed': '00:00' } ), ( 33.333333333333336, 'While', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 33.333333333333336, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 33.333333333333336, 'operation': 'While', 'parameters': { 'doing': 'expression' } }, { 'percent': 33.333333333333336, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'While', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'While', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 33.333333333333336, 'Scope', { 'time_elapsed': '00:00' } ), ( 33.333333333333336, 'While', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 33.333333333333336, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 33.333333333333336, 'operation': 'While', 'parameters': { 'doing': 'expression' } }, { 'percent': 33.333333333333336, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
 
   runner = Runner( parse( 'if True then pause( msg="exp" )' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'IfElse', 'parameters': { 'doing': 'expression' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'if pause( msg="cond" ) then 5' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'IfElse', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'if not pause( msg="cond" ) then 5' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'IfElse', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'if False then 23 else pause( msg="cond" )' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 50.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 50.0, 'operation': 'IfElse', 'parameters': { 'doing': 'expression' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'if not pause( msg="cond" ) then begin()\npause( msg="exp" )\nend' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'IfElse', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'IfElse', 'parameters': { 'doing': 'expression' } }, { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'if False then 1 elif not pause( msg="cond" ) then begin()\npause( msg="exp" )\nend' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 50.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 50.0, 'operation': 'IfElse', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 50.0, 'IfElse', { 'doing': 'expression' } ), ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 50.0, 'operation': 'IfElse', 'parameters': { 'doing': 'expression' } }, { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'if False then 1 elif not pause( msg="cond" ) then begin()\n5\npause( msg="exp" )\n6\nend' ) )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 50.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 50.0, 'IfElse', { 'doing': 'condition' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 50.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 50.0, 'operation': 'IfElse', 'parameters': { 'doing': 'condition' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 66.66666666666667, 'Scope', { 'time_elapsed': '00:00' } ), ( 66.66666666666667, 'IfElse', { 'doing': 'expression' } ), ( 33.333333333333336, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'module': None, 'name': 'pause' } ) ]
+  assert runner.status == [ { 'percent': 66.66666666666667, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 66.66666666666667, 'operation': 'IfElse', 'parameters': { 'doing': 'expression' } }, { 'percent': 33.333333333333336, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': None, 'name': 'pause' } } ]
   assert not runner.done
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
 
@@ -1469,58 +1544,58 @@ def test_exists():
 def test_block_timing():
   runner = Runner( parse( 'begin( expected_time=0:10 )\ndelay( seconds=4 )\nend' ) )
   assert runner.run() == 'Waiting for 3 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00', 'time_remaining': '00:09' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'dispatched': False, 'module': None, 'name': 'delay' } } ]
   assert not runner.done
 
   time.sleep( 2 )
   assert runner.run() == 'Waiting for 1 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:02', 'time_remaining': '00:07' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:02', 'time_remaining': '00:07' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'dispatched': False, 'module': None, 'name': 'delay' } } ]
   assert runner.done is False
 
   time.sleep( 2 )
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'begin( expected_time=0:02 )\ndelay( seconds=8 )\nend' ) )
   assert runner.run() == 'Waiting for 7 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:01' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00', 'time_remaining': '00:01' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'dispatched': False, 'module': None, 'name': 'delay' } } ]
   assert not runner.done
 
   time.sleep( 4 )
   assert runner.run() == 'Waiting for 3 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:04', 'time_remaining': '-00:02' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:04', 'time_remaining': '-00:02' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'dispatched': False, 'module': None, 'name': 'delay' } } ]
   assert runner.done is False
 
   time.sleep( 4 )
   runner.run()
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.done
 
   runner = Runner( parse( 'begin( max_time=0:03 )\ndelay( seconds=6 )\nend' ) )
   assert runner.run() == 'Waiting for 5 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'dispatched': False, 'module': None, 'name': 'delay' } } ]
   assert not runner.done
 
   time.sleep( 2 )
   assert runner.run() == 'Waiting for 3 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:02' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:02' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'dispatched': False, 'module': None, 'name': 'delay' } } ]
   assert not runner.done
 
   time.sleep( 2 )
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:04' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:04' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'dispatched': False, 'module': None, 'name': 'delay' } } ]
   assert not runner.done
 
   assert runner.run() == 'Waiting for 1 more seconds'
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:04' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:04' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'dispatched': False, 'module': None, 'name': 'delay' } } ]
   assert not runner.done
 
   time.sleep( 2 )
   with pytest.raises( Pause ):
     runner.run()
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:06' } ), ( 0.0, 'Function', { 'dispatched': False, 'module': None, 'name': 'delay' } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:06' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'dispatched': False, 'module': None, 'name': 'delay' } } ]
   assert not runner.done
 
   runner.run()
@@ -1530,37 +1605,37 @@ def test_block_timing():
 def test_block_timing_with_remote():
   runner = Runner( parse( 'begin( expected_time=0:10 )\ntesting.remote()\nend' ) )
   runner.registerModule( 'contractor.tscript.runner_plugins_test' )
-  assert runner.status == [ ( 0.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.line == 0
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Script not Running', None )
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00', 'time_remaining': '00:09' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': False } } ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Not Expecting Anything', None )
   assert runner.toSubcontractor( [] ) is None
   assert runner.toSubcontractor( [ 'sdf', 'were' ] ) is None
   assert runner.toSubcontractor( [ 'rfrf', 'testing', 'sdf' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'parameters': 'the count "1"' }
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00', 'time_remaining': '00:09' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': True } } ]
   assert runner.line == 2
   assert runner.run() == 'Not Initilized'
   assert not runner.done
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00', 'time_remaining': '00:09' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': True } } ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.fromSubcontractor( 'Bad Cookie', True ) == ( 'Bad Cookie', None )
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Accepted', 'Current State "True"' )
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00', 'time_remaining': '00:09' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': False } } ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Not Expecting Anything', None )
   assert runner.toSubcontractor( [ 'testing' ] ) == { 'cookie': runner.contractor_cookie, 'module': 'testing', 'function': 'remote_func', 'parameters': 'the count "2"' }
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': True } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00', 'time_remaining': '00:09' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': True } } ]
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Accepted', 'Current State "True"' )
-  assert runner.status == [ ( 0.0, 'Scope', { 'time_elapsed': '00:00', 'time_remaining': '00:09' } ), ( 0.0, 'Function', { 'module': 'testing', 'name': 'remote', 'dispatched': False } ) ]
+  assert runner.status == [ { 'percent': 0.0, 'operation': 'Scope', 'parameters': { 'time_elapsed': '00:00', 'time_remaining': '00:09' } }, { 'percent': 0.0, 'operation': 'Function', 'parameters': { 'module': 'testing', 'name': 'remote', 'dispatched': False } } ]
   assert runner.run() == ''
   assert runner.done
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None
   assert runner.fromSubcontractor( runner.contractor_cookie, True ) == ( 'Script not Running', None )
   assert runner.run() == 'done'
   assert runner.line is None
-  assert runner.status == [ ( 100.0, 'Scope', None ) ]
+  assert runner.status == [ { 'percent': 100.0, 'operation': 'Scope', 'parameters': None } ]
   assert runner.toSubcontractor( [ 'testing' ] ) is None

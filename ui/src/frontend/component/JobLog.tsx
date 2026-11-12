@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import ErrorPanel from './ErrorPanel';
 import { fetchJobLogList } from '../store/jobLogSlice';
+import { DEFAULT_PAGE_SIZE } from '../store/sliceFactory';
 import { Box, CircularProgress, Table, TableBody, TableCell, TableHead, TablePagination, TableRow } from '@mui/material';
 import type { RootState, AppDispatch } from '../store';
 
@@ -13,22 +14,22 @@ const JobLog: React.FC<Props> = ( { site } ) =>
 {
   const dispatch = useDispatch<AppDispatch>();
   const authenticated = useSelector( ( s: RootState ) => s.app.authenticated );
-  const { list, loading, error } = useSelector( ( s: RootState ) => s.jobLog );
+  const updateVersion = useSelector( ( s: RootState ) => s.app.updateVersion );
+  const { list, total, loading, error } = useSelector( ( s: RootState ) => s.jobLog );
   const [page, setPage] = useState( 0 );
-  const [rowsPerPage, setRowsPerPage] = useState( 25 );
+  const [rowsPerPage, setRowsPerPage] = useState( DEFAULT_PAGE_SIZE );
 
   const fetchData = useCallback( () =>
   {
     if ( !authenticated ) return;
-    dispatch( fetchJobLogList( site ?? '' ) );
-  }, [authenticated, dispatch, site] );
+    dispatch( fetchJobLogList( { site: site ?? '', position: page * rowsPerPage, count: rowsPerPage } ) );
+  }, [authenticated, dispatch, site, page, rowsPerPage, updateVersion] );
 
+  useEffect( () => { setPage( 0 ); }, [site] );
   useEffect( () => { fetchData(); }, [fetchData] );
 
   if ( loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
   if ( error ) return <ErrorPanel error={ error } onRetry={ fetchData } />;
-
-  const rows = list || [];
 
   return (
     <Box>
@@ -48,7 +49,7 @@ const JobLog: React.FC<Props> = ( { site } ) =>
           </TableRow>
         </TableHead>
         <TableBody>
-          { rows.slice( page * rowsPerPage, page * rowsPerPage + rowsPerPage ).map( ( item ) => (
+          { ( list || [] ).map( ( item ) => (
             <TableRow key={ item.id }>
               <TableCell>{ item.job_id }</TableCell>
               <TableCell>{ item.site }</TableCell>
@@ -66,10 +67,10 @@ const JobLog: React.FC<Props> = ( { site } ) =>
       </Table>
       <TablePagination
         component="div"
-        count={ rows.length }
+        count={ total }
         page={ page }
         rowsPerPage={ rowsPerPage }
-        rowsPerPageOptions={ [10, 25, 50, 100] }
+        rowsPerPageOptions={ [25, 50, 100] }
         onPageChange={ ( _, p ) => setPage( p ) }
         onRowsPerPageChange={ ( e ) => { setRowsPerPage( parseInt( e.target.value, 10 ) ); setPage( 0 ); } }
       />

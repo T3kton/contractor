@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import ErrorPanel from './ErrorPanel';
 import { contractor } from '../store';
 import { fetchFoundationJobList, fetchStructureJobList, fetchDependencyJobList, fetchJobDetail, pauseJob, resumeJob, resetJob, rollbackJob } from '../store/jobsSlice';
+import { DEFAULT_PAGE_SIZE } from '../store/sliceFactory';
 import JobStateDialog from './JobStateDialog';
 import { Box, Button, Chip, CircularProgress, Link, Snackbar, Alert, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
@@ -17,23 +18,25 @@ interface Props {
 
 const renderStatus = ( item: any, idx: number ) =>
 {
-  if ( item[1] === 'Function' && item[2]?.dispatched )
+  const percent = item.percent.toLocaleString( undefined, { minimumFractionDigits: 2 } );
+
+  if ( item.operation === 'Function' && item.parameters?.dispatched )
     return <Box key={ idx }><strong>Task Dispatched</strong></Box>;
 
-  if ( item[1] === 'Scope' )
+  if ( item.operation === 'Scope' )
   {
-    if ( item[2] === null )
-      return <Box key={ idx }>{ item[0].toLocaleString( undefined, { minimumFractionDigits: 2 } ) }%</Box>;
+    if ( item.parameters === null )
+      return <Box key={ idx }>{ percent }%</Box>;
 
-    if ( item[2]?.time_remaining )
+    if ( item.parameters?.time_remaining )
     {
-      if ( item[2].time_remaining[0] === '-' )
-        return <Box key={ idx } sx={{ bgcolor: 'orange' }}><strong>{ item[2].description }</strong> { item[0].toLocaleString( undefined, { minimumFractionDigits: 2 } ) }% Elapsed:&nbsp;{ item[2].time_elapsed } Remaining:&nbsp;{ item[2].time_remaining }</Box>;
+      if ( item.parameters.time_remaining[0] === '-' )
+        return <Box key={ idx } sx={{ bgcolor: 'orange' }}><strong>{ item.parameters.description }</strong> { percent }% Elapsed:&nbsp;{ item.parameters.time_elapsed } Remaining:&nbsp;{ item.parameters.time_remaining }</Box>;
 
-      return <Box key={ idx }><strong>{ item[2].description }</strong> { item[0].toLocaleString( undefined, { minimumFractionDigits: 2 } ) }% Elapsed:&nbsp;{ item[2].time_elapsed } Remaining:&nbsp;{ item[2].time_remaining }</Box>;
+      return <Box key={ idx }><strong>{ item.parameters.description }</strong> { percent }% Elapsed:&nbsp;{ item.parameters.time_elapsed } Remaining:&nbsp;{ item.parameters.time_remaining }</Box>;
     }
 
-    return <Box key={ idx }><strong>{ item[2].description }</strong> { item[0].toLocaleString( undefined, { minimumFractionDigits: 2 } ) }% Elapsed:&nbsp;{ item[2].time_elapsed }</Box>;
+    return <Box key={ idx }><strong>{ item.parameters.description }</strong> { percent }% Elapsed:&nbsp;{ item.parameters.time_elapsed }</Box>;
   }
 
   return null;
@@ -43,14 +46,15 @@ const Job: React.FC<Props> = ( { id, jobType, site } ) =>
 {
   const dispatch = useDispatch<AppDispatch>();
   const authenticated = useSelector( ( s: RootState ) => s.app.authenticated );
-  const { listFoundation, listStructure, listDependency, detail, loading, error } = useSelector( ( s: RootState ) => s.jobs );
+  const updateVersion = useSelector( ( s: RootState ) => s.app.updateVersion );
+  const { listFoundation, totalFoundation, listStructure, totalStructure, listDependency, totalDependency, detail, loading, error } = useSelector( ( s: RootState ) => s.jobs );
   const [snackMessage, setSnackMessage] = useState( '' );
   const [snackSeverity, setSnackSeverity] = useState<'success' | 'error'>( 'success' );
   const [snackOpen, setSnackOpen] = useState( false );
   const [pageF, setPageF] = useState( 0 );
   const [pageS, setPageS] = useState( 0 );
   const [pageD, setPageD] = useState( 0 );
-  const [rowsPerPage, setRowsPerPage] = useState( 25 );
+  const [rowsPerPage, setRowsPerPage] = useState( DEFAULT_PAGE_SIZE );
   const actionGenRef = useRef( 0 );
 
   const fetchData = useCallback( () =>
@@ -59,12 +63,13 @@ const Job: React.FC<Props> = ( { id, jobType, site } ) =>
     if ( id !== undefined ) dispatch( fetchJobDetail( { id, jobType: jobType ?? '' } ) );
     else
     {
-      dispatch( fetchFoundationJobList( site ?? '' ) );
-      dispatch( fetchStructureJobList( site ?? '' ) );
-      dispatch( fetchDependencyJobList( site ?? '' ) );
+      dispatch( fetchFoundationJobList( { site: site ?? '', position: pageF * rowsPerPage, count: rowsPerPage } ) );
+      dispatch( fetchStructureJobList( { site: site ?? '', position: pageS * rowsPerPage, count: rowsPerPage } ) );
+      dispatch( fetchDependencyJobList( { site: site ?? '', position: pageD * rowsPerPage, count: rowsPerPage } ) );
     }
-  }, [authenticated, dispatch, id, jobType, site] );
+  }, [authenticated, dispatch, id, jobType, site, pageF, pageS, pageD, rowsPerPage, updateVersion] );
 
+  useEffect( () => { setPageF( 0 ); setPageS( 0 ); setPageD( 0 ); }, [site] );
   useEffect( () => { fetchData(); }, [fetchData] );
 
   const showSnack = ( message: string, severity: 'success' | 'error' ) =>
@@ -126,7 +131,8 @@ const Job: React.FC<Props> = ( { id, jobType, site } ) =>
                 }
                 <TableRow><TableCell variant="head">Script</TableCell><TableCell>{ detail.job.script_name }</TableCell></TableRow>
                 <TableRow><TableCell variant="head">Message</TableCell><TableCell>{ detail.job.message }</TableCell></TableRow>
-                <TableRow><TableCell variant="head">State</TableCell><TableCell>{ detail.job.state }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">Note</TableCell><TableCell>{ detail.job.note }</TableCell></TableRow>
+                <TableRow><TableCell variant="head">State</TableCell><TableCell><Chip size="small" label={ detail.job.state } color={ stateColor( detail.job.state ?? '' ) } /></TableCell></TableRow>
                 <TableRow><TableCell variant="head">Created</TableCell><TableCell>{ dateStr( detail.job.created ) }</TableCell></TableRow>
                 <TableRow><TableCell variant="head">Updated</TableCell><TableCell>{ dateStr( detail.job.updated ) }</TableCell></TableRow>
               </TableBody>
@@ -137,10 +143,6 @@ const Job: React.FC<Props> = ( { id, jobType, site } ) =>
       </Box>
     );
   }
-
-  const rowsF = listFoundation || [];
-  const rowsS = listStructure || [];
-  const rowsD = listDependency || [];
 
   return (
     <Box>
@@ -157,19 +159,19 @@ const Job: React.FC<Props> = ( { id, jobType, site } ) =>
           </TableRow>
         </TableHead>
         <TableBody>
-          { rowsF.slice( pageF * rowsPerPage, pageF * rowsPerPage + rowsPerPage ).map( ( item ) => (
+          { ( listFoundation || [] ).map( ( item ) => (
             <TableRow key={ item.id }>
               <TableCell align="right"><Link component={ RouterLink } to={ '/job/f/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.script }</TableCell>
               <TableCell><Link component={ RouterLink } to={ '/foundation/' + item.foundation }>{ item.foundation }</Link></TableCell>
-              <TableCell>{ item.message }<br/>{ item.status.map( ( s: any, idx: number ) => renderStatus( s, idx ) ) }</TableCell>
+              <TableCell>{ item.message }{ item.note && <><br/>{ item.note }</> }<br/>{ item.status.map( ( s: any, idx: number ) => renderStatus( s, idx ) ) }</TableCell>
               <TableCell><Chip size="small" label={ item.state } color={ stateColor( item.state ) } /></TableCell>
               <TableCell><strong>Created:</strong>&nbsp;{ item.created }<br/><strong>Updated:</strong>&nbsp;{ item.updated }</TableCell>
             </TableRow>
           ) ) }
         </TableBody>
       </Table>
-      <TablePagination component="div" count={ rowsF.length } page={ pageF } rowsPerPage={ rowsPerPage } rowsPerPageOptions={ [10, 25, 50, 100] } onPageChange={ ( _, p ) => setPageF( p ) } onRowsPerPageChange={ ( e ) => { setRowsPerPage( parseInt( e.target.value, 10 ) ); setPageF( 0 ); setPageS( 0 ); setPageD( 0 ); } } />
+      <TablePagination component="div" count={ totalFoundation } page={ pageF } rowsPerPage={ rowsPerPage } rowsPerPageOptions={ [25, 50, 100] } onPageChange={ ( _, p ) => setPageF( p ) } onRowsPerPageChange={ ( e ) => { setRowsPerPage( parseInt( e.target.value, 10 ) ); setPageF( 0 ); setPageS( 0 ); setPageD( 0 ); } } />
 
       <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>Structure Jobs</Typography>
       <Table>
@@ -184,19 +186,19 @@ const Job: React.FC<Props> = ( { id, jobType, site } ) =>
           </TableRow>
         </TableHead>
         <TableBody>
-          { rowsS.slice( pageS * rowsPerPage, pageS * rowsPerPage + rowsPerPage ).map( ( item ) => (
+          { ( listStructure || [] ).map( ( item ) => (
             <TableRow key={ item.id }>
               <TableCell align="right"><Link component={ RouterLink } to={ '/job/s/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.script }</TableCell>
               <TableCell><Link component={ RouterLink } to={ '/structure/' + item.structure }>{ item.structure }</Link></TableCell>
-              <TableCell>{ item.message }<br/>{ item.status.map( ( s: any, idx: number ) => renderStatus( s, idx ) ) }</TableCell>
+              <TableCell>{ item.message }{ item.note && <><br/>{ item.note }</> }<br/>{ item.status.map( ( s: any, idx: number ) => renderStatus( s, idx ) ) }</TableCell>
               <TableCell><Chip size="small" label={ item.state } color={ stateColor( item.state ) } /></TableCell>
               <TableCell><strong>Created:</strong>&nbsp;{ item.created }<br/><strong>Updated:</strong>&nbsp;{ item.updated }</TableCell>
             </TableRow>
           ) ) }
         </TableBody>
       </Table>
-      <TablePagination component="div" count={ rowsS.length } page={ pageS } rowsPerPage={ rowsPerPage } rowsPerPageOptions={ [10, 25, 50, 100] } onPageChange={ ( _, p ) => setPageS( p ) } onRowsPerPageChange={ ( e ) => { setRowsPerPage( parseInt( e.target.value, 10 ) ); setPageF( 0 ); setPageS( 0 ); setPageD( 0 ); } } />
+      <TablePagination component="div" count={ totalStructure } page={ pageS } rowsPerPage={ rowsPerPage } rowsPerPageOptions={ [25, 50, 100] } onPageChange={ ( _, p ) => setPageS( p ) } onRowsPerPageChange={ ( e ) => { setRowsPerPage( parseInt( e.target.value, 10 ) ); setPageF( 0 ); setPageS( 0 ); setPageD( 0 ); } } />
 
       <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>Dependency Jobs</Typography>
       <Table>
@@ -211,19 +213,19 @@ const Job: React.FC<Props> = ( { id, jobType, site } ) =>
           </TableRow>
         </TableHead>
         <TableBody>
-          { rowsD.slice( pageD * rowsPerPage, pageD * rowsPerPage + rowsPerPage ).map( ( item ) => (
+          { ( listDependency || [] ).map( ( item ) => (
             <TableRow key={ item.id }>
               <TableCell align="right"><Link component={ RouterLink } to={ '/job/d/' + item.id }>{ item.id }</Link></TableCell>
               <TableCell>{ item.script }</TableCell>
               <TableCell>{ item.dependency }</TableCell>
-              <TableCell>{ item.message }<br/>{ item.status.map( ( s: any, idx: number ) => renderStatus( s, idx ) ) }</TableCell>
+              <TableCell>{ item.message }{ item.note && <><br/>{ item.note }</> }<br/>{ item.status.map( ( s: any, idx: number ) => renderStatus( s, idx ) ) }</TableCell>
               <TableCell><Chip size="small" label={ item.state } color={ stateColor( item.state ) } /></TableCell>
               <TableCell><strong>Created:</strong>&nbsp;{ item.created }<br/><strong>Updated:</strong>&nbsp;{ item.updated }</TableCell>
             </TableRow>
           ) ) }
         </TableBody>
       </Table>
-      <TablePagination component="div" count={ rowsD.length } page={ pageD } rowsPerPage={ rowsPerPage } rowsPerPageOptions={ [10, 25, 50, 100] } onPageChange={ ( _, p ) => setPageD( p ) } onRowsPerPageChange={ ( e ) => { setRowsPerPage( parseInt( e.target.value, 10 ) ); setPageF( 0 ); setPageS( 0 ); setPageD( 0 ); } } />
+      <TablePagination component="div" count={ totalDependency } page={ pageD } rowsPerPage={ rowsPerPage } rowsPerPageOptions={ [25, 50, 100] } onPageChange={ ( _, p ) => setPageD( p ) } onRowsPerPageChange={ ( e ) => { setRowsPerPage( parseInt( e.target.value, 10 ) ); setPageF( 0 ); setPageS( 0 ); setPageD( 0 ); } } />
 
       { snackbar }
     </Box>

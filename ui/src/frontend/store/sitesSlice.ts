@@ -1,6 +1,7 @@
 import type { Site_Site } from '../lib/Contractor';
 import { dateStr } from '../lib/utils';
-import { createDetailListSlice, createAuthThunk } from './sliceFactory';
+import { createPagedListSlice, createAuthThunk } from './sliceFactory';
+import type { PageParams, PagedResult } from './sliceFactory';
 
 export interface SiteListItem {
   name: string;
@@ -15,15 +16,19 @@ export type SiteDetail = Site_Site;
 
 export const fetchSiteList = createAuthThunk(
   'sites/fetchList',
-  async ( _: void, contractor ) =>
+  async ( { position, count }: PageParams, contractor ) =>
   {
-    const result = await contractor.Site_Site_get_multi( { filter: undefined } );
-    return Object.values( result ).map( ( site: any ) => ( {
+    const [ listResult, result ] = await Promise.all( [
+      contractor.Site_Site_list( { filter: undefined, position, count } ),
+      contractor.Site_Site_get_multi( { filter: undefined, position, count } ),
+    ] );
+    const items = Object.values( result ).map( ( site: any ) => ( {
       name: site.name,
       description: site.description,
       created: dateStr( site.created ),
       updated: dateStr( site.updated ),
     } ) ) as SiteListItem[];
+    return { items, total: listResult.total } as PagedResult<SiteListItem>;
   }
 );
 
@@ -35,7 +40,7 @@ export const fetchSite = createAuthThunk(
   }
 );
 
-const sitesSlice = createDetailListSlice<SiteListItem, SiteDetail>( { name: 'sites', fetchList: fetchSiteList, fetchOne: fetchSite } );
+const sitesSlice = createPagedListSlice<SiteListItem, SiteDetail>( { name: 'sites', fetchList: fetchSiteList, fetchOne: fetchSite } );
 
 export const { invalidate: invalidateSites } = sitesSlice.actions;
 export default sitesSlice.reducer;

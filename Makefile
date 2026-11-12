@@ -46,7 +46,7 @@ ui/node_modules.touch: ui/package.json ui/package-lock.json
 	cd ui && npm install
 	touch ui/node_modules.touch
 
-ui/build/main.js: $(wildcard ui/src/frontend/*) ui/src/frontend/index.js ui/node_modules.touch
+ui/build/main.js: $(wildcard ui/src/frontend/*) ui/src/frontend/index.tsx ui/node_modules.touch
 	cd ui && npm run build
 
 ui/build/%: ui/build/main.js
@@ -66,16 +66,18 @@ test-blueprints:
 	echo ubuntu-noble-base
 
 test-requires:
-	echo flake8 python3-pip python3-django python3-psycopg2 python3-pymongo python3-parsimonious python3-jinja2 python3-pytest python3-pytest-cov python3-pytest-django python3-pytest-mock python3-pytest-timeout postgresql mongodb
+	echo flake8 python3-pip python3-django python3-psycopg2 python3-pymongo python3-parsimonious python3-jinja2 python3-pytest python3-pytest-cov python3-pytest-django python3-pytest-mock python3-pytest-timeout postgresql
 
 test-setup:
+	wget https://repo.mongodb.org/apt/ubuntu/dists/noble/mongodb-org/8.3/multiverse/binary-amd64/mongodb-org-server_8.3.8_amd64.deb -O mongodb.deb
+	apt install -y ./mongodb.deb
 	su postgres -c "echo \"CREATE ROLE contractor WITH PASSWORD 'contractor' NOSUPERUSER NOCREATEROLE CREATEDB LOGIN;\" | psql"
-	pip3 install -e .
+	pip3 install -e . --break-system-packages
 	cp contractor.conf.sample contractor/settings.py
 	touch test-setup
 
 lint:
-	flake8 --ignore=E501,E201,E202,E111,E126,E114,E402,W503 --statistics --exclude=migrations,build .
+	flake8 --ignore=E501,E201,E202,E111,E126,E114,E402,W503,E121 --statistics --exclude=migrations,build .
 
 test:
 	py.test-3 -x --cov=contractor --cov-report html --cov-report term --ds=contractor.settings -vv contractor

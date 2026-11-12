@@ -11,6 +11,7 @@ import dependenciesReducer from './dependenciesSlice';
 import structuresReducer from './structuresSlice';
 import complexesReducer from './complexesSlice';
 import addressBlocksReducer from './addressBlocksSlice';
+import directoryReducer from './directorySlice';
 import jobsReducer from './jobsSlice';
 import jobLogReducer from './jobLogSlice';
 import cartographerReducer from './cartographerSlice';
@@ -36,6 +37,7 @@ export const store = configureStore( {
     structures: structuresReducer,
     complexes: complexesReducer,
     addressBlocks: addressBlocksReducer,
+    directory: directoryReducer,
     jobs: jobsReducer,
     jobLog: jobLogReducer,
     cartographer: cartographerReducer,

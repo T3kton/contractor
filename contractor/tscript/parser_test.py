@@ -185,6 +185,63 @@ def test_constants():
                        ( 'L', ( 'C', False ), 1 )
                    ] } )
 
+  # identifiers that merely start with a reserved word must parse as variables, not get cut off partway through the keyword
+  node = parse( 'truely' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'V', { 'name': 'truely', 'module': None } ), 1 )
+                   ] } )
+
+  node = parse( 'falsehood' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'V', { 'name': 'falsehood', 'module': None } ), 1 )
+                   ] } )
+
+  node = parse( 'nonexistent' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'V', { 'name': 'nonexistent', 'module': None } ), 1 )
+                   ] } )
+
+  node = parse( 'notable' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'V', { 'name': 'notable', 'module': None } ), 1 )
+                   ] } )
+
+  # same reserved-word-prefix guard, but exercised via value_expression (assignment RHS) instead of expression
+  node = parse( 'myvar = truely' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'A', { 'target': ( 'V', { 'name': 'myvar', 'module': None } ), 'value': ( 'V', { 'name': 'truely', 'module': None } ) } ), 1 )
+                   ] } )
+
+  # case variations of the reserved-word prefix should be guarded the same way
+  node = parse( 'TRUEly' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'V', { 'name': 'TRUEly', 'module': None } ), 1 )
+                   ] } )
+
+  node = parse( 'FALSEhood' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'V', { 'name': 'FALSEhood', 'module': None } ), 1 )
+                   ] } )
+
+  node = parse( 'NONEexistent' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'V', { 'name': 'NONEexistent', 'module': None } ), 1 )
+                   ] } )
+
+  node = parse( 'NOTable' )
+  assert node == ( 'S', { '_children':
+                   [
+                       ( 'L', ( 'V', { 'name': 'NOTable', 'module': None } ), 1 )
+                   ] } )
+
   node = parse( '0:12' )
   assert node == ( 'S', { '_children':
                    [

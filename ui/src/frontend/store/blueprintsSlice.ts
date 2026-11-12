@@ -1,6 +1,7 @@
 import type { BluePrint_FoundationBluePrint, BluePrint_StructureBluePrint } from '../lib/Contractor';
 import { createSlice } from '@reduxjs/toolkit';
 import { createAuthThunk } from './sliceFactory';
+import type { PageParams, PagedResult } from './sliceFactory';
 import { dateStr } from '../lib/utils';
 
 export interface BluePrintListItem {
@@ -14,7 +15,9 @@ export type BluePrintDetail = BluePrint_FoundationBluePrint | BluePrint_Structur
 
 interface BluePrintsState {
   listF: BluePrintListItem[] | null;
+  totalF: number;
   listS: BluePrintListItem[] | null;
+  totalS: number;
   detail: BluePrintDetail | null;
   loading: boolean;
   error: string | null;
@@ -23,29 +26,37 @@ interface BluePrintsState {
 
 export const fetchFoundationBluePrintList = createAuthThunk(
   'blueprints/fetchFoundationList',
-  async ( _: void, contractor ) =>
+  async ( { position, count }: PageParams, contractor ) =>
   {
-    const result = await contractor.BluePrint_FoundationBluePrint_get_multi( { filter: undefined } );
-    return Object.values( result ).map( ( bp: any ) => ( {
+    const [ listResult, result ] = await Promise.all( [
+      contractor.BluePrint_FoundationBluePrint_list( { filter: undefined, position, count } ),
+      contractor.BluePrint_FoundationBluePrint_get_multi( { filter: undefined, position, count } ),
+    ] );
+    const items = Object.values( result ).map( ( bp: any ) => ( {
       name: bp.name,
       description: bp.description,
       created: dateStr( bp.created ),
       updated: dateStr( bp.updated ),
     } ) ) as BluePrintListItem[];
+    return { items, total: listResult.total } as PagedResult<BluePrintListItem>;
   }
 );
 
 export const fetchStructureBluePrintList = createAuthThunk(
   'blueprints/fetchStructureList',
-  async ( _: void, contractor ) =>
+  async ( { position, count }: PageParams, contractor ) =>
   {
-    const result = await contractor.BluePrint_StructureBluePrint_get_multi( { filter: undefined } );
-    return Object.values( result ).map( ( bp: any ) => ( {
+    const [ listResult, result ] = await Promise.all( [
+      contractor.BluePrint_StructureBluePrint_list( { filter: undefined, position, count } ),
+      contractor.BluePrint_StructureBluePrint_get_multi( { filter: undefined, position, count } ),
+    ] );
+    const items = Object.values( result ).map( ( bp: any ) => ( {
       name: bp.name,
       description: bp.description,
       created: dateStr( bp.created ),
       updated: dateStr( bp.updated ),
     } ) ) as BluePrintListItem[];
+    return { items, total: listResult.total } as PagedResult<BluePrintListItem>;
   }
 );
 
@@ -67,18 +78,18 @@ export const fetchStructureBluePrint = createAuthThunk(
 
 const blueprintsSlice = createSlice( {
   name: 'blueprints',
-  initialState: { listF: null, listS: null, detail: null, loading: false, error: null } as BluePrintsState,
+  initialState: { listF: null, totalF: 0, listS: null, totalS: 0, detail: null, loading: false, error: null } as BluePrintsState,
   reducers: {
-    invalidate: ( state ) => { state.listF = null; state.listS = null; state.detail = null; },
+    invalidate: ( state ) => { state.listF = null; state.totalF = 0; state.listS = null; state.totalS = 0; state.detail = null; },
   },
   extraReducers: ( builder ) =>
   {
     builder
       .addCase( fetchFoundationBluePrintList.pending, ( state ) => { state.loading = true; state.error = null; } )
-      .addCase( fetchFoundationBluePrintList.fulfilled, ( state, action ) => { state.loading = false; state.listF = action.payload; } )
+      .addCase( fetchFoundationBluePrintList.fulfilled, ( state, action ) => { state.loading = false; state.listF = action.payload.items; state.totalF = action.payload.total; } )
       .addCase( fetchFoundationBluePrintList.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } )
       .addCase( fetchStructureBluePrintList.pending, ( state ) => { state.loading = true; state.error = null; } )
-      .addCase( fetchStructureBluePrintList.fulfilled, ( state, action ) => { state.loading = false; state.listS = action.payload; } )
+      .addCase( fetchStructureBluePrintList.fulfilled, ( state, action ) => { state.loading = false; state.listS = action.payload.items; state.totalS = action.payload.total; } )
       .addCase( fetchStructureBluePrintList.rejected, ( state, action ) => { state.loading = false; state.error = ( ( action.payload as any )?.msg ) ?? action.error.message ?? 'Error loading data'; } )
       .addCase( fetchFoundationBluePrint.pending, ( state ) => { state.loading = true; state.error = null; } )
       .addCase( fetchFoundationBluePrint.fulfilled, ( state, action ) => { state.loading = false; state.detail = action.payload as any; } )

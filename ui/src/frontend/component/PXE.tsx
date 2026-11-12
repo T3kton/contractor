@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import ErrorPanel from './ErrorPanel';
 import { fetchPXEList, fetchPXE } from '../store/pxeSlice';
-import { Box, CircularProgress, Link, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { DEFAULT_PAGE_SIZE } from '../store/sliceFactory';
+import { Box, CircularProgress, Link, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../store';
 import { dateStr } from '../lib/utils';
@@ -16,14 +17,17 @@ const PXE: React.FC<Props> = ( { id } ) =>
 {
   const dispatch = useDispatch<AppDispatch>();
   const authenticated = useSelector( ( s: RootState ) => s.app.authenticated );
-  const { list, detail, loading, error } = useSelector( ( s: RootState ) => s.pxe );
+  const updateVersion = useSelector( ( s: RootState ) => s.app.updateVersion );
+  const { list, total, detail, loading, error } = useSelector( ( s: RootState ) => s.pxe );
+  const [page, setPage] = useState( 0 );
+  const [rowsPerPage, setRowsPerPage] = useState( DEFAULT_PAGE_SIZE );
 
   const fetchData = useCallback( () =>
   {
     if ( !authenticated ) return;
     if ( id !== undefined ) dispatch( fetchPXE( id ) );
-    else dispatch( fetchPXEList() );
-  }, [authenticated, dispatch, id] );
+    else dispatch( fetchPXEList( { position: page * rowsPerPage, count: rowsPerPage } ) );
+  }, [authenticated, dispatch, id, page, rowsPerPage, updateVersion] );
 
   useEffect( () => { fetchData(); }, [fetchData] );
 
@@ -52,24 +56,35 @@ const PXE: React.FC<Props> = ( { id } ) =>
   }
 
   return (
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableCell>Name</TableCell>
-          <TableCell>Created</TableCell>
-          <TableCell>Updated</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        { ( list || [] ).map( ( item ) => (
-          <TableRow key={ item.name }>
-            <TableCell><Link component={ RouterLink } to={ '/pxe/' + item.name }>{ item.name }</Link></TableCell>
-            <TableCell>{ item.created }</TableCell>
-            <TableCell>{ item.updated }</TableCell>
+    <Box>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Name</TableCell>
+            <TableCell>Created</TableCell>
+            <TableCell>Updated</TableCell>
           </TableRow>
-        ) ) }
-      </TableBody>
-    </Table>
+        </TableHead>
+        <TableBody>
+          { ( list || [] ).map( ( item ) => (
+            <TableRow key={ item.name }>
+              <TableCell><Link component={ RouterLink } to={ '/pxe/' + item.name }>{ item.name }</Link></TableCell>
+              <TableCell>{ item.created }</TableCell>
+              <TableCell>{ item.updated }</TableCell>
+            </TableRow>
+          ) ) }
+        </TableBody>
+      </Table>
+      <TablePagination
+        component="div"
+        count={ total }
+        page={ page }
+        rowsPerPage={ rowsPerPage }
+        rowsPerPageOptions={ [25, 50, 100] }
+        onPageChange={ ( _, p ) => setPage( p ) }
+        onRowsPerPageChange={ ( e ) => { setRowsPerPage( parseInt( e.target.value, 10 ) ); setPage( 0 ); } }
+      />
+    </Box>
   );
 };
 

@@ -55,7 +55,16 @@ class JobStateDialog extends React.Component<JobStateDialogProps, JobStateDialog
           <DialogTitle>Job State</DialogTitle>
           <DialogContent>
             <Box>
-              <pre>{ this.state.script }</pre>
+              <Table size="small">
+                <TableBody>
+                  { ( this.state.script ?? '' ).split( /[\r\n]/ ).map( ( line, index ) => (
+                    <TableRow key={ index } selected={ index === this.state.cur_line }>
+                      <TableCell sx={{ py: 0 }}>{ index }</TableCell>
+                      <TableCell sx={{ py: 0 }}><pre style={{ margin: 0 }}>{ line }</pre></TableCell>
+                    </TableRow>
+                  ) ) }
+                </TableBody>
+              </Table>
               <Typography>on line: <strong>{ this.state.cur_line }</strong></Typography>
               <Table size="small">
                 <TableHead>

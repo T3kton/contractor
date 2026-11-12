@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('identifier', models.CharField(max_length=64, primary_key=True, serialize=False)),
                 ('message', models.CharField(max_length=200)),
-                ('info_map', contractor.fields.MapField(blank=True, default=contractor.fields.defaultdict, editable=True, null=True)),
+                ('info_map', contractor.fields.JSONMapField(blank=True, default=contractor.fields.defaultdict, editable=True, null=True)),
                 ('last_checkin', models.DateTimeField(blank=True, null=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),

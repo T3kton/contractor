@@ -21,8 +21,8 @@ class Migration(migrations.Migration):
             name='Structure',
             fields=[
                 ('networked_ptr', models.OneToOneField(to='Utilities.Networked', primary_key=True, parent_link=True, serialize=False, auto_created=True,on_delete=models.CASCADE)),
-                ('config_uuid', models.CharField(max_length=36, unique=True)),
-                ('config_values', contractor.fields.MapField(null=True, default=contractor.fields.defaultdict, blank=True)),
+                ('config_uuid', models.CharField(max_length=36, unique=True, default='<undefined>')),
+                ('config_values', contractor.fields.JSONMapField(null=True, default=contractor.fields.defaultdict, blank=True)),
                 ('built_at', models.DateTimeField(null=True, editable=False, blank=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),

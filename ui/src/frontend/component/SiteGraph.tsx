@@ -37,13 +37,14 @@ const SiteGraph: React.FC<Props> = ( { site } ) =>
 {
   const dispatch = useDispatch<AppDispatch>();
   const authenticated = useSelector( ( s: RootState ) => s.app.authenticated );
+  const updateVersion = useSelector( ( s: RootState ) => s.app.updateVersion );
   const { graph, loading, error } = useSelector( ( s: RootState ) => s.siteGraph );
 
   const fetchData = useCallback( () =>
   {
     if ( !authenticated ) return;
     dispatch( fetchSiteGraph( site ?? '' ) );
-  }, [authenticated, dispatch, site] );
+  }, [authenticated, dispatch, site, updateVersion] );
 
   useEffect( () => { fetchData(); }, [fetchData] );
 

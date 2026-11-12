@@ -1,6 +1,7 @@
 import { Site_Site, Building_Structure, Utilities_Address } from '../lib/Contractor';
 import { dateStr } from '../lib/utils';
-import { createDetailListSlice, createAuthThunk } from './sliceFactory';
+import { createPagedListSlice, createAuthThunk, FETCH_ALL_COUNT } from './sliceFactory';
+import type { PageParams, PagedResult } from './sliceFactory';
 
 export interface StructureListItem {
   id: string;
@@ -18,17 +19,21 @@ export interface StructureDetail {
 
 export const fetchStructureList = createAuthThunk(
   'structures/fetchList',
-  async ( site: string, contractor ) =>
+  async ( { site, position, count }: { site: string } & PageParams, contractor ) =>
   {
     const filter = site ? new Building_Structure._ListFilter_site( new Site_Site( contractor, site ) ) : undefined;
-    const result = await contractor.Building_Structure_get_multi( { filter } );
-    return Object.values( result ).map( ( s: any ) => ( {
+    const [ listResult, result ] = await Promise.all( [
+      contractor.Building_Structure_list( { filter, position, count } ),
+      contractor.Building_Structure_get_multi( { filter, position, count } ),
+    ] );
+    const items = Object.values( result ).map( ( s: any ) => ( {
       id: s.id.toString(),
       hostname: s.hostname ?? '',
       state: s.state ?? '',
       created: dateStr( s.created ),
       updated: dateStr( s.updated ),
     } ) ) as StructureListItem[];
+    return { items, total: listResult.total } as PagedResult<StructureListItem>;
   }
 );
 
@@ -39,12 +44,13 @@ export const fetchStructure = createAuthThunk(
     const structure = await contractor.Building_Structure_get( parseInt( id ) );
     const addrResult = await contractor.Utilities_Address_get_multi( {
       filter: new Utilities_Address._ListFilter_structure( new Building_Structure( contractor, parseInt( id ) ) ),
+      count: FETCH_ALL_COUNT,
     } );
     return { structure, addresses: Object.values( addrResult ) } as StructureDetail;
   }
 );
 
-const structuresSlice = createDetailListSlice<StructureListItem, StructureDetail>( { name: 'structures', fetchList: fetchStructureList, fetchOne: fetchStructure } );
+const structuresSlice = createPagedListSlice<StructureListItem, StructureDetail>( { name: 'structures', fetchList: fetchStructureList, fetchOne: fetchStructure } );
 
 export const { invalidate: invalidateStructures } = structuresSlice.actions;
 export default structuresSlice.reducer;

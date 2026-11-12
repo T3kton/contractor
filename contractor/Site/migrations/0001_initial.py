@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('name', models.CharField(max_length=40, primary_key=True, serialize=False)),
                 ('description', models.CharField(max_length=200)),
-                ('config_values', contractor.fields.MapField(null=True, default=contractor.fields.defaultdict, blank=True)),
+                ('config_values', contractor.fields.JSONMapField(null=True, default=contractor.fields.defaultdict, blank=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('parent', models.ForeignKey(null=True, blank=True, to='Site.Site', on_delete=models.CASCADE)),

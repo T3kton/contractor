@@ -14,7 +14,7 @@ const ServerError: React.FC = () =>
       <DialogTitle>Server Error</DialogTitle>
       <DialogContent>
         <p>{ serverError?.msg }</p>
-        <pre>{ serverError?.trace }</pre>
+        <pre style={{ overflowX: 'auto' }}>{ serverError?.trace }</pre>
       </DialogContent>
       <DialogActions>
         <Button onClick={ () => dispatch( clearServerError() ) }>Close</Button>

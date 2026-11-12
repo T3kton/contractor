@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import MapField, name_regex, config_name_regex
+from contractor.fields import JSONMapField, name_regex, config_name_regex
 from contractor.lib.config import getConfig
 from contractor.Records.lib import post_save_callback, post_delete_callback
 from contractor.Directory.models import Zone
@@ -35,7 +35,7 @@ class Site( models.Model ):
   zone = models.ForeignKey( Zone, null=True, blank=True, on_delete=models.PROTECT )
   description = models.CharField( max_length=200 )
   parent = models.ForeignKey( 'self', null=True, blank=True, on_delete=models.CASCADE )
-  config_values = MapField( blank=True, null=True )
+  config_values = JSONMapField( blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 

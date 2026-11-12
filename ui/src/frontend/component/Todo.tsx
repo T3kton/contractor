@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import ErrorPanel from './ErrorPanel';
 import { fetchFoundationClassList, fetchTodoList } from '../store/todoSlice';
-import { Box, Checkbox, CircularProgress, FormControl, FormControlLabel, InputLabel, Link, MenuItem, Select, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
+import { DEFAULT_PAGE_SIZE } from '../store/sliceFactory';
+import { Box, Checkbox, CircularProgress, FormControl, FormControlLabel, InputLabel, Link, MenuItem, Select, Table, TableBody, TableCell, TableHead, TablePagination, TableRow } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../store';
 
@@ -14,22 +15,26 @@ const Todo: React.FC<Props> = ( { site } ) =>
 {
   const dispatch = useDispatch<AppDispatch>();
   const authenticated = useSelector( ( s: RootState ) => s.app.authenticated );
-  const { list, classList, loading, error } = useSelector( ( s: RootState ) => s.todo );
+  const updateVersion = useSelector( ( s: RootState ) => s.app.updateVersion );
+  const { list, total, classList, loading, error } = useSelector( ( s: RootState ) => s.todo );
   const [hasDependencies, setHasDependencies] = useState( false );
   const [foundationClass, setFoundationClass] = useState( '' );
+  const [page, setPage] = useState( 0 );
+  const [rowsPerPage, setRowsPerPage] = useState( DEFAULT_PAGE_SIZE );
 
   useEffect( () =>
   {
     if ( !authenticated ) return;
     dispatch( fetchFoundationClassList() );
-  }, [authenticated, dispatch] );
+  }, [authenticated, dispatch, updateVersion] );
 
   const fetchData = useCallback( () =>
   {
     if ( !authenticated ) return;
-    dispatch( fetchTodoList( { site: site ?? '', hasDependancies: hasDependencies, foundationClass: foundationClass || null } ) );
-  }, [authenticated, dispatch, site, hasDependencies, foundationClass] );
+    dispatch( fetchTodoList( { site: site ?? '', hasDependancies: hasDependencies, foundationClass: foundationClass || null, position: page * rowsPerPage, count: rowsPerPage } ) );
+  }, [authenticated, dispatch, site, hasDependencies, foundationClass, page, rowsPerPage, updateVersion] );
 
+  useEffect( () => { setPage( 0 ); }, [site, hasDependencies, foundationClass] );
   useEffect( () => { fetchData(); }, [fetchData] );
 
   if ( loading ) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
@@ -89,6 +94,15 @@ const Todo: React.FC<Props> = ( { site } ) =>
           ) ) }
         </TableBody>
       </Table>
+      <TablePagination
+        component="div"
+        count={ total }
+        page={ page }
+        rowsPerPage={ rowsPerPage }
+        rowsPerPageOptions={ [25, 50, 100] }
+        onPageChange={ ( _, p ) => setPage( p ) }
+        onRowsPerPageChange={ ( e ) => { setRowsPerPage( parseInt( e.target.value, 10 ) ); setPage( 0 ); } }
+      />
     </Box>
   );
 };

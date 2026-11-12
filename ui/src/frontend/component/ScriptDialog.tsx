@@ -9,7 +9,7 @@ interface ScriptDialogProps {
 interface ScriptData {
   name: string;
   description: string;
-  script_lines: string[];
+  script: string;
 }
 
 interface ScriptDialogState {
@@ -21,7 +21,7 @@ class ScriptDialog extends React.Component<ScriptDialogProps, ScriptDialogState>
 {
   state: ScriptDialogState = {
       active: false,
-      script: { name: '', description: '', script_lines: [] },
+      script: { name: '', description: '', script: '' },
   };
 
   show = () =>
@@ -33,7 +33,7 @@ class ScriptDialog extends React.Component<ScriptDialogProps, ScriptDialogState>
         var script: ScriptData = {
           name: data.name ?? '',
           description: data.description ?? '',
-          script_lines: ( data.script ?? '' ).split( /[\r\n]/ ),
+          script: data.script ?? '',
         };
 
         this.setState( { active: true, script: script } );
@@ -56,11 +56,9 @@ class ScriptDialog extends React.Component<ScriptDialogProps, ScriptDialogState>
               <TableBody>
                 <TableRow><TableCell variant="head">Name</TableCell><TableCell>{ this.state.script.name }</TableCell></TableRow>
                 <TableRow><TableCell variant="head">Description</TableCell><TableCell>{ this.state.script.description }</TableCell></TableRow>
-                { this.state.script.script_lines.map( ( item, index ) => (
-                  <TableRow key={ index }><TableCell>{ index }</TableCell><TableCell><pre>{ item }</pre></TableCell></TableRow>
-                ) ) }
               </TableBody>
             </Table>
+            <pre>{ this.state.script.script }</pre>
           </DialogContent>
           <DialogActions>
             <Button onClick={ this.close }>Close</Button>

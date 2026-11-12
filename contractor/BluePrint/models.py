@@ -4,10 +4,10 @@ from django.core.exceptions import ValidationError
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import MapField, StringListField, name_regex, config_name_regex
+from contractor.fields import JSONMapField, StringListField, name_regex, config_name_regex
 from contractor.tscript import parser
 from contractor.lib.config import getConfig
-from contractor.BluePrint.lib import validateTemplate
+from contractor.BluePrint.lib import validateTemplate, checkTemplate, TemplateError
 from contractor.Records.lib import post_save_callback, post_delete_callback
 
 
@@ -33,7 +33,7 @@ class BluePrint( models.Model ):
   name = models.CharField( max_length=40, primary_key=True )  # update Architect and MCP if this changes max_length
   description = models.CharField( max_length=200 )
   scripts = models.ManyToManyField( 'Script', through='BluePrintScript' )
-  config_values = MapField( blank=True, null=True )
+  config_values = JSONMapField( blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
@@ -110,7 +110,7 @@ class BluePrint( models.Model ):
 class FoundationBluePrint( BluePrint ):
   parent_list = models.ManyToManyField( 'self', blank=True, symmetrical=False )
   foundation_type_list = StringListField( max_length=200 )  # list of the foundation types this blueprint can be used for
-  validation_template = MapField( blank=True, null=True )
+  validation_template = JSONMapField( blank=True, null=True )
   physical_interface_names = StringListField( max_length=200, blank=True )
 
   def getValidationTemplate( self ):
@@ -129,7 +129,10 @@ class FoundationBluePrint( BluePrint ):
     if template is None:
       return None
 
-    return validateTemplate( id_map, template )
+    try:
+      return validateTemplate( id_map, template )
+    except TemplateError as e:  # the stored template itself is malformed (ex: saved without going through full_clean, or predates a validation rule) -- surface it the same way an id_map mismatch is surfaced, instead of raising out of a bootstrap request
+      return [ 'BluePrint "{0}" has a misconfigured validation_template: {1}'.format( self.name, e ) ]
 
   @cinp.action( 'Map' )
   def getConfig( self ):
@@ -145,6 +148,11 @@ class FoundationBluePrint( BluePrint ):
     errors = {}
     if not isinstance( self.validation_template, dict ):
       errors[ 'validation_template' ] = 'template must be a dict'
+    elif self.validation_template:
+      try:
+        checkTemplate( self.validation_template )
+      except TemplateError as e:
+        errors[ 'validation_template' ] = str( e )
 
     if errors:
       raise ValidationError( errors )

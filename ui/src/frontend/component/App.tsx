@@ -16,6 +16,7 @@ import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import LocationCityIcon from '@mui/icons-material/LocationCity';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import DnsIcon from '@mui/icons-material/Dns';
 import DvrIcon from '@mui/icons-material/Dvr';
 import PublicIcon from '@mui/icons-material/Public';
 import ReorderIcon from '@mui/icons-material/Reorder';
@@ -41,6 +42,7 @@ import Complex from './Complex';
 import BluePrint from './BluePrint';
 import PXE from './PXE';
 import AddressBlock from './AddressBlock';
+import Directory from './Directory';
 import Job from './Job';
 import Cartographer from './Cartographer';
 import JobLog from './JobLog';
@@ -63,6 +65,7 @@ const navItems = [
   { to: '/structures', icon: <AccountBalanceIcon />, label: 'Structures' },
   { to: '/complexes', icon: <LocationCityIcon />, label: 'Complexes' },
   { to: '/addressblocks', icon: <CompareArrowsIcon />, label: 'Address Blocks' },
+  { to: '/directory', icon: <DnsIcon />, label: 'Directory' },
   { to: '/jobs', icon: <DvrIcon />, label: 'Jobs' },
   { to: '/cartographer', icon: <PublicIcon />, label: 'Cartographer' },
   { to: '/joblog', icon: <ReorderIcon />, label: 'Job Log' },
@@ -89,6 +92,7 @@ const App: React.FC = () =>
   const [alerts, setAlerts] = useState( 0 );
   const [loggedInUser, setLoggedInUser] = useState<string | null>( null );
   const [logoutMenuAnchor, setLogoutMenuAnchor] = useState<HTMLElement | null>( null );
+  const [loginError, setLoginError] = useState<string | null>( null );
   const timerRef = useRef<ReturnType<typeof setInterval> | null>( null );
 
   const doUpdate = ( site: string | null = curSite ) =>
@@ -130,6 +134,7 @@ const App: React.FC = () =>
 
   const doLogin = () =>
   {
+    setLoginError( null );
     contractor.Auth_User_call_login( username, password )
       .then( ( token: string ) =>
       {
@@ -143,7 +148,7 @@ const App: React.FC = () =>
         setLoggedInUser( username );
         doUpdate();
       },
-      ( err: any ) => { alert( 'Error logging in: "' + ( err?.msg ?? err ) + '"' ); } );
+      ( err: any ) => { setLoginError( 'Error logging in: "' + ( err?.msg ?? err ) + '"' ); } );
   };
 
   const doLogout = () =>
@@ -181,9 +186,10 @@ const App: React.FC = () =>
     <CssBaseline />
     <ServerError />
 
-    <Dialog open={ loginVisible } onClose={ () => setLoginVisible( false ) }>
+    <Dialog open={ loginVisible } onClose={ () => { setLoginVisible( false ); setLoginError( null ); } }>
       <DialogTitle>Login</DialogTitle>
       <DialogContent>
+        { loginError && <Typography color="error" variant="body2" sx={{ mb: 1 }}>{ loginError }</Typography> }
         <TextField
           type="text"
           label="Username"
@@ -201,10 +207,11 @@ const App: React.FC = () =>
           onChange={ (e) => setPassword( e.target.value ) }
           fullWidth
           margin="dense"
+          onKeyDown={ (e) => e.key === 'Enter' && doLogin() }
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={ () => setLoginVisible( false ) }>Close</Button>
+        <Button onClick={ () => { setLoginVisible( false ); setLoginError( null ); } }>Close</Button>
         <Button onClick={ doLogin } variant="contained">Login</Button>
       </DialogActions>
     </Dialog>
@@ -287,6 +294,7 @@ const App: React.FC = () =>
         <Route path="/structure/:id" element={ <DetailRoute Comp={ Structure } /> } />
         <Route path="/complex/:id" element={ <DetailRoute Comp={ Complex } /> } />
         <Route path="/addressblock/:id" element={ <DetailRoute Comp={ AddressBlock } /> } />
+        <Route path="/directoryzone/:id" element={ <DetailRoute Comp={ Directory } /> } />
         <Route path="/job/f/:id" element={ <DetailRoute Comp={ Job } jobType="foundation" /> } />
         <Route path="/job/s/:id" element={ <DetailRoute Comp={ Job } jobType="structure" /> } />
         <Route path="/job/d/:id" element={ <DetailRoute Comp={ Job } jobType="dependency" /> } />
@@ -300,6 +308,7 @@ const App: React.FC = () =>
         <Route path="/structures" element={ <Structure site={ curSite ?? undefined } /> } />
         <Route path="/complexes" element={ <Complex site={ curSite ?? undefined } /> } />
         <Route path="/addressblocks" element={ <AddressBlock site={ curSite ?? undefined } /> } />
+        <Route path="/directory" element={ <Directory /> } />
         <Route path="/jobs" element={ <Job site={ curSite ?? undefined } /> } />
         <Route path="/cartographer" element={ <Cartographer /> } />
         <Route path="/joblog" element={ <JobLog site={ curSite ?? undefined } /> } />

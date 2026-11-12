@@ -22,14 +22,14 @@ other               = ( "continue" / "break" / "pass" )
 
 ifelse              = "if" value_expression "then" em_p expression ( em_s "elif" value_expression "then" em_p expression )* ( em_s "else" em_p expression )?
 
-not_                = ~"[Nn]ot" value_expression
+not_                = ~"[Nn]ot" !~"[a-zA-Z0-9_]" value_expression
 
 time                = ~"([0-9]{1,2}:){1,3}[0-9]{1,2}"
 number_float        = ~"[-+]?[0-9]+\\.[0-9]+"
 number_int          = ~"[-+]?[0-9]+"
 text                = ( "'" ~"[^']*" "'" ) / ( '"' ~'[^"]*' '"' )
-boolean             = ~"[Tt]rue" / ~"[Ff]alse"
-none                = ~"[Nn]one"
+boolean             = ( ~"[Tt]rue" / ~"[Ff]alse" ) !~"[a-zA-Z0-9_]"
+none                = ~"[Nn]one" !~"[a-zA-Z0-9_]"
 exists              = "exists(" ws_s ( array_map_item / variable ) ws_s ")"
 
 array               = "[" ( ( value_expression "," )* value_expression )? ws_s "]"
@@ -310,7 +310,7 @@ class Parser( object ):
     return ( Types.INFIX, { 'operator': node.children[2].text, 'left': self._eval( node.children[1] ), 'right': self._eval( node.children[3] ) } )
 
   def not_( self, node ):  # we are going to abuse the INFIX functino for this one
-    return ( Types.INFIX, { 'operator': 'not', 'left': self._eval( node.children[1] ), 'right': ( Types.CONSTANT, None ) } )
+    return ( Types.INFIX, { 'operator': 'not', 'left': self._eval( node.children[2] ), 'right': ( Types.CONSTANT, None ) } )
 
   def other( self, node ):
     return ( Types.OTHER, node.children[0].text )

@@ -1,4 +1,3 @@
-import pickle
 import pytest
 
 from django.db import connection, transaction
@@ -6,499 +5,7 @@ from django.db.utils import IntegrityError
 from django.db import models
 from django.core.exceptions import ValidationError
 
-from contractor.fields import MapField, JSONField, StringListField, IpAddressField
-
-
-def _convert_recs( recs ):
-  return [ ( id, ( None if value is None else pickle.loads( value.tobytes() ) ) ) for id, value in recs ]
-
-
-def test_mapfield_init():
-  MapField()
-
-  with pytest.raises( ValueError ):
-    MapField( default=None )
-
-  MapField( default=None, null=True )
-
-  with pytest.raises( ValueError ):
-    MapField( default='bob' )
-
-  with pytest.raises( ValueError ):
-    MapField( default=[ 'bob' ] )
-
-  MapField( default={} )
-
-  MapField( default={ 'a': 'sdf' } )
-
-  MapField( default=lambda: {} )
-
-  MapField( default=lambda: 'yeah it is bad, but can we really call the callable during __init__?' )
-
-
-def test_mapfield_cross_contamination():
-  class testModel1( models.Model ):
-    f = MapField()
-
-    class Meta:
-      app_label = 'test_mapfield_cross_contamination'
-
-  class testModel2( models.Model ):
-    f = MapField()
-
-    class Meta:
-      app_label = 'test_mapfield_cross_contamination'
-
-  m1 = testModel1()
-  m1.f = { 'a': 'sfd' }
-
-  m12 = testModel1()
-  assert m12.f == {}
-
-  m2 = testModel2()
-  assert m2.f == {}
-
-  m1 = testModel1()
-  m1.f[ 'a' ] = 'rtr'
-
-  m12 = testModel1()
-  assert m12.f == {}
-
-  m2 = testModel2()
-  assert m2.f == {}
-
-
-def test_mapfield_validation():
-  counter = 0
-  for blank_default, default in ( ( True, None ), ( True, {} ), ( False, { 'stuff': 1 } ) ):
-    for null in ( True, False ):
-      for blank in ( True, False ):
-        kwargs = { 'null': null, 'blank': blank  }
-        if default is not None:
-          kwargs[ 'default' ] = default
-
-        counter += 1
-
-        class testModel( models.Model ):
-          f = MapField( **kwargs )
-
-          class Meta:
-            app_label = 'test_mapfield_validation_{0}'.format( counter )
-
-        m = testModel()
-
-        if blank_default:
-          if blank:
-            m.full_clean()
-
-          else:
-            with pytest.raises( ValidationError ) as e:
-              m.full_clean()
-
-            if default is None or isinstance( default, dict ):
-              assert e.value.message_dict == { 'f': [ 'This field cannot be blank.' ] }
-            else:
-              assert e.value.message_dict == { 'f': [ 'must be a dict.' ] }
-
-        else:
-            m.full_clean()
-
-        m.f = None
-        if not blank:
-          with pytest.raises( ValidationError ) as e:
-            m.full_clean()
-
-          if null:
-            assert e.value.message_dict == { 'f': [ 'This field cannot be blank.' ] }
-          else:
-            assert e.value.message_dict == { 'f': [ 'must be a dict.' ] }
-
-        else:
-          m.full_clean()
-
-        m.f = 0
-        with pytest.raises( ValidationError ) as e:
-          m.full_clean()
-        assert e.value.message_dict == { 'f': [ 'must be a dict.' ] }
-
-        m.f = 42
-        with pytest.raises( ValidationError ) as e:
-          m.full_clean()
-        assert e.value.message_dict == { 'f': [ 'must be a dict.' ] }
-
-        m.f = ''
-        with pytest.raises( ValidationError ) as e:
-          m.full_clean()
-        assert e.value.message_dict == { 'f': [ 'must be a dict.' ] }
-
-        m.f = 'bob'
-        with pytest.raises( ValidationError ) as e:
-          m.full_clean()
-        assert e.value.message_dict == { 'f': [ 'must be a dict.' ] }
-
-        m.f = []
-        with pytest.raises( ValidationError ) as e:
-          m.full_clean()
-        assert e.value.message_dict == { 'f': [ 'must be a dict.' ] }
-
-        m.f = [ 'stuff' ]
-        with pytest.raises( ValidationError ) as e:
-          m.full_clean()
-        assert e.value.message_dict == { 'f': [ 'must be a dict.' ] }
-
-        m.f = {}
-        if not blank:
-          with pytest.raises( ValidationError ) as e:
-            m.full_clean()
-          assert e.value.message_dict == { 'f': [ 'This field cannot be blank.' ] }
-
-        else:
-          m.full_clean()
-
-        m.f = { 'a': 'sally' }
-        m.full_clean()
-
-        testModel.objects.filter( f=None )
-        testModel.objects.filter( f={} )
-        with pytest.raises( ValidationError ):
-          testModel.objects.filter( f='' )
-        with pytest.raises( ValidationError ):
-          testModel.objects.filter( f='bob' )
-        with pytest.raises( ValidationError ):
-          testModel.objects.filter( f=0 )
-        with pytest.raises( ValidationError ):
-          testModel.objects.filter( f=42 )
-        with pytest.raises( ValidationError ):
-          testModel.objects.filter( f=[] )
-        with pytest.raises( ValidationError ):
-          testModel.objects.filter( f=[ 1, 2 ] )
-        testModel.objects.filter( f__isnull=True )
-        testModel.objects.filter( f__isnull=False )
-
-
-@pytest.mark.django_db
-def test_mapfield_save_load_empty_blank():
-  class testModel( models.Model ):
-    f = MapField( default=None, null=True, blank=True )
-
-    class Meta:
-      app_label = 'test_mapfield_save_load_empty_blank'
-
-  with connection.schema_editor() as schema_editor:
-    schema_editor.create_model( testModel )
-
-  m = testModel()
-
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, None ) ]
-
-  m.f = None
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, None ) ]
-
-  m.f = {}
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, {} ) ]
-
-  m.f = { 'a': [ 1, 2, 3 ] }
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, { 'a': [ 1, 2, 3 ] } ) ]
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = ''1'''.format( testModel._meta.db_table ) )
-  assert testModel.objects.get().f is None
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( {}, protocol=4 ) ] )
-  assert testModel.objects.get().f == {}
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( { 'a': [ 1, 2, 3 ] }, protocol=4 ) ] )
-  assert testModel.objects.get().f == { 'a': [ 1, 2, 3 ] }
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 'bob', protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 0, protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 42, protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( '', protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( [], protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( [ 1, 2 ], protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-
-@pytest.mark.django_db
-def test_mapfield_save_load_empty_blank_nonnull():
-  class testModel( models.Model ):
-    f = MapField( blank=True )
-
-    class Meta:
-      app_label = 'test_mapfield_save_load_empty_blank_nonnull'
-
-  with connection.schema_editor() as schema_editor:
-    schema_editor.create_model( testModel )
-
-  m = testModel()
-
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, {} ) ]
-
-  m.f = None
-  m.full_clean()
-  with pytest.raises( IntegrityError ):
-    with transaction.atomic():
-      m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, {} ) ]
-
-  m.f = {}
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, {} ) ]
-
-  m.f = { 'a': [ 1, 2, 3 ] }
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, { 'a': [ 1, 2, 3 ] } ) ]
-
-  with pytest.raises( IntegrityError ):
-    with transaction.atomic():
-      with connection.cursor() as cursor:
-        cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = ''1'''.format( testModel._meta.db_table ) )
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( {}, protocol=4 ) ] )
-  assert testModel.objects.get().f == {}
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( { 'a': [ 1, 2, 3 ] }, protocol=4 ) ] )
-  assert testModel.objects.get().f == { 'a': [ 1, 2, 3 ] }
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 'bob', protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 0, protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 42, protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( '', protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( [], protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( [ 1, 2 ], protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-
-@pytest.mark.django_db
-def test_mapfield_save_default():
-  class testModel( models.Model ):
-    f = MapField( default={ 'b': 2 } )
-
-    class Meta:
-      app_label = 'test_mapfield_save_default'
-
-  with connection.schema_editor() as schema_editor:
-    schema_editor.create_model( testModel )
-
-  m = testModel()
-
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, { 'b': 2 }  ) ]
-
-  m.f = { 'a': [ 1, 2, 3 ] }
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, { 'a': [ 1, 2, 3 ] } ) ]
-
-  with pytest.raises( IntegrityError ):
-    with transaction.atomic():
-      with connection.cursor() as cursor:
-        cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = ''1'''.format( testModel._meta.db_table ) )
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( {}, protocol=4 ) ] )
-  assert testModel.objects.get().f == {}
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( { 'a': [ 1, 2, 3 ] }, protocol=4 ) ] )
-  assert testModel.objects.get().f == { 'a': [ 1, 2, 3 ] }
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 'bob', protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 0, protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 42, protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( '', protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( [], protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( [ 1, 2 ], protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-
-@pytest.mark.django_db
-def test_mapfield_save_default_blank():
-  class testModel( models.Model ):
-    f = MapField( default={ 'b': 2 }, blank=True )
-
-    class Meta:
-      app_label = 'test_mapfield_save_default_blank'
-
-  with connection.schema_editor() as schema_editor:
-    schema_editor.create_model( testModel )
-
-  m = testModel()
-
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, { 'b': 2 } ) ]
-
-  m.f = None
-  m.full_clean()
-  with pytest.raises( IntegrityError ):
-    with transaction.atomic():
-      m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, { 'b': 2 } ) ]
-
-  m.f = {}
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, {} ) ]
-
-  m.f = { 'a': [ 1, 2, 3 ] }
-  m.full_clean()
-  m.save()
-  with connection.cursor() as cursor:
-    cursor.execute( 'SELECT * FROM "{0}" ORDER BY id'.format( testModel._meta.db_table ) )
-    assert _convert_recs( cursor.fetchall() ) == [ ( 1, { 'a': [ 1, 2, 3 ] } ) ]
-
-  with pytest.raises( IntegrityError ):
-    with transaction.atomic():
-      with connection.cursor() as cursor:
-        cursor.execute( 'UPDATE "{0}" SET f = NULL WHERE id = ''1'''.format( testModel._meta.db_table ) )
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( {}, protocol=4 ) ] )
-  assert testModel.objects.get().f == {}
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( { 'a': [ 1, 2, 3 ] }, protocol=4 ) ] )
-  assert testModel.objects.get().f == { 'a': [ 1, 2, 3 ] }
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 'bob', protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 0, protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( 42, protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( '', protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( [], protocol=4 ) ]  )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
-
-  with connection.cursor() as cursor:
-    cursor.execute( 'UPDATE "{0}" SET f = %s WHERE id = ''1'''.format( testModel._meta.db_table ), [ pickle.dumps( [ 1, 2 ], protocol=4 ) ] )
-  with pytest.raises( ValidationError ):
-    testModel.objects.get()
+from contractor.fields import JSONField, JSONMapField, StringListField, IpAddressField, JSON_MAGIC
 
 
 @pytest.mark.django_db
@@ -871,3 +378,57 @@ def test_ipaddressfield_init():
   IpAddressField( default='0.0.0.0' )
 
   IpAddressField( default=lambda: '1.2.3.4' )
+
+
+def test_jsonmapfield_init():
+  JSONMapField()
+
+  with pytest.raises( ValueError ):
+    JSONMapField( default=None )
+
+  JSONMapField( default=None, null=True )
+
+  with pytest.raises( ValueError ):
+    JSONMapField( default='bob' )
+
+  with pytest.raises( ValueError ):
+    JSONMapField( default=[ 'bob' ] )
+
+  JSONMapField( default={} )
+  JSONMapField( default={ 'a': 'sdf' } )
+  JSONMapField( default=lambda: {} )
+
+
+def test_jsonmapfield_dict_only():
+  f = JSONMapField()
+
+  assert f.get_prep_value( { 'a': 1 } ) == JSON_MAGIC + '{"a": 1}'
+  assert f.get_prep_value( None ) is None
+
+  # MapField's dict-only contract is kept
+  for bad in ( [ 1, 2 ], 'a string', 7, True ):
+    with pytest.raises( ValidationError ):
+      f.get_prep_value( bad )
+
+    with pytest.raises( ValidationError ):
+      f.to_python( bad )
+
+  assert f.to_python( { 'a': 1 } ) == { 'a': 1 }
+  assert f.to_python( JSON_MAGIC + '{"a": 1}' ) == { 'a': 1 }  # ie. a fixture-loaded value
+
+
+def test_jsonmapfield_from_db_value():
+  f = JSONMapField()
+
+  assert f.from_db_value( None, None, None ) is None
+  assert f.from_db_value( JSON_MAGIC + '{"a": 1}', None, None ) == { 'a': 1 }
+
+  with pytest.raises( ValidationError ):
+    f.from_db_value( '{"a": 1}', None, None )
+
+  with pytest.raises( ValidationError ):
+    f.from_db_value( JSON_MAGIC + 'not json', None, None )
+
+  # valid JSON that is not a dict is still not acceptable
+  with pytest.raises( ValidationError ):
+    f.from_db_value( JSON_MAGIC + '[ 1, 2 ]', None, None )

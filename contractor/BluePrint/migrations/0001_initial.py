@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('name', models.CharField(max_length=40, primary_key=True, serialize=False)),
                 ('description', models.CharField(max_length=200)),
-                ('config_values', contractor.fields.MapField(null=True, default=contractor.fields.defaultdict, blank=True)),
+                ('config_values', contractor.fields.JSONMapField(null=True, default=contractor.fields.defaultdict, blank=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
@@ -56,7 +56,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('blueprint_ptr', models.OneToOneField(to='BluePrint.BluePrint', primary_key=True, parent_link=True, serialize=False, auto_created=True,on_delete=models.CASCADE)),
                 ('foundation_type_list', contractor.fields.StringListField(default=list, max_length=200)),
-                ('validation_template', contractor.fields.MapField(default=contractor.fields.defaultdict, null=True, blank=True)),
+                ('validation_template', contractor.fields.JSONMapField(default=contractor.fields.defaultdict, null=True, blank=True)),
                 ('physical_interface_names', contractor.fields.StringListField(blank=True, default=list, max_length=200)),
                 ('parent_list', models.ManyToManyField(blank=True, to='BluePrint.FoundationBluePrint')),
             ],

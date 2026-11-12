@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from cinp.orm_django import DjangoCInP as CInP
 
 from contractor.Building.models import Foundation, Structure
-from contractor.fields import MapField
+from contractor.fields import JSONMapField
 
 MAX_BOX_LIFE = 96  # in hours
 cinp = CInP( 'PostOffice', '0.1' )
@@ -73,13 +73,13 @@ class Box( models.Model ):
   proxy = models.CharField( max_length=512, blank=True, null=True )
   type = models.CharField( max_length=4, choices=BOX_TYPE )
   one_shot = models.BooleanField( default=True )
-  extra_data = MapField()
+  extra_data = JSONMapField()
   expires = models.DateTimeField( blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
 
   def extend( self, additional_hours ):
-    self.expires += timedelta( hour=additional_hours )
+    self.expires += timedelta( hours=additional_hours )
     self.full_clean()
     self.save()
 
@@ -96,10 +96,10 @@ class Box( models.Model ):
     if self.type not in [ i[0] for i in Box.BOX_TYPE ]:
       errors[ 'type' ] = 'Invalid'
 
-    if self.expires is not None and not self.expires > datetime.now( timezone.utc ) + timedelta( hours=MAX_BOX_LIFE ):
+    if self.expires is not None and self.expires > datetime.now( timezone.utc ) + timedelta( hours=MAX_BOX_LIFE ):
       errors[ 'expires' ] = 'more than "{0}" hourse in the future'.format( MAX_BOX_LIFE )
 
-    if not self.one_shot and self.exires is None:
+    if not self.one_shot and self.expires is None:
       errors[ 'expires' ] = 'required when not one_shot'
 
     if errors:

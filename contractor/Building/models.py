@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
 from cinp.orm_django import DjangoCInP as CInP
 
-from contractor.fields import MapField, JSONField, name_regex, config_name_regex
+from contractor.fields import JSONMapField, name_regex, config_name_regex
 from contractor.Site.models import Site
 from contractor.BluePrint.models import StructureBluePrint, FoundationBluePrint
 from contractor.Utilities.models import Network, Networked, RealNetworkInterface
@@ -21,6 +21,10 @@ cinp = CInP( 'Building', '0.1' )
 
 FOUNDATION_SUBCLASS_LIST = []
 COMPLEX_SUBCLASS_LIST = []
+
+# where the console of a foundation is directed to, 'console' is the local video/vga
+# NOTE: keep in sync with the ipxe binaries built by resources/ipxe/Makefile
+CONSOLE_PORT_CHOICES = ( 'console', 'ttyS0', 'ttyS1', 'ttyS2', 'ttyS3' )
 
 
 class BuildingException( ValueError ):
@@ -42,7 +46,7 @@ class Foundation( models.Model ):
   locator = models.CharField( max_length=100, primary_key=True )  # if this changes make sure to update architect - instance - foundation_id
   site = models.ForeignKey( Site, on_delete=models.PROTECT )
   blueprint = models.ForeignKey( FoundationBluePrint, on_delete=models.PROTECT )
-  id_map = JSONField( blank=True, null=True )  # ie a dict of asset, chassis, system, etc types
+  id_map = JSONMapField( blank=True, null=True, default=None )  # ie a dict of asset, chassis, system, etc types -- set from the bootstrap client via setIdMap, so the dict-only enforcement is doing real work here. default=None (not JSONMapField's usual empty dict): an un-set id_map has to stay None, both to mean "never reported" and because setLocated/setBuilt test it for truthiness
   located_at = models.DateTimeField( editable=False, blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
@@ -168,6 +172,7 @@ class Foundation( models.Model ):
               '_console': self.console
             }
 
+  # foundations that have console options override this, see CONSOLE_PORT_CHOICES
   @property
   def console( self ):
     return 'console'
@@ -253,21 +258,47 @@ class Foundation( models.Model ):
   def dependencyId( self ):
     return 'f-{0}'.format( self.pk )
 
+  def _idMapInterfaceList( self, id_map ):  # returns the (validated, not yet saved) interfaces this id_map updates, or raises ValueError with a message meant for whoever sent the id_map
+    network = id_map.get( 'network', {} )
+    if not isinstance( network, dict ):
+      raise ValueError( 'id_map "network" must be a map' )
+
+    result = []
+    for iface in RealNetworkInterface.objects.filter( foundation=self ):
+      entry = network.get( iface.physical_location )
+      if entry is None:
+        continue
+
+      if not isinstance( entry, dict ) or not isinstance( entry.get( 'mac' ), str ):
+        raise ValueError( 'id_map network entry "{0}" must be a map with a "mac" string'.format( iface.physical_location ) )
+
+      iface.mac = entry[ 'mac' ]
+      try:
+        iface.full_clean()
+      except ValidationError as e:
+        raise ValueError( 'id_map network entry "{0}" is invalid: {1}'.format( iface.physical_location, '; '.join( e.messages ) ) )
+
+      result.append( iface )
+
+    return result
+
   @cinp.action( return_type={ 'type': 'String' }, parameter_type_list=[ 'Map' ] )
   def setIdMap( self, id_map ):
-    error = self.blueprint.validateIdMap( id_map )
-    if error is not None:
-      return error
+    error_list = self.blueprint.validateIdMap( id_map )
+    if error_list is not None:
+      return '; '.join( error_list )
+
+    try:  # everything the id_map touches is checked before anything is written, so a malformed id_map is a returned error rather than a stored id_map plus a mid-update exception
+      iface_list = self._idMapInterfaceList( id_map )
+    except ValueError as e:
+      return str( e )
 
     self.id_map = id_map
     self.full_clean()
     self.save()
 
-    for iface in RealNetworkInterface.objects.filter( foundation=self ):
-      if iface.physical_location in id_map[ 'network' ]:
-        iface.mac = id_map[ 'network' ][ iface.physical_location ][ 'mac' ]
-        iface.full_clean()
-        iface.save()
+    for iface in iface_list:
+      iface.save()
 
     return None
 
@@ -402,7 +433,7 @@ class Structure( Networked ):
   blueprint = models.ForeignKey( StructureBluePrint, on_delete=models.PROTECT )  # ie what to bild
   foundation = models.OneToOneField( Foundation, related_name='+', on_delete=models.PROTECT )  # ie what to build it on
   config_uuid = models.CharField( max_length=36, unique=True, default='<undefined>' )
-  config_values = MapField( blank=True, null=True )
+  config_values = JSONMapField( blank=True, null=True )
   built_at = models.DateTimeField( editable=False, blank=True, null=True )
   updated = models.DateTimeField( editable=False, auto_now=True )
   created = models.DateTimeField( editable=False, auto_now_add=True )
@@ -788,7 +819,7 @@ class ComplexStructure( models.Model ):
   @cinp.check_auth()
   @staticmethod
   def checkAuth( user, verb, id_list, action=None ):
-    return cinp.basic_auth_check( user, verb, action, ComplexStructure, { 'getConfig', 'Building.view_complexstructure' } )
+    return cinp.basic_auth_check( user, verb, action, ComplexStructure, { 'getConfig': 'Building.view_complexstructure' } )
 
   # TODO: need to make sure a Structure is in only one complex
   def clean( self, *args, **kwargs ):
